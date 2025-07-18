@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Safe Git Push
+#
+# Performs a git push with security checks:
+# - Prevents pushes to main/master branches
+#
+# Usage: safe-git-push
+
+set -euo pipefail
+
+# Check argument count
+if [ $# -ne 0 ]; then
+  echo "Error: Zero arguments expected" >&2
+  echo "Usage: safe-git-push" >&2
+  exit 1
+fi
+
+# Check if current branch is main or master
+current_branch=$(git branch --show-current)
+if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+  echo "Error: Direct pushes to main or master branch are not allowed" >&2
+  echo "Please create a feature branch" >&2
+  exit 1
+fi
+
+git push origin "$current_branch"

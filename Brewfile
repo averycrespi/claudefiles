@@ -1,0 +1,5 @@
+brew "gh"
+brew "git"
+brew "gitleaks"
+brew "stow"
+brew "terminal-notifier"

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+# Safe GitHub PR Create
+#
+# Creates a GitHub pull request with safety checks:
+# - Verifies GitHub CLI is installed and authenticated
+# - Prevents PR creation from main or master branches
+# - Ensures that the feature branch exists on origin
+# - Ensures that the feature branch is up to date with origin
+#
+# Usage: safe-gh-pr-create "PR title" "PR body"
+
+set -euo pipefail
+
+if [ $# -ne 2 ]; then
+  echo "Error: Exactly two arguments (title and body) are required" >&2
+  echo "Usage: safe-gh-pr-create \"PR title\" \"PR body\"" >&2
+  exit 1
+fi
+
+title="$1"
+if [ -z "$title" ]; then
+  echo "Error: Title cannot be empty" >&2
+  echo "Usage: safe-gh-pr-create \"PR title\" \"PR body\"" >&2
+  exit 1
+fi
+
+body="$2"
+if [ -z "$body" ]; then
+  echo "Error: Body cannot be empty" >&2
+  echo "Usage: safe-gh-pr-create \"PR title\" \"PR body\"" >&2
+  exit 1
+fi
+
+# Requirement: GitHub CLI MUST be installed
+if ! command -v gh >/dev/null 2>&1; then
+  echo "Error: GitHub CLI (gh) is not installed" >&2
+  echo "Please run: brew install gh" >&2
+  exit 1
+fi
+
+# Requirement: MUST be authenticated with GitHub
+if ! gh auth status >/dev/null 2>&1; then
+  echo "Error: Not authenticated with GitHub" >&2
+  echo "Please run: gh auth login" >&2
+  exit 1
+fi
+
+# Requirement: current branch MUST NOT be main or master
+current_branch=$(git branch --show-current)
+if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+  echo "Error: Cannot create PR from main or master branch" >&2
+  echo "Please create a feature branch first" >&2
+  exit 1
+fi
+
+# Requirement: current branch MUST exist on origin
+if ! git ls-remote --heads origin "$current_branch" | grep -q "$current_branch"; then
+  echo "Error: The current branch does not exist on origin" >&2
+  echo "Please run: safe-git-push before running this command" >&2
+  exit 1
+fi
+
+# Requirement: current branch MUST be up to date with origin
+git fetch origin "$current_branch"
+if ! git diff --quiet HEAD "origin/$current_branch"; then
+  echo "Error: Current branch is not up to date with origin/$current_branch" >&2
+  echo "Please pull the latest changes or push your local commits" >&2
+  exit 1
+fi
+
+gh pr create --title "$title" --body "$body"
