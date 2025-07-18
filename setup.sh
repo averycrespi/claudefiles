@@ -11,6 +11,9 @@ brew bundle
 echo 'Stowing files ...'
 mkdir -p "$HOME/.claude" && stow claude -t "$HOME/.claude"
 
+echo 'Configuring MCP servers ...'
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+
 echo 'Identifying your shell ...'
 SHELL_RC=""
 if [ -n "${ZSH_VERSION-}" ]; then
