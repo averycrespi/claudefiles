@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 
-# Safe Git Commit
+# Performs a git commit with safety checks.
 #
-# Performs a git commit with security checks:
-# - Ensures there are staged changes
-# - Rejects commits over 10MB
-# - Scans for secrets using gitleaks
+# Requirements:
+# - MUST have git installed
+# - MUST be in a git repository
+# - There MUST be staged changes
+# - Staged changes MUST NOT exceed 10MB
+# - MUST have gitleaks installed
+# - MUST NOT commit secrets
 #
 # Usage: safe-git-commit "your commit message"
 
@@ -24,29 +27,51 @@ if [ -z "$message" ]; then
   exit 1
 fi
 
+# Requirement: MUST have git installed
+if ! command -v git >/dev/null 2>&1; then
+  echo "Error: git is not installed" >&2
+  echo "Please run: brew install git" >&2
+  exit 1
+fi
+
+# Requirement: MUST be in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository" >&2
+  echo "Please check the directory that you are in" >&2
+  exit 1
+fi
+
 # Requirement: there MUST be staged changes
 if git diff --cached --quiet; then
   echo "Error: No staged changes to commit" >&2
-  echo "Use 'git add' to stage files before committing" >&2
+  echo "Please run: git add" >&2
   exit 1
 fi
+
+# Calculate actual byte size of staged files
+total_size=0
+while IFS= read -r -d '' file; do
+  if [ -f "$file" ]; then
+    file_size=$(wc -c <"$file" 2>/dev/null || echo 0)
+    total_size=$((total_size + file_size))
+  fi
+done < <(git diff --cached --name-only -z)
 
 # Requirement: staged changes MUST NOT exceed 10MB
 max_size=10485760 # 10MB
-total_size=$(git diff --cached --numstat | awk '{sum += $1 + $2} END {print sum+0}')
 if [ "$total_size" -gt "$max_size" ]; then
-  echo "Error: Staged changes exceed maximum size of $max_size bytes" >&2
+  echo "Error: Staged changes exceed maximum size of $max_size bytes (actual: $total_size bytes)" >&2
   exit 1
 fi
 
-# Requirement: gitleaks MUST be installed
+# Requirement: MUST have gitleaks installed
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "Error: gitleaks is not installed" >&2
   echo "Please run: brew install gitleaks" >&2
   exit 1
 fi
 
-# Requirement: staged changes MUST NOT contain secrets
+# Requirement: MUST NOT commit secrets
 if ! gitleaks protect --staged --verbose; then
   echo "Error: Secrets detected in staged files by gitleaks" >&2
   echo "Please review and remove sensitive information before committing" >&2

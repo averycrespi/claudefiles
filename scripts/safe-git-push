@@ -1,26 +1,57 @@
 #!/usr/bin/env bash
 
-# Safe Git Push
+# Performs a git push with safety checks.
 #
-# Performs a git push with security checks:
-# - Prevents pushes to main/master branches
+# Requirements:
+# - MUST have git installed
+# - MUST be in a git repository
+# - MUST NOT be in a detached HEAD state
+# - MUST NOT push to main or master branches
+# - MUST have a remote named origin
 #
 # Usage: safe-git-push
 
 set -euo pipefail
 
-# Check argument count
 if [ $# -ne 0 ]; then
   echo "Error: Zero arguments expected" >&2
   echo "Usage: safe-git-push" >&2
   exit 1
 fi
 
-# Check if current branch is main or master
+# Requirement: MUST have git installed
+if ! command -v git >/dev/null 2>&1; then
+  echo "Error: git is not installed" >&2
+  echo "Please run: brew install git" >&2
+  exit 1
+fi
+
+# Requirement: MUST be in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository" >&2
+  echo "Please check the directory that you are in" >&2
+  exit 1
+fi
+
+# Requirement: MUST NOT be in a detached HEAD state
+if ! git symbolic-ref -q HEAD >/dev/null; then
+  echo "Error: Cannot push from detached HEAD state" >&2
+  echo "Please checkout a branch first" >&2
+  exit 1
+fi
+
+# Requirement: MUST NOT push to main or master branches
 current_branch=$(git branch --show-current)
 if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
   echo "Error: Direct pushes to main or master branch are not allowed" >&2
   echo "Please create a feature branch" >&2
+  exit 1
+fi
+
+# Requirement: MUST have a remote named origin
+if ! git remote | grep -q "^origin$"; then
+  echo "Error: Remote 'origin' does not exist" >&2
+  echo "Please configure a remote named 'origin'" >&2
   exit 1
 fi
 

@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 
-# Safe GitHub PR Create
+# Creates a GitHub pull request with safety checks.
 #
-# Creates a GitHub pull request with safety checks:
-# - Verifies GitHub CLI is installed and authenticated
-# - Prevents PR creation from main or master branches
-# - Ensures that the feature branch exists on origin
-# - Ensures that the feature branch is up to date with origin
+# Requirements:
+# - MUST have git installed
+# - MUST be in a git repository
+# - MUST have the GitHub CLI installed
+# - MUST be authenticated with GitHub
+# - MUST NOT create PRs from main or master branches
+# - Current branch MUST exist on origin
+# - Current branch MUST be up to date with origin
+# - MUST have jq installed
+# - MUST NOT create duplicate PRs
 #
 # Usage: safe-gh-pr-create "PR title" "PR body"
 
@@ -32,7 +37,21 @@ if [ -z "$body" ]; then
   exit 1
 fi
 
-# Requirement: GitHub CLI MUST be installed
+# Requirement: MUST have git installed
+if ! command -v git >/dev/null 2>&1; then
+  echo "Error: git is not installed" >&2
+  echo "Please run: brew install git" >&2
+  exit 1
+fi
+
+# Requirement: MUST be in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository" >&2
+  echo "Please check the directory that you are in" >&2
+  exit 1
+fi
+
+# Requirement: MUST have the GitHub CLI installed
 if ! command -v gh >/dev/null 2>&1; then
   echo "Error: GitHub CLI (gh) is not installed" >&2
   echo "Please run: brew install gh" >&2
@@ -46,7 +65,7 @@ if ! gh auth status >/dev/null 2>&1; then
   exit 1
 fi
 
-# Requirement: current branch MUST NOT be main or master
+# Requirement: MUST NOT create PRs from main or master branches
 current_branch=$(git branch --show-current)
 if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
   echo "Error: Cannot create PR from main or master branch" >&2
@@ -55,17 +74,33 @@ if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
 fi
 
 # Requirement: current branch MUST exist on origin
-if ! git ls-remote --heads origin "$current_branch" | grep -q "$current_branch"; then
-  echo "Error: The current branch does not exist on origin" >&2
-  echo "Please run: safe-git-push before running this command" >&2
+if ! git ls-remote --heads origin "$current_branch" | grep -q "refs/heads/$current_branch$"; then
+  echo "Error: Current branch does not exist on origin" >&2
+  echo "Please run: safe-git-push" >&2
   exit 1
 fi
 
 # Requirement: current branch MUST be up to date with origin
-git fetch origin "$current_branch"
-if ! git diff --quiet HEAD "origin/$current_branch"; then
+remote_commit=$(git ls-remote origin "$current_branch" | cut -f1)
+local_commit=$(git rev-parse HEAD)
+if [ "$local_commit" != "$remote_commit" ]; then
   echo "Error: Current branch is not up to date with origin/$current_branch" >&2
   echo "Please pull the latest changes or push your local commits" >&2
+  exit 1
+fi
+
+# Requirement: MUST have jq installed
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is not installed" >&2
+  echo "Please run: brew install jq" >&2
+  exit 1
+fi
+
+# Requirement: MUST NOT create duplicate PRs
+existing_pr=$(gh pr list --head "$current_branch" --json number --jq '.[0].number // ""' 2>/dev/null || echo "")
+if [ -n "$existing_pr" ]; then
+  echo "Error: A pull request already exists for branch '$current_branch' (#$existing_pr)" >&2
+  echo "Please use: gh pr view $existing_pr" >&2
   exit 1
 fi
 
