@@ -1,5 +1,23 @@
 {
   "model": "sonnet",
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(context7:resolve-library-id)",
+      "Bash(context7:get-library-docs)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git add:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(rg:*)"
+    ],
+    "deny": ["Bash(gh pr create:*)", "Bash(git commit:*)", "Bash(git push:*)"]
+  },
   "hooks": {
     "Notification": [
       {

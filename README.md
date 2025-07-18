@@ -7,6 +7,7 @@ My configuration, scripts, and resources for working with Claude Code.
 - macOS
 - Homebrew
 - Claude Code
+- Node.js and npm
 
 ## Quickstart
 
