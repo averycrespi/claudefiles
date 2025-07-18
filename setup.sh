@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Setup script for the repository.
+#
 # This script is idempotent and can safely be run multiple times.
 
 set -euo pipefail
