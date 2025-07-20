@@ -120,9 +120,6 @@ class Logger:
 
 
 class Shell:
-    def __init__(self):
-        pass
-
     def run(self, cmd_args, capture_output=False, raise_on_error=True):
         """Run a command with arguments; shell input is DISABLED for security."""
         if capture_output:
