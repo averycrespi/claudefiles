@@ -408,6 +408,64 @@ class TestGit(unittest.TestCase):
         with self.assertRaises(Git.GitError):
             self.git.list_worktrees()
 
+    def test_worktree_exists_true(self):
+        """Test worktree_exists when worktree exists at given path."""
+        stdout = "/path/to/main   abcdef [main]\n/path/to/feature xyz123 [feature]"
+        mock_result = unittest.mock.Mock(returncode=0, stdout=stdout)
+        self.mock_shell.set_return_value("git worktree list", mock_result)
+
+        result = self.git.worktree_exists("/path/to/feature")
+
+        self.assertTrue(result)
+        self.assertEqual(len(self.mock_shell.commands), 1)
+        self.assertTrue(self.mock_shell.commands[0]["capture_output"])
+
+    def test_worktree_exists_false(self):
+        """Test worktree_exists when worktree does not exist at given path."""
+        stdout = "/path/to/main   abcdef [main]\n/path/to/feature xyz123 [feature]"
+        mock_result = unittest.mock.Mock(returncode=0, stdout=stdout)
+        self.mock_shell.set_return_value("git worktree list", mock_result)
+
+        result = self.git.worktree_exists("/path/to/nonexistent")
+
+        self.assertFalse(result)
+        self.assertEqual(len(self.mock_shell.commands), 1)
+
+    def test_worktree_exists_empty_list(self):
+        """Test worktree_exists when no worktrees exist."""
+        mock_result = unittest.mock.Mock(returncode=0, stdout="")
+        self.mock_shell.set_return_value("git worktree list", mock_result)
+
+        result = self.git.worktree_exists("/any/path")
+
+        self.assertFalse(result)
+        self.assertEqual(len(self.mock_shell.commands), 1)
+
+    def test_worktree_exists_exact_path_match(self):
+        """Test worktree_exists with exact path matching (no false positives)."""
+        stdout = "/path/to/feature-branch   abcdef [feature]\n/path/to/feature xyz123 [main]"
+        mock_result = unittest.mock.Mock(returncode=0, stdout=stdout)
+        self.mock_shell.set_return_value("git worktree list", mock_result)
+
+        # Should match exact paths only, not partial
+        result_exact = self.git.worktree_exists("/path/to/feature")
+        result_partial = self.git.worktree_exists("/path/to/feat")
+        result_prefix = self.git.worktree_exists("/path/to/feature-branch")
+
+        self.assertTrue(result_exact)
+        self.assertFalse(result_partial)
+        self.assertTrue(result_prefix)
+
+    def test_worktree_exists_path_sanitization(self):
+        """Test worktree_exists sanitizes the input path."""
+        stdout = "/safe/path   abcdef [feature]"
+        mock_result = unittest.mock.Mock(returncode=0, stdout=stdout)
+        self.mock_shell.set_return_value("git worktree list", mock_result)
+
+        # This should not raise an exception due to path sanitization
+        with self.assertRaises(ValueError):
+            self.git.worktree_exists("../malicious/path")
+
 
 class TestTmux(unittest.TestCase):
     """Test cases for Tmux class."""
@@ -483,7 +541,7 @@ class TestTmux(unittest.TestCase):
         self.tmux.create_session()
 
         self.assertEqual(len(self.mock_shell.commands), 1)
-        expected_cmd = ["tmux", "new-session", "-d", "-s", "test-session"]
+        expected_cmd = ["tmux", "new-session", "-d", "-s", "test-session", "-n", "test-window"]
         self.assertEqual(self.mock_shell.commands[0]["cmd_args"], expected_cmd)
 
     def test_window_exists_true(self):

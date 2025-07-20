@@ -9,6 +9,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python3 tests/test-worktree-manager.py    # Run unit tests for worktree manager
 ```
 
+### Worktree Management
+```bash
+scripts/worktree-manager create <name> [prompt...]   # Create worktree with tmux window and optional Claude prompt
+scripts/worktree-manager destroy <name>              # Destroy worktree and associated tmux window
+scripts/worktree-manager --help                      # Show CLI usage help
+```
+
 ### Git Workflow (Safety-Enforced)
 Use the provided safe Git commands which include secret detection, file size limits, and branch protection:
 ```bash
@@ -39,8 +46,12 @@ This is a **Claude Code configuration and utilities repository** designed for ma
 
 **Worktree Manager** (`scripts/worktree-manager`):
 - Python implementation: Modular class-based architecture with dependency injection
+- CLI interface with `create` and `destroy` subcommands
 - Automated branch sanitization and naming conventions
-- Claude Code auto-launch integration
+- Claude Code auto-launch integration with optional prompt support
+- Git worktree existence checking with exact path matching
+- Tmux session/window management with "worktree-manager" session
+- Comprehensive unit test coverage (62 tests) including edge cases
 
 **Configuration System** (`claude/`):
 - `settings.json`: Permission allow/deny lists, notification hooks, model selection
@@ -61,6 +72,8 @@ Uses Python unittest with comprehensive mock-based testing:
 - Dependency injection pattern for testability
 - Mock objects for Git, Tmux, Shell, and Logger interactions
 - Unit test coverage for all core worktree management functionality
+- 62 tests total covering Git, Tmux, Shell, Sanitizer, Logger, and integration scenarios
+- Tests include security validation, error handling, and edge cases
 
 ## Important Notes
 
@@ -68,6 +81,8 @@ Uses Python unittest with comprehensive mock-based testing:
 - The setup process installs Homebrew dependencies and configures shell integration
 - All Git operations should use the provided safe commands to maintain security posture
 - Worktree manager requires tmux and expects specific tmux configuration patterns
+- Worktree manager creates worktrees in `../repo-name-worktree-branch-name` format
+- Created tmux windows auto-launch Claude Code with `--add-dir` and `--permission-mode acceptEdits`
 
 ## Development Workflow Requirements
 
@@ -76,8 +91,16 @@ Uses Python unittest with comprehensive mock-based testing:
 python3 tests/test-worktree-manager.py
 ```
 
+**Key Git Class Methods:**
+- `worktree_exists(path)`: Check if worktree exists at exact path (with input sanitization)
+- `list_worktrees()`: Get all current worktrees
+- `create_worktree()`: Create new worktree with branch handling
+- `remove_worktree()`: Remove worktree safely
+- `branch_exists_locally()` / `branch_exists_remotely()`: Branch existence checking
+
 **ALWAYS update this CLAUDE.md file after making significant changes to:**
 - Scripts or command functionality
 - Architecture or component structure
 - Development workflow or testing procedures
 - New dependencies or setup requirements
+- Public API methods or CLI interfaces
