@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "allow": ["Bash(python3 tests/test-worktree-manager.py)"],
+    "deny": []
+  }
+}
