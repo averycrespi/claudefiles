@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+
+"""
+Claude Code Git Worktree Manager (Python Version)
+This script will be called by Claude Code custom slash commands.
+"""
+
+import os
+import sys
+import subprocess
+import re
+
+
+class Sanitizer:
+    def sanitize_path(self, path, allow_relative=False):
+        """Sanitize a file system path for security issues."""
+        if not path or not isinstance(path, str):
+            raise ValueError("Path must be a non-empty string")
+
+        if "\x00" in path:
+            raise ValueError("Path contains null bytes")
+
+        if ".." in path:
+            raise ValueError("Path contains parent directory references")
+
+        if not allow_relative and not os.path.isabs(path):
+            raise ValueError("Relative paths not allowed")
+
+        if len(path) > 4096:
+            raise ValueError("Path too long")
+
+        normalized = os.path.normpath(path)
+        if normalized != path and not allow_relative:
+            raise ValueError("Path normalization changed the path")
+
+        return normalized
+
+    def sanitize_branch_name(self, branch_name):
+        """Sanitize a git branch name."""
+        if not branch_name or not isinstance(branch_name, str):
+            raise ValueError("Branch name must be a non-empty string")
+
+        if branch_name.startswith(".") or branch_name.endswith("."):
+            raise ValueError("Branch name cannot start or end with '.'")
+
+        if branch_name.startswith("-") or branch_name.endswith("-"):
+            raise ValueError("Branch name cannot start or end with '-'")
+
+        if ".." in branch_name:
+            raise ValueError("Branch name cannot contain '..'")
+
+        if branch_name.endswith(".lock"):
+            raise ValueError("Branch name cannot end with '.lock'")
+
+        forbidden_chars = set(
+            "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+            "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+            " ~^:?*[\\@{}\x7f"
+        )
+        if any(c in forbidden_chars for c in branch_name):
+            raise ValueError("Branch name contains forbidden characters")
+
+        if len(branch_name) > 250:  # Conservative limit
+            raise ValueError("Branch name too long")
+
+        return branch_name
+
+    def sanitize_command_string(self, command):
+        """Sanitize a command string for tmux send-keys."""
+        if not isinstance(command, str):
+            raise ValueError("Command must be a string")
+
+        if "\x00" in command:
+            raise ValueError("Command contains null bytes")
+
+        forbidden_sequences = [
+            "\x1b",  # ESC
+            "\x03",  # Ctrl-C
+            "\x04",  # Ctrl-D
+            "\x0c",  # Ctrl-L
+            "\x01",  # Ctrl-A
+        ]
+        if any(seq in command for seq in forbidden_sequences):
+            raise ValueError("Command contains control characters")
+
+        if len(command) > 8192:
+            raise ValueError("Command too long")
+
+        return command
+
+    def sanitize_tmux_name(self, name):
+        """Sanitize a tmux session or window name name."""
+        if not name or not isinstance(name, str):
+            raise ValueError("Name must be a non-empty string")
+
+        return re.sub(r"[^a-zA-Z0-9._-]", "-", name)
+
+
+class Logger:
+    class Colors:
+        GREEN = "\033[0;32m"
+        BLUE = "\033[0;34m"
+        YELLOW = "\033[1;33m"
+        RED = "\033[0;31m"
+        NC = "\033[0m"
+
+    def info(self, message):
+        print(f"{self.Colors.BLUE}INFO{self.Colors.NC}: {message}", file=sys.stderr)
+
+    def success(self, message):
+        print(f"{self.Colors.GREEN}SUCCESS{self.Colors.NC}: {message}", file=sys.stderr)
+
+    def error(self, message):
+        print(f"{self.Colors.RED}ERROR{self.Colors.NC}: {message}", file=sys.stderr)
+
+    def warning(self, message):
+        print(
+            f"{self.Colors.YELLOW}WARNING{self.Colors.NC}: {message}", file=sys.stderr
+        )
+
+
+class Shell:
+    def __init__(self):
+        pass
+
+    def run(self, cmd_args, capture_output=False, raise_on_error=True):
+        """Run a command with arguments; shell input is DISABLED for security."""
+        if capture_output:
+            return subprocess.run(
+                cmd_args,
+                text=True,
+                check=raise_on_error,
+                capture_output=True,
+            )
+        else:
+            return subprocess.run(
+                cmd_args,
+                text=True,
+                check=raise_on_error,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+
+class Git:
+    class GitError(Exception):
+        pass
+
+    def __init__(self, *, shell, sanitizer):
+        if not shell:
+            raise ValueError("Shell instance is required")
+        if not sanitizer:
+            raise ValueError("Sanitizer instance is required")
+        self.shell = shell
+        self.sanitizer = sanitizer
+
+    def is_git_repo(self):
+        """Check if the current directory is a git repository."""
+        result = self.shell.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            raise_on_error=False,
+        )
+        return result and result.returncode == 0
+
+    def get_repo_root(self):
+        """Get the root of the git repository."""
+        result = self.shell.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+        )
+        if result and result.stdout:
+            return result.stdout.strip()
+        raise self.GitError(f"failed to get repo root")
+
+    def get_repo_name(self):
+        """Get the name of the git repository."""
+        return os.path.basename(self.get_repo_root())
+
+    def branch_exists_locally(self, branch_name):
+        """Check if branch exists locally."""
+        try:
+            # Validate branch name first - if invalid, it can't exist
+            self.sanitizer.sanitize_branch_name(branch_name)
+        except ValueError:
+            return False
+
+        branch_name = self.sanitizer.sanitize_tmux_name(branch_name)
+        result = self.shell.run(
+            ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch_name}"],
+            raise_on_error=False,
+        )
+        return result and result.returncode == 0
+
+    def branch_exists_remotely(self, branch_name):
+        """Check if branch exists on remote."""
+        try:
+            # Validate branch name first - if invalid, it can't exist
+            self.sanitizer.sanitize_branch_name(branch_name)
+        except ValueError:
+            return False
+
+        branch_name = self.sanitizer.sanitize_tmux_name(branch_name)
+        result = self.shell.run(
+            [
+                "git",
+                "show-ref",
+                "--verify",
+                "--quiet",
+                f"refs/remotes/origin/{branch_name}",
+            ],
+            raise_on_error=False,
+        )
+        return result and result.returncode == 0
+
+    def create_worktree(self, *, worktree_dir, branch_name, new_branch=False):
+        """Create a git worktree."""
+        worktree_dir = self.sanitizer.sanitize_path(worktree_dir, allow_relative=True)
+        branch_name = self.sanitizer.sanitize_branch_name(branch_name)
+
+        if new_branch:
+            self.shell.run(
+                ["git", "worktree", "add", "-b", branch_name, worktree_dir],
+            )
+        else:
+            self.shell.run(
+                ["git", "worktree", "add", worktree_dir, branch_name],
+            )
+
+    def remove_worktree(self, worktree_dir):
+        """Remove a git worktree."""
+        worktree_dir = self.sanitizer.sanitize_path(worktree_dir, allow_relative=True)
+        self.shell.run(["git", "worktree", "remove", worktree_dir])
+
+    def prune_worktrees(self):
+        """Prune orphaned worktrees."""
+        self.shell.run(["git", "worktree", "prune"])
+
+    def list_worktrees(self):
+        """List git worktrees."""
+        result = self.shell.run(
+            ["git", "worktree", "list"],
+            capture_output=True,
+        )
+        if not result:
+            raise self.GitError(f"failed to list worktrees")
+
+        if not result.stdout:
+            return []
+
+        return result.stdout.strip().split("\n")
+
+
+class Tmux:
+    class TmuxError(Exception):
+        pass
+
+    def __init__(self, *, shell, session_name, base_window_name, sanitizer):
+        if not shell:
+            raise ValueError("Shell instance is required")
+        if not session_name or not isinstance(session_name, str):
+            raise ValueError("Session name must be a non-empty string")
+        if not base_window_name or not isinstance(base_window_name, str):
+            raise ValueError("Base window name must be a non-empty string")
+        if not sanitizer:
+            raise ValueError("Sanitizer instance is required")
+
+        self.shell = shell
+        self.sanitizer = sanitizer
+        self.session_name = self.sanitizer.sanitize_tmux_name(session_name)
+        self.base_window_name = self.sanitizer.sanitize_tmux_name(base_window_name)
+
+    def session_exists(self):
+        """Check if a tmux session exists."""
+        result = self.shell.run(
+            ["tmux", "has-session", "-t", self.session_name],
+            raise_on_error=False,
+        )
+        return result and result.returncode == 0
+
+    def create_session(self):
+        """Create a new detached tmux session."""
+        self.shell.run(["tmux", "new-session", "-d", "-s", self.session_name])
+
+    def window_exists(self, window_name):
+        """Check if a tmux window exists."""
+        window_name = self.sanitizer.sanitize_tmux_name(window_name)
+        result = self.shell.run(
+            ["tmux", "list-windows", "-t", self.session_name, "-F", "#{window_name}"],
+            capture_output=True,
+        )
+        if not result:
+            raise self.TmuxError(f"failed to check if window exists")
+
+        if result.stdout is None:
+            raise self.TmuxError(f"failed to check if window exists")
+
+        return window_name in result.stdout.strip().split("\n")
+
+    def create_window(self, window_name):
+        """Create a new tmux window."""
+        window_name = self.sanitizer.sanitize_tmux_name(window_name)
+        self.shell.run(
+            ["tmux", "new-window", "-t", self.session_name, "-n", window_name]
+        )
+
+    def select_window(self, window_name):
+        """Switch to a tmux window."""
+        window_name = self.sanitizer.sanitize_tmux_name(window_name)
+        self.shell.run(
+            ["tmux", "select-window", "-t", f"{self.session_name}:{window_name}"]
+        )
+
+    def kill_window(self, window_name):
+        """Kill a tmux window."""
+        window_name = self.sanitizer.sanitize_tmux_name(window_name)
+        self.shell.run(
+            ["tmux", "kill-window", "-t", f"{self.session_name}:{window_name}"]
+        )
+
+    def send_keys(self, *, window_name, command, enter=False):
+        """Send keys to a tmux window."""
+        window_name = self.sanitizer.sanitize_tmux_name(window_name)
+        command = self.sanitizer.sanitize_command_string(command)
+
+        args = [
+            "tmux",
+            "send-keys",
+            "-t",
+            f"{self.session_name}:{window_name}",
+            command,
+        ]
+        if enter:
+            args.append("C-m")
+
+        self.shell.run(args)
