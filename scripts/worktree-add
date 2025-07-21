@@ -69,26 +69,36 @@ fi
 # Create tmux window if it doesn't exist
 if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^$window_name$"; then
   echo "Creating tmux window: $window_name"
-  tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_dir"
+  tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_dir" -d
 
-  # Launch Claude Code in the worktree with pre-approved directory
+  # This is a hack, but there's no other safe way to bypass the trust screen
+  # Luckily for us, sending C-m doesn't do anything if the directory is already trusted
+  echo "Bypassing Claude Code directory trust screen (if present)"
+  tmux send-keys -t "$session_name:$window_name" "claude --permission-mode acceptEdits" C-m
+  sleep 2 # Wait for Claude to start
+  tmux send-keys -t "$session_name:$window_name" C-m
+  sleep 1 # Wait for Claude to register the input
+
+  # If the trust screen DOES appear, it breaks our ability to send C-m reliably
+  # To fix this, we can kill and relaunch Claude Code by targeting its pane
+  echo "Fixing window environment"
+  tmux split-window -t "$session_name:$window_name" -c "$worktree_dir"
+  tmux kill-pane -t "$session_name:$window_name.1"
+
   echo "Launching Claude Code"
-  tmux send-keys -t "$session_name:$window_name" "claude --add-dir '$worktree_dir' --permission-mode acceptEdits" C-m
+  tmux send-keys -t "$session_name:$window_name" "claude --permission-mode acceptEdits" C-m
 
-  # Wait for Claude to start and handle potential trust screen
-  echo "Bypassing trust screen"
-  sleep 2 && tmux send-keys -t "$session_name:$window_name" "" C-m
-
-  # Send initial prompt if provided
   if [[ -n "$prompt" ]]; then
     echo "Sending initial prompt: $prompt"
-    sleep 2 && tmux send-keys -t "$session_name:$window_name" "$prompt"
+    sleep 2 # Wait for Claude to start
+    tmux send-keys -t "$session_name:$window_name" "$prompt"
     tmux send-keys -t "$session_name:$window_name" C-m
   fi
 
-  # Split the window to create a terminal pane at the bottom (25%)
-  echo "Splitting window with terminal pane"
+  echo "Splitting window vertically with 75%/25%"
   tmux split-window -t "$session_name:$window_name" -c "$worktree_dir" -v -p 25
+
+  echo "Switching focus back to top pane"
   tmux select-pane -t "$session_name:$window_name" -U
 else
   echo "Tmux window already exists: $window_name"
