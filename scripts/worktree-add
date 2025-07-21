@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+# Adds a new tmux window for a worktree and launches Claude Code in it.
+# This script is idempotent and can safely be run multiple times.
+#
+# Usage:
+#   worktree-add <branch-name> [prompt ...]
+#
+# Examples:
+#   worktree-add feature/auth
+#   worktree-add feature/auth implement the auth flow
+
+set -euo pipefail
+
+# Requirement: must have one argument (branch name)
+if [[ $# -eq 0 ]]; then
+  echo "Error: Branch name is required" >&2
+  echo "Usage: $(basename "$0") <branch-name> [prompt ...]" >&2
+  echo "Examples:" >&2
+  echo "\t$(basename "$0") feature/auth" >&2
+  echo "\t$(basename "$0") feature/auth implement the auth flow" >&2
+  exit 1
+fi
+
+# Requirement: branch name must not be empty
+branch_name="$1"
+if [[ -z "$branch_name" ]]; then
+  echo "Error: Branch name cannot be empty" >&2
+  exit 1
+fi
+
+# Parse prompt from remaining arguments
+shift
+prompt="$*"
+
+# Requirement: must be in a git repository
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Error: Not in a git repository" >&2
+  exit 1
+fi
+
+# Requirement: must be in the main git repository
+if [[ "$(git rev-parse --git-common-dir 2>/dev/null)" != ".git" ]]; then
+  echo "Error: This command must be run from the main git repository, not a worktree" >&2
+  exit 1
+fi
+
+# Initialize tmux session if it doesn't exist
+worktree-init
+
+repo_root=$(git rev-parse --show-toplevel)
+repo_name=$(basename "$repo_root")
+session_name="${repo_name}-worktree"
+window_name=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9-]/-/g')
+worktree_dir="$(dirname "$repo_root")/${repo_name}-worktree-${window_name}"
+
+# Create worktree if it doesn't exist
+if [[ ! -d "$worktree_dir" ]]; then
+  echo "Creating worktree at path: $worktree_dir"
+  if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+    git worktree add "$worktree_dir" "$branch_name"
+  else
+    git worktree add -b "$branch_name" "$worktree_dir"
+  fi
+else
+  echo "Worktree already exists at path: $worktree_dir"
+fi
+
+# Create tmux window if it doesn't exist
+if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^$window_name$"; then
+  echo "Creating tmux window: $window_name"
+  tmux new-window -t "$session_name" -n "$window_name"
+
+  # Change to worktree directory
+  echo "Changing to worktree directory: $worktree_dir"
+  tmux send-keys -t "$session_name:$window_name" "cd '$worktree_dir'" C-m
+
+  # Launch Claude Code in the worktree with pre-approved directory
+  echo "Launching Claude Code"
+  tmux send-keys -t "$session_name:$window_name" "claude --add-dir '$worktree_dir' --permission-mode acceptEdits" C-m
+
+  # Wait for Claude to start and handle potential trust screen
+  echo "Bypassing trust screen"
+  sleep 2 && tmux send-keys -t "$session_name:$window_name" "" C-m
+
+  # Send initial prompt if provided
+  if [[ -n "$prompt" ]]; then
+    echo "Sending initial prompt: $prompt"
+    sleep 2 && tmux send-keys -t "$session_name:$window_name" "$prompt"
+    tmux send-keys -t "$session_name:$window_name" C-m
+  fi
+else
+  echo "Tmux window already exists: $window_name"
+fi
