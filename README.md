@@ -8,7 +8,6 @@ My configuration, scripts, and resources for working with Claude Code.
 - Homebrew
 - Claude Code
 - Node.js and npm
-- Python 3
 
 ## Quickstart
 
