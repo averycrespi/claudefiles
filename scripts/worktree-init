@@ -26,7 +26,7 @@ session_name="${repo_name}-worktree"
 
 # Create tmux session if it doesn't exist
 if ! tmux has-session -t "$session_name" 2>/dev/null; then
-  echo "Creating tmux session: $session_name"
+  echo "Creating tmux session: $session_name with main window"
   tmux new-session -d -s "$session_name" -n "main"
 else
   echo "tmux session already exists: $session_name"
