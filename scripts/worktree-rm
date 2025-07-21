@@ -43,7 +43,7 @@ repo_root=$(git rev-parse --show-toplevel)
 repo_name=$(basename "$repo_root")
 session_name="${repo_name}-worktree"
 window_name=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9-]/-/g')
-worktree_dir="$(dirname "$repo_root")/${repo_name}-worktree-${branch_name}"
+worktree_dir="$(dirname "$repo_root")/${repo_name}-worktree-${window_name}"
 
 # Remove git worktree if it exists
 if [[ -d "$worktree_dir" ]]; then
