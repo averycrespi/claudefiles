@@ -69,11 +69,7 @@ fi
 # Create tmux window if it doesn't exist
 if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^$window_name$"; then
   echo "Creating tmux window: $window_name"
-  tmux new-window -t "$session_name" -n "$window_name"
-
-  # Change to worktree directory
-  echo "Changing to worktree directory: $worktree_dir"
-  tmux send-keys -t "$session_name:$window_name" "cd '$worktree_dir'" C-m
+  tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_dir"
 
   # Launch Claude Code in the worktree with pre-approved directory
   echo "Launching Claude Code"
@@ -89,6 +85,11 @@ if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep
     sleep 2 && tmux send-keys -t "$session_name:$window_name" "$prompt"
     tmux send-keys -t "$session_name:$window_name" C-m
   fi
+
+  # Split the window to create a terminal pane at the bottom (25%)
+  echo "Splitting window with terminal pane"
+  tmux split-window -t "$session_name:$window_name" -c "$worktree_dir" -v -p 25
+  tmux select-pane -t "$session_name:$window_name" -U
 else
   echo "Tmux window already exists: $window_name"
 fi
