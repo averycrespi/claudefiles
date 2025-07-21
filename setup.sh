@@ -13,7 +13,12 @@ echo 'Stowing files ...'
 mkdir -p "$HOME/.claude" && stow claude -t "$HOME/.claude"
 
 echo 'Configuring MCP servers ...'
-claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+if ! claude mcp list | grep -q 'context7'; then
+  echo 'Adding context7 MCP server ...'
+  claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+else
+  echo 'context7 MCP server already configured'
+fi
 
 echo 'Identifying your shell ...'
 SHELL_RC=""
