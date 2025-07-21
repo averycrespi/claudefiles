@@ -5,6 +5,7 @@
 # Requirements:
 # - MUST have git installed
 # - MUST be in a git repository
+# - There MUST NOT be unstaged changes
 # - There MUST be staged changes
 # - Staged changes MUST NOT exceed 10MB
 # - MUST have gitleaks installed
@@ -38,6 +39,13 @@ fi
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
   echo "Error: Not in a git repository" >&2
   echo "Please check the directory that you are in" >&2
+  exit 1
+fi
+
+# Requirement: there MUST NOT be unstaged changes
+if ! git diff --quiet; then
+  echo "Error: Unstaged changes detected" >&2
+  echo "Please run: git add" >&2
   exit 1
 fi
 
