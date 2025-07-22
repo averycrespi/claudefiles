@@ -3,6 +3,9 @@
 # Adds a notification to a tmux window.
 # This script is intended to be called from a Claude Code hook.
 #
+# To automatically clear the notification on tmux window select, add the following line to your .tmux.conf:
+#   set-hook -g after-select-window 'run-shell "tmux rename-window -t #{window_index} \"$(tmux display-message -p -t #{window_index} \"#W\" | sed \"s/^🔔 //\")\""'
+#
 # Usage:
 #   worktree-notify
 
