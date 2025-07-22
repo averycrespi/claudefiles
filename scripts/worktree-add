@@ -66,8 +66,8 @@ else
   echo "Worktree already exists at path: $worktree_dir"
 fi
 
-# Create tmux window if it doesn't exist
-if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^$window_name$"; then
+# Create tmux window if it doesn't exist (with or without notification)
+if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | sed 's/^🔔 //' | grep -q "^$window_name$"; then
   echo "Creating tmux window: $window_name"
   tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_dir" -d
 

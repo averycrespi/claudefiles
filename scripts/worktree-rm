@@ -57,10 +57,13 @@ fi
 if tmux has-session -t "$session_name" 2>/dev/null; then
   echo "tmux session exists: $session_name"
 
-  # Close tmux window if it exists
+  # Close tmux window if it exists (with or without notification)
   if tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^$window_name$"; then
     echo "Closing tmux window: $window_name"
     tmux kill-window -t "$session_name:$window_name"
+  elif tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^🔔 $window_name$"; then
+    echo "Closing tmux window: $window_name"
+    tmux kill-window -t "$session_name:🔔 $window_name"
   else
     echo "tmux window does not exist: $window_name"
   fi

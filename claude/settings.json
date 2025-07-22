@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "terminal-notifier -title 'Claude needs your attention' -message \"$PWD\" && afplay /System/Library/Sounds/Ping.aiff"
+            "command": "terminal-notifier -title 'Claude needs your attention' -message \"$PWD\" && afplay /System/Library/Sounds/Ping.aiff && worktree-notify"
           }
         ]
       }
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "terminal-notifier -title 'Claude is done' -message \"$PWD\" && afplay /System/Library/Sounds/Glass.aiff"
+            "command": "terminal-notifier -title 'Claude is done' -message \"$PWD\" && afplay /System/Library/Sounds/Glass.aiff && worktree-notify"
           }
         ]
       }
