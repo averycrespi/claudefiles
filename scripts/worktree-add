@@ -94,12 +94,6 @@ if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | sed 
     tmux send-keys -t "$session_name:$window_name" "$prompt"
     tmux send-keys -t "$session_name:$window_name" C-m
   fi
-
-  echo "Splitting window vertically with 75%/25%"
-  tmux split-window -t "$session_name:$window_name" -c "$worktree_dir" -v -p 25
-
-  echo "Switching focus back to top pane"
-  tmux select-pane -t "$session_name:$window_name" -U
 else
   echo "Tmux window already exists: $window_name"
 fi
