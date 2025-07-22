@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Creates a GitHub pull request with safety checks.
+# Creates a (draft) GitHub pull request with safety checks.
 #
 # Requirements:
 # - MUST have git installed
@@ -104,4 +104,4 @@ if [ -n "$existing_pr" ]; then
   exit 1
 fi
 
-gh pr create --title "$title" --body "$body"
+gh pr create --title "$title" --body "$body" --draft
