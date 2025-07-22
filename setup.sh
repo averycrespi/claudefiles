@@ -11,6 +11,7 @@ brew bundle
 
 echo 'Stowing files ...'
 mkdir -p "$HOME/.claude" && stow claude -t "$HOME/.claude"
+mkdir -p "$HOME/.claude/commands" && stow commands -t "$HOME/.claude/commands"
 
 echo 'Configuring MCP servers ...'
 if ! claude mcp list | grep -q 'context7'; then
