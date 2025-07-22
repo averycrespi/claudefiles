@@ -6,128 +6,93 @@ allowed-tools: ["TodoWrite", "Read", "Edit", "MultiEdit", "Write", "Bash", "Grep
 
 # Task Execution Command
 
-Execute a detailed plan from the specified file with systematic progress tracking.
+- **Method**: Ultrathink execution - systematic, thorough, validated implementation
+- **Source**: Execute plan from `$ARGUMENTS` (default: `PLAN.txt`)
+- **Process**: Read → Plan → Execute → Verify → Commit → Complete
 
-## Execution Instructions
+## Execution Workflow
 
-You will execute the plan created by `/task:plan`. Follow these steps:
+### 1. Plan Analysis
+**Read plan file** → **Analyze steps** → **Validate completeness**
 
-### 1. Read and Parse the Plan
+### 2. Task Breakdown
+**Convert to TodoWrite items**:
+- 🎯 Specific, measurable actions
+- 📅 Appropriate priorities (high/medium/low)
+- ✅ Include verification steps
+- 🔄 Incremental progression
 
-First, read the specified plan file to understand the complete task:
+### 3. Systematic Execution
+**Per todo**: `in_progress` → **implement** → **verify** → **commit** → `completed`
 
+**Pattern**:
 ```
-Read the plan file (argument: $ARGUMENTS) and analyze the implementation steps,
-file structure changes, code examples, and validation criteria.
+1. Mark todo in_progress
+2. Implement changes fully
+3. Test/verify functionality
+4. Commit: safe-git-commit "descriptive message"
+5. Mark completed
+6. Next todo
 ```
 
-If no plan file is specified, default to `PLAN.txt`.
+## Implementation Standards
 
-### 2. Create TodoWrite Items
+### Code Conventions
+- 🎨 **Match existing**: indentation, naming, imports, architecture
+- 🧪 **Test patterns**: Follow project testing approaches
+- ✅ **Verify**: All tests pass before completion
 
-Convert the plan's implementation steps into specific TodoWrite items:
+### Per-Step Process
+1. 📝 **Understand** requirement clearly
+2. 🔍 **Analyze** existing similar implementations
+3. ⚙️ **Implement** following project patterns
+4. 🧪 **Test** and verify functionality
+5. 📚 **Document** if required by plan
 
-- Break down each major step into actionable todos
-- Set appropriate priorities (high/medium/low)
-- Ensure each todo is specific and measurable
-- Include verification steps as separate todos
+## Error Handling
+**Issue encountered** → **Document in TodoWrite** → **Research patterns** → **Adapt approach**
 
-### 3. Execute Systematically
+## Quality Gate
+- ✅ All steps completed
+- 🎨 Follows project conventions
+- 🧪 Tests pass
+- ⚠️ No console errors
+- 📚 Documentation updated
+- 💾 All changes committed incrementally
 
-Work through todos one at a time with incremental commits:
+## Completion Workflow
 
-- Mark each todo as "in_progress" before starting
-- Complete the specific task fully
-- Verify the change works as expected
-- Commit the change using `safe-git-commit "descriptive message"`
-- Mark as "completed" only when fully done and committed
-- Move to next todo
+### Push & PR
+1. **Push**: `safe-git-push`
+2. **Create PR**: `safe-gh-pr-create "title" "body"`
+   - Title: Feature/task summary
+   - Body: Task overview, changes, testing notes
 
-### 4. Follow Project Conventions
-
-IMPORTANT: Always follow the project's established patterns:
-
-#### Code Style
-- Match existing indentation and formatting
-- Follow established naming conventions
-- Use the same import patterns as existing code
-- Maintain consistency with project architecture
-
-#### Testing
-- Run existing test commands found in package.json or project docs
-- Create tests following existing test patterns
-- Verify all tests pass before marking tasks complete
-
-### 5. Implementation Approach
-
-For each implementation step:
-
-1. **Understand the requirement** - Read the plan step carefully
-2. **Analyze existing code** - Check how similar functionality is implemented
-3. **Make the change** - Implement following project patterns
-4. **Test the change** - Verify it works correctly
-5. **Update documentation** - If required by the plan
-
-### 6. Error Handling
-
-If you encounter issues:
-
-- **Document the problem** in TodoWrite as a new todo
-- **Research solutions** using existing codebase patterns
-- **Ask for clarification** if the plan is unclear
-- **Adapt the approach** while maintaining the overall goal
-
-### 7. Quality Verification
-
-Before marking the overall task complete:
-
-- [ ] All implementation steps completed
-- [ ] Code follows project conventions
-- [ ] Tests pass (if applicable)
-- [ ] No console errors or warnings
-- [ ] Documentation updated (if required)
-- [ ] All changes committed incrementally using safe-git-commit
-
-### 8. Push and Create Pull Request
-
-Once all tasks are completed:
-
-1. **Push changes**: Use `safe-git-push` to push all commits
-2. **Create PR**: Use `safe-gh-pr-create "title" "body"` with:
-   - **Title**: Summarize the implemented feature/task
-   - **Body**: Include task summary, key changes, and testing notes
-
-### 9. Final Reporting
-
-Provide a concise summary:
-
+### Summary Report
 ```
-## Execution Summary
-
-**Task**: [Brief description]
-**Status**: [Completed/Partial/Blocked]
-**Files Modified**: [List of changed files]
-**Commits**: [Number of incremental commits made]
-**Tests**: [Pass/Fail/N/A]
-**PR**: [Link to created pull request]
-**Next Steps**: [If any remaining work]
+🎯 **Task**: [Description]
+🟢 **Status**: [Completed/Partial/Blocked]
+📁 **Files**: [Modified files]
+💾 **Commits**: [Count]
+🧪 **Tests**: [Pass/Fail/N/A]
+🔗 **PR**: [Link]
+➡️ **Next**: [Remaining work]
 ```
 
 ---
 
-## Argument Options
+## Arguments
+- **File specified**: Execute from `$ARGUMENTS`
+- **Default**: Execute from `PLAN.txt`
 
-- **"plan-file.txt"**: Execute the complete plan from the specified file
-- **No arguments**: Execute the complete plan from PLAN.txt (default)
+## Key Principles
 
-## Important Notes
+⚠️ **Scope**: Execute only what's in the plan
+🔒 **Compatibility**: Don't break existing functionality
+🛡️ **Safety**: Use project's safe-git commands
+💾 **Incremental**: Each todo → commit
+🧪 **Quality**: Test before committing
+📝 **Tracking**: Document all issues in TodoWrite
+🔄 **Complete**: Always push and create PR
 
-1. **Only execute what's in the plan** - Don't add extra features or changes
-2. **Maintain backwards compatibility** - Don't break existing functionality
-3. **Follow safe practices** - Use project's safe-git commands
-4. **Commit incrementally** - Each completed todo should result in a commit
-5. **Test thoroughly** - Verify changes work before committing and marking complete
-6. **Document issues** - Track any problems or deviations in TodoWrite
-7. **Complete the workflow** - Always push and create PR when all tasks are done
-
-This systematic approach ensures reliable, traceable execution of complex tasks with proper git workflow, maintaining code quality and project standards.
+**Result**: Reliable, traceable execution maintaining code quality and project standards.
