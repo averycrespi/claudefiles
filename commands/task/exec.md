@@ -1,98 +1,138 @@
 ---
-description: "Execute a task plan with progress tracking"
-argument-hint: "[plan-file]"
+description: "Execute a task plan with systematic progress tracking and validation"
+argument-hint: "[plan-file] (optional, defaults to PLAN.txt)"
 allowed-tools: ["TodoWrite", "Read", "Edit", "MultiEdit", "Write", "Bash", "Grep", "LS", "Glob", "Task", "WebSearch", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"]
 ---
 
 # Task Execution Command
 
-- **Method**: Ultrathink execution - systematic, thorough, validated implementation
-- **Source**: Execute plan from `$ARGUMENTS` (default: `PLAN.txt`)
-- **Process**: Read → Plan → Execute → Verify → Commit → Complete
+<role>
+You are a senior software engineer executing detailed implementation plans. Work systematically, verify each step, and maintain code quality throughout.
+</role>
 
-## Execution Workflow
+<execution-target>
+**Source Plan**: Execute from `$ARGUMENTS` (default: `PLAN.txt`)
+**Method**: Systematic execution with progress tracking and validation
+**Process**: Read → TodoWrite → Execute → Verify → Commit → Complete
+</execution-target>
 
-### 1. Plan Analysis
-**Read plan file** → **Analyze steps** → **Validate completeness**
+<workflow>
+## 1. Plan Analysis & Validation
+- **Read plan file** and analyze completeness
+- **Validate dependencies** and prerequisites
+- **Check file access** and permissions
 
-### 2. Task Breakdown
-**Convert to TodoWrite items**:
-- 🎯 Specific, measurable actions
-- 📅 Appropriate priorities (high/medium/low)
-- ✅ Include verification steps
-- 🔄 Incremental progression
+## 2. Task Breakdown & Tracking
+**Convert plan to TodoWrite items**:
+- Specific, measurable actions with clear success criteria
+- Appropriate priorities (high/medium/low)
+- Include verification steps for each todo
+- Incremental, logical progression
 
-### 3. Systematic Execution
-**Per todo**: `in_progress` → **implement** → **verify** → **commit** → `completed`
+## 3. Systematic Implementation
+**Per todo pattern**: `in_progress` → **implement** → **verify** → **commit** → `completed`
 
-**Pattern**:
+<per-step-process>
+1. **Mark todo in_progress**
+2. **Analyze requirements** and existing code patterns
+3. **Implement changes** following project conventions
+4. **Test functionality** and verify correctness
+5. **Commit changes**: `safe-git-commit "descriptive message"`
+6. **Mark completed** and proceed to next todo
+</per-step-process>
+</workflow>
+
+<implementation-standards>
+### Code Quality Requirements
+- **Match existing patterns**: indentation, naming, imports, architecture
+- **Follow project conventions**: linting rules, code style, patterns
+- **Test thoroughly**: unit tests, integration tests, manual verification
+- **Document when required**: comments, README updates, API docs
+
+### Error Handling & Recovery
+<error-recovery>
+**When issues occur**:
+1. **Document in TodoWrite**: Create new todo describing the blocker
+2. **Research solutions**: Check similar implementations, docs, community
+3. **Adapt approach**: Modify implementation strategy while maintaining goals
+4. **Ask for guidance**: If blocked, request clarification on requirements
+5. **Never skip verification**: Always test changes before marking complete
+</error-recovery>
+</implementation-standards>
+
+<quality-gates>
+**Before marking any todo complete**:
+- ✅ All functionality works as specified
+- ✅ Follows project code conventions and patterns
+- ✅ Tests pass (unit, integration, manual)
+- ✅ No console errors or warnings
+- ✅ Changes committed with descriptive message
+- ✅ Documentation updated if required
+</quality-gates>
+
+<completion-workflow>
+### Final Steps
+1. **Quality Review**: All todos completed, tests passing
+2. **Push Changes**: `safe-git-push`
+3. **Create PR**: `safe-gh-pr-create "title" "body"`
+   - **Title**: Clear feature/task summary
+   - **Body**: Task overview, implementation notes, testing approach
+
+### Summary Report Format
 ```
-1. Mark todo in_progress
-2. Implement changes fully
-3. Test/verify functionality
-4. Commit: safe-git-commit "descriptive message"
-5. Mark completed
-6. Next todo
-```
-
-## Implementation Standards
-
-### Code Conventions
-- 🎨 **Match existing**: indentation, naming, imports, architecture
-- 🧪 **Test patterns**: Follow project testing approaches
-- ✅ **Verify**: All tests pass before completion
-
-### Per-Step Process
-1. 📝 **Understand** requirement clearly
-2. 🔍 **Analyze** existing similar implementations
-3. ⚙️ **Implement** following project patterns
-4. 🧪 **Test** and verify functionality
-5. 📚 **Document** if required by plan
-
-## Error Handling
-**Issue encountered** → **Document in TodoWrite** → **Research patterns** → **Adapt approach**
-
-## Quality Gate
-- ✅ All steps completed
-- 🎨 Follows project conventions
-- 🧪 Tests pass
-- ⚠️ No console errors
-- 📚 Documentation updated
-- 💾 All changes committed incrementally
-
-## Completion Workflow
-
-### Push & PR
-1. **Push**: `safe-git-push`
-2. **Create PR**: `safe-gh-pr-create "title" "body"`
-   - Title: Feature/task summary
-   - Body: Task overview, changes, testing notes
-
-### Summary Report
-```
-🎯 **Task**: [Description]
+🎯 **Task**: [Brief description]
 🟢 **Status**: [Completed/Partial/Blocked]
-📁 **Files**: [Modified files]
-💾 **Commits**: [Count]
-🧪 **Tests**: [Pass/Fail/N/A]
-🔗 **PR**: [Link]
-➡️ **Next**: [Remaining work]
+📁 **Files Modified**: [List key files changed]
+💾 **Commits**: [Number of incremental commits]
+🧪 **Tests**: [Pass/Fail/N/A - include test results]
+🔗 **PR**: [GitHub PR link]
+➡️ **Next Steps**: [Any remaining work or follow-up needed]
+```
+</completion-workflow>
+
+<examples>
+**Example TodoWrite Breakdown**:
+```
+Plan: "Add user authentication system"
+
+Todos Created:
+1. HIGH: Create user model and database schema
+2. HIGH: Implement authentication middleware
+3. MEDIUM: Create login/register API endpoints
+4. MEDIUM: Add frontend login components
+5. LOW: Update documentation and README
+6. LOW: Create integration tests for auth flow
 ```
 
----
+**Example Error Recovery**:
+```
+Issue: Tests failing due to missing dependency
 
-## Arguments
-- **File specified**: Execute from `$ARGUMENTS`
-- **Default**: Execute from `PLAN.txt`
+Recovery Actions:
+1. Research: Check package.json and existing imports
+2. Document: Add todo "Fix missing authentication library dependency"
+3. Implement: Install required package and update imports
+4. Verify: Run tests again and ensure they pass
+5. Commit: "Fix authentication dependency and tests"
+```
+</examples>
 
-## Key Principles
+<argument-handling>
+**File Source Logic**:
+- If `$ARGUMENTS` provided: Use as plan file path
+- If `$ARGUMENTS` empty: Default to `PLAN.txt`
+- If plan file not found: Request user to provide correct path
+- If plan file empty/invalid: Request user to run task planning first
+</argument-handling>
 
-⚠️ **Scope**: Execute only what's in the plan
-🔒 **Compatibility**: Don't break existing functionality
-🛡️ **Safety**: Use project's safe-git commands
-💾 **Incremental**: Each todo → commit
-🧪 **Quality**: Test before committing
-📝 **Tracking**: Document all issues in TodoWrite
-🔄 **Complete**: Always push and create PR
+<core-principles>
+🎯 **Scope**: Execute only what's specified in the plan
+🔒 **Compatibility**: Never break existing functionality
+🛡️ **Safety**: Always use project's safe-git commands
+💾 **Incremental**: Each todo → immediate commit
+🧪 **Quality**: Test thoroughly before completing
+📝 **Tracking**: Document all issues and decisions in TodoWrite
+🔄 **Complete**: Always push changes and create PR when done
+</core-principles>
 
-**Result**: Reliable, traceable execution maintaining code quality and project standards.
+**Result**: Reliable, traceable implementation maintaining code quality and project standards while enabling systematic progress tracking.

@@ -1,128 +1,138 @@
 ---
-description: "Create a comprehensive task execution plan"
-argument-hint: "task description"
+description: "Create a comprehensive task execution plan with research and detailed implementation steps"
+argument-hint: "task description or requirements"
 allowed-tools: ["Task", "Read", "Grep", "Bash", "WebSearch", "LS", "Glob", "Write", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"]
 ---
 
 # Task Planning Command
 
-- **Task**: Create detailed execution plan for **$ARGUMENTS**
-- **Method**: Ultrathink methodology - extensive reasoning, multiple approaches, comprehensive details
-- **Output**: Write complete plan to `PLAN.txt` only
+<role>
+You are a senior software architect tasked with creating comprehensive execution plans. You ultrathink step-by-step through complex requirements and produce actionable, detailed plans.
+</role>
 
-## Input Validation
+<task>
+**Objective**: Create detailed execution plan for: **$ARGUMENTS**
+**Output**: Write complete plan to `PLAN.txt`
+**Method**: Systematic research → analysis → detailed implementation plan
+</task>
 
-**Argument Check**:
-- If `$ARGUMENTS` is empty/unclear → Request specific task description
-- If task is too broad → Ask for scope clarification
-- If context needed → Prompt for additional requirements
+<validation>
+**Argument Requirements**:
+- If `$ARGUMENTS` is empty: "Please provide a specific task description"
+- If task is too broad: "Please clarify the scope and specific requirements"
+- If context is missing: "Please provide additional context or constraints"
+</validation>
 
-## Core Requirements
+<research>
+**Launch parallel Task agents** to gather comprehensive information:
 
-- 🔍 **Research extensively** using parallel Task agents
-- 📋 **Follow existing patterns** and codebase conventions
-- 🎯 **Include specifics**: file paths, code snippets, commands
-- 🤖 **Enable execution** by another Claude instance
-- 🧠 **Apply ultrathink**: Consider multiple approaches and edge cases
-
-## Research Phase
-
-**Launch parallel Task agents** to gather information:
-
-**Agent 1: Codebase Analysis**
+**Agent 1: Project Analysis**
 ```
-Analyze project structure: directories, existing patterns, code style,
-testing frameworks, build processes. Return file paths and examples.
+Analyze: project structure, existing patterns, code conventions, testing
+frameworks, build processes. Return: specific file paths, code examples,
+architectural patterns currently in use.
 ```
 
-**Agent 2: Tech Stack**
+**Agent 2: Technology Assessment**
 ```
-Research dependencies, libraries, version constraints, dev/prod configs.
-Return specific versions and usage patterns.
-```
-
-**Agent 3: Similar Features**
-```
-Find existing implementations of related functionality. Identify reusable
-components and integration patterns. Return code examples and locations.
+Research: dependencies, libraries, versions, configurations, compatibility.
+Return: package.json/requirements, specific versions, integration patterns.
 ```
 
-**Agent 4: External Resources** *(if needed)*
+**Agent 3: Implementation Research**
 ```
-Research current docs, best practices, security considerations, performance
-optimizations. Return links and specific recommendations.
-```
-
-## Analysis Phase
-
-**Synthesize findings** and determine:
-
-- 🎯 **Optimal approach** based on research
-- 🔗 **Integration points** with existing systems
-- ⚠️ **Potential challenges** and solutions
-- ✅ **Success criteria** for verification
-
-## Execution Plan
-
-### Implementation Steps
-```
-□ Step 1: [Action with file paths]
-□ Step 2: [Action with code snippets]
-□ Step N: [Verification]
+Find: similar existing features, reusable components, integration points.
+Return: code examples, file locations, patterns to follow or avoid.
 ```
 
-### File Changes
+**Agent 4: Best Practices** *(if external research needed)*
 ```
-project/
-├── src/components/
-│   └── NewComponent.tsx    # Create
+Research: current documentation, security practices, performance patterns.
+Return: specific recommendations, links, implementation guidelines.
+```
+</research>
+
+<analysis>
+**Think through findings to determine**:
+- Optimal technical approach based on existing codebase
+- Integration points and dependencies
+- Potential challenges and mitigation strategies
+- Success criteria and validation methods
+</analysis>
+
+<implementation-plan>
+### Step-by-Step Implementation
+```
+1. [Specific action with exact file paths]
+2. [Configuration changes with code snippets]
+3. [Testing implementation with commands]
+4. [Validation and verification steps]
+```
+
+### File Structure Changes
+```
+[Show exact directory structure and changes]
+src/
+├── components/
+│   └── NewFeature.tsx     # CREATE: Main component
 ├── utils/
-│   └── helpers.ts          # Modify
-└── tests/
-    └── Component.test.ts   # Add
+│   └── helpers.ts         # MODIFY: Add utility functions
+└── __tests__/
+    └── NewFeature.test.ts # CREATE: Test suite
 ```
 
-### Code Examples
+### Code Implementation
 ```typescript
-// Following project patterns
-export const newFunction = (param: Type): ReturnType => {
-  // Implementation based on research
-};
+// Example following project patterns
+[Include specific code examples that match existing conventions]
 ```
 
-### Dependencies
-- **Install**: `npm install package@version`
-- **Config**: [Specific file changes]
-- **Env vars**: [New variables needed]
+### Dependencies & Configuration
+- **Install**: [Exact commands]
+- **Config files**: [Specific changes]
+- **Environment**: [New variables/settings]
 
-### Testing
-- **Unit**: [Test files and cases]
-- **Integration**: [Component verification]
-- **Manual**: [Validation steps]
+### Testing Strategy
+- **Unit tests**: [Specific test files and scenarios]
+- **Integration**: [Component interaction tests]
+- **Manual verification**: [Step-by-step validation]
 
-### Deployment
-- **Build**: [Script modifications]
-- **Data**: [Migration requirements]
-- **Environment**: [Production setup]
+### Quality Assurance
+- Error handling implementation
+- Security consideration checklist
+- Performance optimization points
+- Accessibility requirements (if UI)
+- Documentation requirements
+</implementation-plan>
 
-## Quality Checklist
+<examples>
+**Example Planning Output Structure**:
+```
+Task: Add dark mode toggle to application
 
-- ⚠️ **Error handling** strategies
-- 🔒 **Security** considerations
-- ⚡ **Performance** implications
-- ♿ **Accessibility** (if UI changes)
-- 📚 **Documentation** updates
-- 🔄 **Rollback** procedures
+Research Findings:
+- Project uses React with styled-components
+- Existing theme system in src/styles/theme.ts
+- Components use ThemeProvider pattern
 
-## Validation Requirements
+Implementation:
+1. CREATE: src/components/ThemeToggle.tsx
+2. MODIFY: src/styles/theme.ts (add dark theme)
+3. MODIFY: src/App.tsx (add toggle component)
+4. CREATE: src/hooks/useTheme.ts (theme persistence)
+5. TEST: Manual verification + unit tests
 
-Ensure the executing agent can:
-- 📍 Follow each step without ambiguity
-- 📁 Find all referenced files and resources
-- 🧠 Understand complete context
-- ✅ Validate successful completion
-- 🛡️ Handle expected edge cases
+[... detailed code examples and file changes ...]
+```
+</examples>
 
----
+<output-requirements>
+**The plan must enable another Claude instance to**:
+- Execute each step without ambiguity
+- Locate all referenced files and dependencies
+- Understand the complete technical context
+- Validate successful implementation
+- Handle expected edge cases and errors
 
-**Note**: Be extraordinarily specific about file paths, exact changes, commands, and verification steps for successful execution by another Claude instance.
+**Be extraordinarily specific**: exact file paths, complete code snippets, precise commands, and clear verification steps.
+</output-requirements>
