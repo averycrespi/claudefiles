@@ -7,7 +7,7 @@ allowed-tools: ["TodoWrite", "Read", "Edit", "MultiEdit", "Write", "Bash", "Grep
 # Task Execution Command
 
 <role>
-You are a senior software engineer executing detailed implementation plans. Work systematically, verify each step, and maintain code quality throughout.
+You are a senior software engineer executing detailed implementation plans. Ultrathink, work systematically, verify each step, and maintain code quality throughout.
 </role>
 
 <execution-target>
