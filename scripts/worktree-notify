@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # Adds a notification to a tmux window.
-# This script is idempotent and can safely be run multiple times.
-# Unlike other scripts, it must be called from a worktree.
+# This script is intended to be called from a Claude Code hook.
 #
 # Usage:
 #   worktree-notify
@@ -11,14 +10,14 @@ set -euo pipefail
 
 # Requirement: must be in a git repository
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "Error: Not in a git repository" >&2
-  exit 1
+  echo "Skipped: Not in a git repository" >&2
+  exit 0
 fi
 
 # Requirement: must be in a worktree
 if [[ "$(git rev-parse --git-common-dir 2>/dev/null)" == ".git" ]]; then
-  echo "Error: This command must be run from a worktree, not the main repository" >&2
-  exit 1
+  echo "Skipped: This command must be run from a worktree, not the main repository" >&2
+  exit 0
 fi
 
 worktree_root=$(git rev-parse --show-toplevel)
@@ -29,24 +28,23 @@ if [[ "$worktree_name" =~ ^(.+)-worktree-(.+)$ ]]; then
   repo_name="${BASH_REMATCH[1]}"
   window_name="${BASH_REMATCH[2]}"
 else
-  echo "Error: Worktree name: $worktree_name doesn't match expected format" >&2
-  exit 1
+  echo "Skipped: Worktree name: $worktree_name doesn't match expected format" >&2
+  exit 0
 fi
 
 session_name="${repo_name}-worktree"
 
 # Requirement: tmux session must exist
 if ! tmux has-session -t "$session_name" 2>/dev/null; then
-  echo "Error: tmux session: $session_name does not exist" >&2
-  exit 1
+  echo "Skipped: tmux session: $session_name does not exist" >&2
+  exit 0
 fi
 
 # Add notification if the window exists and doesn't already have one
 if tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^🔔 $window_name$"; then
   echo "tmux window: $window_name already has a notification"
 elif ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -q "^$window_name$"; then
-  echo "Error: tmux window: $window_name does not exist" >&2
-  exit 1
+  echo "Skipped: tmux window: $window_name does not exist" >&2
 else
   echo "Adding notification to tmux window: $window_name"
   tmux rename-window -t "$session_name:$window_name" "🔔 $window_name"
