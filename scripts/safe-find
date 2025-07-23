@@ -3,7 +3,7 @@
 """
 Secure replacement for the find command with safety checks.
 
-Safely wrapping the find command is non-trival, so it's
+Safely wrapping the find command is non-trivial, so it's
 easier to reimplement its core functionality here.
 
 Requirements:
@@ -20,7 +20,6 @@ import sys
 import argparse
 import fnmatch
 import stat
-import time
 import re
 
 # Maximum recursion depth to prevent excessive resource usage
@@ -63,11 +62,24 @@ def parse_arguments():
             print("  -name PATTERN     Find files matching pattern", file=sys.stderr)
             print("  -iname PATTERN    Case-insensitive name matching", file=sys.stderr)
             print(
+                "  -path PATTERN     Full path matches shell pattern", file=sys.stderr
+            )
+            print(
+                "  -ipath PATTERN    Case-insensitive path pattern matching",
+                file=sys.stderr,
+            )
+            print(
+                "  -regex PATTERN    Full path matches regular expression",
+                file=sys.stderr,
+            )
+            print(
+                "  -iregex PATTERN   Case-insensitive regex path matching",
+                file=sys.stderr,
+            )
+            print(
                 "  -type TYPE        File type (f=file, d=directory, l=symlink)",
                 file=sys.stderr,
             )
-            print("  -size [+-]N[cwbkMG]  File size filter", file=sys.stderr)
-            print("  -mtime [+-]N      Modification time in days", file=sys.stderr)
             print("  -maxdepth N       Maximum search depth", file=sys.stderr)
             print("  -mindepth N       Minimum search depth", file=sys.stderr)
             print("  -print            Print results (default)", file=sys.stderr)
@@ -80,9 +92,8 @@ def parse_arguments():
     # Paths (can be multiple)
     parser.add_argument(
         "paths",
-        nargs="*",
-        default=["."],
-        help="Directories to search (default: current directory)",
+        nargs="+",
+        help="Directories to search",
     )
 
     # Search criteria
@@ -93,15 +104,21 @@ def parse_arguments():
         "-iname", dest="iname_pattern", help="Case-insensitive name matching"
     )
     parser.add_argument(
+        "-regex", dest="regex_pattern", help="Full path matches regular expression"
+    )
+    parser.add_argument(
+        "-iregex", dest="iregex_pattern", help="Case-insensitive regex path matching"
+    )
+    parser.add_argument(
+        "-path", dest="path_pattern", help="Full path matches shell pattern"
+    )
+    parser.add_argument(
+        "-ipath", dest="ipath_pattern", help="Case-insensitive path pattern matching"
+    )
+    parser.add_argument(
         "-type",
         choices=["f", "d", "l"],
         help="File type: f=file, d=directory, l=symlink",
-    )
-    parser.add_argument(
-        "-size", dest="size_filter", help="File size filter (e.g., +1M, -100k)"
-    )
-    parser.add_argument(
-        "-mtime", dest="mtime_filter", type=int, help="Modified time filter in days"
     )
     parser.add_argument(
         "-maxdepth",
@@ -141,42 +158,27 @@ def parse_arguments():
         print("Error: Minimum depth cannot exceed maximum depth", file=sys.stderr)
         sys.exit(1)
 
-    # Validate paths exist
+    # Validate and normalize paths
+    validated_paths = []
     for path in args.paths:
-        if not os.path.exists(path):
+        # Normalize the path to remove redundant separators and resolve .. components
+        normalized_path = os.path.normpath(path)
+
+        # Check if path exists
+        if not os.path.exists(normalized_path):
             print(f"Error: Path '{path}' does not exist", file=sys.stderr)
             sys.exit(1)
 
+        # Check if path is accessible
+        if not os.access(normalized_path, os.R_OK):
+            print(f"Error: Path '{path}' is not readable", file=sys.stderr)
+            sys.exit(1)
+
+        validated_paths.append(normalized_path)
+
+    args.paths = validated_paths
+
     return args
-
-
-def parse_size_filter(size_str):
-    """Parse size filter string like '+1M', '-100k', '50c'."""
-    if not size_str:
-        return None
-
-    # Extract operator, number, and unit
-    match = re.match(r"^([+-]?)(\d+)([cwbkMG]?)$", size_str)
-    if not match:
-        print(f"Error: Invalid size format '{size_str}'", file=sys.stderr)
-        sys.exit(1)
-
-    operator, number, unit = match.groups()
-    number = int(number)
-
-    # Convert to bytes
-    multipliers = {
-        "c": 1,
-        "w": 2,
-        "b": 512,
-        "k": 1024,
-        "M": 1024 * 1024,
-        "G": 1024 * 1024 * 1024,
-    }
-    multiplier = multipliers.get(unit, 1)
-    size_bytes = number * multiplier
-
-    return (operator, size_bytes)
 
 
 def matches_criteria(filepath, filename, file_stat, args, current_depth):
@@ -189,8 +191,43 @@ def matches_criteria(filepath, filename, file_stat, args, current_depth):
     if args.name_pattern and not fnmatch.fnmatch(filename, args.name_pattern):
         return False
 
+    # Check case-insensitive name pattern
     if args.iname_pattern and not fnmatch.fnmatch(
         filename.lower(), args.iname_pattern.lower()
+    ):
+        return False
+
+    # Check regex pattern
+    if args.regex_pattern:
+        try:
+            if not re.search(args.regex_pattern, filepath):
+                return False
+        except re.error as e:
+            print(
+                f"Error: Invalid regex pattern '{args.regex_pattern}': {e}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    # Check case-insensitive regex pattern
+    if args.iregex_pattern:
+        try:
+            if not re.search(args.iregex_pattern, filepath, re.IGNORECASE):
+                return False
+        except re.error as e:
+            print(
+                f"Error: Invalid regex pattern '{args.iregex_pattern}': {e}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    # Check path pattern
+    if args.path_pattern and not fnmatch.fnmatch(filepath, args.path_pattern):
+        return False
+
+    # Check case-insensitive path pattern
+    if args.ipath_pattern and not fnmatch.fnmatch(
+        filepath.lower(), args.ipath_pattern.lower()
     ):
         return False
 
@@ -203,33 +240,6 @@ def matches_criteria(filepath, filename, file_stat, args, current_depth):
         elif args.type == "l" and not stat.S_ISLNK(file_stat.st_mode):
             return False
 
-    # Check size filter
-    if args.size_filter:
-        size_info = parse_size_filter(args.size_filter)
-        if size_info:
-            operator, target_size = size_info
-            file_size = file_stat.st_size
-
-            if operator == "+" and file_size <= target_size:
-                return False
-            elif operator == "-" and file_size >= target_size:
-                return False
-            elif operator == "" and file_size != target_size:
-                return False
-
-    # Check modification time
-    if args.mtime_filter is not None:
-        file_mtime = file_stat.st_mtime
-        current_time = time.time()
-        days_ago = (current_time - file_mtime) / (24 * 3600)
-
-        if args.mtime_filter > 0 and days_ago < args.mtime_filter:
-            return False
-        elif args.mtime_filter < 0 and days_ago > abs(args.mtime_filter):
-            return False
-        elif args.mtime_filter == 0 and int(days_ago) != 0:
-            return False
-
     return True
 
 
@@ -239,12 +249,29 @@ def safe_find(args):
     separator = "\0" if args.print0 else "\n"
 
     for search_path in args.paths:
+        # Normalize the search path for consistent depth calculation
+        normalized_search_path = os.path.normpath(os.path.abspath(search_path))
+
         try:
             for root, dirs, files in os.walk(search_path):
                 # Calculate current depth relative to search path
-                current_depth = root[len(search_path) :].count(os.sep)
-                if search_path != "." and not search_path.endswith(os.sep):
-                    current_depth += 1
+                normalized_root = os.path.normpath(os.path.abspath(root))
+
+                # Calculate depth by counting path separators in the relative path
+                if normalized_root == normalized_search_path:
+                    current_depth = 0
+                else:
+                    try:
+                        rel_path = os.path.relpath(
+                            normalized_root, normalized_search_path
+                        )
+                        if rel_path.startswith(".."):
+                            # Root is outside search path, skip
+                            continue
+                        current_depth = rel_path.count(os.sep)
+                    except ValueError:
+                        # Different drives on Windows, skip
+                        continue
 
                 # Stop if we exceed max depth
                 if current_depth > args.maxdepth:
@@ -265,7 +292,7 @@ def safe_find(args):
                                 file=sys.stderr,
                             )
                             sys.exit(1)
-                except (OSError, IOError):
+                except (OSError, IOError, PermissionError):
                     continue  # Skip inaccessible directories
 
                 # Check files in directory
@@ -284,9 +311,15 @@ def safe_find(args):
                                     file=sys.stderr,
                                 )
                                 sys.exit(1)
-                    except (OSError, IOError):
+                    except (OSError, IOError, PermissionError):
                         continue  # Skip inaccessible files
 
+        except PermissionError as e:
+            print(f"Permission denied accessing '{search_path}': {e}", file=sys.stderr)
+            continue
+        except FileNotFoundError as e:
+            print(f"Path not found '{search_path}': {e}", file=sys.stderr)
+            continue
         except (OSError, IOError) as e:
             print(f"Error accessing '{search_path}': {e}", file=sys.stderr)
             continue
@@ -297,7 +330,6 @@ def main():
     try:
         args = parse_arguments()
         safe_find(args)
-
     except KeyboardInterrupt:
         print("\nInterrupted", file=sys.stderr)
         sys.exit(1)
