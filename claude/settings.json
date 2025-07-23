@@ -1,5 +1,4 @@
 {
-  "model": "sonnet",
   "permissions": {
     "allow": [
       "Bash(cd:*)",
@@ -16,11 +15,17 @@
       "Bash(ls:*)",
       "Bash(pwd:*)",
       "Bash(rg:*)",
+      "Bash(safe-find:*)",
       "Bash(safe-gh-pr-create:*)",
       "Bash(safe-git-commit:*)",
       "Bash(safe-git-push:*)"
     ],
-    "deny": ["Bash(gh pr create:*)", "Bash(git commit:*)", "Bash(git push:*)"]
+    "deny": [
+      "Bash(find:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
   },
   "hooks": {
     "Notification": [
