@@ -2,23 +2,38 @@
   "permissions": {
     "allow": [
       "Bash(cd:*)",
-      "Bash(context7:resolve-library-id)",
-      "Bash(context7:get-library-docs)",
+      "Bash(cut:*)",
+      "Bash(diff:*)",
+      "Bash(file:*)",
+      "Bash(grep:*)",
+      "Bash(jq:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(pwd:*)",
+      "Bash(rg:*)",
+      "Bash(sort:*)",
+      "Bash(tr:*)",
+      "Bash(type:*)",
+      "Bash(uniq:*)",
+      "Bash(which:*)",
+      "Bash(wc:*)",
+
       "Bash(gh pr checks:*)",
       "Bash(gh pr diff:*)",
       "Bash(gh pr view:*)",
       "Bash(git add:*)",
+      "Bash(git blame:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git status:*)",
-      "Bash(grep:*)",
-      "Bash(ls:*)",
-      "Bash(pwd:*)",
-      "Bash(rg:*)",
+
       "Bash(safe-find:*)",
       "Bash(safe-gh-pr-create:*)",
       "Bash(safe-git-commit:*)",
-      "Bash(safe-git-push:*)"
+      "Bash(safe-git-push:*)",
+
+      "mcp__context7__get-library-docs",
+      "mcp__context7__resolve-library-id"
     ],
     "deny": [
       "Bash(find:*)",
