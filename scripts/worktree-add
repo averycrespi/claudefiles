@@ -66,6 +66,25 @@ else
   echo "Worktree already exists at path: $worktree_dir"
 fi
 
+repo_claude_dir="$repo_root/.claude"
+repo_local_settings="$repo_claude_dir/settings.local.json"
+worktree_claude_dir="$worktree_dir/.claude"
+worktree_local_settings="$worktree_claude_dir/settings.local.json"
+
+# Copy local Claude settings to worktree if they don't exist
+if [[ -f "$repo_local_settings" ]]; then
+  echo "Found local Claude settings at: $repo_local_settings"
+  if [[ ! -f "$worktree_local_settings" ]]; then
+    echo "Copying local Claude settings to: $worktree_local_settings"
+    mkdir -p "$worktree_claude_dir"
+    cp "$repo_local_settings" "$worktree_local_settings"
+  else
+    echo "Local Claude settings already exist in worktree"
+  fi
+else
+  echo "No local Claude settings found in repo"
+fi
+
 # Create tmux window if it doesn't exist (with or without notification)
 if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | sed 's/^🔔 //' | grep -q "^$window_name$"; then
   echo "Creating tmux window: $window_name"
