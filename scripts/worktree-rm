@@ -47,10 +47,10 @@ worktree_dir="$(dirname "$repo_root")/${repo_name}-worktree-${window_name}"
 
 # Remove git worktree if it exists
 if [[ -d "$worktree_dir" ]]; then
-  echo "Removing worktree at path: $worktree_dir"
+  echo "Removing worktree at: $worktree_dir"
   git worktree remove "$worktree_dir"
 else
-  echo "Worktree does not exist at path: $worktree_dir"
+  echo "Worktree does not exist at: $worktree_dir"
 fi
 
 # Close tmux window if session and window exist

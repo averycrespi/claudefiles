@@ -114,5 +114,5 @@ if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | sed 
     tmux send-keys -t "$session_name:$window_name" C-m
   fi
 else
-  echo "Tmux window already exists: $window_name"
+  echo "tmux window already exists: $window_name"
 fi
