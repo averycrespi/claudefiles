@@ -56,28 +56,28 @@ worktree_dir="$(dirname "$repo_root")/${repo_name}-worktree-${window_name}"
 
 # Create worktree if it doesn't exist
 if [[ ! -d "$worktree_dir" ]]; then
-  echo "Creating worktree at path: $worktree_dir"
+  echo "Creating worktree at: $worktree_dir"
   if git show-ref --verify --quiet "refs/heads/$branch_name"; then
-    git worktree add "$worktree_dir" "$branch_name"
+    git worktree add --quiet "$worktree_dir" "$branch_name"
   else
-    git worktree add -b "$branch_name" "$worktree_dir"
+    git worktree add --quiet -b "$branch_name" "$worktree_dir"
   fi
 else
-  echo "Worktree already exists at path: $worktree_dir"
+  echo "Worktree already exists at: $worktree_dir"
 fi
 
 repo_claude_dir="$repo_root/.claude"
-repo_local_settings="$repo_claude_dir/settings.local.json"
+repo_local_settings_file="$repo_claude_dir/settings.local.json"
 worktree_claude_dir="$worktree_dir/.claude"
-worktree_local_settings="$worktree_claude_dir/settings.local.json"
+worktree_local_settings_file="$worktree_claude_dir/settings.local.json"
 
 # Copy local Claude settings to worktree if they don't exist
-if [[ -f "$repo_local_settings" ]]; then
-  echo "Found local Claude settings at: $repo_local_settings"
-  if [[ ! -f "$worktree_local_settings" ]]; then
-    echo "Copying local Claude settings to: $worktree_local_settings"
+if [[ -f "$repo_local_settings_file" ]]; then
+  echo "Found local Claude settings at: $repo_local_settings_file"
+  if [[ ! -f "$worktree_local_settings_file" ]]; then
+    echo "Copying local Claude settings to: $worktree_local_settings_file"
     mkdir -p "$worktree_claude_dir"
-    cp "$repo_local_settings" "$worktree_local_settings"
+    cp "$repo_local_settings_file" "$worktree_local_settings_file"
   else
     echo "Local Claude settings already exist in worktree"
   fi
