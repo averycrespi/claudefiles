@@ -1,7 +1,6 @@
 ---
 description: "Create a comprehensive task execution plan with research and detailed implementation steps"
 argument-hint: "task description or requirements"
-allowed-tools: ["Task", "Read", "Grep", "Bash", "WebSearch", "LS", "Glob", "Write", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"]
 ---
 
 # Task Planning Command

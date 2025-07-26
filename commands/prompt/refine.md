@@ -1,7 +1,6 @@
 ---
 description: "Analyze and refine prompts using comprehensive prompt engineering best practices"
 argument-hint: "prompt-file-path"
-allowed-tools: ["Read", "Write", "Task", "Grep", "LS", "Glob", "WebFetch", "WebSearch", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"]
 ---
 
 # Prompt Engineering Refinement Command
@@ -20,7 +19,7 @@ You are a senior prompt engineering expert specializing in Claude optimization w
 <workflow>
 **Step 1**: Read prompt file from provided path and validate content
 **Step 2**: Systematic analysis using 7-point framework
-**Step 3**: Priority-based improvement identification  
+**Step 3**: Priority-based improvement identification
 **Step 4**: Enhanced prompt generation with explanations
 **Step 5**: Validation against quality assurance checklist
 **Step 6**: Write refined prompt back to original file
@@ -53,7 +52,7 @@ You are a senior prompt engineering expert specializing in Claude optimization w
 
 **Scoring**: ✅ Excellent | ⚠️ Needs Work | ❌ Missing | 🆕 Enhancement Opportunity
 
-### 2. XML Structure & Organization  
+### 2. XML Structure & Organization
 **Assessment Criteria**:
 - Logical section separation with XML tags
 - Consistent naming conventions
@@ -164,7 +163,7 @@ First, determine:
 
 <content-structure>
 1. Foundational concepts with analogies
-2. Key terminology with clear definitions  
+2. Key terminology with clear definitions
 3. Practical examples in relevant domain
 4. Next steps and resources for deeper learning
 </content-structure>
@@ -254,7 +253,7 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 - [ ] Consistent naming and organization
 - [ ] Clear section boundaries and purpose
 
-### Content Quality  
+### Content Quality
 - [ ] Ultra-specific, unambiguous instructions
 - [ ] Explicit success criteria and constraints
 - [ ] Comprehensive context and motivation
@@ -287,7 +286,7 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 ### Original Prompt Analysis
 ```
 📝 **Original Prompt**: [Concise description of prompt purpose]
-🎯 **Intent**: [Primary objective and use case identification]  
+🎯 **Intent**: [Primary objective and use case identification]
 📊 **Current State Assessment**:
   ❌ Critical Issues: [Problems affecting core functionality]
   ⚠️ Improvement Areas: [Opportunities for enhancement]
@@ -299,11 +298,11 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 ```
 🔍 **7-Point Evaluation**:
   1. Role Assignment: [✅/⚠️/❌/🆕] - [Specific assessment with evidence]
-  2. XML Structure: [✅/⚠️/❌/🆕] - [Organization quality analysis]  
+  2. XML Structure: [✅/⚠️/❌/🆕] - [Organization quality analysis]
   3. Clarity & Directness: [✅/⚠️/❌/🆕] - [Instruction precision evaluation]
   4. Examples & Multishot: [✅/⚠️/❌/🆕] - [Example quality and coverage]
   5. Chain of Thought: [✅/⚠️/❌/🆕] - [Reasoning structure assessment]
-  6. Output Control: [✅/⚠️/❌/🆕] - [Format specification evaluation]  
+  6. Output Control: [✅/⚠️/❌/🆕] - [Format specification evaluation]
   7. Claude 4 Optimization: [✅/⚠️/❌/🆕] - [Advanced capability utilization]
 
 📊 **Overall Score**: [X/7] - [Performance category: Excellent/Good/Needs Work/Poor]
@@ -321,7 +320,7 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 ```
 🚀 **Key Transformations**:
   1. [Specific improvement with clear before/after comparison]
-  2. [Structural enhancement with performance rationale]  
+  2. [Structural enhancement with performance rationale]
   3. [Content optimization with expected benefit]
 
 📈 **Predicted Performance Gains**:
@@ -332,7 +331,7 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 
 ⚠️ **Implementation Guidance**:
   • [Critical usage considerations]
-  • [Customization recommendations]  
+  • [Customization recommendations]
   • [Testing and validation suggestions]
 
 💾 **File Update Status**:

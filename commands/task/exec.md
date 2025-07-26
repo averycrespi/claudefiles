@@ -1,7 +1,6 @@
 ---
 description: "Execute a task plan with systematic progress tracking and validation"
 argument-hint: "[plan-file] (optional, defaults to PLAN.txt)"
-allowed-tools: ["TodoWrite", "Read", "Edit", "MultiEdit", "Write", "Bash", "Grep", "LS", "Glob", "Task", "WebSearch", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"]
 ---
 
 # Task Execution Command
