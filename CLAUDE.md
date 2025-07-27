@@ -92,7 +92,7 @@ The `claude/settings.json` file enforces strict security policies:
 - Edit files in `claude/` directory
 - Run `./setup.sh` again to apply changes via stow
 - Configuration changes affect all projects globally
-- **Important**: Update this CLAUDE.md file when making significant changes to document new features, commands, or architectural changes
+- **Important**: Update the README.md and this CLAUDE.md file when making significant changes to document new features, commands, or architectural changes
 
 ### Adding New Safe Commands
 1. Create script in `scripts/` directory
