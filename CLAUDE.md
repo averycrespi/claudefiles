@@ -67,6 +67,12 @@ The repository includes specialized agents for different tasks:
 - Automatically invoked after implementing security-sensitive features
 - Accessible via the Task tool with `subagent_type: "security-analyst"`
 
+#### code-reviewer
+- Reviews code for quality, best practices, potential bugs, and performance issues
+- Checks adherence to conventions, identifies code smells, and suggests improvements
+- Automatically invoked after writing or modifying significant code
+- Accessible via the Task tool with `subagent_type: "code-reviewer"`
+
 ### Command Extensions
 Custom slash commands are available in `claude/commands/`:
 - `/task/exec` - Execute implementation plans with systematic tracking
