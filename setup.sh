@@ -9,10 +9,10 @@ set -euo pipefail
 echo 'Installing macOS dependencies ...'
 brew bundle
 
-echo 'Stowing files ...'
+echo 'Stowing Claude Code configuration ...'
 mkdir -p "$HOME/.claude" && stow claude -t "$HOME/.claude"
 
-echo 'Configuring MCP servers ...'
+echo 'Configuring MCP servers for Claude Code ...'
 if ! claude mcp list | grep -q 'context7'; then
   echo 'Adding context7 MCP server ...'
   claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
