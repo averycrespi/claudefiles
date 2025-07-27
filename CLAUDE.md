@@ -53,11 +53,11 @@ These commands include safety checks:
 - `Brewfile` - macOS dependencies managed by Homebrew
 
 ### Agent System
-The repository includes a `research-analyst` agent specialized for comprehensive research tasks:
+The repository includes a `research-assistant` agent specialized for comprehensive research tasks:
 - Use when investigating technical concepts or best practices
 - Synthesizes information from multiple authoritative sources
 - Provides structured output with citations and recommendations
-- Accessible via the Task tool with `subagent_type: "research-analyst"`
+- Accessible via the Task tool with `subagent_type: "research-assistant"`
 
 ### Command Extensions
 Custom slash commands are available in `claude/commands/`:
