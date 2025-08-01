@@ -1,6 +1,7 @@
 ---
 description: "Create a comprehensive task execution plan with research and detailed implementation steps"
 argument-hint: "task description or requirements"
+model: "claude-opus-4-20250514"
 ---
 
 # Task Planning Command

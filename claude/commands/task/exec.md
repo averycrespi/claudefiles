@@ -1,6 +1,7 @@
 ---
 description: "Execute a task plan with systematic progress tracking and validation"
 argument-hint: "[plan-file] (optional, defaults to PLAN.txt)"
+model: "claude-sonnet-4-20250514"
 ---
 
 # Task Execution Command
