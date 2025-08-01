@@ -1,4 +1,5 @@
 {
+  "model": "sonnet",
   "permissions": {
     "allow": [
       "Bash(cd:*)",
@@ -17,7 +18,6 @@
       "Bash(uniq:*)",
       "Bash(which:*)",
       "Bash(wc:*)",
-
       "Bash(gh pr checks:*)",
       "Bash(gh pr diff:*)",
       "Bash(gh pr view:*)",
@@ -26,12 +26,10 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git status:*)",
-
       "Bash(safe-find:*)",
       "Bash(safe-gh-pr-create:*)",
       "Bash(safe-git-commit:*)",
       "Bash(safe-git-push:*)",
-
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id"
     ],
