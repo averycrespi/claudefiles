@@ -7,249 +7,360 @@ model: "claude-opus-4-20250514"
 # Documentation Sync Command
 
 <role>
-You are a technical documentation specialist focused on keeping project documentation in sync with code changes. You analyze git history, identify documentation gaps, and update relevant files systematically.
+You are a senior technical documentation engineer with expertise in git version control, automated documentation systems, and developer experience optimization. You ultrathink through documentation analysis to identify gaps between code changes and documentation state. You excel at maintaining documentation consistency, accuracy, and completeness through systematic change tracking and intelligent updates. You have deep proficiency with git commands, markdown formatting, and technical writing best practices.
 </role>
 
-<sync-target>
-**Source Analysis**: Recent git commits, current staged/unstaged changes, and modified files
-**Method**: Intelligent documentation gap detection and automated updates
-**Scope**: README.md, CLAUDE.md, and project documentation files
-</sync-target>
+<task>
+Analyze recent code changes through git history and current modifications to automatically synchronize project documentation. Detect documentation gaps, identify outdated content, and systematically update all relevant documentation files while preserving existing style and structure.
+
+**Success Criteria**:
+- All code changes have corresponding documentation updates
+- Documentation style and formatting remain consistent
+- No broken examples or outdated instructions persist
+- Updates are accurate, tested, and comprehensive
+</task>
+
+<target-processing>
+**Argument Handling** ($ARGUMENTS):
+- Empty/no argument → Update both README.md and CLAUDE.md (default)
+- `readme` → Focus exclusively on README.md updates
+- `claude` → Focus exclusively on CLAUDE.md updates
+- File/directory path → Update documentation within specified scope
+
+<example>
+<input>/docs:sync</input>
+<action>Analyze all recent changes and update both README.md and CLAUDE.md</action>
+</example>
+
+<example>
+<input>/docs:sync readme</input>
+<action>Focus analysis on README.md-relevant changes only</action>
+</example>
+
+<example>
+<input>/docs:sync docs/api/</input>
+<action>Update all documentation files within docs/api/ directory</action>
+</example>
+</target-processing>
 
 <workflow>
-## 1. Change Analysis
-- **Analyze recent commits**: `git log --oneline -10` and `git diff HEAD~5..HEAD`
-- **Review current changes**: `git status` and `git diff` (staged) + `git diff HEAD` (all changes)
-- **Identify changed files**: Focus on code files that impact user-facing functionality
-- **Detect documentation impact**: New features, API changes, configuration updates, breaking changes
+## Phase 1: Comprehensive Change Analysis
 
-## 2. Documentation Gap Detection
-**Check for outdated documentation**:
-- README sections that reference changed functionality
-- CLAUDE.md instructions that no longer apply
-- API documentation missing new endpoints/methods
-- Configuration examples that need updates
-- Installation/setup steps that changed
+**1.1 Git History Analysis** (Execute in parallel):
+```bash
+# Batch these commands for efficiency
+git log --oneline -20 --name-status  # Recent commits with file changes
+git diff HEAD~10..HEAD --name-only    # Files changed in last 10 commits
+git diff HEAD~10..HEAD --stat         # Change statistics
+```
 
-## 3. Intelligent Update Strategy
-**Per documentation type**:
-- **README.md**: Feature descriptions, usage examples, setup instructions
-- **CLAUDE.md**: Project-specific guidance, tool usage, conventions
-- **Other Docs**: API documentation, configuration guides, project documentation
+**1.2 Current State Analysis** (Execute in parallel):
+```bash
+git status --porcelain               # Current working tree state
+git diff --staged --name-only        # Staged files
+git diff HEAD --name-only            # All modified files
+```
+
+**1.3 Change Impact Assessment**:
+Think step-by-step through each changed file:
+- What functionality does this file implement?
+- Does it affect user-facing features or APIs?
+- What documentation sections reference this functionality?
+- Are there breaking changes requiring migration guides?
+
+<example>
+<change>Modified: src/cli/commands.ts - Added new --format flag</change>
+<impact>
+- README.md: CLI usage section needs new flag documentation
+- CLAUDE.md: Development workflow may need updating
+- Examples: Command examples need --format demonstration
+</impact>
+</example>
+
+## Phase 2: Documentation Gap Detection
+
+**2.1 Systematic Documentation Audit**:
+For each documentation file, check:
+- Feature descriptions match current implementation
+- Code examples compile and run correctly
+- Configuration options are complete and accurate
+- Installation steps reflect current requirements
+- API documentation matches actual endpoints
+
+<example>
+<audit>
+File: README.md
+Section: "Installation"
+Current: "npm install myproject"
+Gap: Missing new peer dependency added in commit abc123
+Update needed: Add "npm install myproject react@^18.0.0"
+</example>
+</audit>
+
+**2.2 Cross-Reference Validation**:
+- Verify all mentioned files/paths exist
+- Check that linked resources are accessible
+- Ensure version numbers are current
+- Validate command syntax and options
+
+## Phase 3: Intelligent Documentation Updates
+
+**3.1 Style Analysis** (Critical for consistency):
+Before making any changes, analyze existing documentation:
+- Header hierarchy and formatting patterns
+- Code block language specifications
+- List formatting (bullets vs numbers)
+- Link syntax (inline vs reference)
+- Terminology and voice consistency
+
+**3.2 Systematic Updates**:
+Apply changes while maintaining discovered patterns:
+```
+1. Read existing content and structure
+2. Identify exact insertion/modification points
+3. Match surrounding style exactly
+4. Preserve section organization
+5. Test all code examples
+6. Validate formatting consistency
+```
+
+<example>
+<before>
+## Features
+- Fast processing
+- Easy setup
+</before>
+<after>
+## Features
+- Fast processing
+- Easy setup
+- Automatic retries (added in v2.1.0)
+</after>
+<rationale>Maintained bullet list format, concise descriptions, version notation pattern</rationale>
+</example>
 </workflow>
 
-<analysis-logic>
-## Change Impact Assessment
+<change-categorization>
+## Impact Level Classification
 
-### High Impact Changes (Always Update Docs)
-- New public APIs or endpoints
-- Configuration file structure changes
-- Installation/setup process modifications
-- Breaking changes to existing functionality
-- New CLI commands or options
-- Environment variable changes
-
-### Medium Impact Changes (Selective Updates)
-- Internal refactoring with external implications
-- Performance improvements worth documenting
-- Bug fixes that change behavior
-- New dependencies or tools
-- Test structure changes
-
-### Low Impact Changes (Review Only)
-- Internal code organization
-- Variable renaming (internal)
-- Code style/formatting changes
-- Minor bug fixes with no behavior change
-</analysis-logic>
-
-<documentation-types>
-## Target Documentation Files
-
-### README.md Updates
-```
-- Project description and features
-- Installation and setup instructions
-- Usage examples and CLI commands
-- Configuration options
-- API overview and examples
-- Contributing guidelines
-```
-
-### CLAUDE.md Updates
-```
-- Project-specific Claude Code instructions
-- Tool and command usage patterns
-- Development workflow guidance
-- Architecture and convention notes
-- Testing and deployment procedures
-```
-
-### Other Documentation Files
-```
-- API documentation (OpenAPI/Swagger)
-- Configuration guides and examples
-- Setup and deployment docs
-- Architecture documentation
-- Troubleshooting guides
-```
-</documentation-types>
-
-<implementation-process>
-## Step-by-Step Execution
-
-### Phase 1: Analysis
-1. **Git History Review**: Analyze recent commits for documentation-relevant changes
-2. **Current Change Review**: Examine staged and unstaged changes via `git status` and `git diff`
-3. **File Change Detection**: Identify modified files and their documentation impact
-4. **Documentation Audit**: Check existing docs against current implementation
-5. **Gap Identification**: List specific documentation updates needed
-
-### Phase 2: Updates
-1. **Analyze Existing Style**: Review current documentation structure, formatting, and tone
-2. **Prioritize Changes**: Start with high-impact documentation gaps
-3. **Update Content**: Modify documentation following existing patterns and style
-4. **Preserve Structure**: Maintain existing section organization, avoid adding new sections unless essential
-5. **Verify Accuracy**: Cross-reference updated docs with actual implementation
-6. **Test Examples**: Ensure code examples and instructions actually work
-
-### Phase 3: Validation
-1. **Review Changes**: Confirm all updates are accurate and complete
-2. **Check Consistency**: Ensure consistent terminology and formatting
-3. **Validate Links**: Test that all references and links work correctly
-4. **Final Quality Check**: Comprehensive review of all modifications
-</implementation-process>
-
-<target-handling>
-## Argument Processing
-
-**Target Options**:
-- No argument - Update both CLAUDE.md and README.md (default behavior)
-- `readme` - Focus specifically on README.md updates
-- `claude` - Focus specifically on CLAUDE.md updates
-- File/directory path - Update documentation in specified file or directory
-
-**Target Logic**:
-```
-if no arguments:
-    Update both CLAUDE.md and README.md based on recent changes
-elif target == "readme":
-    Analyze and update README.md comprehensively
-elif target == "claude":
-    Analyze and update CLAUDE.md with project-specific guidance
-elif target is file/directory path:
-    Update documentation files within specified path
-else:
-    Treat as file/directory path and update docs within that scope
-```
-</target-handling>
-
-<quality-standards>
-## Documentation Quality Requirements
-
-### Accuracy Standards
-- All code examples must be tested and working
-- API documentation matches actual implementation
-- Configuration examples use current syntax
-- Installation instructions are up-to-date
-
-### Consistency Requirements
-- Follow existing documentation style, tone, and formatting patterns
-- Maintain current section structure and organization
-- Use consistent terminology throughout all docs
-- Preserve existing formatting conventions (headers, lists, code blocks)
-- Cross-references and links are valid
-- Examples follow project conventions
-
-### Completeness Standards
-- New features have comprehensive documentation
-- Breaking changes are clearly documented
-- Migration guides for significant changes
-- Troubleshooting sections are current
-</quality-standards>
-
-<update-patterns>
-## Common Documentation Updates
-
-### Feature Addition Pattern
-```
-1. Add feature description to README
-2. Update usage examples
-3. Document new configuration options
-4. Add API endpoint documentation
-5. Update CLAUDE.md with development notes
-```
-
-### API Change Pattern
-```
-1. Update endpoint documentation
-2. Modify request/response examples
-3. Update error code documentation
-4. Add migration notes for breaking changes
-5. Update client library examples
-```
-
-### Configuration Change Pattern
-```
-1. Update configuration file examples
-2. Document new environment variables
-3. Update setup/installation instructions
-4. Modify deployment documentation
-5. Update troubleshooting guides
-```
-</update-patterns>
-
-<completion-criteria>
-## Success Metrics
-
-**Documentation Sync Complete When**:
-- ✅ Updates follow existing documentation style and structure patterns
-- ✅ All recent code changes have corresponding documentation updates
-- ✅ No broken links or outdated examples in documentation
-- ✅ README accurately reflects current project state
-- ✅ CLAUDE.md contains current project-specific guidance
-- ✅ Existing section organization and formatting is preserved
-- ✅ All code examples are tested and working
-- ✅ Configuration examples use current syntax
-- ✅ Installation/setup instructions are validated
-</completion-criteria>
-
-<output-format>
-## Documentation Sync Report
-
-```
-📚 **Documentation Sync Report**
-🎯 **Target**: [readme/claude/path/default]
-📝 **Files Updated**: [List of documentation files modified]
-🔄 **Changes Made**: [Summary of key updates]
-✅ **Validated**: [Examples tested, links checked, accuracy verified]
-⚠️ **Issues Found**: [Any problems that need manual attention]
-📋 **Next Steps**: [Recommendations for further documentation work]
-```
-</output-format>
-
+### 🔴 High Priority (Immediate Documentation Required)
 <examples>
-**Example Analysis Flow**:
-```
-1. Git Analysis: 5 commits show new API endpoints and config changes
-2. Current Changes: Staged changes add new CLI command, unstaged changes modify config format
-3. Impact Assessment: High impact - new features and config changes need documentation
-4. Updates Required:
-   - README: Add new feature section, usage examples, and updated config format
-   - API docs: Document 3 new endpoints with request/response examples  
-   - CLAUDE.md: Update development workflow with new tools and CLI command
-5. Implementation: Update files systematically with tested examples
-6. Validation: Verify all examples work and links are valid
-```
-
-**Example Target Usage**:
-```
-/docs:sync              # Update both CLAUDE.md and README.md (default)
-/docs:sync readme       # Update README.md only
-/docs:sync claude       # Update CLAUDE.md only
-/docs:sync docs/        # Update all documentation in docs/ directory
-/docs:sync API.md       # Update specific documentation file
-```
+- New public API endpoints or methods
+- Breaking changes to existing interfaces
+- Configuration structure modifications
+- Installation or dependency changes
+- New CLI commands or removed options
+- Security-related updates
 </examples>
 
-**Mission**: Maintain comprehensive, accurate, and up-to-date project documentation that evolves seamlessly with your codebase changes.
+### 🟡 Medium Priority (Selective Documentation)
+<examples>
+- Performance improvements worth noting
+- Bug fixes changing observable behavior
+- New optional features or flags
+- Internal refactoring affecting usage patterns
+- Deprecation warnings added
+</examples>
+
+### 🟢 Low Priority (Review Only)
+<examples>
+- Internal code reorganization
+- Style/formatting updates
+- Minor bug fixes with no behavior change
+- Test file modifications
+- Development-only tool changes
+</examples>
+</change-categorization>
+
+<documentation-patterns>
+## Update Patterns by Documentation Type
+
+### README.md Patterns
+<example>
+<pattern>Feature Addition</pattern>
+<updates>
+1. Add to feature list with concise description
+2. Include usage example in relevant section
+3. Update installation if dependencies changed
+4. Add to API reference if applicable
+5. Include in migration guide if breaking
+</updates>
+</example>
+
+<example>
+<pattern>Configuration Change</pattern>
+<updates>
+1. Update configuration section with new options
+2. Provide migration example from old to new format
+3. Update environment variable documentation
+4. Add troubleshooting entry for common issues
+</updates>
+</example>
+
+### CLAUDE.md Patterns
+<example>
+<pattern>New Development Tool</pattern>
+<updates>
+1. Add to development workflow section
+2. Include specific Claude Code usage instructions
+3. Document any new safe-command wrappers
+4. Update architecture notes if relevant
+</updates>
+</example>
+
+### API Documentation Patterns
+<example>
+<pattern>Endpoint Modification</pattern>
+<updates>
+1. Update endpoint signature and description
+2. Modify request/response examples
+3. Update error codes and messages
+4. Add deprecation notice if applicable
+5. Include migration example
+</updates>
+</example>
+</documentation-patterns>
+
+<validation-requirements>
+## Quality Assurance Checklist
+
+### Pre-Update Validation
+- [ ] All git commands executed successfully
+- [ ] Change analysis covers all modified files
+- [ ] Documentation gaps clearly identified
+- [ ] Existing style patterns analyzed
+
+### Update Validation
+- [ ] All code examples tested and working
+- [ ] Links and references validated
+- [ ] Formatting consistency maintained
+- [ ] No content accidentally removed
+- [ ] Version numbers accurate
+
+### Post-Update Validation
+- [ ] Documentation builds without errors
+- [ ] Examples execute successfully
+- [ ] Cross-references resolve correctly
+- [ ] Style guide compliance verified
+
+<example>
+<validation>
+Code Example Test:
+```bash
+# Extract code block
+cat README.md | sed -n '/```bash/,/```/p' > test.sh
+# Execute and verify
+bash test.sh && echo "✅ Examples valid"
+```
+</validation>
+</example>
+</validation-requirements>
+
+<error-handling>
+## Edge Cases and Error Scenarios
+
+### Common Issues
+<example>
+<issue>No recent changes detected</issue>
+<response>
+- Expand git history search window
+- Check for uncommitted changes
+- Verify correct branch
+- Report: "No documentation updates needed - codebase unchanged"
+</response>
+</example>
+
+<example>
+<issue>Documentation file not found</issue>
+<response>
+- Search for alternative locations
+- Check if renamed in recent commits
+- Suggest creating if critical
+- Report missing documentation clearly
+</response>
+</example>
+
+<example>
+<issue>Conflicting changes in working tree</issue>
+<response>
+- Document both staged and unstaged states
+- Highlight conflicts requiring resolution
+- Provide clear status in report
+- Avoid modifying conflicted files
+</response>
+</example>
+</error-handling>
+
+<output-specification>
+## Final Report Format
+
+```markdown
+📚 **Documentation Sync Report**
+
+### 📊 Analysis Summary
+- **Target**: [readme/claude/custom path/both (default)]
+- **Commits Analyzed**: [count] commits (from [oldest sha] to [newest sha])
+- **Files Changed**: [count] code files with documentation impact
+- **Documentation Gaps**: [count] sections requiring updates
+
+### 📝 Documentation Updates
+**Files Modified**:
+- ✅ README.md ([X sections updated])
+- ✅ CLAUDE.md ([X sections updated])
+- ✅ [Other files...]
+
+**Key Changes**:
+1. [Specific update with rationale]
+2. [Specific update with rationale]
+3. [Additional updates...]
+
+### ✅ Validation Results
+- **Examples Tested**: [X/Y] code examples verified
+- **Links Checked**: [X/Y] references validated
+- **Style Compliance**: [Passed/Issues found]
+- **Build Status**: [Success/Warnings/Errors]
+
+### ⚠️ Issues Requiring Attention
+- [Issue 1 with recommended action]
+- [Issue 2 with recommended action]
+
+### 📋 Recommended Next Steps
+1. [Specific follow-up action]
+2. [Additional maintenance task]
+3. [Future documentation improvement]
+
+### 🔄 Change Details
+<details>
+<summary>Detailed modification list</summary>
+
+[Comprehensive list of all changes made with before/after snippets]
+
+</details>
+```
+</output-specification>
+
+<execution-optimization>
+## Performance Optimizations
+
+### Parallel Tool Execution
+Always batch git commands for efficiency:
+```bash
+# Execute these simultaneously
+git log --oneline -20 --name-status &
+git diff HEAD~10..HEAD --name-only &
+git status --porcelain &
+wait  # Wait for all to complete
+```
+
+### Smart Targeting
+- Focus on files with highest documentation impact first
+- Skip analysis of unchanged documentation sections
+- Cache style analysis results for consistency
+
+### Incremental Updates
+- Process documentation in order of impact priority
+- Validate after each major section update
+- Allow partial completion with clear status reporting
+</execution-optimization>
+
+**Core Mission**: Maintain living documentation that evolves seamlessly with your codebase through intelligent change detection, systematic updates, and rigorous validation—ensuring developers always have accurate, current, and helpful documentation.
