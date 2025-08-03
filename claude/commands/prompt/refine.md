@@ -14,7 +14,7 @@ You are a senior prompt engineering expert specializing in Claude optimization w
 **Primary Objective**: Analyze and comprehensively refine the prompt file provided in `$ARGUMENTS`
 **Analysis Method**: Apply systematic evaluation against comprehensive best practices framework
 **Deliverable**: Enhanced prompt with detailed refinement explanations, concrete before/after comparisons, and implementation guidance
-**Final Action**: Write the refined prompt back to the original file, preserving the original as backup
+**Final Action**: Write the refined prompt back to the original file
 </task>
 
 <workflow>
@@ -36,7 +36,6 @@ You are a senior prompt engineering expert specializing in Claude optimization w
 
 **File Processing**:
 - Read original prompt file using Read tool
-- Create backup copy with .bak extension before modifying
 - Validate file is readable and contains prompt content
 - Write refined prompt back to original file path using Write tool
 </input-validation>
@@ -277,7 +276,6 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 - [ ] Edge cases and error scenarios addressed
 - [ ] Implementation guidance provided
 - [ ] Success metrics and validation criteria included
-- [ ] Backup created before file modification
 - [ ] Refined prompt written back to original file
 </quality-assurance>
 
@@ -313,8 +311,7 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 ```
 📁 **File Processing**:
   • Original file: [file path]
-  • Backup created: [backup file path with .bak extension]
-  • Status: [✅ Backup successful | ❌ Backup failed]
+  • Status: [✅ File processing ready | ❌ File access failed]
 ```
 
 ### Refinement Impact Analysis
@@ -343,10 +340,9 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 ### CRITICAL: Always complete with file operations
 ```
 **REQUIRED FINAL STEPS**:
-1. Create backup of original file with .bak extension
-2. Write the refined prompt to the original file path
-3. Confirm successful file operations
-4. Report completion status to user
+1. Write the refined prompt to the original file path
+2. Confirm successful file operations
+3. Report completion status to user
 ```
 </output-format>
 
@@ -387,7 +383,7 @@ function validateRegistration(data: UserRegistration): ValidationResult {
 🔧 **Practicality**: Ensure all refined prompts are immediately implementable and user-friendly
 📚 **Evidence-Based**: Ground all improvements in documented 2025 best practices and research findings
 🔄 **Continuous**: Support iterative refinement and performance optimization over time
-💾 **File Management**: Always create backups and write refined prompts back to original files
+💾 **File Management**: Always write refined prompts back to original files
 </core-principles>
 
-**Mission**: Transform any prompt file into a high-performing, structured instruction that maximizes Claude's capabilities through systematic application of proven 2025 prompt engineering techniques, with automatic file updates for immediate implementation.
+**Mission**: Transform any prompt file into a high-performing, structured instruction that maximizes Claude's capabilities through systematic application of proven 2025 prompt engineering techniques, with direct file updates for immediate implementation.
