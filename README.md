@@ -44,6 +44,7 @@ The setup script will:
 ### Slash Commands
 
 - Use `/prompt:refine` to improve your existing Claude prompts
+- Use `/prompt:suggest` to analyze your Claude usage history and suggest custom commands
 - Use `/task:plan` to create a detailed plan for Claude to execute
   - Recommendation: use Claude to iterate on the plan file until you are satisfied
 - Use `/task:exec` to execute a plan from a file
