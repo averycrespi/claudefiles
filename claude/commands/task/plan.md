@@ -29,8 +29,8 @@ You are a senior software architect tasked with creating comprehensive execution
 **Agent 1: Project Analysis**
 ```
 Analyze: project structure, existing patterns, code conventions, testing
-frameworks, build processes. Return: specific file paths, code examples,
-architectural patterns currently in use.
+frameworks, build processes. Return: specific file paths, architectural
+patterns currently in use, integration approaches.
 ```
 
 **Agent 2: Technology Assessment**
@@ -42,7 +42,7 @@ Return: package.json/requirements, specific versions, integration patterns.
 **Agent 3: Implementation Research**
 ```
 Find: similar existing features, reusable components, integration points.
-Return: code examples, file locations, patterns to follow or avoid.
+Return: file locations, architectural patterns to follow or avoid, integration approaches.
 ```
 
 **Agent 4: Best Practices** *(if external research needed)*
@@ -62,16 +62,15 @@ Return: specific recommendations, links, implementation guidelines.
 
 <implementation-plan>
 ### Step-by-Step Implementation
-```
-1. [Specific action with exact file paths]
-2. [Configuration changes with code snippets]
-3. [Testing implementation with commands]
-4. [Validation and verification steps]
-```
+1. **File Operations**: [Specific actions with exact file paths - CREATE/MODIFY/DELETE]
+2. **Configuration Changes**: [Config files to update and key settings]
+3. **Dependencies**: [Packages to install/update with exact commands]
+4. **Testing Strategy**: [Test files to create and validation commands]
+5. **Verification Steps**: [How to confirm successful implementation]
 
 ### File Structure Changes
 ```
-[Show exact directory structure and changes]
+[Show directory structure with CREATE/MODIFY/DELETE annotations]
 src/
 ├── components/
 │   └── NewFeature.tsx     # CREATE: Main component
@@ -81,11 +80,10 @@ src/
     └── NewFeature.test.ts # CREATE: Test suite
 ```
 
-### Code Implementation
-```typescript
-// Example following project patterns
-[Include specific code examples that match existing conventions]
-```
+### Key Implementation Notes
+- **Architecture**: [High-level design decisions and patterns to follow]
+- **Integration Points**: [How this connects with existing code]
+- **Critical Configurations**: [Only essential config snippets, 2-3 lines max]
 
 ### Dependencies & Configuration
 - **Install**: [Exact commands]
@@ -116,13 +114,16 @@ Research Findings:
 - Components use ThemeProvider pattern
 
 Implementation:
-1. CREATE: src/components/ThemeToggle.tsx
-2. MODIFY: src/styles/theme.ts (add dark theme)
-3. MODIFY: src/App.tsx (add toggle component)
-4. CREATE: src/hooks/useTheme.ts (theme persistence)
-5. TEST: Manual verification + unit tests
+1. CREATE: src/components/ThemeToggle.tsx (button component with icon)
+2. MODIFY: src/styles/theme.ts (add darkTheme object)
+3. MODIFY: src/App.tsx (add toggle to header)
+4. CREATE: src/hooks/useTheme.ts (localStorage persistence)
+5. TEST: Toggle functionality + theme switching
 
-[... detailed code examples and file changes ...]
+Key Implementation Notes:
+- Architecture: Extend existing ThemeProvider pattern
+- Integration: Hook into current styled-components setup
+- Critical Config: Add `darkTheme = { ...lightTheme, colors: {...} }`
 ```
 </examples>
 
@@ -134,5 +135,7 @@ Implementation:
 - Validate successful implementation
 - Handle expected edge cases and errors
 
-**Be extraordinarily specific**: exact file paths, complete code snippets, precise commands, and clear verification steps.
+**Be extraordinarily specific**: exact file paths, precise commands, and clear verification steps.
+
+**Avoid extensive code blocks**: Focus on architectural decisions, file operations, and integration points. Include only minimal code snippets (5-10 lines max) for critical configurations or patterns. Let the execution phase handle detailed implementation.
 </output-requirements>
