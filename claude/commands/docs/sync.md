@@ -17,7 +17,7 @@ Analyze recent code changes through git history and current modifications to aut
 - All code changes have corresponding documentation updates
 - Documentation style and formatting remain consistent
 - No broken examples or outdated instructions persist
-- Updates are accurate, tested, and comprehensive
+- Updates are accurate and comprehensive
 </task>
 
 <target-processing>
@@ -120,8 +120,7 @@ Apply changes while maintaining discovered patterns:
 2. Identify exact insertion/modification points
 3. Match surrounding style exactly
 4. Preserve section organization
-5. Test all code examples
-6. Validate formatting consistency
+5. Validate formatting consistency
 ```
 
 <example>
@@ -231,7 +230,6 @@ Apply changes while maintaining discovered patterns:
 - [ ] Existing style patterns analyzed
 
 ### Update Validation
-- [ ] All code examples tested and working
 - [ ] Links and references validated
 - [ ] Formatting consistency maintained
 - [ ] No content accidentally removed
@@ -242,18 +240,6 @@ Apply changes while maintaining discovered patterns:
 - [ ] Examples execute successfully
 - [ ] Cross-references resolve correctly
 - [ ] Style guide compliance verified
-
-<example>
-<validation>
-Code Example Test:
-```bash
-# Extract code block
-cat README.md | sed -n '/```bash/,/```/p' > test.sh
-# Execute and verify
-bash test.sh && echo "✅ Examples valid"
-```
-</validation>
-</example>
 </validation-requirements>
 
 <error-handling>
@@ -315,7 +301,6 @@ bash test.sh && echo "✅ Examples valid"
 3. [Additional updates...]
 
 ### ✅ Validation Results
-- **Examples Tested**: [X/Y] code examples verified
 - **Links Checked**: [X/Y] references validated
 - **Style Compliance**: [Passed/Issues found]
 - **Build Status**: [Success/Warnings/Errors]
@@ -341,16 +326,6 @@ bash test.sh && echo "✅ Examples valid"
 
 <execution-optimization>
 ## Performance Optimizations
-
-### Parallel Tool Execution
-Always batch git commands for efficiency:
-```bash
-# Execute these simultaneously
-git log --oneline -20 --name-status &
-git diff HEAD~10..HEAD --name-only &
-git status --porcelain &
-wait  # Wait for all to complete
-```
 
 ### Smart Targeting
 - Focus on files with highest documentation impact first
