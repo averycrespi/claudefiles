@@ -75,10 +75,11 @@ The repository includes specialized agents for different tasks:
 
 ### Command Extensions
 Custom slash commands are available in `claude/commands/`:
-- `/task/exec` - Execute implementation plans with systematic tracking
-- `/task/plan` - Create detailed implementation plans
-- `/prompt/refine` - Refine and improve prompts
-- `/prompt/suggest` - Analyze Claude Code usage history and suggest custom commands based on patterns
+- `/docs:sync` - Analyze recent code changes and synchronize documentation automatically
+- `/task:exec` - Execute implementation plans with systematic tracking
+- `/task:plan` - Create detailed implementation plans
+- `/prompt:refine` - Refine and improve prompts
+- `/prompt:suggest` - Analyze Claude Code usage history and suggest custom commands based on patterns
 
 ### Security Configuration
 The `claude/settings.json` file enforces strict security policies:
