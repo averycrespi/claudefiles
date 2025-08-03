@@ -150,12 +150,13 @@ Apply consistent code formatting across your project using configured linters an
 ## Execution Process
 
 1. **Initialize**: Set up analysis for top command suggestions
-2. **Extract History**: Use jq to extract display entries from `~/.claude.json`
-3. **Extract Queries**: Collect all display entries from project histories
-4. **Categorize**: Group queries by semantic similarity and intent
-5. **Analyze Frequency**: Count occurrences and rank patterns
-6. **Generate Suggestions**: Create command proposals with details
-7. **Format Output**: Present prioritized suggestions with rationale
+2. **Check Existing Commands**: Scan ~/.claude/commands to identify existing commands
+3. **Extract History**: Use jq to extract display entries from `~/.claude.json`
+4. **Extract Queries**: Collect all display entries from project histories
+5. **Categorize**: Group queries by semantic similarity and intent
+6. **Analyze Frequency**: Count occurrences and rank patterns
+7. **Generate Suggestions**: Create command proposals with details, avoiding duplicates
+8. **Format Output**: Present prioritized suggestions with rationale
 
 ### Implementation Details
 
@@ -165,7 +166,16 @@ Apply consistent code formatting across your project using configured linters an
 # Target: Return top 5-10 most valuable command suggestions
 ```
 
-**Step 2: History Data Extraction**
+**Step 2: Check Existing Commands**
+```
+1. Use safe-find to scan ~/.claude/commands directory:
+   safe-find ~/.claude/commands -name "*.md" -type f
+2. Extract command names from file paths (e.g., docs/sync.md -> docs:sync)
+3. Create exclusion list to avoid suggesting duplicate commands
+4. Include existing command categories in pattern analysis to avoid conflicts
+```
+
+**Step 3: History Data Extraction**
 ```
 1. Use Bash with jq to extract display entries from ~/.claude.json:
    jq -r '.projects[].history[].display // empty' ~/.claude.json
@@ -176,7 +186,7 @@ Apply consistent code formatting across your project using configured linters an
 3. Collect clean query list for pattern analysis
 ```
 
-**Step 3: Pattern Recognition Algorithm**
+**Step 4: Pattern Recognition Algorithm**
 ```
 For each query:
 1. Normalize text (lowercase, remove punctuation)
@@ -191,7 +201,7 @@ For each query:
 4. Use semantic similarity for grouping related queries
 ```
 
-**Step 4: Frequency Analysis & Ranking**
+**Step 5: Frequency Analysis & Ranking**
 ```
 1. Count exact matches and semantic groups
 2. Calculate frequency scores
@@ -202,13 +212,14 @@ For each query:
    - Return highest scoring suggestions only
 ```
 
-**Step 5: Command Generation**
+**Step 6: Command Generation**
 ```
 For each qualified pattern:
 1. Generate command name using pattern: category:action
-2. Create synopsis based on most common query variations
-3. Suggest parameters from query variations
-4. Include frequency data and example usage
+2. Cross-reference against existing commands list to avoid duplicates
+3. Create synopsis based on most common query variations
+4. Suggest parameters from query variations
+5. Include frequency data and example usage
 ```
 </implementation-steps>
 
@@ -217,7 +228,8 @@ For each qualified pattern:
 - Ensure Claude history file exists and is readable
 - Validate JSON parsing succeeds
 - Filter out existing slash commands to avoid duplicates
-- Verify suggested commands don't conflict with built-in commands
+- Check ~/.claude/commands directory to identify existing custom commands
+- Verify suggested commands don't conflict with built-in or existing commands
 - Ensure minimum data quality (at least 10 history entries)
 </validation>
 
