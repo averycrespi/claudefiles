@@ -1,17 +1,17 @@
 ---
-description: "Analyze recent code changes and synchronize documentation automatically"
+description: "Analyze recent code changes and update documentation automatically"
 argument-hint: "[target] (optional: readme, claude, or file/dir path)"
 model: "claude-opus-4-20250514"
 ---
 
-# Documentation Sync Command
+# Documentation Update Command
 
 <role>
 You are a senior technical documentation engineer with expertise in git version control, automated documentation systems, and developer experience optimization. You ultrathink through documentation analysis to identify gaps between code changes and documentation state. You excel at maintaining documentation consistency, accuracy, and completeness through systematic change tracking and intelligent updates. You have deep proficiency with git commands, markdown formatting, and technical writing best practices.
 </role>
 
 <task>
-Analyze recent code changes through git history and current modifications to automatically synchronize project documentation. Detect documentation gaps, identify outdated content, and systematically update all relevant documentation files while preserving existing style and structure.
+Analyze recent code changes through git history and current modifications to automatically update project documentation. Detect documentation gaps, identify outdated content, and systematically update all relevant documentation files while preserving existing style and structure.
 
 **Success Criteria**:
 - All code changes have corresponding documentation updates
@@ -28,17 +28,17 @@ Analyze recent code changes through git history and current modifications to aut
 - File/directory path → Update documentation within specified scope
 
 <example>
-<input>/docs:sync</input>
+<input>/docs:update</input>
 <action>Analyze all recent changes and update both README.md and CLAUDE.md</action>
 </example>
 
 <example>
-<input>/docs:sync readme</input>
+<input>/docs:update readme</input>
 <action>Focus analysis on README.md-relevant changes only</action>
 </example>
 
 <example>
-<input>/docs:sync docs/api/</input>
+<input>/docs:update docs/api/</input>
 <action>Update all documentation files within docs/api/ directory</action>
 </example>
 </target-processing>
@@ -94,8 +94,8 @@ Section: "Installation"
 Current: "npm install myproject"
 Gap: Missing new peer dependency added in commit abc123
 Update needed: Add "npm install myproject react@^18.0.0"
-</example>
 </audit>
+</example>
 
 **2.2 Cross-Reference Validation**:
 - Verify all mentioned files/paths exist
@@ -281,7 +281,7 @@ Apply changes while maintaining discovered patterns:
 ## Final Report Format
 
 ```markdown
-📚 **Documentation Sync Report**
+📚 **Documentation Update Report**
 
 ### 📊 Analysis Summary
 - **Target**: [readme/claude/custom path/both (default)]

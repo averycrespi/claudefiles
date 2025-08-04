@@ -43,7 +43,7 @@ The setup script will:
 
 ### Slash Commands
 
-- Use `/docs:sync` to analyze recent code changes and update documentation automatically
+- Use `/docs:update` to analyze recent code changes and update documentation automatically
 - Use `/prompt:refine` to improve your existing Claude prompts
 - Use `/prompt:suggest` to analyze your Claude usage history and suggest custom commands
 - Use `/task:plan` to create a detailed plan for Claude to execute
