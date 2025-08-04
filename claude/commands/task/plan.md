@@ -7,161 +7,99 @@ model: "claude-opus-4-20250514"
 # Task Planning Command
 
 <role>
-You are a senior software architect tasked with creating comprehensive execution plans. You ultrathink step-by-step through complex requirements and produce actionable, detailed plans.
+Senior software architect with specialized agent integration expertise. Ultrathink systematically through requirements to produce actionable execution plans leveraging parallel research capabilities.
 </role>
 
 <task>
-**Objective**: Create detailed execution plan for: **$ARGUMENTS**
-**Output**: Write complete plan to `PLAN.txt`
-**Method**: Systematic research → analysis → detailed implementation plan
+Create detailed execution plan for: **$ARGUMENTS**
+Output to `PLAN.txt` via research → analysis → implementation methodology
 </task>
 
 <validation>
-**Argument Requirements**:
-- If `$ARGUMENTS` is empty: "Please provide a specific task description"
-- If task is too broad: "Please clarify the scope and specific requirements"
-- If context is missing: "Please provide additional context or constraints"
+- Empty `$ARGUMENTS`: "Please provide a specific task description"
+- Too broad: "Please clarify scope and specific requirements"
+- Missing context: "Please provide additional context or constraints"
 </validation>
 
 <research>
-**Launch parallel Task agents** to gather comprehensive information:
+**Launch parallel Task agents for comprehensive analysis**:
 
-**Agent 1: Project Analysis**
-```
-Analyze project structure, existing patterns, code conventions, testing
-frameworks, build processes. Return specific file paths, architectural
-patterns currently in use, integration approaches.
-```
+1. **Project Analysis**: Analyze structure, patterns, conventions, testing frameworks. Return file paths, architectural patterns, integration approaches.
 
-**Agent 2: Technology Assessment**
-```
-Research dependencies, libraries, versions, configurations, compatibility.
-Return package.json/requirements, specific versions, integration patterns.
-```
+2. **Technology Assessment**: Research dependencies, versions, configurations. Return package details, compatibility requirements.
 
-**Agent 3: Implementation Research**
-```
-Find similar existing features, reusable components, integration points.
-Return file locations, architectural patterns to follow or avoid, integration approaches.
-```
+3. **Implementation Research**: Find similar features, reusable components. Return locations, patterns to follow/avoid.
 
-**Agent 4: Best Practices Research**
-```
-Use subagent research-assistant:
-Investigate current best practices, documentation, and authoritative guidance
-for the specific technology stack and implementation approach. Synthesize
-findings from multiple sources. Return specific recommendations, links,
-implementation guidelines with source attribution.
-```
+4. **Best Practices** (research-assistant): Investigate current best practices for technology stack. Synthesize authoritative guidance with source attribution.
 
-**Security Analysis (conditional)**
-```
-IF task involves authentication, user input, database operations, 
-cryptographic functions, or external integrations:
-
-Use subagent security-analyst:
-Analyze security implications of the planned implementation. Identify
-potential vulnerabilities, security best practices, and recommend
-secure coding patterns. Return security requirements and mitigation strategies.
-```
+5. **Security Analysis** (security-analyst): IF task involves auth/input/database/crypto/external APIs, analyze security implications and recommend secure patterns.
 </research>
 
 <analysis>
-**Think through findings to determine**:
-- Optimal technical approach based on existing codebase
+Synthesize findings to determine:
+- Optimal approach based on codebase patterns
 - Integration points and dependencies
-- Potential challenges and mitigation strategies
+- Challenges and mitigation strategies
 - Success criteria and validation methods
-- Security requirements and risk assessment (if security-analyst was invoked)
-- Compliance with established security practices and OWASP guidelines
+- Security requirements (if applicable)
 </analysis>
 
 <implementation-plan>
 ### Step-by-Step Implementation
-1. **File Operations**: [Specific actions with exact file paths - CREATE/MODIFY/DELETE]
-2. **Configuration Changes**: [Config files to update and key settings]
-3. **Dependencies**: [Packages to install/update with exact commands]
-4. **Testing Strategy**: [Test files to create and validation commands]
-5. **Verification Steps**: [How to confirm successful implementation]
+1. **File Operations**: [CREATE/MODIFY/DELETE with exact paths]
+2. **Configuration**: [Config files and key settings]
+3. **Dependencies**: [Install commands]
+4. **Testing**: [Test files and validation]
+5. **Verification**: [Success confirmation steps]
 
-### File Structure Changes
+### File Structure
 ```
-[Show directory structure with CREATE/MODIFY/DELETE annotations]
 src/
-├── components/
-│   └── NewFeature.tsx     # CREATE: Main component
-├── utils/
-│   └── helpers.ts         # MODIFY: Add utility functions
-└── __tests__/
-    └── NewFeature.test.ts # CREATE: Test suite
+├── components/NewFeature.tsx  # CREATE
+└── utils/helpers.ts          # MODIFY
 ```
 
-### Key Implementation Notes
-- **Architecture**: [High-level design decisions and patterns to follow]
-- **Integration Points**: [How this connects with existing code]
-- **Critical Configurations**: [Only essential config snippets, 2-3 lines max]
-
-### Dependencies & Configuration
-- **Install**: [Exact commands]
-- **Config files**: [Specific changes]
-- **Environment**: [New variables/settings]
-
-### Testing Strategy
-- **Unit tests**: [Specific test files and scenarios]
-- **Integration**: [Component interaction tests]
-- **Manual verification**: [Step-by-step validation]
+### Key Notes
+- **Architecture**: [Design decisions and patterns]
+- **Integration**: [Connection points with existing code]
+- **Critical Config**: [Essential snippets only, 2-3 lines max]
 
 ### Quality Assurance
-- Error handling implementation
-- Security consideration checklist
+- Error handling requirements
+- Security considerations
 - Performance optimization points
-- Accessibility requirements (if UI)
-- Documentation requirements
+- Accessibility (if UI)
 
-### Implementation Plan Review
-**After creating the implementation plan, validate it using code-reviewer**:
-```
-Use subagent code-reviewer:
-Review the proposed implementation plan for potential issues, architectural
-concerns, and best practices. Analyze the planned file structure, integration
-points, and implementation approach. Return recommendations for improving
-the plan before execution.
-```
+**Validate plan with code-reviewer**: Review proposed implementation for issues, architectural concerns, best practices before execution.
 </implementation-plan>
 
 <examples>
-**Example Planning Output Structure**:
+**Example 1: Dark Mode Toggle**
 ```
-Task: Add dark mode toggle to application
+Research: React + styled-components, existing ThemeProvider
+Plan: CREATE ThemeToggle.tsx, MODIFY theme.ts, useTheme hook
+```
 
-Research Findings:
-- Project uses React with styled-components
-- Existing theme system in src/styles/theme.ts
-- Components use ThemeProvider pattern
+**Example 2: API Rate Limiting**
+```
+Research: Express middleware, Redis for state
+Plan: CREATE rateLimiter.ts, MODIFY app.ts, add Redis config
+```
 
-Implementation:
-1. CREATE: src/components/ThemeToggle.tsx (button component with icon)
-2. MODIFY: src/styles/theme.ts (add darkTheme object)
-3. MODIFY: src/App.tsx (add toggle to header)
-4. CREATE: src/hooks/useTheme.ts (localStorage persistence)
-5. TEST: Toggle functionality + theme switching
-
-Key Implementation Notes:
-- Architecture: Extend existing ThemeProvider pattern
-- Integration: Hook into current styled-components setup
-- Critical Config: Add `darkTheme = { ...lightTheme, colors: {...} }`
+**Example 3: User Authentication**
+```
+Research: JWT patterns, bcrypt, existing auth middleware
+Plan: CREATE auth routes, MODIFY user model, security-analyst review
 ```
 </examples>
 
 <output-requirements>
-**The plan must enable another Claude instance to**:
-- Execute each step without ambiguity
-- Locate all referenced files and dependencies
-- Understand the complete technical context
+Plan enables another Claude to:
+- Execute steps without ambiguity
+- Locate all files and dependencies
 - Validate successful implementation
-- Handle expected edge cases and errors
+- Handle expected edge cases
 
-**Be extraordinarily specific**: exact file paths, precise commands, and clear verification steps.
-
-**Avoid extensive code blocks**: Focus on architectural decisions, file operations, and integration points. Include only minimal code snippets (5-10 lines max) for critical configurations or patterns. Let the execution phase handle detailed implementation.
+**Be specific**: exact paths, precise commands, clear verification.
+**Minimize code**: Focus on architecture and integration (5-10 line snippets max).
 </output-requirements>
