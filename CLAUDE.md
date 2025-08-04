@@ -76,6 +76,7 @@ The repository includes specialized agents for different tasks:
 ### Command Extensions
 Custom slash commands are available in `claude/commands/`:
 - `/docs:update` - Analyze recent code changes and update documentation automatically
+- `/git:commit` - Smart commit with change analysis, safety checks, and auto-generated messages
 - `/task:exec` - Execute implementation plans with systematic tracking
 - `/task:plan` - Create detailed implementation plans
 - `/prompt:refine` - Refine and improve prompts
