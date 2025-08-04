@@ -28,27 +28,41 @@ You are a senior software architect tasked with creating comprehensive execution
 
 **Agent 1: Project Analysis**
 ```
-Analyze: project structure, existing patterns, code conventions, testing
-frameworks, build processes. Return: specific file paths, architectural
+Analyze project structure, existing patterns, code conventions, testing
+frameworks, build processes. Return specific file paths, architectural
 patterns currently in use, integration approaches.
 ```
 
 **Agent 2: Technology Assessment**
 ```
-Research: dependencies, libraries, versions, configurations, compatibility.
-Return: package.json/requirements, specific versions, integration patterns.
+Research dependencies, libraries, versions, configurations, compatibility.
+Return package.json/requirements, specific versions, integration patterns.
 ```
 
 **Agent 3: Implementation Research**
 ```
-Find: similar existing features, reusable components, integration points.
-Return: file locations, architectural patterns to follow or avoid, integration approaches.
+Find similar existing features, reusable components, integration points.
+Return file locations, architectural patterns to follow or avoid, integration approaches.
 ```
 
-**Agent 4: Best Practices** *(if external research needed)*
+**Agent 4: Best Practices Research**
 ```
-Research: current documentation, security practices, performance patterns.
-Return: specific recommendations, links, implementation guidelines.
+Use subagent research-assistant:
+Investigate current best practices, documentation, and authoritative guidance
+for the specific technology stack and implementation approach. Synthesize
+findings from multiple sources. Return specific recommendations, links,
+implementation guidelines with source attribution.
+```
+
+**Security Analysis (conditional)**
+```
+IF task involves authentication, user input, database operations, 
+cryptographic functions, or external integrations:
+
+Use subagent security-analyst:
+Analyze security implications of the planned implementation. Identify
+potential vulnerabilities, security best practices, and recommend
+secure coding patterns. Return security requirements and mitigation strategies.
 ```
 </research>
 
@@ -58,6 +72,8 @@ Return: specific recommendations, links, implementation guidelines.
 - Integration points and dependencies
 - Potential challenges and mitigation strategies
 - Success criteria and validation methods
+- Security requirements and risk assessment (if security-analyst was invoked)
+- Compliance with established security practices and OWASP guidelines
 </analysis>
 
 <implementation-plan>
@@ -101,6 +117,16 @@ src/
 - Performance optimization points
 - Accessibility requirements (if UI)
 - Documentation requirements
+
+### Implementation Plan Review
+**After creating the implementation plan, validate it using code-reviewer**:
+```
+Use subagent code-reviewer:
+Review the proposed implementation plan for potential issues, architectural
+concerns, and best practices. Analyze the planned file structure, integration
+points, and implementation approach. Return recommendations for improving
+the plan before execution.
+```
 </implementation-plan>
 
 <examples>
