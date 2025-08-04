@@ -5,7 +5,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 ## Features
 
 - 🤖 **Agents** for research, code review, security analysis, etc.
-- ⚡ **Slash commands** for task completion and prompt refinement
+- ⚡ **Slash commands** for task completion, prompt refinement, and more
 - 🔒 **Reasonable permissions** for balancing agent autonomy with security
 - 🔔 **Notification hooks** to alert you when Claude needs attention
 - 🛡️ **Safe wrapper scripts** for granting Claude access to dangerous commands
