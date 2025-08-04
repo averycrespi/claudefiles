@@ -15,22 +15,46 @@ Target: $ARGUMENTS (empty=both README.md+CLAUDE.md | readme | claude | path)
 </task>
 
 <workflow>
-## 1. Change Analysis (parallel execution)
+## 1. Target-Specific Documentation & Change Analysis (parallel execution)
 ```bash
-git log --oneline -20 --name-status    # Recent commits
-git diff HEAD~10..HEAD --name-only     # Changed files
-git status --porcelain                 # Current state
+# Determine target documentation files based on arguments
+# $ARGUMENTS = empty → README.md + CLAUDE.md
+# $ARGUMENTS = "readme" → README.md only  
+# $ARGUMENTS = "claude" → CLAUDE.md only
+# $ARGUMENTS = "path/to/file.md" → specific file/directory
+
+# For each target doc file, get last modification commit
+git log -1 --format="%H %cd" --date=iso README.md 2>/dev/null  # if targeting readme/both
+git log -1 --format="%H %cd" --date=iso CLAUDE.md 2>/dev/null  # if targeting claude/both
+git log -1 --format="%H %cd" --date=iso [specific-path] 2>/dev/null  # if targeting specific path
+
+# Get ALL commits since oldest target documentation was last updated
+git log --oneline --name-status --since="[oldest-target-doc-date]"  # Dynamic date from targets only
+git diff [oldest-target-doc-commit]..HEAD --name-only               # All changes since oldest target doc update
+
+# Include current working state
+git status --porcelain                 # Unstaged changes
+git diff --cached --name-only          # Staged changes
+git diff --name-only                   # Unstaged file changes
 ```
 
-## 2. Impact Assessment
-For each change, identify:
-- Affected features/APIs
-- Documentation sections requiring updates
-- Breaking changes needing migration guides
+## 2. Comprehensive Impact Assessment
+For each change discovered (from oldest doc update to current), identify:
+- **Code changes**: New/modified APIs, features, configurations
+- **File changes**: Added, deleted, moved files affecting documentation
+- **Breaking changes**: Version bumps, API changes, deprecated features
+- **Current work**: Unstaged/staged changes that affect user-facing behavior
+
+**Analysis Strategy**:
+1. **Target-focused**: Only analyze commits since the oldest **specified** documentation file was updated
+2. **Historical changes**: Review ALL commits since oldest target doc file was updated
+3. **Current state**: Include uncommitted changes that affect functionality
+4. **Cross-reference**: Match code changes to specific target documentation sections
 
 <example>
-Modified: src/cli/commands.ts - Added --format flag
-Impact: README.md CLI section needs flag docs + examples
+**Historical**: src/cli/commands.ts (3 commits ago) - Added --format flag
+**Current**: package.json (staged) - Version bump to 2.1.0
+**Impact**: README.md CLI section needs --format docs + version update
 </example>
 
 ## 3. Documentation Updates
@@ -49,8 +73,10 @@ Impact: README.md CLI section needs flag docs + examples
 
 ### 📊 Analysis Summary
 - **Target**: [specified target]
-- **Commits**: X analyzed
-- **Gaps Found**: Y sections
+- **Time Range**: Since [oldest-target-doc-date] ([X] commits + current changes)
+- **Historical Commits**: X analyzed since last target doc update
+- **Current Changes**: Y staged + Z unstaged files
+- **Gaps Found**: N sections requiring updates
 
 ### 📝 Updates Applied
 ✅ **README.md**: [X sections]
@@ -79,4 +105,14 @@ Impact: README.md CLI section needs flag docs + examples
 </example>
 </examples>
 
-**Mission**: Keep documentation synchronized with code through intelligent change detection and systematic updates.
+## Implementation Logic
+
+**Step-by-step execution**:
+1. **Parse target argument** to determine which documentation files to update
+2. **Find oldest target documentation update** using `git log -1 --format="%H %cd" --date=iso [target-file]`
+3. **Analyze ALL changes since oldest target update** with `git log --since="[target-date]" --name-status`
+4. **Include current working state** (staged + unstaged changes)
+5. **Map changes to target documentation sections** that need updates
+6. **Apply updates** while preserving existing style and structure
+
+**Mission**: Keep documentation synchronized with code through comprehensive change detection - never miss an update by analyzing the complete history since documentation was last modified.
