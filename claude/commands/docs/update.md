@@ -1,7 +1,7 @@
 ---
 description: "Analyze recent code changes and update documentation automatically"
 argument-hint: "[target] (optional: readme, claude, or file/dir path)"
-model: "claude-opus-4-20250514"
+model: "claude-sonnet-4-20250514"
 ---
 
 # Documentation Update Command
