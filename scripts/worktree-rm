@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Removes a worktree and closes the tmux window for a given branch.
+#
 # This script is idempotent and can safely be run multiple times.
 #
 # Usage:

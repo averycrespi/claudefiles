@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Adds a new tmux window for a worktree and launches Claude Code in it.
+#
 # This script is idempotent and can safely be run multiple times.
 #
 # Usage:

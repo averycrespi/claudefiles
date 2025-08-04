@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Adds a notification to a tmux window.
+#
 # This script is intended to be called from a Claude Code hook.
 #
 # To automatically clear the notification on tmux window select, add the following line to your .tmux.conf:

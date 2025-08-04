@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Initializes a tmux session for a worktree.
+#
 # This script is idempotent and can safely be run multiple times.
 #
 # Usage:

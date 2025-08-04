@@ -14,10 +14,10 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Requirements
 
-- macOS
-- Homebrew
-- Claude Code
-- Python 3
+- **Claude Code** to make use of these resources
+- **macOS** is assumed, but can be adapted for Linux
+- **Homebrew** for macOS dependency management
+- **Python 3** for the `safe-find` script
 
 ## Quickstart
 
@@ -31,7 +31,7 @@ The setup script will:
 - Install dependencies via Homebrew
 - Symlink configuration files to `~/.claude/`
 - Configure MCP servers in Claude Code
-- Add the scripts directory to your PATH
+- Add the scripts directory to your `PATH`
 
 ## Usage
 
