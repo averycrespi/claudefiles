@@ -37,9 +37,9 @@ The setup script will:
 
 ### Agents
 
-- Ask Claude to use the `code-reviewer` for detailed code reviews
-- Ask Claude to use the `research-assistant` for in-depth research and analysis
-- Ask Claude to use the `security-analyst` to find vulnerabilities
+- Use the `code-reviewer` agent for detailed code reviews
+- Use the `research-assistant` agent for in-depth research and analysis
+- Use the `security-analyst` agent to find vulnerabilities
 
 ### Slash Commands
 
