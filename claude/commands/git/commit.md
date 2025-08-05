@@ -17,7 +17,7 @@ Context: $ARGUMENTS (optional)
 
 <workflow>
 1. Verify staged changes exist (git status)
-2. Run safety checks in parallel: format, lint, typecheck
+2. Run safety checks in parallel: lint, typecheck
 3. Analyze diff --staged for scope/impact
 4. Generate conventional commit message
 5. Execute safe-git-commit
@@ -41,7 +41,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 <parallel-checks>
 Run simultaneously:
-- Format: go fmt, prettier, rustfmt
 - Lint: eslint, ruff, golangci-lint
 - Types: tsc, mypy
 - Size: warn >10MB
