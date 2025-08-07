@@ -67,6 +67,28 @@ else
   echo "Worktree already exists at: $worktree_dir"
 fi
 
+echo "Searching for setup scripts ..."
+setup_scripts=()
+
+if [[ -d "$worktree_dir/scripts" ]]; then
+  for script_name in "init" "init.sh" "setup" "setup.sh"; do
+    script_path="$worktree_dir/scripts/$script_name"
+    if [[ -f "$script_path" && -x "$script_path" ]]; then
+      echo "Found setup script: $script_path"
+      setup_scripts+=("$script_path")
+    fi
+  done
+fi
+
+if [[ ${#setup_scripts[@]} -gt 0 ]]; then
+  for script in "${setup_scripts[@]}"; do
+    echo "Running setup script: $script"
+    (cd "$worktree_dir" && "$script")
+  done
+else
+  echo "No setup scripts found"
+fi
+
 repo_claude_dir="$repo_root/.claude"
 repo_local_settings_file="$repo_claude_dir/settings.local.json"
 worktree_claude_dir="$worktree_dir/.claude"
