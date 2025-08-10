@@ -7,174 +7,137 @@ model: "claude-sonnet-4-20250514"
 # Task Execution Command
 
 <role>
-Senior software engineer executing implementation plans. Ultrathink systematically through each step, verify thoroughly, maintain quality.
+Senior software engineer with TDD expertise. Ultrathink systematically through each transformation step, validate rigorously, maintain quality.
 </role>
 
 <task>
-Execute system transformation plan with comprehensive tracking and integrated tool usage.
-
-**Plan file**: $ARGUMENTS (defaults to `PLAN.md` if empty)
-**Execution log**: Maintain detailed log in `EXECUTION.md`
-**Integration**: Auto-call `safe-git-commit` and analyze documentation needs at appropriate points
+Execute transformation plan from: $ARGUMENTS (defaults to `PLAN.md`)
+Output detailed log to: `EXECUTION.md`
 </task>
 
 <validation>
-- No arguments: Use `PLAN.md` as default plan file
-- Plan file doesn't exist: "Plan file not found at specified path"
-- Plan lacks transformation steps: "Plan must define clear transformation steps"
-- Current system state unclear: Request codebase context before execution
+- No arguments: Use `PLAN.md` as default
+- Missing file: "Plan file not found at [path]"
+- Invalid plan: "Plan must define clear transformation steps"
 </validation>
 
 <workflow>
-## Execution Process
+**Phase 1: Initialize**
+1. Read plan → parse steps → validate prerequisites
+2. Create EXECUTION.md with plan summary
+3. Convert to TodoWrite tasks (parallel processing when possible)
+4. Verify system matches plan assumptions
 
-### Phase 1: Initialization
-1. **Read plan** → parse transformation steps → validate prerequisites
-2. **Initialize EXECUTION.md** → create execution log with plan summary and timeline
-3. **Convert to TodoWrite tasks**: Transform plan steps into specific, trackable todos
-4. **Verify current state** → confirm system matches plan assumptions
+**Phase 2: Execute (Per Step)**
+1. Mark todo `in_progress` → log step start
+2. **TDD Cycle** (if applicable):
+   - Red: Write failing tests
+   - Green: Minimal implementation
+   - Refactor: Optimize while green
+3. Validate transformation achieved
+4. Use `safe-git-commit` at milestones
+5. Update docs if behavior changes
+6. Log completion → mark `completed`
 
-### Phase 2: Transformation Execution
-**Per-step execution pattern**:
-1. **Mark todo in_progress** → update EXECUTION.md with step start
-2. **Analyze requirements** → understand transformation needed for this step
-3. **Implement changes** → follow project conventions and patterns
-4. **Test and verify** → validate step achieves intended transformation
-5. **Commit changes**: Use `safe-git-commit` with descriptive transformation message
-6. **Update documentation**: Analyze and update documentation if changes affect documented behavior
-7. **Log progress** → append completion details to EXECUTION.md
-8. **Mark completed** → proceed to next transformation step
-
-### Phase 3: Integration Points
-- **Use `safe-git-commit`** at logical transformation milestones (not every tiny change)
-- **Update documentation** when implementation changes affect documented system behavior
-- **Continuous validation** → ensure each step moves toward spec-defined target state
+**Phase 3: Complete**
+1. Final validation of all steps
+2. `safe-git-commit` completion
+3. `safe-git-push` → `safe-gh-pr-create`
+4. Generate summary with PR link
 </workflow>
 
-<quality-standards>
-**Transformation Step Completion Criteria**:
-- ✅ Step achieves intended state transformation per plan
-- ✅ Implementation follows project conventions (style, patterns, imports)
-- ✅ Tests pass and validate new behavior
-- ✅ No errors or warnings introduced
-- ✅ Changes committed with transformation-focused message
-- ✅ Documentation updated if system behavior changed
-- ✅ Progress logged in EXECUTION.md with timestamp and details
-
-**Error Recovery Protocol**:
-1. **Log issue** → document blocker in EXECUTION.md with context
-2. **Create blocking todo** → specific task describing what needs resolution
-3. **Research solutions** → investigate in codebase, docs, or external resources
-4. **Adapt approach** → modify implementation while maintaining transformation goals
-5. **Escalate if needed** → request guidance for architectural decisions
-6. **Never skip validation** → ensure each step is fully verified before proceeding
-
-**EXECUTION.md Format**:
-```
+<execution-log>
+```markdown
 # Execution Log: [Plan Name]
 **Started**: [timestamp]
-**Plan**: [plan-file-path]
-**Target**: [brief target state description]
+**Plan**: [file-path]
 
 ## Progress Log
-### [timestamp] - [Step Name] - STARTED
-- **Objective**: [what this step transforms]
+### [timestamp] - [Step Name] - [STATUS]
+- **Objective**: [transformation goal]
 - **Approach**: [implementation strategy]
-
-### [timestamp] - [Step Name] - COMPLETED
-- **Changes Made**: [files modified/created]
-- **Validation**: [how success was verified]
-- **Commit**: [commit hash/message]
-- **Notes**: [any important decisions or issues]
-
-### [timestamp] - [Step Name] - BLOCKED  
-- **Issue**: [description of blocker]
-- **Investigation**: [research done]
-- **Resolution**: [how it was resolved]
+- **Validation**: [how verified]
+- **Commit**: [hash/message]
+- **Issues**: [blockers/resolutions]
 ```
-</quality-standards>
+</execution-log>
 
-<completion>
-### Transformation Completion Process
+<quality-checklist>
+✅ Each step achieves intended transformation
+✅ TDD cycle completed (when applicable)
+✅ Tests pass, no regressions
+✅ Project conventions followed
+✅ Progress logged with timestamps
+✅ Commits at logical milestones only
+✅ Documentation updated for behavior changes
+</quality-checklist>
 
-1. **Final validation** → verify all transformation steps completed successfully
-2. **System state check** → confirm current state aligns with plan objectives
-3. **Documentation sync** → final documentation update if needed
-4. **Final commit** → `safe-git-commit` with transformation completion message
-5. **Push changes** → `safe-git-push`
-6. **Create PR** → `safe-gh-pr-create "title" "body"` with transformation summary
-
-**Final EXECUTION.md Entry**:
-```
-### [timestamp] - TRANSFORMATION COMPLETED
-- **Final State**: [brief description of achieved state]
-- **Total Changes**: [files created/modified/deleted counts]
-- **Commits**: [list of commit messages]
-- **Validation**: [how final state was verified]
-- **PR**: [pull request URL]
-- **Next Steps**: [recommended follow-up actions]
-```
-
-**Completion Summary Format**:
-```
-🎯 Transformation: [plan description]
-🟢 Status: [Completed/Partial/Blocked]
-📊 Progress: [X/Y steps completed]  
-📁 Files Changed: [created: X, modified: Y, deleted: Z]
-💾 Commits: [count with key messages]
-🧪 Validation: [Pass/Fail status]
-🔗 PR: [pull request link]
-➡️ Recommended: [call /task:verify to validate against spec]
-```
-</completion>
+<error-recovery>
+1. Log blocker in EXECUTION.md
+2. Create blocking todo with context
+3. Research solutions (parallel tools when possible)
+4. Adapt approach maintaining goals
+5. Never skip validation
+</error-recovery>
 
 <examples>
 <example>
-**Transformation Plan**: "Add JWT authentication system"
-**TodoWrite conversion**:
-1. HIGH: Create user model and database schema
-2. HIGH: Implement JWT middleware for route protection  
-3. HIGH: Create authentication endpoints (login/register)
-4. MEDIUM: Add frontend authentication components
-5. MEDIUM: Update API documentation for auth requirements
-6. LOW: Add authentication tests and validation
+**JWT Authentication**:
+```
+TodoWrite tasks:
+1. [HIGH] User model + tests (TDD)
+2. [HIGH] JWT middleware + tests (TDD)
+3. [HIGH] Auth endpoints + tests (TDD)
+4. [MEDIUM] Frontend components
+5. [LOW] Integration tests
 
-**EXECUTION.md progression**:
-- Each step logs start time, approach, completion details
-- Commits called at: user model, middleware, endpoints, frontend
-- Documentation updated after API changes
+Parallel execution: Run tests while implementing next step
+Commits: After each TDD cycle completes
+```
 </example>
 
 <example>
-**Error Scenario**: Tests failing - missing authentication dependency
-**Recovery Process**:
-1. **Log in EXECUTION.md**: "Step 2 blocked - JWT library not installed"
-2. **Create todo**: "Install and configure JWT authentication library"
-3. **Research**: Check package.json, investigate JWT options
-4. **Resolve**: Install library, update imports, verify tests
-5. **Commit**: "safe-git-commit 'Fix JWT library dependency for auth middleware'"
-6. **Continue**: Resume step 2 with working dependencies
+**Missing Dependency**:
+```
+BLOCKED: JWT library not installed
+- Research: Check package.json, find alternatives
+- Resolve: npm install jsonwebtoken
+- Commit: "fix: add JWT dependency"
+- Continue: Resume middleware implementation
+```
 </example>
 
 <example>
-**Missing Plan File**:
-Input: `/task:exec` (no arguments)
-Response: "No plan file found at PLAN.md. Please run `/task:plan` first to generate transformation plan."
+**Large Transformation**:
+```
+Parallel tools usage:
+- Grep for existing patterns
+- Read multiple files simultaneously
+- Run tests while reading next requirements
+- Batch related file edits
 
-Input: `/task:exec custom-plan.md`  
-Response: "Plan file not found at custom-plan.md. Please verify path or run `/task:plan` with appropriate arguments."
+Optimization: 50% time reduction via parallelization
+```
+</example>
+
+<example>
+**TDD Workflow**:
+```
+Step: Implement user validation
+1. Write failing test for email validation
+2. Add minimal validation code
+3. Test passes → refactor for clarity
+4. Write test for password requirements
+5. Implement password validation
+6. All tests green → safe-git-commit
+```
 </example>
 </examples>
 
 <principles>
-**Execution Principles**:
-🎯 **Scope adherence**: Execute only plan scope, no feature creep
-🔒 **Stability**: Never break existing functionality during transformation
-🛡️ **Safety**: Use safe-git commands and validate each step
-📊 **Progress tracking**: Maintain detailed EXECUTION.md log and TodoWrite status
-💾 **Logical commits**: Group related changes, use `safe-git-commit` at transformation milestones
-🧪 **Continuous validation**: Test thoroughly and verify state transformation at each step
-📝 **Decision logging**: Document all implementation decisions and trade-offs
-🔄 **Integration awareness**: Update documentation when behavior changes affect documented behavior
-⚡ **Efficiency**: Work systematically through plan without skipping verification
+- **Parallel execution**: Use multiple tools simultaneously for efficiency
+- **TDD rigor**: Red-Green-Refactor for each feature
+- **Atomic commits**: Only commit complete, tested transformations
+- **Continuous validation**: Never proceed with failing tests
+- **Progress visibility**: Update TodoWrite and EXECUTION.md continuously
 </principles>

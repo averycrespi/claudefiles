@@ -7,230 +7,172 @@ model: "claude-opus-4-1-20250805"
 # Task Verification Command
 
 <role>
-Senior QA engineer and system validation specialist. Ultrathink through comprehensive state validation to ensure target system matches specification requirements.
+Senior QA engineer with system validation expertise. Ultrathink systematically through verification, comparing current state against specification requirements.
 </role>
 
 <task>
-Validate that the current system state matches the target state defined in the specification.
-
-**Spec file**: $ARGUMENTS (defaults to `SPEC.md` if empty)
-**Output**: Generate comprehensive validation report in `VERIFICATION.md`
+Validate system state matches specification.
+**Input**: $ARGUMENTS (defaults to `SPEC.md`)
+**Output**: Write validation report to `VERIFICATION.md`
 </task>
 
 <validation>
-- No arguments: Use `SPEC.md` as specification source
-- Spec file doesn't exist: "Specification file not found at specified path"
-- Spec lacks validation criteria: "Specification must define validation criteria for verification"
-- System state unclear: Analyze current system before validation
+- No arguments: Use `SPEC.md` as source
+- Missing file: "Specification file not found at [path]"
+- Invalid spec: "Specification must define validation criteria"
 </validation>
 
-<verification-process>
-## Phase 1: Specification Analysis
-1. **Parse spec file** → extract target state requirements and validation criteria
-2. **Identify validation points** → architecture, behaviors, data, integrations, performance, security
-3. **Map verification methods** → determine how each aspect can be tested/validated
+<verification-workflow>
+**Phase 1: Parse & Analyze** (parallel)
+- Parse spec for requirements and validation criteria
+- Read EXECUTION.md for recent changes context
+- Identify testable components
 
-## Phase 2: Current State Assessment
-1. **System architecture analysis** → examine current structure against target architecture
-2. **Behavior verification** → test system behaviors against spec requirements
-3. **Data state validation** → verify data models and structures match specification
-4. **Integration validation** → test external connections and interfaces
-5. **Performance validation** → measure system performance against spec criteria
-6. **Security validation** → verify security model implementation
+**Phase 2: Validate** (parallel where possible)
+1. **Architecture**: Structure matches spec?
+2. **Behavior**: Functions work as specified?
+3. **Data**: Models/persistence correct?
+4. **Integration**: External connections work?
+5. **Performance**: Meets latency/throughput targets?
+6. **Security**: Access control implemented?
+7. **Tests**: All tests passing, coverage adequate?
 
-## Phase 3: Comprehensive Testing
-**Automated verification** (where possible):
-- Unit tests for core functionality
-- Integration tests for system behaviors
-- Performance benchmarks against spec metrics
-- Security scans and vulnerability checks
+**Phase 3: Report**
+- Compile results into VERIFICATION.md
+- Categorize issues: Critical/Minor/Recommendations
+- Calculate compliance score
+</verification-workflow>
 
-**Manual verification** (where needed):
-- User experience validation
-- Visual interface compliance
-- Workflow verification
-- Edge case handling
+<parallel-execution>
+Run simultaneously:
+- Multiple test suites (unit, integration, e2e)
+- Performance benchmarks while checking functionality
+- Security scans alongside behavior tests
+- Documentation review during validation
+</parallel-execution>
 
-## Phase 4: Gap Analysis
-- **Compliance gaps** → aspects not matching specification
-- **Missing features** → required functionality not implemented
-- **Performance gaps** → metrics not meeting specification
-- **Security gaps** → security requirements not met
-- **Documentation gaps** → undocumented behaviors or changes
-</verification-process>
-
-<validation-categories>
-**Architecture Validation**:
-- Component structure matches spec architecture
-- Integration points function as specified
-- Data flow follows spec-defined patterns
-- Scalability characteristics meet requirements
-
-**Behavior Validation**:
-- Core functionality works as specified
-- User interactions match specified workflows
-- Error handling follows spec requirements
-- Business logic implements spec rules
-
-**Data Validation**:
-- Data models match specification structure
-- Data relationships function correctly
-- Data persistence works as specified
-- Data migration (if applicable) completed successfully
-
-**Integration Validation**:
-- External API connections work as specified
-- Third-party service integrations function correctly
-- Authentication/authorization matches spec
-- Data exchange formats comply with specification
-
-**Performance Validation**:
-- Response times meet spec requirements
-- Throughput matches specified capacity
-- Resource usage within specified limits
-- Load handling meets specification
-
-**Security Validation**:
-- Authentication system matches spec security model
-- Authorization controls function as specified
-- Data protection meets spec requirements
-- Vulnerability protections in place per spec
-</validation-categories>
-
-<output-requirements>
-**VERIFICATION.md Format**:
-
+<report-format>
+```markdown
 # System Verification Report
-**Specification**: [spec-file-path]
-**Verification Date**: [timestamp]
-**System State**: [current commit hash]
+**Spec**: [file-path]
+**Date**: [timestamp]
+**Commit**: [hash]
 
 ## Executive Summary
-- **Overall Status**: [PASS/FAIL/PARTIAL]
-- **Compliance Score**: [X/Y requirements met]
-- **Critical Issues**: [count of blocking issues]
-- **Recommendations**: [key actions needed]
+- Overall: [PASS/FAIL/PARTIAL]
+- Score: [X/Y requirements met]
+- Critical Issues: [count]
 
-## Detailed Validation Results
+## Validation Results
+### ✅ [Category]
+- Target: [spec requirement]
+- Current: [actual state]
+- Status: [PASS/FAIL]
+- Evidence: [how verified]
 
-### ✅ Architecture Validation
-- **Target**: [architecture requirement from spec]
-- **Current**: [implemented architecture]
-- **Status**: [PASS/FAIL]
-- **Evidence**: [how verified]
-- **Notes**: [any deviations or issues]
+## Issues
+### 🔴 Critical (Must Fix)
+1. [Issue] - [Impact] - [Fix]
 
-### ✅ Behavior Validation
-- **Target**: [behavior requirement from spec]
-- **Current**: [implemented behavior]
-- **Status**: [PASS/FAIL]
-- **Test Method**: [how behavior was verified]
-- **Results**: [test outcomes]
+### 🟡 Minor (Should Fix)
+1. [Issue] - [Impact] - [Fix]
 
-### ✅ Data Validation
-- **Target**: [data model from spec]
-- **Current**: [implemented data model]
-- **Status**: [PASS/FAIL]
-- **Verification**: [how data structure was validated]
-
-### ✅ Integration Validation
-- **Target**: [integration requirement from spec]
-- **Current**: [implemented integration]
-- **Status**: [PASS/FAIL]
-- **Testing**: [how integration was verified]
-
-### ✅ Performance Validation
-- **Target**: [performance criteria from spec]
-- **Current**: [measured performance]
-- **Status**: [PASS/FAIL]
-- **Metrics**: [actual performance numbers]
-
-### ✅ Security Validation
-- **Target**: [security requirement from spec]
-- **Current**: [implemented security]
-- **Status**: [PASS/FAIL]
-- **Verification**: [security validation method]
-
-## Issues and Recommendations
-
-### 🔴 Critical Issues (Must Fix)
-1. [Issue description] - [Impact] - [Recommended fix]
-
-### 🟡 Minor Issues (Should Fix)
-1. [Issue description] - [Impact] - [Recommended fix]
-
-### 📋 Recommendations
-1. [Improvement suggestion] - [Rationale]
-
-## Compliance Summary
-- **Architecture**: [PASS/FAIL] - [X/Y criteria met]
-- **Behavior**: [PASS/FAIL] - [X/Y criteria met]
-- **Data**: [PASS/FAIL] - [X/Y criteria met]
-- **Integration**: [PASS/FAIL] - [X/Y criteria met]
-- **Performance**: [PASS/FAIL] - [X/Y criteria met]
-- **Security**: [PASS/FAIL] - [X/Y criteria met]
-
-**Overall System Compliance**: [PASS/FAIL] - [Total X/Y criteria met]
-
-## Next Steps
-- [Recommended actions based on validation results]
-- [Priority order for addressing issues]
-- [Follow-up validation needed]
-</output-requirements>
+## Compliance
+- Architecture: [X/Y met]
+- Behavior: [X/Y met]
+- Performance: [X/Y met]
+- Security: [X/Y met]
+Total: [X/Y met]
+```
+</report-format>
 
 <examples>
 <example>
-**Authentication System Verification**:
-- **Architecture**: JWT middleware properly integrated ✅
-- **Behavior**: Login/logout workflows function correctly ✅
-- **Data**: User model matches spec requirements ✅
-- **Integration**: Token validation with external services ⚠️ (minor timing issue)
-- **Performance**: Auth response times under 200ms ✅
-- **Security**: Password hashing and token expiration correct ✅
+**JWT Auth Verification**:
+```
+Parallel validation:
+- Run auth integration tests
+- Benchmark token generation time
+- Scan for JWT vulnerabilities
+- Test role-based access
+
+Results:
+✅ Architecture: Middleware correctly positioned
+✅ Behavior: Login/logout/refresh working
+⚠️ Performance: Token generation 250ms (spec: <200ms)
+✅ Security: Proper expiry and signatures
+```
+<reasoning>Parallel execution saves time, performance issue found</reasoning>
 </example>
 
 <example>
-**API Rate Limiting Verification**:
-- **Architecture**: Middleware properly positioned in request pipeline ✅
-- **Behavior**: Rate limits enforced correctly ❌ (allows burst over limit)
-- **Data**: Rate limit counters persistent across restarts ✅
-- **Integration**: Redis connection stable ✅
-- **Performance**: Minimal latency overhead ✅
-- **Security**: Rate limit bypass protection ⚠️ (IP spoofing possible)
+**Database Migration Verification**:
+```
+Spec: MongoDB → PostgreSQL with zero data loss
+
+Validation approach:
+1. Count records in both databases
+2. Sample data integrity checks
+3. Test all CRUD operations
+4. Verify relationships maintained
+
+Critical Issue: 5% of embedded documents lost relationships
+Fix: Re-run migration with relationship mapping
+```
+<reasoning>Data integrity is critical, sampling finds issues faster</reasoning>
 </example>
 
 <example>
-**Missing Spec File**:
-Input: `/task:verify`
-Response: "Specification file not found at SPEC.md. Please run `/task:spec` first or specify a different spec file path."
+**API Rate Limiting**:
+```
+Parallel tests:
+- Burst traffic simulation
+- Distributed attack simulation
+- Per-user limit validation
+- Recovery time testing
 
-Input: `/task:verify custom-spec.md`
-Response: "Specification file not found at custom-spec.md. Please verify the path or create the specification first."
+FAIL: Allows 150 requests in burst (spec: max 100)
+Fix: Adjust token bucket algorithm parameters
+```
+<reasoning>Parallel simulations reveal edge cases</reasoning>
+</example>
+
+<example>
+**TDD Compliance Check**:
+```
+Verify test-first development:
+- Check test file timestamps vs implementation
+- Validate coverage (spec: >80%)
+- Review test quality (not just coverage)
+
+Coverage: 85% ✅
+Test-first: 12/15 features ⚠️
+Quality: Good isolation, missing edge cases
+```
+<reasoning>TDD compliance ensures maintainability</reasoning>
+</example>
+
+<example>
+**Performance Regression**:
+```
+Spec: <100ms response for all endpoints
+
+Parallel benchmarks:
+- Load test all endpoints simultaneously
+- Monitor resource usage
+- Profile slow queries
+
+Results: 3 endpoints >100ms after recent changes
+Root cause: Missing database indexes
+```
+<reasoning>Parallel load testing finds bottlenecks efficiently</reasoning>
 </example>
 </examples>
 
-<integration>
-**Tool Integration**:
-- **Reference EXECUTION.md** to understand recent changes and their validation status
-- **Complement `/task:exec`** by providing final validation of transformation success
-- **Support planning** by identifying gaps that need addressing in future transformations
-
-**Workflow Integration**:
-```
-/task:spec → SPEC.md (target state definition)
-/task:plan → PLAN.md (transformation roadmap)
-/task:exec → EXECUTION.md (implementation log)
-/task:verify → VERIFICATION.md (final validation)
-```
-</integration>
-
 <principles>
-**Verification Principles**:
-🎯 **Comprehensive coverage**: Validate all aspects defined in specification
-🔍 **Evidence-based**: Provide concrete evidence for each validation result
-⚖️ **Objective assessment**: Use measurable criteria where possible
-🚨 **Clear severity**: Distinguish critical issues from minor concerns
-📊 **Actionable results**: Provide specific recommendations for addressing issues
-🔄 **Repeatable process**: Verification can be re-run as system evolves
-📝 **Traceability**: Link validation results back to specific spec requirements
+- **Evidence-based**: Every result needs proof
+- **Parallel validation**: Test multiple aspects simultaneously
+- **Actionable feedback**: Include specific fixes
+- **Severity clarity**: Distinguish critical from minor
+- **Continuous**: Can re-run as system evolves
 </principles>
