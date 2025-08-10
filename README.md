@@ -10,6 +10,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - 🔔 **Notification hooks** to alert you when Claude needs attention
 - 🛡️ **Safe wrapper scripts** for granting Claude access to dangerous commands
 - 🌳 **Worktree management scripts** for building ergonomic workflows
+- 📊 **Status line** showing the current model and session information
 - 📖 **Instructions** telling Claude how to use the resources in this repository
 
 ## Requirements
@@ -18,6 +19,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - **macOS** is assumed, but can be adapted for Linux
 - **Homebrew** for macOS dependency management
 - **Python 3** for the `safe-find` script
+- **Bun** for the status line
 
 ## Quickstart
 
@@ -63,6 +65,10 @@ The setup script will:
   -  Under the hood, `worktree-init` is called to start a new tmux session
 - Use `worktree-rm` to destroy a worktree and its associated tmux window
 - The Claude [hooks](./claude/settings.json) call `worktree-notify` when Claude is done or needs attention
+
+### Status Line
+
+- Shows the current model and session information using [ccusage](https://ccusage.com/guide/statusline)
 
 ## License
 
