@@ -66,10 +66,6 @@ The setup script will:
 - Use `worktree-rm` to destroy a worktree and its associated tmux window
 - The Claude [hooks](./claude/settings.json) call `worktree-notify` when Claude is done or needs attention
 
-### Status Line
-
-- Shows the current model and session information using [ccusage](https://ccusage.com/guide/statusline)
-
 ## License
 
 [MIT](./LICENSE)
