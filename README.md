@@ -45,14 +45,24 @@ The setup script will:
 
 ### Slash Commands
 
+#### Prompt Engineering
+
+- Use `/prompt:refine prompt-file` to improve your existing Claude prompts
+- Use `/prompt:suggest` to analyze your Claude usage history and suggest custom commands
+
+#### Task Lifecycle
+
+> Recommendation: Wipe the context with `/clear` between each step. This prevents thought leakage & context bloat.
+
+- Use `/task:spec requirements` to generate a spec through Socratic questioning, written to `SPEC.md`
+- Use `/task:plan [spec-file]` to transform a spec into a detailed execution plan, written to `PLAN.md`
+- Use `/task:exec [plan-file]` to execute a plan from a file, with progress logged to `EXECUTION.md`
+- Use `/task:verify [spec-file]` to validate the final state against a spec, reporting to `VERIFICATION.md`
+
+#### Utilities
+
 - Use `/docs:update` to analyze recent code changes and update documentation automatically
 - Use `/git:commit` to analyze staged changes and create smart commits with auto-generated messages
-- Use `/prompt:refine` to improve your existing Claude prompts
-- Use `/prompt:suggest` to analyze your Claude usage history and suggest custom commands
-- Use `/task:plan` to create a detailed plan for Claude to execute
-  - Recommendation: use Claude to iterate on the plan file until you are satisfied
-- Use `/task:exec` to execute a plan from a file
-  - Recommendation: before executing a plan, wipe the context with `/clear` to prevent context bloat
 
 ### Safe Wrapper Scripts
 
