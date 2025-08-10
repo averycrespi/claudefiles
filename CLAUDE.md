@@ -75,10 +75,26 @@ The repository includes specialized agents for different tasks:
 
 ### Command Extensions
 Custom slash commands are available in `claude/commands/`:
+
+#### Task Command System
+Comprehensive workflow for systematic project transformation:
+- `/task:spec` - Create technical specifications through Socratic questioning → `SPEC.md`
+- `/task:plan` - Generate detailed implementation plans with parallel research → `PLAN.md`
+- `/task:exec` - Execute plans systematically with progress tracking → `EXECUTION.md`
+- `/task:verify` - Validate final system state against original specifications → `VERIFICATION.md`
+
+**Command Workflow**: `/task:spec` → `/task:plan` → `/task:exec` → `/task:verify`
+
+**Key Features**:
+- Agent integration (research-assistant, security-analyst, code-reviewer)
+- Safety-first approach using safe-git commands
+- TodoWrite integration for systematic task management
+- Auto-calls `/docs:update` when behavior changes
+- Comprehensive validation at each step
+
+#### Other Commands
 - `/docs:update` - Analyze recent code changes and update documentation automatically
 - `/git:commit` - Smart commit with change analysis, safety checks, and auto-generated messages
-- `/task:exec` - Execute implementation plans with systematic tracking
-- `/task:plan` - Create detailed implementation plans
 - `/prompt:refine` - Refine and improve prompts
 - `/prompt:suggest` - Analyze Claude Code usage history and suggest custom commands based on patterns
 
