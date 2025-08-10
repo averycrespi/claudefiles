@@ -54,9 +54,9 @@ The setup script will:
 
 > Recommendation: Wipe the context with `/clear` between each step. This prevents thought leakage & context bloat.
 
-- Use `/task:spec requirements` to generate a spec through Socratic questioning, written to `SPEC.md`
+- Use `/task:specify requirements` to generate a spec through Socratic questioning, written to `SPEC.md`
 - Use `/task:plan [spec-file]` to transform a spec into a detailed execution plan, written to `PLAN.md`
-- Use `/task:exec [plan-file]` to execute a plan from a file, with progress logged to `EXECUTION.md`
+- Use `/task:execute [plan-file]` to execute a plan from a file, with progress logged to `EXECUTION.md`
 - Use `/task:verify [spec-file]` to validate the final state against a spec, reporting to `VERIFICATION.md`
 
 #### Utilities

@@ -78,12 +78,12 @@ Custom slash commands are available in `claude/commands/`:
 
 #### Task Command System
 Comprehensive workflow for systematic project transformation:
-- `/task:spec` - Create technical specifications through Socratic questioning → `SPEC.md`
+- `/task:specify` - Create technical specifications through Socratic questioning → `SPEC.md`
 - `/task:plan` - Generate detailed implementation plans with parallel research → `PLAN.md`
-- `/task:exec` - Execute plans systematically with progress tracking → `EXECUTION.md`
+- `/task:execute` - Execute plans systematically with progress tracking → `EXECUTION.md`
 - `/task:verify` - Validate final system state against original specifications → `VERIFICATION.md`
 
-**Command Workflow**: `/task:spec` → `/task:plan` → `/task:exec` → `/task:verify`
+**Command Workflow**: `/task:specify` → `/task:plan` → `/task:execute` → `/task:verify`
 
 **Key Features**:
 - Agent integration (research-assistant, security-analyst, code-reviewer)
