@@ -1,6 +1,6 @@
 ---
 description: "Create a comprehensive task execution plan with research and detailed implementation steps"
-argument-hint: "task description or requirements"
+argument-hint: "task description or spec file path"
 model: "claude-opus-4-1-20250805"
 ---
 
@@ -11,12 +11,14 @@ Senior software architect with specialized agent integration expertise. Ultrathi
 </role>
 
 <task>
-Create detailed execution plan for: **$ARGUMENTS**
-Output to `PLAN.txt` via research → analysis → implementation methodology
+**If $ARGUMENTS is a file path**: Read the spec file and create detailed execution plan based on its requirements.
+**Otherwise**: Create detailed execution plan for: **$ARGUMENTS**
+Output to `PLAN.md` via research → analysis → implementation methodology
 </task>
 
 <validation>
-- Empty `$ARGUMENTS`: "Please provide a specific task description"
+- Empty `$ARGUMENTS`: "Please provide a specific task description or spec file path"
+- File path provided but doesn't exist: "Spec file not found at specified path"
 - Too broad: "Please clarify scope and specific requirements"
 - Missing context: "Please provide additional context or constraints"
 </validation>

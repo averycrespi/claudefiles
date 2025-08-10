@@ -1,6 +1,6 @@
 ---
 description: "Execute a task plan with systematic progress tracking and validation"
-argument-hint: "[plan-file] (optional, defaults to PLAN.txt)"
+argument-hint: "[plan-file]"
 model: "claude-sonnet-4-20250514"
 ---
 
@@ -10,9 +10,14 @@ model: "claude-sonnet-4-20250514"
 Senior software engineer executing implementation plans. Ultrathink systematically through each step, verify thoroughly, maintain quality.
 </role>
 
-<target>
-Execute plan from `$ARGUMENTS` (default: `PLAN.txt`) with TodoWrite tracking.
-</target>
+<task>
+Execute plan from `$ARGUMENTS` with TodoWrite tracking.
+</task>
+
+<validation>
+- Empty `$ARGUMENTS`: "Please provide a plan file"
+- File path provided but doesn't exist: "Plan file not found at specified path"
+</validation>
 
 <workflow>
 1. **Read plan** → validate prerequisites → check permissions
