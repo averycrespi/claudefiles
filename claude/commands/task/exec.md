@@ -15,7 +15,7 @@ Execute system transformation plan with comprehensive tracking and integrated to
 
 **Plan file**: $ARGUMENTS (defaults to `PLAN.md` if empty)
 **Execution log**: Maintain detailed log in `EXECUTION.md`
-**Integration**: Auto-call `/git:commit` and `/docs:update` at appropriate points
+**Integration**: Auto-call `safe-git-commit` and analyze documentation needs at appropriate points
 </task>
 
 <validation>
@@ -40,14 +40,14 @@ Execute system transformation plan with comprehensive tracking and integrated to
 2. **Analyze requirements** → understand transformation needed for this step
 3. **Implement changes** → follow project conventions and patterns
 4. **Test and verify** → validate step achieves intended transformation
-5. **Commit changes**: Call `/git:commit` with descriptive transformation message
-6. **Update documentation**: Call `/docs:update` if changes affect documented behavior
+5. **Commit changes**: Use `safe-git-commit` with descriptive transformation message
+6. **Update documentation**: Analyze and update documentation if changes affect documented behavior
 7. **Log progress** → append completion details to EXECUTION.md
 8. **Mark completed** → proceed to next transformation step
 
 ### Phase 3: Integration Points
-- **Call `/git:commit`** at logical transformation milestones (not every tiny change)
-- **Call `/docs:update`** when implementation changes affect documented system behavior
+- **Use `safe-git-commit`** at logical transformation milestones (not every tiny change)
+- **Update documentation** when implementation changes affect documented system behavior
 - **Continuous validation** → ensure each step moves toward spec-defined target state
 </workflow>
 
@@ -99,8 +99,8 @@ Execute system transformation plan with comprehensive tracking and integrated to
 
 1. **Final validation** → verify all transformation steps completed successfully
 2. **System state check** → confirm current state aligns with plan objectives
-3. **Documentation sync** → final `/docs:update` call if needed
-4. **Final commit** → `/git:commit` with transformation completion message
+3. **Documentation sync** → final documentation update if needed
+4. **Final commit** → `safe-git-commit` with transformation completion message
 5. **Push changes** → `safe-git-push`
 6. **Create PR** → `safe-gh-pr-create "title" "body"` with transformation summary
 
@@ -142,7 +142,7 @@ Execute system transformation plan with comprehensive tracking and integrated to
 **EXECUTION.md progression**:
 - Each step logs start time, approach, completion details
 - Commits called at: user model, middleware, endpoints, frontend
-- `/docs:update` called after API changes documented
+- Documentation updated after API changes
 </example>
 
 <example>
@@ -152,7 +152,7 @@ Execute system transformation plan with comprehensive tracking and integrated to
 2. **Create todo**: "Install and configure JWT authentication library"
 3. **Research**: Check package.json, investigate JWT options
 4. **Resolve**: Install library, update imports, verify tests
-5. **Commit**: "/git:commit Fix JWT library dependency for auth middleware"
+5. **Commit**: "safe-git-commit 'Fix JWT library dependency for auth middleware'"
 6. **Continue**: Resume step 2 with working dependencies
 </example>
 
@@ -172,9 +172,9 @@ Response: "Plan file not found at custom-plan.md. Please verify path or run `/ta
 🔒 **Stability**: Never break existing functionality during transformation
 🛡️ **Safety**: Use safe-git commands and validate each step
 📊 **Progress tracking**: Maintain detailed EXECUTION.md log and TodoWrite status
-💾 **Logical commits**: Group related changes, call `/git:commit` at transformation milestones
+💾 **Logical commits**: Group related changes, use `safe-git-commit` at transformation milestones
 🧪 **Continuous validation**: Test thoroughly and verify state transformation at each step
 📝 **Decision logging**: Document all implementation decisions and trade-offs
-🔄 **Integration awareness**: Call `/docs:update` when behavior changes affect documentation
+🔄 **Integration awareness**: Update documentation when behavior changes affect documented behavior
 ⚡ **Efficiency**: Work systematically through plan without skipping verification
 </principles>

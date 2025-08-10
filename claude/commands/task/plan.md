@@ -118,7 +118,7 @@ Each step follows the Red-Green-Refactor TDD cycle:
    - **Green**: Update config files and settings to pass tests
    - **Refactor**: Clean up configuration structure
 
-6. **Documentation Updates**: [When to call `/docs:update`]
+6. **Documentation Updates**: [When to update documentation]
 7. **Final Verification**: [Validate all tests pass and target state achieved]
 
 ## File Operation Details
@@ -146,10 +146,10 @@ src/
 - **Coverage Goals**: Aim for comprehensive test coverage of new/modified behaviors
 
 ## Integration Strategy
-- **Test-Driven Commit Points**: Call `/git:commit` only after completing full Red-Green-Refactor cycles with all tests passing
+- **Test-Driven Commit Points**: Use `safe-git-commit` only after completing full Red-Green-Refactor cycles with all tests passing
 - **Test Execution Checkpoints**: Run test suite at each phase transition (Red→Green, Green→Refactor, before commits)
 - **Test Failure Protocols**: Handle failing tests by debugging, not by skipping or removing tests
-- **Documentation Triggers**: Call `/docs:update` when implementation changes affect documented behavior or add new testable features
+- **Documentation Triggers**: Update documentation when implementation changes affect documented behavior or add new testable features
 - **Continuous Testing**: Maintain green test suite throughout transformation - never commit broken tests
 - **Coverage Validation**: Verify test coverage meets minimum thresholds before marking steps complete
 
@@ -207,7 +207,7 @@ Plan: Current security model analysis → Auth architecture research → Migrati
 - **Unambiguous execution**: Another Claude can execute without clarification
 - **Complete file mapping**: All affected files identified with exact paths
 - **Clear validation**: Each step includes verification method
-- **Integration aware**: Specifies when to call `/git:commit` and `/docs:update`
+- **Integration aware**: Specifies when to use `safe-git-commit` and update documentation
 - **Risk aware**: Identifies potential issues and mitigation strategies
 
 **Be specific**: Exact paths, precise commands, clear verification criteria.
