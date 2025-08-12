@@ -39,7 +39,7 @@
       "Bash(git push:*)"
     ]
   },
-  "model": "sonnet",
+  "model": "opusplan",
   "hooks": {
     "Notification": [
       {
