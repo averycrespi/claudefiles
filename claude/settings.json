@@ -24,6 +24,7 @@
       "Bash(git blame:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
+      "Bash(git remote get-url:*)",
       "Bash(git status:*)",
       "Bash(safe-find:*)",
       "Bash(safe-gh-pr-create:*)",

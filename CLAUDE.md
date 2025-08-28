@@ -95,6 +95,7 @@ Comprehensive workflow for systematic project transformation:
 #### Other Commands
 - `/docs:update` - Analyze recent code changes and update documentation automatically
 - `/git:commit` - Smart commit with change analysis, safety checks, and auto-generated messages
+- `/git:review` - AI-assisted GitHub PR review analysis to augment human reviewers with repository context
 - `/prompt:refine` - Refine and improve prompts
 - `/prompt:suggest` - Analyze Claude Code usage history and suggest custom commands based on patterns
 
@@ -104,6 +105,7 @@ The `claude/settings.json` file enforces strict security policies:
 - Blocks dangerous commands (`find`, `git commit`, `git push`)
 - Requires using safe wrapper scripts for potentially dangerous operations
 - Includes hooks for desktop notifications on significant events
+- Configured to use "opusplan" model for enhanced planning capabilities in task workflows
 
 ## Working with This Repository
 

@@ -63,6 +63,7 @@ The setup script will:
 
 - Use `/docs:update` to analyze recent code changes and update documentation automatically
 - Use `/git:commit` to analyze staged changes and create smart commits with auto-generated messages
+- Use `/git:review github-pr-url` to generate AI-assisted GitHub PR review analysis to augment human reviewers
 
 ### Safe Wrapper Scripts
 
