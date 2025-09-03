@@ -5,21 +5,18 @@
 # This script is idempotent and can safely be run multiple times.
 #
 # Usage:
-#   worktree-add <branch-name> [prompt ...]
+#   worktree-add <branch-name>
 #
 # Examples:
 #   worktree-add feature/auth
-#   worktree-add feature/auth implement the auth flow
 
 set -euo pipefail
 
 # Requirement: must have one argument (branch name)
 if [[ $# -eq 0 ]]; then
   echo "Error: Branch name is required" >&2
-  echo "Usage: $(basename "$0") <branch-name> [prompt ...]" >&2
-  echo "Examples:" >&2
-  echo "\t$(basename "$0") feature/auth" >&2
-  echo "\t$(basename "$0") feature/auth implement the auth flow" >&2
+  echo "Usage: $(basename "$0") <branch-name>" >&2
+  echo "Example: $(basename "$0") feature/auth" >&2
   exit 1
 fi
 
@@ -29,10 +26,6 @@ if [[ -z "$branch_name" ]]; then
   echo "Error: Branch name cannot be empty" >&2
   exit 1
 fi
-
-# Parse prompt from remaining arguments
-shift
-prompt="$*"
 
 # Requirement: must be in a git repository
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -113,29 +106,8 @@ if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | sed 
   echo "Creating tmux window: $window_name"
   tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_dir" -d
 
-  # This is a hack, but there's no other safe way to bypass the trust screen
-  # Luckily for us, sending C-m doesn't do anything if the directory is already trusted
-  echo "Bypassing Claude Code directory trust screen (if present)"
-  tmux send-keys -t "$session_name:$window_name" "claude --permission-mode acceptEdits" C-m
-  sleep 2 # Wait for Claude to start
-  tmux send-keys -t "$session_name:$window_name" C-m
-  sleep 1 # Wait for Claude to register the input
-
-  # If the trust screen DOES appear, it breaks our ability to send C-m reliably
-  # To fix this, we can kill and relaunch Claude Code by targeting its pane
-  echo "Fixing window environment"
-  tmux split-window -t "$session_name:$window_name" -c "$worktree_dir"
-  tmux kill-pane -t "$session_name:$window_name.1"
-
   echo "Launching Claude Code"
   tmux send-keys -t "$session_name:$window_name" "claude --permission-mode acceptEdits" C-m
-
-  if [[ -n "$prompt" ]]; then
-    echo "Sending initial prompt: $prompt"
-    sleep 2 # Wait for Claude to start
-    tmux send-keys -t "$session_name:$window_name" "$prompt"
-    tmux send-keys -t "$session_name:$window_name" C-m
-  fi
 else
   echo "tmux window already exists: $window_name"
 fi
