@@ -2,30 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) across all projects.
 
-## Safe Find Command
+## Safe commands
 
-ALWAYS use the `safe-find` command instead of the `find` command:
+### Safe Find Command
 
- - Use `safe-find [options]` instead of `find [options]`
+- ALWAYS use the `safe-find` command instead of the `find` command
+- The `safe-find` command supports the same options as `find`, but only allows basic filtering
+- To see a list of allowed options, run `safe-find -help`:
 
-The `safe-find` command supports the same options as `find`, with the following differences:
+```
+usage: safe-find [-name NAME_PATTERN] [-iname INAME_PATTERN]
+                 [-regex REGEX_PATTERN] [-iregex IREGEX_PATTERN]
+                 [-path PATH_PATTERN] [-ipath IPATH_PATTERN] [-type {f,d,l}]
+                 [-maxdepth MAXDEPTH] [-mindepth MINDEPTH] [-print] [-print0]
+                 [-help]
+                 paths [paths ...]
+```
 
-- You CANNOT use dangerous options which execute commands (e.g. `-exec`) or modify files (e.g. `-delete`)
-- Only basic options are supported, e.g. name and path filtering
-- Logical operators are NOT supported, e.g. `!`, `()`, `-a`, `-o`
+### Safe Git Commands
 
-To see a list of allowed options, run `safe-find -help`.
-
-## Safe Git Commands
-
-ALWAYS use these safe Git commands instead of the base Git commands:
-
-- Use `safe-git-commit "message"` instead of `git commit`
-- Use `safe-git-push` instead of `git push`
-- Use `safe-gh-pr-create "title" "body"` instead of `gh pr create`
-
-These safe Git commands do NOT accept any other flags, options, or parameters:
-
-- You CANNOT use `safe-git-commit --no-verify` to skip failing Git hooks
-- You CANNOT use `safe-git-push --force` to force push
-- You CANNOT use `safe-gh-pr-create --fill` to autofill the title and body
+- ALWAYS use `safe-git-commit "message"` instead of `git commit`
+- ALWAYS use `safe-git-push` instead of `git push`
+- ALWAYS use `safe-gh-pr-create "title" "body"` instead of `git pr create`
+- These safe Git and GitHub commands do not accept any other flags or arguments

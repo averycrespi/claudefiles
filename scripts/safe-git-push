@@ -69,14 +69,14 @@ fi
 # Requirement: there MUST NOT be unstaged changes
 if ! git diff --quiet; then
   echo "Error: Unstaged changes detected" >&2
-  echo "Please stage and commit the changes with: git add && safe-git-commit" >&2
+  echo "Please stage and commit the changes with: git add && safe-git-commit \"message\"" >&2
   exit 1
 fi
 
 # Requirement: there MUST NOT be staged changes
 if ! git diff --cached --quiet; then
   echo "Error: Staged changes not yet committed" >&2
-  echo "Please commit the changes with: safe-git-commit" >&2
+  echo "Please commit the changes with: safe-git-commit \"message\"" >&2
   exit 1
 fi
 

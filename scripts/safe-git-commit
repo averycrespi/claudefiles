@@ -11,20 +11,20 @@
 # - MUST have gitleaks installed
 # - MUST NOT commit secrets
 #
-# Usage: safe-git-commit "your commit message"
+# Usage: safe-git-commit "message"
 
 set -euo pipefail
 
 if [ $# -ne 1 ]; then
   echo "Error: Exactly one argument (commit message) is required" >&2
-  echo "Usage: safe-git-commit \"your commit message\"" >&2
+  echo "Usage: safe-git-commit \"message\"" >&2
   exit 1
 fi
 
 message="$1"
 if [ -z "$message" ]; then
   echo "Error: Commit message cannot be empty" >&2
-  echo "Usage: safe-git-commit \"your commit message\"" >&2
+  echo "Usage: safe-git-commit \"message\"" >&2
   exit 1
 fi
 
