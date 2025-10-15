@@ -40,7 +40,6 @@
       "Bash(git push:*)"
     ]
   },
-  "model": "opusplan",
   "hooks": {
     "Notification": [
       {
@@ -68,5 +67,6 @@
   "statusLine": {
     "type": "command",
     "command": "bunx ccusage statusline"
-  }
+  },
+  "alwaysThinkingEnabled": false
 }
