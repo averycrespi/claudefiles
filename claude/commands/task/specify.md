@@ -1,7 +1,6 @@
 ---
 description: "Create a comprehensive technical specification document through Socratic questioning"
 argument-hint: "requirements"
-model: "claude-opus-4-1-20250805"
 ---
 
 <role>

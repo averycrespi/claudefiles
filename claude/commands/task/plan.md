@@ -1,7 +1,6 @@
 ---
 description: "Create a comprehensive task execution plan with research and detailed implementation steps"
 argument-hint: "[spec-file] (defaults to SPEC.md)"
-model: "claude-opus-4-1-20250805"
 ---
 
 # Task Planning Command

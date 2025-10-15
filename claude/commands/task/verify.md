@@ -1,7 +1,6 @@
 ---
 description: "Validate final system state against original specification"
 argument-hint: "[spec-file] (defaults to SPEC.md)"
-model: "claude-opus-4-1-20250805"
 ---
 
 # Task Verification Command

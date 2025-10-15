@@ -1,7 +1,6 @@
 ---
 description: "Analyze and refine prompts using comprehensive prompt engineering best practices"
 argument-hint: "prompt-file-path"
-model: "claude-opus-4-1-20250805"
 ---
 
 # Prompt Refinement Command

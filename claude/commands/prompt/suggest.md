@@ -1,7 +1,6 @@
 ---
 description: "Analyze Claude Code usage history and suggest the most salient custom commands based on patterns"
 argument-hint: "[focus] (optional: git, testing, docs, files, quality, or all)"
-model: "claude-opus-4-1-20250805"
 ---
 
 # Command Suggestion Analyzer

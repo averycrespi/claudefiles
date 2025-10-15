@@ -1,7 +1,6 @@
 ---
 description: "AI-assisted GitHub PR review to augment human reviewers"
 argument-hint: "github-pr-url (GitHub PR URL to review)"
-model: "claude-opus-4-1-20250805"
 ---
 
 # GitHub PR Review Assistant
