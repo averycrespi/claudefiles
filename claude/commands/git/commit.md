@@ -1,7 +1,7 @@
 ---
 description: "Smart commit with change analysis, safety checks, and auto-generated messages"
 argument-hint: "[context] (optional: additional context for commit message)"
-model: "claude-sonnet-4-20250514"
+model: "claude-sonnet-4-5-20250929"
 ---
 
 # Git Smart Commit Command
