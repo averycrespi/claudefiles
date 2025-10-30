@@ -73,7 +73,9 @@ The setup script will:
 ### Worktree Management Scripts
 
 - Use `worktree-add` to create a new worktree and tmux window for a branch
-  -  Under the hood, `worktree-init` is called to start a new tmux session
+  - Under the hood, `worktree-init` is called to start a new tmux session
+- Use `worktree-attach` to attach to the existing tmux session for the current repository
+  - Attaches to the first window in the session if it exists, otherwise returns an error
 - Use `worktree-rm` to destroy a worktree and its associated tmux window
 - The Claude [hooks](./claude/settings.json) call `worktree-notify` when Claude is done or needs attention
 

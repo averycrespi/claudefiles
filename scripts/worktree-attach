@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+# Attaches to an existing tmux session for a worktree.
+#
+# This script attaches to the tmux session if it exists, otherwise returns an error.
+# It always attaches to the first window in the session.
+#
+# Usage:
+#   worktree-attach
+
+set -euo pipefail
+
+# Requirement: must be in a git repository
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Error: Not in a git repository" >&2
+  exit 1
+fi
+
+# Get the repository root and name
+repo_root=$(git rev-parse --show-toplevel)
+repo_name=$(basename "$repo_root")
+
+# Check if we're in the main repository or a worktree
+git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null)
+
+if [[ "$git_common_dir" == ".git" ]]; then
+  # We're in the main repository
+  session_name="${repo_name}-worktree"
+  window_name="main"
+else
+  # We're in a worktree - extract the worktree name
+  worktree_path=$(git rev-parse --show-toplevel)
+  worktree_name=$(basename "$worktree_path")
+  session_name="${repo_name}-worktree"
+  window_name="$worktree_name"
+fi
+
+# Check if the tmux session exists
+if ! tmux has-session -t "$session_name" 2>/dev/null; then
+  echo "Error: tmux session '$session_name' does not exist" >&2
+  echo "Run 'worktree-init' first to create the session" >&2
+  exit 1
+fi
+
+# Check if the window exists
+if ! tmux list-windows -t "$session_name" -F "#{window_name}" | grep -q "^${window_name}$"; then
+  echo "Error: Window '$window_name' does not exist in session '$session_name'" >&2
+  echo "Available windows:" >&2
+  tmux list-windows -t "$session_name" -F "  - #{window_name}" >&2
+  exit 1
+fi
+
+# Attach to the session and select the window
+echo "Attaching to tmux session: $session_name, window: $window_name"
+if [[ -n "${TMUX:-}" ]]; then
+  # Already inside tmux, switch to the target session and window
+  tmux switch-client -t "$session_name:$window_name"
+else
+  # Not inside tmux, attach to the session and select the window
+  tmux attach-session -t "$session_name:$window_name"
+fi
