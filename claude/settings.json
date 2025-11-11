@@ -30,14 +30,28 @@
       "Bash(safe-gh-pr-create:*)",
       "Bash(safe-git-commit:*)",
       "Bash(safe-git-push:*)",
+      "Bash(acli jira workitem view:*)",
+      "Bash(acli jira workitem search:*)",
+      "Bash(acli jira workitem comment list:*)",
+      "Bash(acli jira board search:*)",
+      "Bash(acli jira board list-sprints:*)",
+      "Bash(acli jira sprint list-workitems:*)",
+      "Bash(acli jira project list:*)",
+      "Bash(acli jira project view:*)",
+      "Bash(acli jira auth status:*)",
       "mcp__context7__get-library-docs",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "Skill(jira)"
     ],
     "deny": [
       "Bash(find:*)",
       "Bash(gh pr create:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(acli jira workitem create:*)",
+      "Bash(acli jira workitem update:*)",
+      "Bash(acli jira workitem delete:*)",
+      "Bash(acli jira field:*)"
     ]
   },
   "hooks": {

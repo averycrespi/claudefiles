@@ -48,6 +48,7 @@ These commands include safety checks:
   - `settings.json` - Permissions and hooks configuration
   - `agents/` - Custom agent definitions
   - `commands/` - Slash command definitions
+  - `skills/` - Custom skill definitions
 - `scripts/` - Security-enhanced command line tools
 - `setup.sh` - Repository setup and configuration script
 - `Brewfile` - macOS dependencies managed by Homebrew
@@ -99,13 +100,72 @@ Comprehensive workflow for systematic project transformation:
 - `/prompt:refine` - Refine and improve prompts
 - `/prompt:suggest` - Analyze Claude Code usage history and suggest custom commands based on patterns
 
+### Skills System
+The repository includes custom skills that extend Claude Code's capabilities:
+
+#### Jira Integration Skill
+Automatic integration with Jira Cloud for seamless issue tracking:
+- **Activation**: Automatically detects ticket IDs (e.g., "PROJ-123") and Jira-related keywords
+- **Capabilities**: View issues, search with JQL, list boards/sprints, fetch project information
+- **Security**: Read-only access enforced through permissions; no data modification allowed
+- **Requirements**: Atlassian CLI (ACLI) installed and authenticated
+
+To enable Jira integration:
+1. Install ACLI: `brew install acli` (included in Brewfile)
+2. Authenticate: `acli jira auth login`
+3. Verify: `acli jira auth status`
+
+The skill provides transparent Jira context without leaving your IDE, supporting:
+- Direct ticket lookup: "What's PROJ-123?"
+- Natural queries: "Show me current sprint tickets"
+- Multi-ticket analysis: Automatically fetches multiple ticket IDs in parallel
+- JQL searches: "Find high priority bugs assigned to me"
+
+See `claude/skills/jira/SKILL.md` for detailed documentation.
+
 ### Security Configuration
 The `claude/settings.json` file enforces strict security policies:
 - Allows only safe operations (specific bash commands, git operations)
 - Blocks dangerous commands (`find`, `git commit`, `git push`)
 - Requires using safe wrapper scripts for potentially dangerous operations
 - Includes hooks for desktop notifications on significant events
-- Configured to use "opusplan" model for enhanced planning capabilities in task workflows
+- Jira integration: Allows read-only ACLI commands, blocks all write operations
+- Thinking mode: Configured with `alwaysThinkingEnabled: false` for Claude Code 2.0
+
+### Worktree Management
+The `scripts/` directory includes tmux-integrated worktree management tools:
+
+#### worktree-add
+Creates a new git worktree and tmux window for a branch:
+```bash
+worktree-add <branch-name>
+```
+- Creates worktree in `../worktrees/<repo-name>/<branch-name>/`
+- Launches tmux session `<repo-name>-worktree` (or uses existing)
+- Creates new tmux window named after the branch
+- Automatically starts Claude Code in the worktree directory
+- Idempotent: safe to run multiple times
+
+#### worktree-attach
+Attaches to an existing tmux session for the current worktree:
+```bash
+worktree-attach
+```
+- Detects whether you're in main repository or a worktree
+- Attaches to the appropriate tmux window in the worktree session
+- If already in tmux: switches to the target session/window
+- If not in tmux: attaches to the session and selects the window
+- Useful for returning to Claude Code sessions after detaching
+
+#### worktree-rm
+Removes a git worktree and its tmux window:
+```bash
+worktree-rm <branch-name>
+```
+- Cleans up both the worktree directory and tmux window
+- Ensures proper cleanup of git worktree references
+
+The notification hooks in `settings.json` integrate with these scripts to provide desktop notifications when Claude Code completes tasks or needs attention.
 
 ## Working with This Repository
 

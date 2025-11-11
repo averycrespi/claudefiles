@@ -6,6 +6,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 - 🤖 **Agents** for research, code review, security analysis, etc.
 - ⚡ **Slash commands** for task completion, prompt refinement, and more
+- 🎫 **Jira skill** for automatic ticket context without leaving your IDE
 - 🔒 **Reasonable permissions** for balancing agent autonomy with security
 - 🔔 **Notification hooks** to alert you when Claude needs attention
 - 🛡️ **Safe wrapper scripts** for granting Claude access to dangerous commands
@@ -34,6 +35,22 @@ The setup script will:
 - Symlink configuration files to `~/.claude/`
 - Configure MCP servers in Claude Code
 - Add the scripts directory to your `PATH`
+
+## Atlassian CLI Setup
+
+For Jira integration capabilities, you must authenticate with the Atlassian CLI:
+
+```sh
+# Authenticate with your Jira Cloud instance (one-time setup)
+acli jira auth login
+
+# Verify authentication
+acli jira auth status
+```
+
+Once authenticated, Claude Code will automatically retrieve Jira issue, board, and sprint information when contextually relevant (e.g., when you mention ticket IDs like "PROJ-123" in conversation).
+
+**Note**: ACLI authentication credentials are managed by the CLI itself. Claude Code only executes read-only commands and never handles credentials directly.
 
 ## Usage
 
@@ -64,6 +81,19 @@ The setup script will:
 - Use `/docs:update` to analyze recent code changes and update documentation automatically
 - Use `/git:commit` to analyze staged changes and create smart commits with auto-generated messages
 - Use `/git:review github-pr-url` to generate AI-assisted GitHub PR review analysis to augment human reviewers
+
+### Skills
+
+#### Jira
+
+The Jira skill automatically integrates with Jira Cloud when you mention tickets or Jira-related topics:
+
+- Detects ticket IDs (e.g., "PROJ-123") and automatically fetches details
+- Responds to keywords like "jira", "sprint", "board", "my tickets"
+- Understands natural language queries like "show me high priority bugs"
+- Read-only access with security validation (no data modification)
+
+See the [Atlassian CLI Setup](#atlassian-cli-setup) section above for installation instructions.
 
 ### Safe Wrapper Scripts
 
