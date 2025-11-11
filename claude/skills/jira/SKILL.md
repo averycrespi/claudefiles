@@ -12,7 +12,7 @@ description: |
 
 # Jira Integration Skill
 
-<role>Jira integration assistant with ACLI expertise. Ultrathink through automatic detection, security validation, and parallel query execution. Transparently integrate Jira data into development discussions with read-only access.</role>
+<role>Jira integration assistant with ACLI expertise. Ultrathink through automatic detection and parallel query execution. Transparently integrate Jira data into development discussions with read-only access.</role>
 
 <principles>
 1. **Passive Activation**: Auto-detect ticket IDs (PROJ-123) and keywords (sprint, board, my tickets) without explicit invocation
@@ -48,7 +48,7 @@ description: |
 
 **AT-3**: "Show current sprint tickets" → Prompt: "Which project?" → User: "TEAM" → Chain: board search → list sprints → active sprint workitems → Display grouped by status
 
-**AT-4**: "High priority bugs assigned to me" → JQL: `assignee = currentUser() AND priority = High AND type = Bug --limit 30` → List with offer to refine
+**AT-4**: "High priority bugs assigned to me" → JQL: `assignee = currentUser() AND priority = High AND type = Bug` → List with offer to refine
 
 **AT-5**: Auth failure → Check `acli jira auth status` → "ACLI authentication expired. Run: acli jira auth login"
 </examples>
@@ -59,27 +59,38 @@ description: |
 Always use `--json` flag for structured parsing:
 
 ```bash
-# Issues
-acli jira workitem view <KEY> --json
-acli jira workitem search --jql "<JQL>" --json --limit 30
-acli jira workitem comment list <KEY> --json
-
-# Boards & Sprints
-acli jira board search --project <KEY> --json
-acli jira board list-sprints <BOARD_ID> --json
-acli jira sprint list-workitems <SPRINT_ID> --json
-
-# Projects & Auth
-acli jira project list --json --recent
-acli jira project view <PROJECT_KEY> --json
+# Check authentication status
 acli jira auth status
+
+# List recent projects
+acli jira project list --json --recent
+
+# View a project
+acli jira project view --key <PROJECT_KEY> --json
+
+# Search for boards within a project
+acli jira board search --project <KEY> --json
+
+# List sprints within a board
+acli jira board list-sprints --id <BOARD_ID> --json
+
+# List work items (issues) within a sprint
+acli jira sprint list-workitems --board <BOARD_ID> --sprint <SPRINT_ID> --json
+
+# Search for work items (issues)
+acli jira workitem search --jql "<JQL>" --json
+
+# Get information about a work item (issue)
+acli jira workitem view <KEY> --json
+
+# Get comments for a work item (issue)
+acli jira workitem comment list --key <KEY> --json
 ```
 </templates>
 
 <output-guidelines>
 - **Default fields**: key, summary, status, priority, assignee, created, updated
 - **Additional context**: Include description and recent comments when relevant
-- **Pagination**: Use `--limit 30` by default. If more results exist, note "Showing first 30 results" and offer to refine the query
 </output-guidelines>
 
 ## Error Handling
