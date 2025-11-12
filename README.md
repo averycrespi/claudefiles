@@ -36,7 +36,7 @@ The setup script will:
 - Configure MCP servers in Claude Code
 - Add the scripts directory to your `PATH`
 
-## Atlassian CLI Setup
+### Atlassian CLI Setup
 
 For Jira integration capabilities, you must authenticate with the Atlassian CLI:
 
@@ -56,11 +56,18 @@ Once authenticated, Claude Code will automatically retrieve Jira issue, board, a
 
 ### Agents
 
+> [Subagents](https://code.claude.com/docs/en/sub-agents) are specialized AI personalities which Claude Code can delegate tasks to.
+> They can be manually invoked by the user, or be automatically invoked by Claude Code.
+> They have their own isolated context windows, and can share their results with the main context.
+
 - Use the `code-reviewer` agent for detailed code reviews
 - Use the `research-assistant` agent for in-depth research and analysis
 - Use the `security-analyst` agent to find vulnerabilities
 
 ### Slash Commands
+
+> [Slash commands](https://code.claude.com/docs/en/slash-commands) are macros for frequently use prompts.
+> They must be manually invoked by the user.
 
 #### Prompt Engineering
 
@@ -69,7 +76,7 @@ Once authenticated, Claude Code will automatically retrieve Jira issue, board, a
 
 #### Task Lifecycle
 
-> Recommendation: Wipe the context with `/clear` between each step. This prevents thought leakage & context bloat.
+> Recommendation: Wipe the context with `/clear` between each step. This prevents context bloat.
 
 - Use `/task:specify requirements` to generate a spec through Socratic questioning, written to `SPEC.md`
 - Use `/task:plan [spec-file]` to transform a spec into a detailed execution plan, written to `PLAN.md`
@@ -84,8 +91,11 @@ Once authenticated, Claude Code will automatically retrieve Jira issue, board, a
 
 ### Skills
 
-- Use the `jira` skill to retrieve information about projects, boards, and issues from Jira Cloud.
-- Use the `skill-creator` skill to create new skills.
+> [Skills](https://www.claude.com/blog/skills) are specialized instruction sets for domain-specific expertise.
+> They can be manually invoked by the user, or be automatically invoked by Claude Code.
+
+- Use the `jira` skill to retrieve information about projects, boards, and issues from Jira Cloud
+- Use the `skill-creator` skill to create new skills
 
 ### Safe Wrapper Scripts
 
@@ -103,4 +113,5 @@ Once authenticated, Claude Code will automatically retrieve Jira issue, board, a
 
 ## License
 
-[MIT](./LICENSE)
+- Repository licensed under [MIT](./LICENSE)
+- `skill-creator` skill licensed under [Apache](./claude/skills/skill-creator/LICENSE.txt)
