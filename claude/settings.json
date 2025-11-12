@@ -41,7 +41,8 @@
       "Bash(acli jira auth status:*)",
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id",
-      "Skill(jira)"
+      "Skill(jira)",
+      "Skill(skill-creator)"
     ],
     "deny": [
       "Bash(find:*)",
