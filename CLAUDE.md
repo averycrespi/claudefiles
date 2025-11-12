@@ -123,6 +123,17 @@ The skill provides transparent Jira context without leaving your IDE, supporting
 
 See `claude/skills/jira/SKILL.md` for detailed documentation.
 
+#### Skill Creator
+Guide for creating effective skills that extend Claude Code's capabilities:
+- **Activation**: Use when users want to create or update custom skills
+- **Capabilities**: Provides templates, validation scripts, and best practices for skill development
+- **Features**: Includes init, validation, and packaging scripts for skill lifecycle management
+- **Documentation**: Comprehensive guide on skill structure, activation patterns, and tool integration
+
+The skill-creator helps you build skills that integrate specialized knowledge, workflows, or tool integrations into Claude Code. It includes Python scripts for initializing new skills, validating skill structure, and packaging skills for distribution.
+
+See `claude/skills/skill-creator/SKILL.md` for detailed documentation.
+
 ### Security Configuration
 The `claude/settings.json` file enforces strict security policies:
 - Allows only safe operations (specific bash commands, git operations)

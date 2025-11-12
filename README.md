@@ -6,7 +6,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 - 🤖 **Agents** for research, code review, security analysis, etc.
 - ⚡ **Slash commands** for task completion, prompt refinement, and more
-- 🎫 **Jira skill** for automatic ticket context without leaving your IDE
+- 🎫 **Skills** for Jira integration and skill creation
 - 🔒 **Reasonable permissions** for balancing agent autonomy with security
 - 🔔 **Notification hooks** to alert you when Claude needs attention
 - 🛡️ **Safe wrapper scripts** for granting Claude access to dangerous commands
@@ -91,9 +91,15 @@ The Jira skill automatically integrates with Jira Cloud when you mention tickets
 - Detects ticket IDs (e.g., "PROJ-123") and automatically fetches details
 - Responds to keywords like "jira", "sprint", "board", "my tickets"
 - Understands natural language queries like "show me high priority bugs"
-- Read-only access with security validation (no data modification)
 
-See the [Atlassian CLI Setup](#atlassian-cli-setup) section above for installation instructions.
+#### Skill Creator
+
+The Skill Creator skill helps you create new custom skills for Claude Code:
+
+- Guides you through the skill creation process with best practices
+- Provides templates and validation for skill structure
+- Includes scripts for packaging and testing skills
+- Ensures skills follow Claude Code skill conventions
 
 ### Safe Wrapper Scripts
 
