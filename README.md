@@ -84,22 +84,8 @@ Once authenticated, Claude Code will automatically retrieve Jira issue, board, a
 
 ### Skills
 
-#### Jira
-
-The Jira skill automatically integrates with Jira Cloud when you mention tickets or Jira-related topics:
-
-- Detects ticket IDs (e.g., "PROJ-123") and automatically fetches details
-- Responds to keywords like "jira", "sprint", "board", "my tickets"
-- Understands natural language queries like "show me high priority bugs"
-
-#### Skill Creator
-
-The Skill Creator skill helps you create new custom skills for Claude Code:
-
-- Guides you through the skill creation process with best practices
-- Provides templates and validation for skill structure
-- Includes scripts for packaging and testing skills
-- Ensures skills follow Claude Code skill conventions
+- Use the `jira` skill to retrieve information about projects, boards, and issues from Jira Cloud.
+- Use the `skill-creator` skill to create new skills.
 
 ### Safe Wrapper Scripts
 
