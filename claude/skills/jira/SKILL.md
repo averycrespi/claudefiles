@@ -32,18 +32,7 @@ When ticket IDs appear in user messages:
 
 ### Command Reference
 
-Detailed ACLI commands, options, and JQL patterns are available in `references/commands.md`. Always use the `--json` flag for structured output.
-
-**Key commands:**
-- View specific issue: `acli jira workitem view <KEY> --fields <FIELDS> --json`
-- Search issues: `acli jira workitem search --jql "<JQL>" --fields <FIELDS> --limit <N> --json`
-- List sprints: `acli jira board list-sprints --id <BOARD_ID> --json`
-- View comments: `acli jira workitem comment list --key <KEY> --limit 5 --order "-created" --json`
-
-**Getting help:** Use `--help` flag for detailed command information:
-- `acli jira workitem view --help`
-
-Read `references/commands.md` for comprehensive documentation of all options, field specifications, pagination, and advanced usage patterns.
+Read [`references/commands.md`](references/commands.md) for comprehensive documentation of all options, field specifications, pagination, and advanced usage patterns.
 
 ### Context Optimization
 
@@ -81,7 +70,7 @@ Prompt for missing context (project key, board ID) when needed.
 
 ### Error Handling
 
-Handle errors gracefully without disrupting conversation flow. Detailed error recovery patterns are in `references/error-handling.md`. Key principles:
+Handle errors gracefully without disrupting conversation flow. Detailed error recovery patterns are in [`references/error-handling.md`](references/error-handling.md). Key principles:
 
 - Check `acli jira auth status` for authentication failures
 - Provide actionable guidance for recovery
