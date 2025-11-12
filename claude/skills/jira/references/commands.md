@@ -45,25 +45,27 @@ acli jira workitem view <KEY> [options]
 **Options:**
 - `--json` - Generate JSON output (always use this for parsing)
 - `--fields <fields>` - Comma-separated list of fields to return
-  - Default: `key,issuetype,summary,status,assignee,description`
-  - `*all` - Returns all fields
-  - `*navigable` - Returns navigable fields
+  - Default (ACLI): `key,issuetype,summary,status,assignee,description`
+  - **Recommended default**: `key,summary,status,priority,assignee` (excludes expensive `description` and `issuetype`)
+  - `*all` - Returns all fields (avoid - expensive)
+  - `*navigable` - Returns navigable fields (avoid - expensive)
   - Prefix with `-` to exclude: `-description` excludes description
   - Examples:
-    - `summary,comment` - Only summary and comments
-    - `*navigable,-comment` - All navigable fields except comments
+    - `key,summary,status,priority,assignee` - Minimal, efficient (recommended default)
+    - `key,summary,status,priority,assignee,created,updated,description` - Detailed view
+    - `*navigable,-comment,-description` - All navigable fields except expensive ones
 - `--web` - Open work item in web browser
 
 **Examples:**
 ```bash
-# View with default fields as JSON
-acli jira workitem view PROJ-123 --json
+# Recommended: Quick view with minimal fields (default usage)
+acli jira workitem view PROJ-123 --fields key,summary,status,priority,assignee --json
 
-# View with specific fields
-acli jira workitem view PROJ-123 --fields summary,assignee,priority --json
+# Detailed view (when user asks for details)
+acli jira workitem view PROJ-123 --fields key,summary,status,priority,assignee,created,updated,description --json
 
-# View all fields
-acli jira workitem view PROJ-123 --fields "*all" --json
+# Avoid: Full fields (very expensive)
+acli jira workitem view PROJ-123 --fields "*all" --json  # Don't use unless necessary
 ```
 
 ### Search Work Items
@@ -75,27 +77,29 @@ acli jira workitem search [options]
 - `--jql <query>` - JQL query string (required unless using --filter)
 - `--filter <id>` - Filter ID to use for search
 - `--json` - Generate JSON output (always use this)
-- `--csv` - Generate CSV output
+- `--csv` - Generate CSV output (more compact for large result sets)
 - `--fields <fields>` - Comma-separated list of fields to display
-  - Default: `issuetype,key,assignee,priority,status,summary`
+  - Default (ACLI): `issuetype,key,assignee,priority,status,summary`
+  - **Recommended**: `key,summary,status,assignee` (excludes `issuetype`, `priority` unless needed)
 - `--limit <num>` - Maximum number of work items to fetch
-- `--paginate` - Fetch all work items by paginating (ignores --limit)
-- `--count` - Return count of matching work items only
+  - **Always use this**: Default to `--limit 20` to prevent excessive results
+- `--paginate` - Fetch all work items by paginating (ignores --limit, use sparingly)
+- `--count` - Return count of matching work items only (use when user only needs quantity)
 - `--web` - Open search in web browser
 
 **Examples:**
 ```bash
-# Basic JQL search
-acli jira workitem search --jql "project = TEAM" --json
+# Recommended: Search with minimal fields and limit
+acli jira workitem search --jql "project = TEAM" --fields key,summary,status,assignee --limit 20 --json
 
-# Search with custom fields
-acli jira workitem search --jql "assignee = currentUser()" --fields "key,summary,status" --json
-
-# Paginate through all results
-acli jira workitem search --jql "project = TEAM AND status != Done" --paginate --json
-
-# Get count only
+# Count only (efficient when user needs quantity)
 acli jira workitem search --jql "sprint in openSprints()" --count
+
+# Search with custom fields and limit
+acli jira workitem search --jql "assignee = currentUser()" --fields "key,summary,status" --limit 20 --json
+
+# Use sparingly: Paginate through all results (can be expensive)
+acli jira workitem search --jql "project = TEAM AND status != Done" --paginate --json
 ```
 
 ### List Comments
@@ -107,19 +111,21 @@ acli jira workitem comment list [options]
 - `--key <KEY>` - Work item key (required)
 - `--json` - Generate JSON output
 - `--limit <num>` - Maximum comments per page (default: 50)
+  - **Recommended**: Use `--limit 5` to show only recent comments by default
 - `--order <field>` - Order by field: `created` or `updated` (default: `+created`)
   - Prefix with `+` for ascending, `-` for descending
-- `--paginate` - Fetch all comments (ignores --limit)
+  - **Recommended**: Use `--order "-created"` to show newest first
+- `--paginate` - Fetch all comments (ignores --limit, use very sparingly - can be extremely expensive)
 
 **Examples:**
 ```bash
-# List comments for an issue
+# Recommended: Recent comments only (efficient)
+acli jira workitem comment list --key PROJ-123 --limit 5 --order "-created" --json
+
+# List all comments on first page (default limit)
 acli jira workitem comment list --key PROJ-123 --json
 
-# List recent comments first
-acli jira workitem comment list --key PROJ-123 --order "-created" --json
-
-# Get all comments
+# Use sparingly: Get all comments (very expensive for issues with many comments)
 acli jira workitem comment list --key PROJ-123 --paginate --json
 ```
 
@@ -341,7 +347,7 @@ Always use `--json` flag for structured, parseable output. Typical JSON fields i
 - `key` - Issue identifier (e.g., PROJ-123)
 - `id` - Numeric issue ID
 - `summary` - Brief description
-- `description` - Full description text
+- `description` - Full description text (expensive - use selectively)
 - `status` - Current status object with `name` field
 - `priority` - Priority object with `name` field (Highest, High, Medium, Low, Lowest)
 - `issuetype` - Issue type object (Bug, Story, Task, etc.)
@@ -349,7 +355,7 @@ Always use `--json` flag for structured, parseable output. Typical JSON fields i
 - `reporter` - User object for issue creator
 - `created` - ISO 8601 timestamp
 - `updated` - ISO 8601 timestamp
-- `comment` - Comments array (when using view with comments field)
+- `comment` - Comments array (expensive - use selectively)
 
 ### Field Specifications
 When specifying fields:
@@ -357,6 +363,86 @@ When specifying fields:
 - Custom fields: Use field ID like `customfield_10001`
 - System fields: Use standard names like `summary`, `description`, `status`
 - Field expansion: Some fields require explicit request (e.g., `comment`)
+
+## Context Optimization
+
+### Field Selection Strategies
+
+To minimize token consumption, use selective field specifications based on query intent:
+
+**Recommended field sets:**
+
+1. **Quick view** (default for ticket lookups):
+   ```bash
+   --fields key,summary,status,priority,assignee
+   ```
+   Use for: Quick ticket references, status checks, "What's PROJ-123?"
+
+2. **Detailed view** (when user needs more context):
+   ```bash
+   --fields key,summary,status,priority,assignee,created,updated,description
+   ```
+   Use for: "Show me details of PROJ-123", "What's the description of PROJ-123?"
+
+3. **Search results** (list-based queries):
+   ```bash
+   --fields key,summary,status,assignee --limit 20
+   ```
+   Use for: JQL searches, sprint listings, "Show my tickets"
+
+4. **Count only** (when quantity is sufficient):
+   ```bash
+   --count
+   ```
+   Use for: "How many tickets...", "Count of issues..."
+
+**Performance considerations:**
+
+- **Expensive fields** (high token cost):
+  - `description` - Can be very large text blocks
+  - `comment` - Array of all comments with full text
+  - `attachment` - Array of attachment metadata
+  - `*all` or `*navigable` - Returns all available fields
+
+- **Efficient fields** (low token cost):
+  - `key` - Just the ticket ID
+  - `summary` - One-line description
+  - `status` - Status object (name, id)
+  - `priority` - Priority object (name, id)
+  - `assignee` - User object (displayName, emailAddress)
+  - `created`, `updated` - Timestamps
+
+**Best practices:**
+
+1. **Start minimal**: Use quick view fields by default, fetch additional details only when needed
+2. **Avoid wildcards**: Never use `*all` or `*navigable` unless absolutely necessary
+3. **Exclude expensive fields**: Use `-description,-comment` to explicitly exclude
+4. **Limit results**: Always add `--limit` to searches (default: 20, adjust as needed)
+5. **Use count**: When user only needs quantity, use `--count` instead of fetching all data
+6. **Selective comments**: Use `--limit 5 --order "-created"` to show only recent comments
+7. **Two-stage fetching**: For large searches, first show keys/summaries, then fetch details for specific items user wants
+
+**Examples:**
+
+```bash
+# Minimal ticket view (default)
+acli jira workitem view PROJ-123 --fields key,summary,status,priority,assignee --json
+
+# Detailed ticket view (when user asks for details)
+acli jira workitem view PROJ-123 --fields key,summary,status,priority,assignee,created,updated,description --json
+
+# Efficient search (always with limit)
+acli jira workitem search --jql "sprint in openSprints()" --fields key,summary,status,assignee --limit 20 --json
+
+# Count only (no field fetching)
+acli jira workitem search --jql "assignee = currentUser() AND status != Done" --count
+
+# Recent comments only (not all)
+acli jira workitem comment list --key PROJ-123 --limit 5 --order "-created" --json
+
+# Exclude expensive fields
+acli jira workitem view PROJ-123 --fields "*navigable,-description,-comment,-attachment" --json
+```
 
 ## Important Notes
 

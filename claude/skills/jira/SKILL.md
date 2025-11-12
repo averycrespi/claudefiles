@@ -27,7 +27,7 @@ Activate this skill when detecting:
 
 When ticket IDs appear in user messages:
 
-1. **Single ticket**: Immediately fetch using `acli jira workitem view <KEY> --json`
+1. **Single ticket**: Immediately fetch using `acli jira workitem view <KEY> --fields key,summary,status,priority,assignee --json`
 2. **Multiple tickets**: Fetch ALL in parallel using multiple Bash tool calls in a single message
 
 ### Command Reference
@@ -35,15 +35,39 @@ When ticket IDs appear in user messages:
 Detailed ACLI commands, options, and JQL patterns are available in `references/commands.md`. Always use the `--json` flag for structured output.
 
 **Key commands:**
-- View specific issue: `acli jira workitem view <KEY> --json`
-- Search issues: `acli jira workitem search --jql "<JQL>" --json`
+- View specific issue: `acli jira workitem view <KEY> --fields <FIELDS> --json`
+- Search issues: `acli jira workitem search --jql "<JQL>" --fields <FIELDS> --limit <N> --json`
 - List sprints: `acli jira board list-sprints --id <BOARD_ID> --json`
-- View comments: `acli jira workitem comment list --key <KEY> --json`
+- View comments: `acli jira workitem comment list --key <KEY> --limit 5 --order "-created" --json`
 
 **Getting help:** Use `--help` flag for detailed command information:
 - `acli jira workitem view --help`
 
 Read `references/commands.md` for comprehensive documentation of all options, field specifications, pagination, and advanced usage patterns.
+
+### Context Optimization
+
+To minimize token usage, follow these field selection and limiting strategies:
+
+**Default field specifications:**
+- **Quick view** (default): `--fields key,summary,status,priority,assignee`
+- **Detailed view** (when user asks for "details"): `--fields key,summary,status,priority,assignee,created,updated,description`
+- **Search results**: `--fields key,summary,status,assignee` (always add `--limit 20`)
+
+**Result limiting:**
+- Always use `--limit` for searches: Default to `--limit 20`, adjust based on user needs
+- For comments: Use `--limit 5 --order "-created"` to show only recent comments
+- Use `--count` when user only needs result counts: `acli jira workitem search --jql "<JQL>" --count`
+
+**Selective detailed fetching:**
+- Only include `description` when user explicitly asks for issue details or content
+- Only fetch comments when user specifically asks about comments or discussion
+- Avoid fetching all fields (`*navigable`) unless absolutely necessary
+
+**Performance notes:**
+- Expensive fields: `description`, `comment`, `attachment` consume significant tokens
+- Keep field lists minimal by default; fetch additional fields only when needed
+- When results are truncated, inform user: "Showing 20 of 150 results"
 
 ### Building JQL Queries
 
@@ -83,8 +107,8 @@ Created: 2025-11-01 | Updated: 2025-11-10
 
 - **Multiple tickets**: Use parallel Bash tool calls in a single message for efficiency
 - **Sprint queries**: Chain commands sequentially (board search → list sprints → sprint workitems)
-- **Default fields**: Display key, summary, status, priority, assignee, created, updated
-- **Additional context**: Include description and recent comments when relevant to the discussion
+- **Field selection**: Use minimal fields by default (`key,summary,status,priority,assignee`), fetch additional fields only when user needs details
+- **Result limits**: Always apply appropriate limits to prevent excessive context consumption
 
 ## Security
 
