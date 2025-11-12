@@ -97,7 +97,7 @@ For natural language requests, construct appropriate JQL queries:
 - "Current sprint" → `sprint in openSprints()`
 - "Unassigned issues" → `assignee is EMPTY`
 
-See `references/jql.md` for comprehensive JQL patterns.
+See [`jql.md`](jql.md) for comprehensive JQL patterns.
 
 **Best Practices:**
 1. **Always use `--limit`**: Default to 20, adjust based on user needs
@@ -191,7 +191,7 @@ type = Bug
 type in (Story, Task)
 ```
 
-See `references/jql.md` for more comprehensive patterns.
+See [`jql.md`](jql.md) for more comprehensive patterns.
 
 ## Error Handling
 
@@ -213,4 +213,4 @@ Unable to find issue PROJ-999. Would you like to search for similar issues?
 Permission denied for PROJ-123. Check with Jira administrator for access.
 ```
 
-See `references/error-handling.md` for comprehensive error patterns.
+See [`error-handling.md`](error-handling.md) for comprehensive error patterns.

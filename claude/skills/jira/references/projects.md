@@ -106,7 +106,7 @@ project = TEAM AND assignee = currentUser()
 project = TEAM AND assignee is EMPTY
 ```
 
-See `references/jql.md` for more comprehensive patterns.
+See [`jql.md`](jql.md) for more comprehensive patterns.
 
 ## Usage Patterns
 

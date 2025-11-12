@@ -212,7 +212,7 @@ sprint is EMPTY
 project = TEAM AND sprint is EMPTY
 ```
 
-See `references/jql.md` for more comprehensive patterns.
+See [`jql.md`](jql.md) for more comprehensive patterns.
 
 ## JSON Output Fields
 
@@ -250,4 +250,4 @@ Board not found. Use: acli jira board search --project TEAM --json
 Sprint not found. Use: acli jira board list-sprints --id <BOARD_ID> --json
 ```
 
-See `references/error-handling.md` for comprehensive error patterns.
+See [`error-handling.md`](error-handling.md) for comprehensive error patterns.
