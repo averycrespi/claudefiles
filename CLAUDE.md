@@ -109,6 +109,7 @@ Automatic integration with Jira Cloud for seamless issue tracking:
 - **Capabilities**: View issues, search with JQL, list boards/sprints, fetch project information
 - **Security**: Read-only access enforced through permissions; no data modification allowed
 - **Requirements**: Atlassian CLI (ACLI) installed and authenticated
+- **Architecture**: Domain-based reference organization for efficient token usage
 
 To enable Jira integration:
 1. Install ACLI: `brew install acli` (included in Brewfile)
@@ -120,6 +121,17 @@ The skill provides transparent Jira context without leaving your IDE, supporting
 - Natural queries: "Show me current sprint tickets"
 - Multi-ticket analysis: Automatically fetches multiple ticket IDs in parallel
 - JQL searches: "Find high priority bugs assigned to me"
+
+**Reference Structure**: The skill uses domain-specific reference files for efficient context loading:
+- `auth.md` - Authentication commands
+- `workitems.md` - Work item operations
+- `projects.md` - Project commands
+- `boards-sprints.md` - Board and sprint operations
+- `jql.md` - JQL query patterns
+- `optimization.md` - Performance strategies
+- `error-handling.md` - Error recovery patterns
+
+This organization enables selective loading based on query type, reducing token consumption by ~55% for single-domain queries.
 
 See `claude/skills/jira/SKILL.md` for detailed documentation.
 

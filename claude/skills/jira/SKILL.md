@@ -32,7 +32,22 @@ When ticket IDs appear in user messages:
 
 ### Command Reference
 
-Read [`references/commands.md`](references/commands.md) for comprehensive documentation of all options, field specifications, pagination, and advanced usage patterns.
+The skill provides domain-specific reference files for detailed command documentation:
+
+- **[`references/auth.md`](references/auth.md)** - Authentication commands and troubleshooting
+- **[`references/workitems.md`](references/workitems.md)** - Work item operations (view, search, comments)
+- **[`references/projects.md`](references/projects.md)** - Project commands and key conventions
+- **[`references/boards-sprints.md`](references/boards-sprints.md)** - Board and sprint operations
+- **[`references/jql.md`](references/jql.md)** - Comprehensive JQL query patterns
+- **[`references/optimization.md`](references/optimization.md)** - Performance and context optimization strategies
+
+**Loading strategy:**
+- Load references selectively based on query type to minimize token usage
+- For ticket queries: Load `workitems.md` and `jql.md`
+- For sprint queries: Load `boards-sprints.md` and `jql.md`
+- For authentication issues: Load `auth.md`
+- For optimization guidance: Load `optimization.md`
+- Load multiple references in parallel when query spans domains
 
 ### Context Optimization
 
@@ -44,27 +59,26 @@ To minimize token usage, follow these field selection and limiting strategies:
 - **Search results**: `--fields key,summary,status,assignee` (always add `--limit 20`)
 
 **Result limiting:**
-- Always use `--limit` for searches: Default to `--limit 20`, adjust based on user needs
+- Always use `--limit` for searches: Default to `--limit 20`
 - For comments: Use `--limit 5 --order "-created"` to show only recent comments
-- Use `--count` when user only needs result counts: `acli jira workitem search --jql "<JQL>" --count`
+- Use `--count` when user only needs result counts
 
-**Selective detailed fetching:**
-- Only include `description` when user explicitly asks for issue details or content
-- Only fetch comments when user specifically asks about comments or discussion
-- Avoid fetching all fields (`*navigable`) unless absolutely necessary
+**Key principles:**
+- Avoid expensive fields (`description`, `comment`, `attachment`) unless user asks
+- Load reference files selectively based on query type
+- Inform user about truncation: "Showing 20 of 150 results"
 
-**Performance notes:**
-- Expensive fields: `description`, `comment`, `attachment` consume significant tokens
-- Keep field lists minimal by default; fetch additional fields only when needed
-- When results are truncated, inform user: "Showing 20 of 150 results"
+See [`references/optimization.md`](references/optimization.md) for comprehensive optimization strategies.
 
 ### Building JQL Queries
 
-For natural language requests, construct appropriate JQL queries:
+For natural language requests, construct appropriate JQL queries. Common patterns:
 
 - "My tickets" → `assignee = currentUser()`
 - "High priority bugs" → `priority = High AND type = Bug`
 - "Current sprint" → `sprint in openSprints()`
+
+See [`references/jql.md`](references/jql.md) for comprehensive JQL patterns and natural language mapping.
 
 Prompt for missing context (project key, board ID) when needed.
 
