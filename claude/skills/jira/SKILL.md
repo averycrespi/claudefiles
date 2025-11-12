@@ -1,113 +1,67 @@
 ---
 name: jira
 description: |
-  Retrieve Jira issues, boards, and sprint data via Atlassian CLI (ACLI).
-
-  Use when: User mentions ticket IDs (PROJ-123), asks about "my tickets",
-  "current sprint", "jira issue", searches for bugs/tasks, or needs board/
-  project information. Activates automatically on ticket references.
-
-  Read-only mode with automatic security validation. Requires ACLI auth.
+  This skill should be used when the user mentions Jira ticket IDs (e.g., PROJ-123),
+  asks about tickets, sprints, boards, or searches for issues. Automatically activates
+  on ticket references and provides read-only access to Jira data via Atlassian CLI.
+  Requires ACLI authentication.
 ---
 
 # Jira Integration Skill
 
-<role>Jira integration assistant with ACLI expertise. Ultrathink through automatic detection and parallel query execution. Transparently integrate Jira data into development discussions with read-only access.</role>
+## Purpose
 
-<principles>
-1. **Passive Activation**: Auto-detect ticket IDs (PROJ-123) and keywords (sprint, board, my tickets) without explicit invocation
-2. **Parallel Operations**: Fetch multiple tickets/queries in single message for efficiency
-3. **Graceful Errors**: Handle failures transparently without disrupting conversation flow
-</principles>
+Transparently integrate Jira data into development discussions by automatically detecting and retrieving issue information, sprint data, and board contents using the Atlassian CLI (ACLI). Provide seamless read-only access to Jira without disrupting conversation flow.
 
-## Automatic Detection
+## When to Use This Skill
 
-<triggers>
-**Explicit Ticket IDs**: Pattern `[A-Z][A-Z0-9_]+-[0-9]+` (e.g., PROJ-123, TEAM-456)
-- Single ID: Fetch immediately
-- Multiple IDs: Fetch ALL in parallel using multiple Bash calls in one message
+Activate this skill when detecting:
 
-**Keywords**: "jira", "ticket", "issue", "board", "sprint", "backlog", "my tickets"
-- Determine command type from context (view, search, sprint query)
+- **Explicit ticket IDs**: Pattern `[A-Z][A-Z0-9_]+-[0-9]+` (e.g., PROJ-123, TEAM-456)
+- **Jira keywords**: "jira", "ticket", "issue", "board", "sprint", "backlog", "my tickets"
+- **Natural language queries**: "current sprint", "assigned to me", "high priority bugs"
 
-**Natural Language**: "current sprint", "assigned to me", "high priority bugs"
-- Construct appropriate JQL: `assignee = currentUser() AND priority = High AND type = Bug`
-- Prompt for missing context (project key, board ID) if needed
-</triggers>
+## How to Use This Skill
 
-<context-requirements>
-- **Project Context** (for boards/sprints): Prompt "Which project/board?" if needed
-- **User Context** (for "my tickets"): Use `assignee = currentUser()` automatically
-- **Sprint Context**: Prompt for board/sprint ID if needed
-</context-requirements>
+### Automatic Detection and Fetching
 
-<examples>
-**AT-1**: "What's PROJ-123?" → Execute `acli jira workitem view PROJ-123 --json` → Respond: "PROJ-123 (Fix auth bug) is In Progress, High priority, assigned to John"
+When ticket IDs appear in user messages:
 
-**AT-2**: "PROJ-123, PROJ-456, PROJ-789 need review" → Parallel execution (3 Bash calls in one message) → Synthesize: "Found 3 tickets: PROJ-123 (In Progress, High), PROJ-456 (To Do, Medium), PROJ-789 (Done, Low)"
+1. **Single ticket**: Immediately fetch using `acli jira workitem view <KEY> --json`
+2. **Multiple tickets**: Fetch ALL in parallel using multiple Bash tool calls in a single message
 
-**AT-3**: "Show current sprint tickets" → Prompt: "Which project?" → User: "TEAM" → Chain: board search → list sprints → active sprint workitems → Display grouped by status
+### Command Reference
 
-**AT-4**: "High priority bugs assigned to me" → JQL: `assignee = currentUser() AND priority = High AND type = Bug` → List with offer to refine
+Detailed ACLI commands and JQL patterns are available in `references/commands.md`. Always use the `--json` flag for structured output. Common commands include:
 
-**AT-5**: Auth failure → Check `acli jira auth status` → "ACLI authentication expired. Run: acli jira auth login"
-</examples>
+- View specific issue: `acli jira workitem view <KEY> --json`
+- Search issues: `acli jira workitem search --jql "<JQL>" --json`
+- List sprints: `acli jira board list-sprints --id <BOARD_ID> --json`
+- View comments: `acli jira workitem comment list --key <KEY> --json`
 
-## Command Execution
+### Building JQL Queries
 
-<templates>
-Always use `--json` flag for structured parsing:
+For natural language requests, construct appropriate JQL queries:
 
-```bash
-# Check authentication status
-acli jira auth status
+- "My tickets" → `assignee = currentUser()`
+- "High priority bugs" → `priority = High AND type = Bug`
+- "Current sprint" → `sprint in openSprints()`
 
-# List recent projects
-acli jira project list --json --recent
+Prompt for missing context (project key, board ID) when needed.
 
-# View a project
-acli jira project view --key <PROJECT_KEY> --json
+### Error Handling
 
-# Search for boards within a project
-acli jira board search --project <KEY> --json
+Handle errors gracefully without disrupting conversation flow. Detailed error recovery patterns are in `references/error-handling.md`. Key principles:
 
-# List sprints within a board
-acli jira board list-sprints --id <BOARD_ID> --json
+- Check `acli jira auth status` for authentication failures
+- Provide actionable guidance for recovery
+- Continue assisting with other tasks while resolving errors
+- Disable skill for session if ACLI is not installed
 
-# List work items (issues) within a sprint
-acli jira sprint list-workitems --board <BOARD_ID> --sprint <SPRINT_ID> --json
+### Response Formatting
 
-# Search for work items (issues)
-acli jira workitem search --jql "<JQL>" --json
+Present information concisely:
 
-# Get information about a work item (issue)
-acli jira workitem view <KEY> --json
-
-# Get comments for a work item (issue)
-acli jira workitem comment list --key <KEY> --json
-```
-</templates>
-
-<output-guidelines>
-- **Default fields**: key, summary, status, priority, assignee, created, updated
-- **Additional context**: Include description and recent comments when relevant
-</output-guidelines>
-
-## Error Handling
-
-<recovery-patterns>
-**401/Auth Failure**: Check `acli jira auth status` → Guide: "Run: acli jira auth login"
-**404/Not Found**: Graceful message, offer to search similar tickets, continue conversation
-**403/Permission**: "You don't have permission to view {KEY}. Check with Jira admin."
-**429/Rate Limit**: "API rate limit reached. Wait 2 minutes before retrying."
-**Network/Timeout**: Retry once with 5s delay → "Unable to reach Jira API."
-**Invalid JQL**: Log error, simplify query or prompt user: "Try more specific search?"
-**ACLI Not Installed**: Check `which acli` → Guide: "Install: brew install acli" → Disable skill for session
-</recovery-patterns>
-
-## Response Formatting
-
-<format>
 **Single ticket**:
 ```
 PROJ-123: Fix authentication bug
@@ -115,31 +69,21 @@ Status: In Progress | Priority: High | Assignee: John Doe
 Created: 2025-11-01 | Updated: 2025-11-10
 ```
 
-**Multiple tickets**: Group logically (by status or priority), show key + summary + essential metadata
+**Multiple tickets**: Group logically by status or priority, showing key + summary + essential metadata.
 
-**Search results**: List with key details, note "Showing N of M results" if applicable
-</format>
+**Search results**: List with key details, noting "Showing N of M results" if results are truncated.
 
-## Reasoning Workflow
+### Execution Strategy
 
-<thinking-process>
-**When triggered**:
-1. **Detect**: Identify ticket IDs, keywords, or natural language patterns
-2. **Context**: Prompt for missing information (project key, board ID) if needed
-3. **Execute**: Run ACLI commands with `--json`, use parallel Bash calls for multiple queries
-4. **Respond**: Format appropriately, offer next actions if helpful
-5. **Error**: If failure, identify error type and apply recovery pattern
+- **Multiple tickets**: Use parallel Bash tool calls in a single message for efficiency
+- **Sprint queries**: Chain commands sequentially (board search → list sprints → sprint workitems)
+- **Default fields**: Display key, summary, status, priority, assignee, created, updated
+- **Additional context**: Include description and recent comments when relevant to the discussion
 
-**For multiple tickets**: ALWAYS use parallel Bash tool calls in a single message
-**For search queries**: Construct JQL with appropriate filters
-**For sprint queries**: Chain commands sequentially (board → sprint → workitems)
-</thinking-process>
+## Security
 
-## Security Notes
-
-Read-only operations enforced in settings.json:
-- ✅ Retrieve issues, boards, sprints, projects, comments, attachments
-- ✅ Search with JQL queries
-- ❌ Create, update, delete, assign, transition, or modify any Jira data
+Read-only operations are enforced in settings.json:
+- Allowed: Retrieve issues, boards, sprints, projects, comments, search with JQL
+- Blocked: Create, update, delete, assign, transition, or modify any Jira data
 
 All write operations require explicit user approval and are denied by default.
