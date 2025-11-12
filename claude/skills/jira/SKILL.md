@@ -1,10 +1,10 @@
 ---
 name: jira
 description: |
-  This skill should be used when the user mentions Jira ticket IDs (e.g., PROJ-123),
-  asks about tickets, sprints, boards, or searches for issues. Automatically activates
-  on ticket references and provides read-only access to Jira data via Atlassian CLI.
-  Requires ACLI authentication.
+  This skill should be used when the user asks about Jira work items, sprints, boards,
+  or projects. Activates when detecting: ticket IDs (PROJ-123), questions about "current
+  sprint", "my tickets", "Jira issues", board information, project status, or any Jira-related
+  queries. Provides read-only access to Jira Cloud via Atlassian CLI.
 ---
 
 # Jira Integration Skill
@@ -32,12 +32,18 @@ When ticket IDs appear in user messages:
 
 ### Command Reference
 
-Detailed ACLI commands and JQL patterns are available in `references/commands.md`. Always use the `--json` flag for structured output. Common commands include:
+Detailed ACLI commands, options, and JQL patterns are available in `references/commands.md`. Always use the `--json` flag for structured output.
 
+**Key commands:**
 - View specific issue: `acli jira workitem view <KEY> --json`
 - Search issues: `acli jira workitem search --jql "<JQL>" --json`
 - List sprints: `acli jira board list-sprints --id <BOARD_ID> --json`
 - View comments: `acli jira workitem comment list --key <KEY> --json`
+
+**Getting help:** Use `--help` flag for detailed command information:
+- `acli jira workitem view --help`
+
+Read `references/commands.md` for comprehensive documentation of all options, field specifications, pagination, and advanced usage patterns.
 
 ### Building JQL Queries
 
