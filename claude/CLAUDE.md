@@ -38,3 +38,17 @@ usage: safe-find [-name NAME_PATTERN] [-iname INAME_PATTERN]
   confluence-search "API guide" --limit 20
   confluence-search "onboarding" | jq '.results[].title'
   ```
+
+### Confluence View Command
+
+- Use `confluence-view <page-id-or-url>` to read a specific Confluence page
+- Returns JSON output with page metadata and content
+- Requires environment variables: `CONFLUENCE_DOMAIN`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`
+- Supports `--metadata` flag to return metadata only (no content) for lightweight queries
+- Example usage:
+  ```bash
+  confluence-view 123456789
+  confluence-view "https://mycompany.atlassian.net/wiki/viewpage.action?pageId=123456789"
+  confluence-view 123456789 --metadata
+  confluence-view 123456789 | jq '.title'
+  ```

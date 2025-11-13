@@ -40,6 +40,7 @@
       "Bash(acli jira project view:*)",
       "Bash(acli jira auth status:*)",
       "Bash(confluence-search:*)",
+      "Bash(confluence-view:*)",
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id",
       "Skill(jira)",

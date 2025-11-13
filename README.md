@@ -52,6 +52,27 @@ Once authenticated, Claude Code will automatically retrieve Jira issue, board, a
 
 **Note**: ACLI authentication credentials are managed by the CLI itself. Claude Code only executes read-only commands and never handles credentials directly.
 
+### Confluence Setup
+
+For Confluence integration capabilities (`confluence-search` and `confluence-view`), you must set environment variables with your Confluence credentials:
+
+```sh
+# Add to your shell profile (~/.zshrc, ~/.bashrc, etc.)
+export CONFLUENCE_DOMAIN="mycompany.atlassian.net"  # Your Confluence domain
+export CONFLUENCE_EMAIL="your.email@example.com"    # Your email address
+export CONFLUENCE_API_TOKEN="your-api-token-here"   # API token from Atlassian
+```
+
+To create an API token:
+1. Go to https://id.atlassian.com/manage-profile/security/api-tokens
+2. Click "Create API token"
+3. Give it a label (e.g., "Claude Code")
+4. Copy the token and add it to your environment variables
+
+Once configured, Claude Code can search and read Confluence pages automatically when needed.
+
+**Note**: These environment variables are read by the Confluence scripts. Claude Code never accesses credentials directly.
+
 ## Usage
 
 ### Agents
@@ -107,7 +128,8 @@ Available scripts:
 - `safe-git-commit` - Git commit with safety checks (no secrets, size limits, branch protection)
 - `safe-git-push` - Git push with validation
 - `safe-gh-pr-create` - GitHub PR creation with safety checks
-- `confluence-search` - Search Confluence pages
+- `confluence-search` - Search Confluence pages using Confluence Query Language (CQL)
+- `confluence-view` - Read a specific Confluence page by ID or URL
 
 ### Worktree Management Scripts
 
