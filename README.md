@@ -103,12 +103,6 @@ Once configured, Claude Code can search and read Confluence pages automatically 
 - Use `/task:execute [plan-file]` to execute a plan from a file, with progress logged to `EXECUTION.md`
 - Use `/task:verify [spec-file]` to validate the final state against a spec, reporting to `VERIFICATION.md`
 
-#### Utilities
-
-- Use `/docs:update` to analyze recent code changes and update documentation automatically
-- Use `/git:commit` to analyze staged changes and create smart commits with auto-generated messages
-- Use `/git:review github-pr-url` to generate AI-assisted GitHub PR review analysis to augment human reviewers
-
 ### Skills
 
 > [Skills](https://www.claude.com/blog/skills) are specialized instruction sets for domain-specific expertise.

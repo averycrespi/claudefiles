@@ -116,13 +116,9 @@ Comprehensive workflow for systematic project transformation:
 - Agent integration (research-assistant, security-analyst, code-reviewer)
 - Safety-first approach using safe-git commands
 - TodoWrite integration for systematic task management
-- Auto-calls `/docs:update` when behavior changes
 - Comprehensive validation at each step
 
 #### Other Commands
-- `/docs:update` - Analyze recent code changes and update documentation automatically
-- `/git:commit` - Smart commit with change analysis, safety checks, and auto-generated messages
-- `/git:review` - AI-assisted GitHub PR review analysis to augment human reviewers with repository context
 - `/prompt:refine` - Refine and improve prompts
 - `/prompt:suggest` - Analyze Claude Code usage history and suggest custom commands based on patterns
 
