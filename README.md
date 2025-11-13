@@ -102,6 +102,13 @@ Once authenticated, Claude Code will automatically retrieve Jira issue, board, a
 - Claude has been [instructed](./claude/CLAUDE.md) how to use these scripts
 - The [permissions](./claude/settings.json) prevents Claude from using the unsafe versions
 
+Available scripts:
+- `safe-find` - Restricted file search that blocks dangerous operations
+- `safe-git-commit` - Git commit with safety checks (no secrets, size limits, branch protection)
+- `safe-git-push` - Git push with validation
+- `safe-gh-pr-create` - GitHub PR creation with safety checks
+- `confluence-search` - Search Confluence pages
+
 ### Worktree Management Scripts
 
 - Use `worktree-add` to create a new worktree and tmux window for a branch

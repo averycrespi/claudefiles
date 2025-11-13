@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Confluence Search Script
+# Searches Confluence for pages using the REST API
+# Requires: CONFLUENCE_DOMAIN, CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN
+
+# Default values
+LIMIT=10
+QUERY=""
+
+# Parse arguments
+show_help() {
+    cat << EOF
+Usage: confluence-search [OPTIONS] <query>
+
+Search Confluence for pages using CQL (Confluence Query Language).
+
+Arguments:
+    <query>         Search query (required)
+
+Options:
+    -l, --limit N   Limit results to N pages (default: 10)
+    -h, --help      Show this help message
+
+Environment Variables (required):
+    CONFLUENCE_DOMAIN      Confluence domain (e.g., mycompany.atlassian.net)
+    CONFLUENCE_EMAIL       Email address for authentication
+    CONFLUENCE_API_TOKEN   API token from Atlassian account settings
+
+Output:
+    JSON format with search results
+
+Examples:
+    confluence-search "project documentation"
+    confluence-search "API guide" --limit 20
+    confluence-search "onboarding" | jq '.results[].title'
+EOF
+    exit 0
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        -l|--limit)
+            LIMIT="$2"
+            shift 2
+            ;;
+        -*)
+            echo "Error: Unknown option: $1" >&2
+            echo "Run 'confluence-search --help' for usage information." >&2
+            exit 1
+            ;;
+        *)
+            QUERY="$1"
+            shift
+            ;;
+    esac
+done
+
+# Validate query is provided
+if [[ -z "$QUERY" ]]; then
+    echo "Error: Search query is required" >&2
+    echo "Run 'confluence-search --help' for usage information." >&2
+    exit 1
+fi
+
+# Validate environment variables
+if [[ -z "${CONFLUENCE_DOMAIN:-}" ]]; then
+    echo "Error: CONFLUENCE_DOMAIN environment variable is not set" >&2
+    exit 1
+fi
+
+if [[ -z "${CONFLUENCE_EMAIL:-}" ]]; then
+    echo "Error: CONFLUENCE_EMAIL environment variable is not set" >&2
+    exit 1
+fi
+
+if [[ -z "${CONFLUENCE_API_TOKEN:-}" ]]; then
+    echo "Error: CONFLUENCE_API_TOKEN environment variable is not set" >&2
+    exit 1
+fi
+
+# Infer API path based on domain
+infer_api_path() {
+    local domain="$1"
+    if [[ "$domain" == *".atlassian.net" ]]; then
+        echo "/wiki/rest/api"
+    else
+        echo "/rest/api"
+    fi
+}
+
+API_PATH=$(infer_api_path "$CONFLUENCE_DOMAIN")
+
+# Construct base URL
+BASE_URL="https://${CONFLUENCE_DOMAIN}${API_PATH}"
+
+# Create Basic Auth header
+# Pattern: Base64(email:token)
+AUTH_STRING="${CONFLUENCE_EMAIL}:${CONFLUENCE_API_TOKEN}"
+AUTH_HEADER="Authorization: Basic $(printf '%s' "$AUTH_STRING" | base64)"
+
+# Build CQL query
+# Escape double quotes in query
+ESCAPED_QUERY="${QUERY//\"/\\\"}"
+CQL="text ~ \"${ESCAPED_QUERY}\""
+
+# URL encode the CQL parameter
+URL_ENCODED_CQL=$(printf '%s' "$CQL" | jq -sRr @uri)
+
+# Make API request
+HTTP_STATUS=$(curl -s -w "%{http_code}" -o /tmp/confluence-search-response.json \
+    -H "$AUTH_HEADER" \
+    -H "Content-Type: application/json" \
+    "${BASE_URL}/search?cql=${URL_ENCODED_CQL}&limit=${LIMIT}")
+
+# Check HTTP status
+if [[ "$HTTP_STATUS" != "200" ]]; then
+    echo "Error: API request failed with status $HTTP_STATUS" >&2
+
+    # Try to show error message from response
+    if [[ -f /tmp/confluence-search-response.json ]]; then
+        ERROR_MSG=$(jq -r '.message // .errorMessages[0] // "Unknown error"' /tmp/confluence-search-response.json 2>/dev/null || echo "Unknown error")
+        echo "Error message: $ERROR_MSG" >&2
+    fi
+
+    rm -f /tmp/confluence-search-response.json
+    exit 1
+fi
+
+# Parse and format response
+# Extract results array and map to consistent format
+jq '{
+    results: [
+        .results[] |
+        (if .content then .content else . end) as $item |
+        {
+            id: $item.id,
+            title: $item.title,
+            type: $item.type,
+            excerpt: (if .excerpt then .excerpt else $item.excerpt // "" end),
+            url: ("https://'"$CONFLUENCE_DOMAIN"'" + ($item._links.webui // $item._links.tinyui // ""))
+        }
+    ],
+    size: .size,
+    totalSize: .totalSize
+}' /tmp/confluence-search-response.json
+
+# Clean up temp file
+rm -f /tmp/confluence-search-response.json

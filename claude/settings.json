@@ -39,6 +39,7 @@
       "Bash(acli jira project list:*)",
       "Bash(acli jira project view:*)",
       "Bash(acli jira auth status:*)",
+      "Bash(confluence-search:*)",
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id",
       "Skill(jira)",
@@ -83,5 +84,5 @@
     "type": "command",
     "command": "bunx ccusage statusline"
   },
-  "alwaysThinkingEnabled": false
+  "alwaysThinkingEnabled": true
 }

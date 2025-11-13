@@ -40,6 +40,21 @@ These commands include safety checks:
 - Limits commit size to 10MB
 - Runs `gitleaks` to detect secrets before committing
 
+### Confluence Search Command
+- Use `confluence-search "query"` to search Confluence for pages
+- Returns JSON output with search results for easy parsing
+- Supports optional `--limit N` flag to control number of results (default: 10)
+- Requires environment variables: `CONFLUENCE_DOMAIN`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`
+- Auto-detects API path based on domain (Atlassian Cloud vs self-hosted)
+- Uses CQL (Confluence Query Language) for full-text search
+
+Example usage:
+```bash
+confluence-search "project documentation"
+confluence-search "API guide" --limit 20
+confluence-search "onboarding" | jq '.results[].title'
+```
+
 ## Repository Architecture
 
 ### Core Structure
