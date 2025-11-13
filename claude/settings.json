@@ -44,6 +44,7 @@
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id",
       "Skill(jira)",
+      "Skill(confluence)",
       "Skill(skill-creator)"
     ],
     "deny": ["Bash(gh pr create:*)", "Bash(git commit:*)", "Bash(git push:*)"]
