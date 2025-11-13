@@ -204,6 +204,24 @@ The skill automatically handles API path detection for both Atlassian Cloud and 
 
 See `claude/skills/confluence/SKILL.md` for detailed documentation.
 
+#### Git Skill
+Always-active skill providing Git workflow guidance and best practices:
+- **Activation**: Always loaded for all Git operations
+- **Capabilities**: Enforces safe Git commands, conventional commit format, proper workflow sequence
+- **Commands**: Instructs use of `safe-git-commit`, `safe-git-push`, `safe-gh-pr-create`
+- **Commit Format**: Conventional commits with types (feat, fix, chore, docs, refactor, test)
+- **Safety**: Only pushes and creates PRs when explicitly requested by user
+
+The Git skill ensures Claude follows security best practices and maintains consistent commit message quality across all projects. It provides concise guidance on:
+- Safe Git command usage with safety checks explained
+- Conventional commit format and common types
+- Best practices for commit messages
+- Standard Git workflow (commit → push → PR)
+
+**Important**: The skill explicitly instructs Claude to only use `safe-git-push` and `safe-gh-pr-create` when the user explicitly requests it, preventing proactive pushing or PR creation.
+
+See `claude/skills/git/SKILL.md` for detailed documentation.
+
 ### Security Configuration
 The `claude/settings.json` file enforces strict security policies:
 - Allows only safe operations (specific bash commands, git operations)

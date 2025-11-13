@@ -43,6 +43,7 @@
       "Bash(confluence-view:*)",
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id",
+      "Skill(git)",
       "Skill(jira)",
       "Skill(confluence)",
       "Skill(skill-creator)"

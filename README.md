@@ -116,6 +116,7 @@ Once configured, Claude Code can search and read Confluence pages automatically 
 
 - Use the `jira` skill to retrieve information about projects, boards, and issues from Jira Cloud
 - Use the `confluence` skill to search and read documentation from Confluence
+- Use the `git` skill (always active) to enforce safe Git commands and conventional commit format
 - Use the `skill-creator` skill to create new skills
 
 ### Safe Wrapper Scripts
