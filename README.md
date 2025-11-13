@@ -9,7 +9,6 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - 🎫 **Skills** for Jira integration, Confluence integration, and skill creation
 - 🔒 **Reasonable permissions** for balancing agent autonomy with security
 - 🔔 **Notification hooks** to alert you when Claude needs attention
-- 🛡️ **Safe wrapper scripts** for granting Claude access to dangerous commands
 - 🌳 **Worktree management scripts** for building ergonomic workflows
 - 📊 **Status line** showing the current model and session information
 - 📖 **Instructions** telling Claude how to use the resources in this repository
@@ -112,20 +111,6 @@ Once configured, Claude Code can search and read Confluence pages automatically 
 - Use the `confluence` skill to search and read documentation from Confluence
 - Use the `git` skill (always active) to enforce safe Git commands and conventional commit format
 - Use the `skill-creator` skill to create new skills
-
-### Safe Wrapper Scripts
-
-- Claude has been [instructed](./claude/CLAUDE.md) how to use these scripts
-- The [permissions](./claude/settings.json) prevents Claude from using the unsafe versions
-
-**Git scripts** (bundled in Git skill at `~/.claude/skills/git/scripts/`):
-- `safe-git-commit` - Git commit with safety checks (no secrets, size limits, branch protection)
-- `safe-git-push` - Git push with validation
-- `safe-gh-pr-create` - GitHub PR creation with safety checks
-
-**Confluence scripts** (bundled in Confluence skill at `~/.claude/skills/confluence/scripts/`):
-- `confluence-search` - Search Confluence pages using Confluence Query Language (CQL)
-- `confluence-view` - Read a specific Confluence page by ID or URL
 
 ### Worktree Management Scripts
 
