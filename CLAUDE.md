@@ -172,6 +172,38 @@ The skill-creator helps you build skills that integrate specialized knowledge, w
 
 See `claude/skills/skill-creator/SKILL.md` for detailed documentation.
 
+#### Confluence Integration Skill
+Transparent integration with Confluence for accessing documentation and wiki content:
+- **Activation**: Automatically detects Confluence keywords ("confluence", "wiki", "documentation"), Confluence URLs, or numeric page IDs in Confluence context
+- **Capabilities**: Search Confluence pages with CQL, retrieve page content and metadata, convert HTML to Markdown
+- **Commands**: `confluence-search` for searching, `confluence-view` for retrieving specific pages
+- **Security**: Read-only access via REST API; no data modification supported
+- **Requirements**: Environment variables `CONFLUENCE_DOMAIN`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`
+
+To enable Confluence integration:
+1. Generate API token: https://id.atlassian.com/manage-profile/security/api-tokens (for Atlassian Cloud)
+2. Set environment variables in your shell profile (`~/.zshrc` or `~/.bashrc`):
+   ```bash
+   export CONFLUENCE_DOMAIN="company.atlassian.net"
+   export CONFLUENCE_EMAIL="your.email@company.com"
+   export CONFLUENCE_API_TOKEN="your-token-here"
+   ```
+3. Scripts are automatically available after running `setup.sh`
+
+The skill provides seamless documentation access without leaving the development environment, supporting:
+- Keyword-based search: "Find documentation about authentication"
+- Direct page access: "Show me page 123456789"
+- URL-based retrieval: Works with any Confluence URL format
+- Content conversion: Pipe to `pandoc` for Markdown conversion
+
+**Reference Structure**: The skill uses reference files for detailed guidance:
+- `cql-patterns.md` - CQL query patterns and natural language mapping
+- `troubleshooting.md` - Authentication, API errors, and debugging tips
+
+The skill automatically handles API path detection for both Atlassian Cloud and self-hosted instances.
+
+See `claude/skills/confluence/SKILL.md` for detailed documentation.
+
 ### Security Configuration
 The `claude/settings.json` file enforces strict security policies:
 - Allows only safe operations (specific bash commands, git operations)

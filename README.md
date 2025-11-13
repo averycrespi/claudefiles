@@ -6,7 +6,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 - 🤖 **Agents** for research, code review, security analysis, etc.
 - ⚡ **Slash commands** for task completion, prompt refinement, and more
-- 🎫 **Skills** for Jira integration and skill creation
+- 🎫 **Skills** for Jira integration, Confluence integration, and skill creation
 - 🔒 **Reasonable permissions** for balancing agent autonomy with security
 - 🔔 **Notification hooks** to alert you when Claude needs attention
 - 🛡️ **Safe wrapper scripts** for granting Claude access to dangerous commands
@@ -115,6 +115,7 @@ Once configured, Claude Code can search and read Confluence pages automatically 
 > They can be manually invoked by the user, or be automatically invoked by Claude Code.
 
 - Use the `jira` skill to retrieve information about projects, boards, and issues from Jira Cloud
+- Use the `confluence` skill to search and read documentation from Confluence
 - Use the `skill-creator` skill to create new skills
 
 ### Safe Wrapper Scripts
