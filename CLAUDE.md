@@ -35,8 +35,10 @@ These commands include safety checks:
 - Limits commit size to 10MB
 - Runs `gitleaks` to detect secrets before committing
 
-### Confluence Search Command
-- Use `confluence-search "query"` to search Confluence for pages
+### Confluence Commands (Confluence Skill)
+The Confluence commands are bundled within the Confluence skill at `~/.claude/skills/confluence/scripts/`:
+
+**Search**: `~/.claude/skills/confluence/scripts/confluence-search "query"`
 - Returns JSON output with search results for easy parsing
 - Supports optional `--limit N` flag to control number of results (default: 10)
 - Requires environment variables: `CONFLUENCE_DOMAIN`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`
@@ -45,13 +47,11 @@ These commands include safety checks:
 
 Example usage:
 ```bash
-confluence-search "project documentation"
-confluence-search "API guide" --limit 20
-confluence-search "onboarding" | jq '.results[].title'
+~/.claude/skills/confluence/scripts/confluence-search "project documentation"
+~/.claude/skills/confluence/scripts/confluence-search "API guide" --limit 20
 ```
 
-### Confluence View Command
-- Use `confluence-view <page-id-or-url>` to read a specific Confluence page
+**View**: `~/.claude/skills/confluence/scripts/confluence-view <page-id-or-url>`
 - Returns JSON output with page metadata and content
 - Accepts numeric page ID or full Confluence URL with pageId parameter
 - Supports `--metadata` flag to return metadata only (no content) for lightweight queries
@@ -60,11 +60,8 @@ confluence-search "onboarding" | jq '.results[].title'
 
 Example usage:
 ```bash
-confluence-view 123456789
-confluence-view "https://mycompany.atlassian.net/wiki/viewpage.action?pageId=123456789"
-confluence-view 123456789 --metadata
-confluence-view 123456789 | jq '.title'
-confluence-view 123456789 | jq '.content' | pandoc -f html -t markdown
+~/.claude/skills/confluence/scripts/confluence-view 123456789
+~/.claude/skills/confluence/scripts/confluence-view "https://mycompany.atlassian.net/wiki/viewpage.action?pageId=123456789"
 ```
 
 ## Repository Architecture
@@ -173,7 +170,7 @@ See `claude/skills/skill-creator/SKILL.md` for detailed documentation.
 Transparent integration with Confluence for accessing documentation and wiki content:
 - **Activation**: Automatically detects Confluence keywords ("confluence", "wiki", "documentation"), Confluence URLs, or numeric page IDs in Confluence context
 - **Capabilities**: Search Confluence pages with CQL, retrieve page content and metadata, convert HTML to Markdown
-- **Commands**: `confluence-search` for searching, `confluence-view` for retrieving specific pages
+- **Bundled Scripts**: Includes `confluence-search` and `confluence-view` in `scripts/` directory
 - **Security**: Read-only access via REST API; no data modification supported
 - **Requirements**: Environment variables `CONFLUENCE_DOMAIN`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`
 

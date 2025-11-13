@@ -25,6 +25,10 @@ Activate this skill when detecting:
 
 ## How to Use This Skill
 
+The Confluence scripts are located in `~/.claude/skills/confluence/scripts/`:
+- `~/.claude/skills/confluence/scripts/confluence-search` - Search for Confluence pages
+- `~/.claude/skills/confluence/scripts/confluence-view` - View specific Confluence page by ID or URL
+
 ### Search: `confluence-search`
 
 Search Confluence for pages using text search (default) or full CQL (Confluence Query Language) queries.
