@@ -21,15 +21,16 @@ This script:
 
 ## Safe Command Usage
 
-This repository enforces security through custom "safe" command replacements:
+This repository enforces security through custom "safe" command replacements bundled with skills:
 
-### Safe Git Commands
-- Use `safe-git-commit "message"` instead of `git commit`
-- Use `safe-git-push` instead of `git push`
-- Use `safe-gh-pr-create "title" "body"` instead of `gh pr create`
+### Safe Git Commands (Git Skill)
+The safe Git commands are bundled within the Git skill at `~/.claude/skills/git/scripts/`:
+- Use `~/.claude/skills/git/scripts/safe-git-commit "message"` instead of `git commit`
+- Use `~/.claude/skills/git/scripts/safe-git-push` instead of `git push`
+- Use `~/.claude/skills/git/scripts/safe-gh-pr-create "title" "body"` instead of `gh pr create`
 
 These commands include safety checks:
-- Prevents commits to main/master branches
+- Prevents pushes to main/master branches
 - Requires staged changes with no unstaged changes
 - Limits commit size to 10MB
 - Runs `gitleaks` to detect secrets before committing
@@ -201,16 +202,16 @@ The skill automatically handles API path detection for both Atlassian Cloud and 
 See `claude/skills/confluence/SKILL.md` for detailed documentation.
 
 #### Git Skill
-Always-active skill providing Git workflow guidance and best practices:
+Always-active skill providing Git workflow guidance and bundled safe Git scripts:
 - **Activation**: Always loaded for all Git operations
 - **Capabilities**: Enforces safe Git commands, conventional commit format, proper workflow sequence
-- **Commands**: Instructs use of `safe-git-commit`, `safe-git-push`, `safe-gh-pr-create`
+- **Bundled Scripts**: Includes `safe-git-commit`, `safe-git-push`, `safe-gh-pr-create` in `scripts/` directory
 - **Commit Format**: Conventional commits with types (feat, fix, chore, docs, refactor, test)
 - **Safety**: Only pushes and creates PRs when explicitly requested by user
 
-The Git skill ensures Claude follows security best practices and maintains consistent commit message quality across all projects. It provides concise guidance on:
-- Safe Git command usage with safety checks explained
-- Conventional commit format and common types
+The Git skill ensures Claude follows security best practices and maintains consistent commit message quality across all projects. It provides:
+- Safe Git command scripts with safety checks (gitleaks, size limits, branch protection)
+- Conventional commit format guidance and common types
 - Best practices for commit messages
 - Standard Git workflow (commit → push → PR)
 

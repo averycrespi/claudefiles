@@ -118,10 +118,12 @@ Once configured, Claude Code can search and read Confluence pages automatically 
 - Claude has been [instructed](./claude/CLAUDE.md) how to use these scripts
 - The [permissions](./claude/settings.json) prevents Claude from using the unsafe versions
 
-Available scripts:
+**Git scripts** (bundled in Git skill at `~/.claude/skills/git/scripts/`):
 - `safe-git-commit` - Git commit with safety checks (no secrets, size limits, branch protection)
 - `safe-git-push` - Git push with validation
 - `safe-gh-pr-create` - GitHub PR creation with safety checks
+
+**Confluence scripts** (in `scripts/` directory):
 - `confluence-search` - Search Confluence pages using Confluence Query Language (CQL)
 - `confluence-view` - Read a specific Confluence page by ID or URL
 
