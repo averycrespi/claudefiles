@@ -19,7 +19,6 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - **Claude Code** to make use of these resources
 - **macOS** is assumed, but can be adapted for Linux
 - **Homebrew** for macOS dependency management
-- **Python 3** for the `safe-find` script
 - **Bun** for the status line
 
 ## Quickstart
@@ -124,7 +123,6 @@ Once configured, Claude Code can search and read Confluence pages automatically 
 - The [permissions](./claude/settings.json) prevents Claude from using the unsafe versions
 
 Available scripts:
-- `safe-find` - Restricted file search that blocks dangerous operations
 - `safe-git-commit` - Git commit with safety checks (no secrets, size limits, branch protection)
 - `safe-git-push` - Git push with validation
 - `safe-gh-pr-create` - GitHub PR creation with safety checks

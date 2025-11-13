@@ -5,6 +5,7 @@
       "Bash(cut:*)",
       "Bash(diff:*)",
       "Bash(file:*)",
+      "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(jq:*)",
       "Bash(ls:*)",
@@ -26,7 +27,6 @@
       "Bash(git log:*)",
       "Bash(git remote get-url:*)",
       "Bash(git status:*)",
-      "Bash(safe-find:*)",
       "Bash(safe-gh-pr-create:*)",
       "Bash(safe-git-commit:*)",
       "Bash(safe-git-push:*)",
@@ -46,16 +46,7 @@
       "Skill(jira)",
       "Skill(skill-creator)"
     ],
-    "deny": [
-      "Bash(find:*)",
-      "Bash(gh pr create:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(acli jira workitem create:*)",
-      "Bash(acli jira workitem update:*)",
-      "Bash(acli jira workitem delete:*)",
-      "Bash(acli jira field:*)"
-    ]
+    "deny": ["Bash(gh pr create:*)", "Bash(git commit:*)", "Bash(git push:*)"]
   },
   "hooks": {
     "Notification": [

@@ -16,7 +16,7 @@ Focus: $ARGUMENTS (empty=all | git | testing | docs | files | quality)
 </task>
 
 <workflow>
-1. **Parallel Check**: Run safe-find on `~/.claude/commands` AND jq extraction simultaneously
+1. **Parallel Check**: Run find on `~/.claude/commands` AND jq extraction simultaneously
 2. **Extract History**: `jq '.projects[].history[].display // empty' ~/.claude.json`
 3. **Focus Filter**: Apply category keywords if specified:
    - **git**: commit, push, PR, merge, branch, sync

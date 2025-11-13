@@ -23,12 +23,6 @@ This script:
 
 This repository enforces security through custom "safe" command replacements:
 
-### Safe Find Command
-- Use `safe-find [options]` instead of `find [options]`
-- Blocks dangerous operations like `-exec`, `-delete`, `-ok`
-- Supports basic filtering: `-name`, `-type`, `-maxdepth`, `-path`, `-regex`
-- Has built-in limits: max 50 depth, max 100,000 files
-
 ### Safe Git Commands
 - Use `safe-git-commit "message"` instead of `git commit`
 - Use `safe-git-push` instead of `git push`

@@ -91,7 +91,7 @@ Generate structured review assistance with full repository context to augment hu
 <example>
 **Auth Changes**:
 - Find imports: `rg "import.*auth"`
-- Locate tests: `safe-find -name "*auth*test*"`
+- Locate tests: `find -name "*auth*test*"`
 - Check middleware: `rg "authMiddleware"`
 - Analyze security config impact
 </example>
