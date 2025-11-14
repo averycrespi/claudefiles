@@ -34,3 +34,7 @@ Located in `scripts/`:
 ## Documentation
 
 See [SKILL.md](SKILL.md) for complete documentation including command syntax, CQL patterns, and advanced workflows.
+
+## Attribution
+
+The Confluence scripts were reverse-engineered from the [confluence-cli](https://github.com/pchuri/confluence-cli) project.
