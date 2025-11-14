@@ -4,23 +4,22 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Features
 
-- 🤖 **Agents** for research, code review, security analysis, etc.
-- ⚡ **Slash commands** for task completion, prompt refinement, and more
-- 🎫 **Skills** for Jira integration, Confluence integration, and skill creation
-- 🔒 **Reasonable permissions** for balancing agent autonomy with security
-- 🔔 **Notification hooks** to alert you when Claude needs attention
-- 🌳 **Worktree management scripts** for building ergonomic workflows
-- 📊 **Status line** showing the current model and session information
-- 📖 **Instructions** telling Claude how to use the resources in this repository
+- 🤖 **Agents** for research, code reviews, and security analysis
+- ⚡ **Commands** for task workflows and prompt engineering
+- 🧠 **Skills** for Git, Jira, Confluence, and skill creation
+- 📜 **Scripts** for parallel development using Git worktrees
+- ⚙️ **Settings** for permissions, notifications, and the status line
 
 ## Requirements
 
-- **Claude Code** to make use of these resources
-- **macOS** is assumed, but can be adapted for Linux
-- **Homebrew** for macOS dependency management
-- **Bun** for the status line
+- [Claude Code](https://www.claude.com/product/claude-code) to make use of these resources
+- [Homebrew](https://brew.sh/) for macOS dependency management
+- [Bun](https://bun.com/) for the status line
+- macOS is assumed, but can be adapted for Linux
 
-## Quickstart
+## Setup
+
+### Quickstart
 
 ```sh
 git clone git@github.com:averycrespi/claudefiles.git
@@ -34,9 +33,9 @@ The setup script will:
 - Configure MCP servers in Claude Code
 - Add the scripts directory to your `PATH`
 
-### Atlassian CLI Setup
+### Atlassian CLI
 
-For Jira integration capabilities, you must authenticate with the Atlassian CLI:
+To use the `jira` skill, you must authenticate with the Atlassian CLI:
 
 ```sh
 # Authenticate with your Jira Cloud instance (one-time setup)
@@ -46,13 +45,9 @@ acli jira auth login
 acli jira auth status
 ```
 
-Once authenticated, Claude Code will automatically retrieve Jira issue, board, and sprint information when contextually relevant (e.g., when you mention ticket IDs like "PROJ-123" in conversation).
+### Confluence
 
-**Note**: ACLI authentication credentials are managed by the CLI itself. Claude Code only executes read-only commands and never handles credentials directly.
-
-### Confluence Setup
-
-For Confluence integration capabilities (`confluence-search` and `confluence-view`), you must set environment variables with your Confluence credentials:
+To use the `confluence` skill, you must export the following environment variable:
 
 ```sh
 # Add to your shell profile (~/.zshrc, ~/.bashrc, etc.)
@@ -67,59 +62,73 @@ To create an API token:
 3. Give it a label (e.g., "Claude Code")
 4. Copy the token and add it to your environment variables
 
-Once configured, Claude Code can search and read Confluence pages automatically when needed.
-
-**Note**: These environment variables are read by the Confluence scripts. Claude Code never accesses credentials directly.
-
-## Usage
+## Components
 
 ### Agents
 
-> [Subagents](https://code.claude.com/docs/en/sub-agents) are specialized AI personalities which Claude Code can delegate tasks to.
+> [Agents](https://code.claude.com/docs/en/sub-agents) are specialized AI personalities which Claude Code can delegate tasks to.
 > They can be manually invoked by the user, or be automatically invoked by Claude Code.
-> They have their own isolated context windows, and can share their results with the main context.
+> Each agent has its own isolated context windows, and can share its results with the main context.
 
-- Use the `code-reviewer` agent for detailed code reviews
-- Use the `research-assistant` agent for in-depth research and analysis
-- Use the `security-analyst` agent to find vulnerabilities
+- Use the [`code-reviewer`](./claude/agents/code-reviewer.md) agent for reviewing code
+- Use the [`research-assistant`](./claude/agents/research-assistant.md) agent for in-depth research and analysis
+- Use the [`security-analyst`](./claude/agents/security-analyst.md) agent to find vulnerabilities
 
-### Slash Commands
+### Commands
 
-> [Slash commands](https://code.claude.com/docs/en/slash-commands) are macros for frequently use prompts.
+> [Commands](https://code.claude.com/docs/en/slash-commands) are macros for frequently use prompts.
 > They must be manually invoked by the user.
 
-#### Prompt Engineering
-
-- Use `/prompt:refine prompt-file` to improve your existing Claude prompts
-- Use `/prompt:suggest` to analyze your Claude usage history and suggest custom commands
-
-#### Task Lifecycle
-
-> Recommendation: Wipe the context with `/clear` between each step. This prevents context bloat.
-
+Task workflow:
 - Use `/task:specify requirements` to generate a spec through Socratic questioning, written to `SPEC.md`
 - Use `/task:plan [spec-file]` to transform a spec into a detailed execution plan, written to `PLAN.md`
 - Use `/task:execute [plan-file]` to execute a plan from a file, with progress logged to `EXECUTION.md`
 - Use `/task:verify [spec-file]` to validate the final state against a spec, reporting to `VERIFICATION.md`
+- Recommendation: To prevent context bloat, run `/clear` between each step
+
+Prompt engineering:
+- Use `/prompt:refine prompt-file` to improve your existing Claude prompts
+- Use `/prompt:suggest` to analyze your Claude usage history and suggest custom commands
 
 ### Skills
 
 > [Skills](https://www.claude.com/blog/skills) are specialized instruction sets for domain-specific expertise.
 > They can be manually invoked by the user, or be automatically invoked by Claude Code.
 
-- Use the `jira` skill to retrieve information about projects, boards, and issues from Jira Cloud
-- Use the `confluence` skill to search and read documentation from Confluence
-- Use the `git` skill (always active) to enforce safe Git commands and conventional commit format
-- Use the `skill-creator` skill to create new skills
+- Use the [`jira`](./claude/skills/jira/README.md) skill to retrieve information about projects, boards, and issues from Jira Cloud
+- Use the [`confluence`](./claude/skills/confluence/README.md) skill to search and read documentation from Confluence
+- Use the [`git`](./claude/skills/git/README.md) skill to enforce safe Git commands and conventional commit format
+- Use the [`skill-creator`](./claude/skills/skill-creator/README.md) skill to create new skills
 
-### Worktree Management Scripts
+### Scripts
 
-- Use `worktree-add` to create a new worktree and tmux window for a branch
-  - Under the hood, `worktree-init` is called to start a new tmux session
-- Use `worktree-attach` to attach to the existing tmux session for the current repository
-  - Attaches to the first window in the session if it exists, otherwise returns an error
-- Use `worktree-rm` to destroy a worktree and its associated tmux window
-- The Claude [hooks](./claude/settings.json) call `worktree-notify` when Claude is done or needs attention
+Worktree management:
+- Use [`worktree-init`](./scripts/worktree-init) to start a new tmux session for the current repository
+- Use [`worktree-add`](./scripts/worktree-add) to create a new worktree and tmux window for a branch
+- Use [`worktree-attach`](./scripts/worktree-attach) to attach to an existing tmux session for the current repository
+- Use [`worktree-rm`](./scripts/worktree-rm) to destroy a worktree and its associated tmux window
+- The Claude Code [hooks](./claude/settings.json) will call [`worktree-notify`](./scripts/worktree-notify) when Claude is done or needs attention
+
+### Settings
+
+> See [settings.json](./claude/settings.json) for all settings.
+
+Allowed permissions:
+- Common Unix commands
+- Read-only Git operations
+- Scripts included in skills
+- Skills themslves
+- Context7 MCP tools
+
+Denied permissions:
+- Git commit and push commands; use safe wrappers instead
+- GitHub create PR command; use safe wrapper instead
+
+Hooks:
+- Send a notification when Claude needs your attention
+
+Status line:
+- Configures the [ccusage status line](https://ccusage.com/guide/statusline)
 
 ## License
 
