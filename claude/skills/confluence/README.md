@@ -21,7 +21,7 @@ Provides command-line scripts to search for pages and retrieve content from Conf
 ## Bundled Scripts
 
 Located in `scripts/`:
-- `confluence-search` - Search for pages using text or CQL queries
+- `confluence-search` - Search for pages using CQL queries (use `--text` for simple text search)
 - `confluence-view` - Retrieve page content by ID or URL
 
 ## Usage Examples

@@ -2,19 +2,20 @@
 
 This reference provides common CQL query patterns for use with `confluence-search`.
 
-## Important: Text Search vs CQL Mode
+## Important: CQL Mode vs Text Search
 
 The `confluence-search` script supports two modes:
 
-1. **Text Search Mode (default)**: Automatically wraps your query in `text ~ "query"` pattern
-   - Use for: Simple keyword searches
-   - Example: `confluence-search "project documentation"`
+1. **CQL Mode (default)**: Passes your query directly as CQL
+   - Use for: All queries with full CQL syntax
+   - Example: `confluence-search "text ~ \"project documentation\""`
+   - Example: `confluence-search "space = DEV AND text ~ \"API\""`
 
-2. **CQL Mode (with `--cql` flag)**: Passes your query directly as CQL
-   - Use for: Advanced queries with operators, functions, and filters
-   - Example: `confluence-search --cql "space = DEV AND text ~ \"API\""`
+2. **Text Search Mode (with `--text` flag)**: Automatically wraps your query in `text ~ "query"` pattern
+   - Use for: Simple keyword searches without CQL syntax
+   - Example: `confluence-search --text "project documentation"`
 
-**All advanced CQL examples in this document require the `--cql` flag.**
+**CQL is the default - no flag needed for CQL queries. Use `--text` flag for simple text searches.**
 
 ## Basic CQL Syntax
 
@@ -32,17 +33,17 @@ CQL queries are built using fields, operators, keywords, and functions.
 
 ## Common Search Patterns
 
-### Text Search (Default Mode)
+### Simple Text Search (with --text flag)
 
-**Simple text search** (no --cql flag needed):
+**Simple text search** (using --text flag):
 ```bash
-confluence-search "project documentation"
+confluence-search --text "project documentation"
 # Automatically becomes: text ~ "project documentation"
 ```
 
 **Multiple terms**:
 ```bash
-confluence-search "API guide authentication"
+confluence-search --text "API guide authentication"
 # Automatically becomes: text ~ "API guide authentication"
 ```
 
@@ -57,74 +58,74 @@ confluence-search "API guide authentication"
 | "Pages with 'api' label" | `label = "api"` |
 | "Pages in multiple spaces" | `space IN (DEV, DOCS)` |
 
-### Advanced Query Construction (CQL Mode)
+### CQL Query Construction (Default Mode)
 
-When users need more specific searches, use the `--cql` flag with custom CQL queries:
+Use CQL queries directly without any flag:
 
 **Space filtering**:
 ```bash
 # Search in specific space
-confluence-search --cql "space = DEV AND text ~ \"architecture\""
+confluence-search "space = DEV AND text ~ \"architecture\""
 
 # Multiple spaces
-confluence-search --cql "space IN (DEV, DOCS) AND text ~ \"onboarding\""
+confluence-search "space IN (DEV, DOCS) AND text ~ \"onboarding\""
 ```
 
 **Date-based searches**:
 ```bash
 # Pages modified in last 7 days
-confluence-search --cql "lastModified >= now(\"-7d\")"
+confluence-search "lastModified >= now(\"-7d\")"
 
 # Pages created this month
-confluence-search --cql "created >= startOfMonth()"
+confluence-search "created >= startOfMonth()"
 
 # Date range
-confluence-search --cql "created >= \"2025-01-01\" AND created <= \"2025-01-31\""
+confluence-search "created >= \"2025-01-01\" AND created <= \"2025-01-31\""
 ```
 
 **Author/Creator filtering**:
 ```bash
 # Current user's pages
-confluence-search --cql "creator = currentUser()"
+confluence-search "creator = currentUser()"
 
 # Specific user (by username)
-confluence-search --cql "creator = \"john.doe@company.com\""
+confluence-search "creator = \"john.doe@company.com\""
 
 # Last modifier
-confluence-search --cql "lastModifiedBy = currentUser()"
+confluence-search "lastModifiedBy = currentUser()"
 ```
 
 **Label-based searches**:
 ```bash
 # Single label
-confluence-search --cql "label = documentation"
+confluence-search "label = documentation"
 
 # Multiple labels (pages with all labels)
-confluence-search --cql "label = api AND label = public"
+confluence-search "label = api AND label = public"
 
 # Multiple labels (pages with any label)
-confluence-search --cql "label IN (api, internal)"
+confluence-search "label IN (api, internal)"
 ```
 
 **Type filtering**:
 ```bash
 # Only pages
-confluence-search --cql "type = page"
+confluence-search "type = page"
 
 # Only blog posts
-confluence-search --cql "type = blogpost"
+confluence-search "type = blogpost"
 
 # Exclude certain types
-confluence-search --cql "type != comment"
+confluence-search "type != comment"
 ```
 
 **Combining conditions**:
 ```bash
 # Complex query
-confluence-search --cql "space = DEV AND label = architecture AND lastModified >= now(\"-30d\") AND creator = currentUser()"
+confluence-search "space = DEV AND label = architecture AND lastModified >= now(\"-30d\") AND creator = currentUser()"
 
 # Using OR conditions
-confluence-search --cql "(space = DEV OR space = DOCS) AND text ~ \"API\""
+confluence-search "(space = DEV OR space = DOCS) AND text ~ \"API\""
 ```
 
 ## CQL Functions
@@ -141,66 +142,66 @@ Useful functions for dynamic queries:
 
 ## Result Ordering
 
-Sort results by specific fields using the `--cql` flag:
+Sort results by specific fields using CQL ORDER BY:
 
 ```bash
 # Most recently modified first
-confluence-search --cql "text ~ \"API\" ORDER BY lastModified DESC"
+confluence-search "text ~ \"API\" ORDER BY lastModified DESC"
 
 # Oldest first
-confluence-search --cql "space = DEV ORDER BY created ASC"
+confluence-search "space = DEV ORDER BY created ASC"
 
 # By title (alphabetical)
-confluence-search --cql "label = documentation ORDER BY title ASC"
+confluence-search "label = documentation ORDER BY title ASC"
 ```
 
 ## Tips for Effective Searches
 
-1. **Start with default text search**: Use `confluence-search "query"` for simple keyword searches
-2. **Use `--cql` for filters**: Add `--cql` flag when you need space, label, date, or creator filters
+1. **Use CQL by default**: Pass CQL queries directly: `confluence-search "text ~ \"query\""`
+2. **Use `--text` for convenience**: Add `--text` flag for simple searches: `confluence-search --text "query"`
 3. **Combine space + text**: Most effective CQL pattern is `space = "KEY" AND text ~ "query"`
 4. **Limit results**: Use `--limit` flag to control result count (works in both modes)
 5. **Date functions over exact dates**: Use `now("-7d")` instead of hardcoded dates for maintainability
 
 ## Examples by Use Case
 
-### Finding Documentation (Text Search)
+### Finding Documentation (Simple Text Search)
 
 ```bash
-# Recent API documentation
-confluence-search "API documentation" --limit 20
+# Recent API documentation (using --text flag for convenience)
+confluence-search --text "API documentation" --limit 20
 
 # Onboarding guides
-confluence-search "onboarding" --limit 10
+confluence-search --text "onboarding" --limit 10
 
 # Release notes
-confluence-search "release notes" --limit 15
+confluence-search --text "release notes" --limit 15
 ```
 
-### Team Collaboration (CQL Mode)
+### Team Collaboration (CQL)
 
 ```bash
 # My recent pages
-confluence-search --cql "creator = currentUser()" --limit 50
+confluence-search "creator = currentUser()" --limit 50
 
 # Team's recent updates
-confluence-search --cql "space = TEAM AND lastModified >= now(\"-7d\")" --limit 30
+confluence-search "space = TEAM AND lastModified >= now(\"-7d\")" --limit 30
 
 # Meeting notes with specific label
-confluence-search --cql "label = meeting-notes AND lastModified >= now(\"-30d\")" --limit 20
+confluence-search "label = meeting-notes AND lastModified >= now(\"-30d\")" --limit 20
 ```
 
-### Project Research (CQL Mode)
+### Project Research (CQL)
 
 ```bash
 # Architecture decisions in specific space
-confluence-search --cql "space = ARCH AND text ~ \"decision\"" --limit 20
+confluence-search "space = ARCH AND text ~ \"decision\"" --limit 20
 
 # Design specifications with label
-confluence-search --cql "label = design AND text ~ \"spec\"" --limit 25
+confluence-search "label = design AND text ~ \"spec\"" --limit 25
 
 # Recent technical documentation
-confluence-search --cql "space = DOCS AND label = technical AND lastModified >= now(\"-90d\")" --limit 30
+confluence-search "space = DOCS AND label = technical AND lastModified >= now(\"-90d\")" --limit 30
 ```
 
 ## Limitations
@@ -212,22 +213,23 @@ The `confluence-search` script uses the Confluence REST API's `/search` endpoint
 - **Performance**: Complex queries with many conditions may be slower
 - **Text search**: Uses Confluence's built-in text indexing (usually updated within minutes)
 
-## Choosing Between Text Search and CQL Mode
+## Choosing Between CQL and Text Search
 
-**Use default text search when**:
-- Searching for keywords or phrases
-- You don't need filters (space, labels, dates, creators)
-- Simpler, more readable commands
-- Example: `confluence-search "API documentation"`
-
-**Use `--cql` mode when**:
+**Use CQL mode (default)** when:
 - Filtering by space, label, creator, or date
 - Combining multiple conditions with AND/OR
 - Using CQL functions like `currentUser()` or `now("-7d")`
 - Sorting results with ORDER BY
-- Example: `confluence-search --cql "space = DEV AND lastModified >= now(\"-7d\")"`
+- Full control over query structure
+- Example: `confluence-search "space = DEV AND lastModified >= now(\"-7d\")"`
 
-The `--cql` flag provides full access to Confluence Query Language without needing to construct manual API calls.
+**Use `--text` flag when**:
+- Searching for simple keywords or phrases
+- You don't need filters (space, labels, dates, creators)
+- Prefer simpler command syntax without CQL operators
+- Example: `confluence-search --text "API documentation"`
+
+CQL mode (default) provides full access to Confluence Query Language without needing to construct manual API calls.
 
 ## See Also
 

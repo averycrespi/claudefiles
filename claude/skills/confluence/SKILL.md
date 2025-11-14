@@ -31,38 +31,44 @@ The Confluence scripts are located in `~/.claude/skills/confluence/scripts/`:
 
 ### Search: `confluence-search`
 
-Search Confluence for pages using text search (default) or full CQL (Confluence Query Language) queries.
+Search Confluence for pages using CQL (Confluence Query Language) queries.
 
-**Basic text search** (default):
+**Basic CQL queries** (default):
 ```bash
-confluence-search "query text"
-```
+# Simple text search with CQL
+confluence-search "text ~ \"query text\""
 
-**Advanced CQL queries** (with `--cql` flag):
-```bash
 # Search in specific space
-confluence-search --cql "space = DEV AND text ~ \"API\""
+confluence-search "space = DEV AND text ~ \"API\""
 
 # Search by label
-confluence-search --cql "label = documentation AND text ~ \"guide\""
+confluence-search "label = documentation AND text ~ \"guide\""
 
 # Search by creator
-confluence-search --cql "creator = currentUser()"
+confluence-search "creator = currentUser()"
 
 # Recent content
-confluence-search --cql "lastModified >= now(\"-7d\")"
+confluence-search "lastModified >= now(\"-7d\")"
+```
+
+**Simple text search** (with `--text` flag):
+```bash
+# Automatically wraps in: text ~ "query"
+confluence-search --text "query text"
+confluence-search --text "API documentation"
 ```
 
 **With result limit**:
 ```bash
-confluence-search "API documentation" --limit 20
-confluence-search --cql "space = DEV" --limit 50
+confluence-search "text ~ \"API documentation\"" --limit 20
+confluence-search "space = DEV" --limit 50
+confluence-search --text "onboarding" --limit 20
 ```
 
 **Piping to jq for parsing**:
 ```bash
-confluence-search "onboarding" | jq '.results[].title'
-confluence-search "architecture" | jq '.results[] | {title, url}'
+confluence-search "text ~ \"onboarding\"" | jq '.results[].title'
+confluence-search "text ~ \"architecture\"" | jq '.results[] | {title, url}'
 ```
 
 **Output format** (JSON):
@@ -169,7 +175,7 @@ confluence-view 123456789 | jq -r '.content' | pandoc -f html -t markdown -o pag
 #### 1. Search then View
 ```bash
 # Find relevant pages
-confluence-search "authentication" --limit 5
+confluence-search "text ~ \"authentication\"" --limit 5
 
 # Review results, then fetch full content
 confluence-view 123456789
@@ -178,16 +184,16 @@ confluence-view 123456789
 #### 2. Search with Filtering
 ```bash
 # Get results and filter by space
-confluence-search "API" | jq '.results[] | select(.url | contains("/DEV/"))'
+confluence-search "text ~ \"API\"" | jq '.results[] | select(.url | contains("/DEV/"))'
 
 # Show only titles and URLs
-confluence-search "onboarding" | jq '.results[] | "\(.title): \(.url)"'
+confluence-search "text ~ \"onboarding\"" | jq '.results[] | "\(.title): \(.url)"'
 ```
 
 #### 3. Bulk Content Retrieval
 ```bash
 # Search returns multiple page IDs
-IDS=$(confluence-search "architecture" | jq -r '.results[].id')
+IDS=$(confluence-search "text ~ \"architecture\"" | jq -r '.results[].id')
 
 # Fetch each page (in parallel if using Claude Code)
 for id in $IDS; do
@@ -216,12 +222,17 @@ For detailed information about specific topics, load these reference files:
 - For authentication/connection issues: Load `troubleshooting.md`
 - Load both in parallel when needed
 
-**When to use `--cql` flag**:
-- For space-specific searches: `--cql "space = KEY AND text ~ \"term\""`
-- For label-based searches: `--cql "label = tag"`
-- For date-filtered searches: `--cql "lastModified >= now(\"-7d\")"`
-- For complex multi-condition queries: `--cql "space IN (DEV, PROD) AND creator = currentUser()"`
-- For simple text searches: Use default mode without `--cql` flag
+**When to use `--text` flag**:
+- For simple text searches without CQL syntax: `--text "search terms"`
+- When you want automatic wrapping: `--text "API guide"` becomes `text ~ "API guide"`
+- For convenience when you don't need advanced CQL features
+
+**CQL is the default** (no flag needed):
+- For space-specific searches: `"space = KEY AND text ~ \"term\""`
+- For label-based searches: `"label = tag"`
+- For date-filtered searches: `"lastModified >= now(\"-7d\")"`
+- For complex multi-condition queries: `"space IN (DEV, PROD) AND creator = currentUser()"`
+- For simple text searches with explicit syntax: `"text ~ \"search terms\""`
 
 ### Response Formatting
 

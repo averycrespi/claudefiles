@@ -9,20 +9,20 @@ set -euo pipefail
 # Default values
 LIMIT=10
 QUERY=""
-CQL_MODE=false
+CQL_MODE=true
 
 # Parse arguments
 show_help() {
     cat << EOF
 Usage: confluence-search [OPTIONS] <query>
 
-Search Confluence for pages using text search or full CQL (Confluence Query Language).
+Search Confluence for pages using CQL (Confluence Query Language).
 
 Arguments:
-    <query>         Search query (required)
+    <query>         CQL search query (required)
 
 Options:
-    --cql           Treat query as raw CQL (default: wrap in text search)
+    --text          Wrap query in text search pattern: text ~ "query"
     -l, --limit N   Limit results to N pages (default: 10)
     -h, --help      Show this help message
 
@@ -35,14 +35,15 @@ Output:
     JSON format with search results
 
 Examples:
-    # Plain text search (default)
-    confluence-search "project documentation"
-    confluence-search "API guide" --limit 20
+    # CQL queries (default)
+    confluence-search "text ~ \"project documentation\""
+    confluence-search "space = DEV AND text ~ \"API\"" --limit 20
+    confluence-search "creator = currentUser() AND label = documentation"
+    confluence-search "lastModified >= now(\"-7d\")" --limit 50
 
-    # Full CQL queries (advanced)
-    confluence-search --cql "space = DEV AND text ~ \"API\""
-    confluence-search --cql "creator = currentUser() AND label = documentation"
-    confluence-search --cql "lastModified >= now(\"-7d\")" --limit 50
+    # Simple text search (using --text flag)
+    confluence-search --text "project documentation"
+    confluence-search --text "API guide" --limit 20
 EOF
     exit 0
 }
@@ -53,8 +54,8 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             show_help
             ;;
-        --cql)
-            CQL_MODE=true
+        --text)
+            CQL_MODE=false
             shift
             ;;
         -l|--limit)
@@ -118,10 +119,10 @@ AUTH_HEADER="Authorization: Basic $(printf '%s' "$AUTH_STRING" | base64)"
 
 # Build CQL query
 if [[ "$CQL_MODE" == "true" ]]; then
-    # Pass query directly as CQL
+    # Pass query directly as CQL (default behavior)
     CQL="$QUERY"
 else
-    # Wrap query in text search pattern (default behavior)
+    # Wrap query in text search pattern (when --text flag is used)
     # Escape double quotes in query
     ESCAPED_QUERY="${QUERY//\"/\\\"}"
     CQL="text ~ \"${ESCAPED_QUERY}\""

@@ -42,15 +42,20 @@ The Confluence commands are bundled within the Confluence skill at `~/.claude/sk
 
 **Search**: `~/.claude/skills/confluence/scripts/confluence-search "query"`
 - Returns JSON output with search results for easy parsing
+- Uses CQL (Confluence Query Language) by default for powerful queries
+- Supports `--text` flag for simple text searches (automatically wraps in `text ~ "query"`)
 - Supports optional `--limit N` flag to control number of results (default: 10)
 - Requires environment variables: `CONFLUENCE_DOMAIN`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`
 - Auto-detects API path based on domain (Atlassian Cloud vs self-hosted)
-- Uses CQL (Confluence Query Language) for full-text search
 
 Example usage:
 ```bash
-~/.claude/skills/confluence/scripts/confluence-search "project documentation"
-~/.claude/skills/confluence/scripts/confluence-search "API guide" --limit 20
+# CQL queries (default)
+~/.claude/skills/confluence/scripts/confluence-search "text ~ \"project documentation\""
+~/.claude/skills/confluence/scripts/confluence-search "space = DEV AND text ~ \"API\"" --limit 20
+
+# Simple text search (with --text flag)
+~/.claude/skills/confluence/scripts/confluence-search --text "API guide" --limit 20
 ```
 
 **View**: `~/.claude/skills/confluence/scripts/confluence-view <page-id-or-url>`
