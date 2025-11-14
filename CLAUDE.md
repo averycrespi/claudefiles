@@ -24,19 +24,21 @@ This script:
 This repository enforces security through custom "safe" command replacements bundled with skills:
 
 ### Safe Git Commands (Git Skill)
-The safe Git commands are bundled within the Git skill at `~/.claude/skills/git/scripts/`:
+The safe Git commands are bundled within the Git skill at `~/.claude/skills/git/scripts/` and must be called with their full paths:
 - Use `~/.claude/skills/git/scripts/safe-git-commit "message"` instead of `git commit`
 - Use `~/.claude/skills/git/scripts/safe-git-push` instead of `git push`
 - Use `~/.claude/skills/git/scripts/safe-gh-pr-create "title" "body"` instead of `gh pr create`
 
-These commands include safety checks:
+**Note**: These scripts are bundled within the Git skill and require full paths. They are not added to PATH to avoid conflicts with system git commands.
+
+Safety checks included:
 - Prevents pushes to main/master branches
 - Requires staged changes with no unstaged changes
 - Limits commit size to 10MB
 - Runs `gitleaks` to detect secrets before committing
 
 ### Confluence Commands (Confluence Skill)
-The Confluence commands are bundled within the Confluence skill at `~/.claude/skills/confluence/scripts/`:
+The Confluence commands are bundled within the Confluence skill at `~/.claude/skills/confluence/scripts/` and must be called with their full paths:
 
 **Search**: `~/.claude/skills/confluence/scripts/confluence-search "query"`
 - Returns JSON output with search results for easy parsing
@@ -67,15 +69,20 @@ Example usage:
 ## Repository Architecture
 
 ### Core Structure
-- `claude/` - Claude Code configuration files
-  - `CLAUDE.md` - Global instructions for all projects
+- `claude/` - Claude Code configuration files (symlinked to `~/.claude/` via stow)
+  - `CLAUDE.md` - Global instructions applied to all projects
   - `settings.json` - Permissions and hooks configuration
   - `agents/` - Custom agent definitions
   - `commands/` - Slash command definitions
   - `skills/` - Custom skill definitions
+- `CLAUDE.md` - Project-specific instructions for this repository (this file)
 - `scripts/` - Security-enhanced command line tools
 - `setup.sh` - Repository setup and configuration script
 - `Brewfile` - macOS dependencies managed by Homebrew
+
+**Note**: There are two CLAUDE.md files:
+1. `claude/CLAUDE.md` - Global instructions symlinked to `~/.claude/CLAUDE.md` and applied across all projects
+2. `CLAUDE.md` (root) - Project-specific instructions for this repository only
 
 ### Agent System
 The repository includes specialized agents for different tasks:
@@ -159,10 +166,13 @@ See `claude/skills/jira/SKILL.md` for detailed documentation.
 Guide for creating effective skills that extend Claude Code's capabilities:
 - **Activation**: Use when users want to create or update custom skills
 - **Capabilities**: Provides templates, validation scripts, and best practices for skill development
-- **Features**: Includes init, validation, and packaging scripts for skill lifecycle management
+- **Features**: Includes Python scripts for skill lifecycle management:
+  - `init_skill.py` - Initialize new skill structure
+  - `quick_validate.py` - Validate skill configuration
+  - `package_skill.py` - Package skills for distribution
 - **Documentation**: Comprehensive guide on skill structure, activation patterns, and tool integration
 
-The skill-creator helps you build skills that integrate specialized knowledge, workflows, or tool integrations into Claude Code. It includes Python scripts for initializing new skills, validating skill structure, and packaging skills for distribution.
+The skill-creator helps you build skills that integrate specialized knowledge, workflows, or tool integrations into Claude Code.
 
 See `claude/skills/skill-creator/SKILL.md` for detailed documentation.
 
@@ -182,7 +192,7 @@ To enable Confluence integration:
    export CONFLUENCE_EMAIL="your.email@company.com"
    export CONFLUENCE_API_TOKEN="your-token-here"
    ```
-3. Scripts are automatically available after running `setup.sh`
+3. Scripts are bundled within the skill and accessible via their full paths (see examples above)
 
 The skill provides seamless documentation access without leaving the development environment, supporting:
 - Keyword-based search: "Find documentation about authentication"
@@ -224,9 +234,20 @@ The `claude/settings.json` file enforces strict security policies:
 - Includes hooks for desktop notifications on significant events
 - Jira integration: Allows read-only ACLI commands, blocks all write operations
 - Thinking mode: Configured with `alwaysThinkingEnabled: false` for Claude Code 2.0
+- Status line: Configured to display Claude Code usage statistics via [ccusage](https://ccusage.com/guide/statusline)
 
 ### Worktree Management
-The `scripts/` directory includes tmux-integrated worktree management tools:
+The `scripts/` directory includes tmux-integrated worktree management tools. These scripts are added to PATH by `setup.sh` and can be called directly:
+
+#### worktree-init
+Initializes a tmux session for worktrees:
+```bash
+worktree-init
+```
+- Must be run from the main git repository (not from a worktree)
+- Creates a tmux session named `<repo-name>-worktree` with a "main" window
+- Idempotent: safe to run multiple times
+- Prerequisite for using other worktree scripts with tmux integration
 
 #### worktree-add
 Creates a new git worktree and tmux window for a branch:
@@ -257,6 +278,17 @@ worktree-rm <branch-name>
 ```
 - Cleans up both the worktree directory and tmux window
 - Ensures proper cleanup of git worktree references
+
+#### worktree-notify
+Adds a notification bell to a tmux window:
+```bash
+worktree-notify
+```
+- Must be run from a worktree (not the main repository)
+- Adds a 🔔 emoji prefix to the tmux window name to indicate activity
+- Intended to be called from Claude Code hooks in `settings.json`
+- Idempotent: won't add multiple notification bells
+- Auto-clears on tmux window select if you add the recommended hook to `.tmux.conf` (see script comments)
 
 The notification hooks in `settings.json` integrate with these scripts to provide desktop notifications when Claude Code completes tasks or needs attention.
 
