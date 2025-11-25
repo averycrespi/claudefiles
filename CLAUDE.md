@@ -21,21 +21,21 @@ This script:
 
 ## Safe Command Usage
 
-This repository enforces security through custom "safe" command replacements bundled with skills:
+This repository enforces security through custom "safe" command replacements:
 
-### Safe Git Commands (Git Skill)
-The safe Git commands are bundled within the Git skill at `~/.claude/skills/git/scripts/` and must be called with their full paths:
-- Use `~/.claude/skills/git/scripts/safe-git-commit "message"` instead of `git commit`
-- Use `~/.claude/skills/git/scripts/safe-git-push` instead of `git push`
-- Use `~/.claude/skills/git/scripts/safe-gh-pr-create "title" "body"` instead of `gh pr create`
-
-**Note**: These scripts are bundled within the Git skill and require full paths. They are not added to PATH to avoid conflicts with system git commands.
+### Safe Git Commands
+The safe Git commands are located in the `scripts/` directory and available via PATH:
+- Use `safe-git-commit "message"` instead of `git commit`
+- Use `safe-git-push` instead of `git push`
+- Use `safe-gh-pr-create "title" "body"` instead of `gh pr create`
 
 Safety checks included:
 - Prevents pushes to main/master branches
 - Requires staged changes with no unstaged changes
 - Limits commit size to 10MB
 - Runs `gitleaks` to detect secrets before committing
+
+See `~/.claude/CLAUDE.md` for complete Git workflow documentation.
 
 ### Confluence Commands (Confluence Skill)
 The Confluence commands are bundled within the Confluence skill at `~/.claude/skills/confluence/scripts/` and must be called with their full paths:
@@ -75,7 +75,7 @@ Example usage:
 
 ### Core Structure
 - `claude/` - Claude Code configuration files (symlinked to `~/.claude/` via stow)
-  - `CLAUDE.md` - Global instructions applied to all projects
+  - `CLAUDE.md` - Global instructions applied to all projects (includes Git workflow)
   - `settings.json` - Permissions and hooks configuration
   - `agents/` - Custom agent definitions
   - `commands/` - Slash command definitions
@@ -212,24 +212,6 @@ The skill provides seamless documentation access without leaving the development
 The skill automatically handles API path detection for both Atlassian Cloud and self-hosted instances.
 
 See `claude/skills/confluence/SKILL.md` for detailed documentation.
-
-#### Git Skill
-Always-active skill providing Git workflow guidance and bundled safe Git scripts:
-- **Activation**: Always loaded for all Git operations
-- **Capabilities**: Enforces safe Git commands, conventional commit format, proper workflow sequence
-- **Bundled Scripts**: Includes `safe-git-commit`, `safe-git-push`, `safe-gh-pr-create` in `scripts/` directory
-- **Commit Format**: Conventional commits with types (feat, fix, chore, docs, refactor, test)
-- **Safety**: Only pushes and creates PRs when explicitly requested by user
-
-The Git skill ensures Claude follows security best practices and maintains consistent commit message quality across all projects. It provides:
-- Safe Git command scripts with safety checks (gitleaks, size limits, branch protection)
-- Conventional commit format guidance and common types
-- Best practices for commit messages
-- Standard Git workflow (commit → push → PR)
-
-**Important**: The skill explicitly instructs Claude to only use `safe-git-push` and `safe-gh-pr-create` when the user explicitly requests it, preventing proactive pushing or PR creation.
-
-See `claude/skills/git/SKILL.md` for detailed documentation.
 
 ### Security Configuration
 The `claude/settings.json` file enforces strict security policies:

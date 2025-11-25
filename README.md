@@ -6,7 +6,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 - 🤖 **Agents** for research, code reviews, and security analysis
 - ⚡ **Commands** for task workflows and prompt engineering
-- 🧠 **Skills** for Git, Jira, Confluence, and skill creation
+- 🧠 **Skills** for Jira, Confluence, and skill creation
 - 📜 **Scripts** for parallel development using Git worktrees
 - ⚙️ **Settings** for permissions, notifications, and the status line
 
@@ -97,7 +97,6 @@ Prompt engineering:
 
 - Use the [`jira`](./claude/skills/jira/README.md) skill to retrieve information about projects, boards, and issues from Jira Cloud
 - Use the [`confluence`](./claude/skills/confluence/README.md) skill to search and read documentation from Confluence
-- Use the [`git`](./claude/skills/git/README.md) skill to enforce safe Git commands and conventional commit format
 - Use the [`skill-creator`](./claude/skills/skill-creator/README.md) skill to create new skills
 
 ### Scripts
@@ -109,6 +108,11 @@ Worktree management:
 - Use [`worktree-rm`](./scripts/worktree-rm) to destroy a worktree and its associated tmux window
 - The Claude Code [hooks](./claude/settings.json) will call [`worktree-notify`](./scripts/worktree-notify) when Claude is done or needs attention
 
+Safe Git commands:
+- Claude will use [safe-git-commit](./scripts/safe-git-commit) instead of `git commit`
+- Claude will use [safe-git-push](./scripts/safe-git-push) instead of `git push`
+- Claude will use [safe-gh-pr-create](./scripts/safe-gh-pr-create) instead of `gh pr create`
+
 ### Settings
 
 > See [settings.json](./claude/settings.json) for all settings.
@@ -116,8 +120,8 @@ Worktree management:
 Allowed permissions:
 - Common Unix commands
 - Read-only Git operations
-- Scripts included in skills
-- Skills themslves
+- Safe Git scripts
+- Skills and their scripts
 - Context7 MCP tools
 
 Denied permissions:
