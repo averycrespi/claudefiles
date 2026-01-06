@@ -10,7 +10,7 @@ Use this template when dispatching a code quality reviewer subagent.
 Task tool (code-reviewer):
   description: "Review code quality for Task N"
 
-  Use template at requesting-code-review/code-reviewer.md
+  Use template at ./code-reviewer-template.md
 
   Fill in placeholders:
   - WHAT_WAS_IMPLEMENTED: [task summary]

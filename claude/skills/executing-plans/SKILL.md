@@ -90,7 +90,7 @@ Fill in:
 
 Use prompt template at `./code-quality-reviewer-prompt.md`
 
-The code-reviewer subagent uses the template at `requesting-code-review/code-reviewer.md`.
+The code-reviewer subagent uses the template at `./code-reviewer-template.md`.
 
 Fill in:
 - WHAT_WAS_IMPLEMENTED: Task summary
@@ -134,6 +134,7 @@ After all tasks complete:
 
 - `./spec-reviewer-prompt.md` - Verify implementation matches spec
 - `./code-quality-reviewer-prompt.md` - Verify implementation is well-built
+- `./code-reviewer-template.md` - Full template for code-reviewer subagent
 
 ## Review Order Matters
 
