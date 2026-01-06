@@ -46,6 +46,7 @@
       "Bash(~/.claude/skills/confluence/scripts/confluence-view:*)",
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id",
+      "Read(~/.claude/skills/**)",
       "Skill(brainstorming)",
       "Skill(confluence)",
       "Skill(executing-plans)",
