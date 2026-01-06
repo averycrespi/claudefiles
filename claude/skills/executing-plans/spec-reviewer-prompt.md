@@ -2,7 +2,9 @@
 
 Use this template when dispatching a spec compliance reviewer subagent.
 
-**Purpose:** Verify implementer built what was requested (nothing more, nothing less)
+**Purpose:** Verify implementation matches specification (nothing more, nothing less).
+
+**When to dispatch:** After implementation is complete and committed.
 
 ```
 Task tool (general-purpose):
@@ -12,16 +14,16 @@ Task tool (general-purpose):
 
     ## What Was Requested
 
-    [FULL TEXT of task requirements]
+    [FULL TEXT of task requirements from plan]
 
     ## What Implementer Claims They Built
 
-    [From implementer's report]
+    [Summary of what was implemented]
 
     ## CRITICAL: Do Not Trust the Report
 
-    The implementer finished suspiciously quickly. Their report may be incomplete,
-    inaccurate, or optimistic. You MUST verify everything independently.
+    The implementer finished quickly. Their report may be incomplete,
+    inaccurate, or optimistic. Verify everything independently.
 
     **DO NOT:**
     - Take their word for what they implemented
@@ -56,6 +58,6 @@ Task tool (general-purpose):
     **Verify by reading code, not by trusting report.**
 
     Report:
-    - ✅ Spec compliant (if everything matches after code inspection)
-    - ❌ Issues found: [list specifically what's missing or extra, with file:line references]
+    - If compliant: "Spec compliant - [brief confirmation]"
+    - If issues: "Issues found:" followed by specific list with file:line references
 ```

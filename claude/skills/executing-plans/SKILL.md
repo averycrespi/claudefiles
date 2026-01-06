@@ -1,76 +1,173 @@
 ---
 name: executing-plans
-description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
+description: Use when you have a written implementation plan to execute - implements inline with subagent review gates for spec compliance and code quality
 ---
 
 # Executing Plans
 
 ## Overview
 
-Load plan, review critically, execute tasks in batches, report for review between batches.
+Execute implementation plans by implementing tasks inline (fast) with independent subagent reviews (unbiased). Combines speed of inline execution with quality assurance of fresh-context reviewers.
 
-**Core principle:** Batch execution with checkpoints for architect review.
+**Core principle:** Inline implementation + subagent review gates = fast execution with independent quality checks.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
 ## The Process
 
-### Step 1: Load and Review Plan
-1. Read plan file
-2. Review critically - identify any questions or concerns about the plan
-3. If concerns: Raise them with your human partner before starting
-4. If no concerns: Create TodoWrite and proceed
-
-### Step 2: Execute Batch
-**Default: First 3 tasks**
-
+```
 For each task:
-1. Mark as in_progress
-2. Follow each step exactly (plan has bite-sized steps)
-3. Run verifications as specified
-4. Mark as completed
+  1. Load task from plan
+  2. Implement inline (TDD)
+  3. Commit
+  4. Dispatch spec reviewer subagent
+  5. Fix issues if any (inline)
+  6. Dispatch code quality reviewer subagent
+  7. Fix issues if any (inline)
+  8. Mark task complete
 
-### Step 3: Report
-When batch complete:
-- Show what was implemented
-- Show verification output
-- Say: "Ready for feedback."
+After all tasks:
+  Use finishing-a-development-branch
+```
 
-### Step 4: Continue
-Based on feedback:
-- Apply changes if needed
-- Execute next batch
-- Repeat until complete
+### Step 1: Load and Review Plan
 
-### Step 5: Complete Development
+1. Read plan file
+2. Review critically - identify any questions or concerns
+3. If concerns: Raise them before starting
+4. If no concerns: Create TodoWrite with all tasks and proceed
 
-After all tasks complete and verified:
-- Announce: "I'm using the finishing-a-development-branch skill to complete this work."
-- **REQUIRED SUB-SKILL:** Use Skill(finishing-a-development-branch)
-- Follow that skill to verify tests, present options, execute choice
+### Step 2: Execute Each Task
 
-## When to Stop and Ask for Help
+For each task in order:
+
+#### 2a. Mark In Progress
+```
+Mark task as in_progress in TodoWrite
+```
+
+#### 2b. Implement Inline
+
+Follow the plan's steps exactly. Use TDD:
+- Write failing test
+- Verify it fails
+- Write minimal implementation
+- Verify it passes
+- Refactor if needed
+
+**Reference:** Skill(test-driven-development) for TDD discipline.
+
+#### 2c. Commit
+
+```bash
+git add -A
+git commit -m "feat: [task description]"
+```
+
+Capture the commit SHA for review:
+```bash
+BASE_SHA=$(git rev-parse HEAD~1)
+HEAD_SHA=$(git rev-parse HEAD)
+```
+
+#### 2d. Dispatch Spec Reviewer
+
+Use prompt template at `./spec-reviewer-prompt.md`
+
+Fill in:
+- Task requirements (full text from plan)
+- What was implemented (your summary)
+
+**If spec reviewer finds issues:**
+1. Fix issues inline
+2. Amend commit: `git add -A && git commit --amend --no-edit`
+3. Re-dispatch spec reviewer
+4. Repeat until approved
+
+**Only proceed to code quality review after spec compliance passes.**
+
+#### 2e. Dispatch Code Quality Reviewer
+
+Use prompt template at `./code-quality-reviewer-prompt.md`
+
+The code-reviewer subagent uses the template at `requesting-code-review/code-reviewer.md`.
+
+Fill in:
+- WHAT_WAS_IMPLEMENTED: Task summary
+- PLAN_OR_REQUIREMENTS: Task text from plan
+- BASE_SHA: Commit before this task
+- HEAD_SHA: Current commit
+- DESCRIPTION: Brief description
+
+**If code reviewer finds issues:**
+- **Critical:** Fix immediately, amend commit, re-review
+- **Important:** Fix immediately, amend commit, re-review
+- **Minor:** Note for later or fix now (judgment call)
+
+#### 2f. Mark Complete
+
+```
+Mark task as completed in TodoWrite
+```
+
+Proceed to next task.
+
+### Step 3: Complete Development
+
+After all tasks complete:
+
+1. Run full test suite to verify everything works together
+2. **REQUIRED SUB-SKILL:** Use Skill(finishing-a-development-branch)
+3. Follow that skill to verify tests, present options, execute choice
+
+## When to Stop and Ask
 
 **STOP executing immediately when:**
-- Hit a blocker mid-batch (missing dependency, test fails, instruction unclear)
-- Plan has critical gaps preventing starting
-- You don't understand an instruction
-- Verification fails repeatedly
+- Hit a blocker (missing dependency, unclear instruction)
+- Test fails and fix is not obvious
+- Spec reviewer identifies fundamental misunderstanding
+- Code reviewer identifies Critical architectural issues
 
 **Ask for clarification rather than guessing.**
 
-## When to Revisit Earlier Steps
+## Prompt Templates
 
-**Return to Review (Step 1) when:**
-- Partner updates the plan based on your feedback
-- Fundamental approach needs rethinking
+- `./spec-reviewer-prompt.md` - Verify implementation matches spec
+- `./code-quality-reviewer-prompt.md` - Verify implementation is well-built
 
-**Don't force through blockers** - stop and ask.
+## Review Order Matters
 
-## Remember
-- Review plan critically first
+```
+Implementation → Spec Review → Code Quality Review
+                     ↓              ↓
+              "Did we build    "Did we build
+               the right        it well?"
+               thing?"
+```
+
+**Never skip spec review.** Code quality review on wrong code is wasted effort.
+
+**Never skip code quality review.** Spec-compliant code can still be buggy or unmaintainable.
+
+## Red Flags
+
+**Never:**
+- Skip either review stage
+- Proceed to code quality before spec compliance passes
+- Ignore Critical or Important issues
+- Guess when blocked
+
+**Always:**
 - Follow plan steps exactly
-- Don't skip verifications
-- Reference skills when plan says to
-- Between batches: just report and wait
-- Stop when blocked, don't guess
+- Use TDD for implementation
+- Fix issues before proceeding to next task
+- Commit after each task (before review)
+
+## Integration
+
+**Required skills:**
+- **test-driven-development** - Implementation discipline
+- **finishing-a-development-branch** - Complete development after all tasks
+
+**Used by:**
+- **writing-plans** - Creates plans this skill executes
