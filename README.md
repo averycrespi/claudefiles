@@ -41,6 +41,8 @@ acli jira auth login
 acli jira auth status  # Verify authentication
 ```
 
+For more information, see the [Jira skill README](./claude/skills/jira/README.md).
+
 ### Confluence Integration
 
 To use the `confluence` skill, export the following environment variables:
@@ -52,7 +54,7 @@ export CONFLUENCE_EMAIL="your.email@example.com"
 export CONFLUENCE_API_TOKEN="your-api-token-here"
 ```
 
-Create an API token at https://id.atlassian.com/manage-profile/security/api-tokens
+For more information, see the [Confluence skill README](./claude/skills/confluence/README.md).
 
 ## Workflow
 
@@ -71,12 +73,12 @@ This repository includes a structured development workflow adapted from [superpo
 
 ### Slash Commands
 
-| Command | Description |
-|---------|-------------|
-| `/brainstorm` | Explore requirements and design before implementation |
-| `/write-plan` | Create detailed implementation plan with bite-sized tasks |
-| `/execute-plan` | Execute plan with inline implementation and subagent reviews |
-| `/complete-work` | Verify tests and present options to finish work |
+| Command          | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `/brainstorm`    | Explore requirements and design before implementation        |
+| `/write-plan`    | Create detailed implementation plan with bite-sized tasks    |
+| `/execute-plan`  | Execute plan with inline implementation and subagent reviews |
+| `/complete-work` | Verify tests and present options to finish work              |
 
 ### How It Differs from Superpowers
 
@@ -94,42 +96,42 @@ This reduces subagents per task from 3 to 2, significantly improving speed while
 
 Adapted from [superpowers](https://github.com/obra/superpowers). These skills guide structured development:
 
-| Skill | Purpose |
-|-------|---------|
-| `brainstorming` | Turn ideas into designs through collaborative dialogue |
-| `writing-plans` | Create detailed implementation plans with TDD steps |
+| Skill             | Purpose                                                     |
+| ----------------- | ----------------------------------------------------------- |
+| `brainstorming`   | Turn ideas into designs through collaborative dialogue      |
+| `writing-plans`   | Create detailed implementation plans with TDD steps         |
 | `executing-plans` | Execute plans with inline implementation + subagent reviews |
-| `completing-work` | Verify tests, present options, create PR |
+| `completing-work` | Verify tests, present options, create PR                    |
 
 ### Integration Skills
 
 Connect to external services for seamless context:
 
-| Skill | Purpose |
-|-------|---------|
-| `jira` | Read-only access to Jira issues, boards, and sprints |
-| `confluence` | Search and read Confluence documentation |
+| Skill        | Purpose                                              |
+| ------------ | ---------------------------------------------------- |
+| `jira`       | Read-only access to Jira issues, boards, and sprints |
+| `confluence` | Search and read Confluence documentation             |
 
 ### Reference Skills
 
 Referenced by other skills for development practices:
 
-| Skill | Purpose |
-|-------|---------|
+| Skill                     | Purpose                                  |
+| ------------------------- | ---------------------------------------- |
 | `test-driven-development` | TDD discipline: red-green-refactor cycle |
 
 ### Meta Skills
 
 For extending Claude Code's capabilities:
 
-| Skill | Purpose |
-|-------|---------|
+| Skill             | Purpose                       |
+| ----------------- | ----------------------------- |
 | `creating-skills` | Guide for creating new skills |
 
 ## Agents
 
-| Agent | Purpose |
-|-------|---------|
+| Agent           | Purpose                                         |
+| --------------- | ----------------------------------------------- |
 | `code-reviewer` | Review code changes against plans and standards |
 
 ## Scripts
@@ -138,12 +140,12 @@ For extending Claude Code's capabilities:
 
 For parallel development using Git worktrees and tmux:
 
-| Script | Purpose |
-|--------|---------|
-| `worktree-init` | Start a new tmux session for the current repository |
-| `worktree-add` | Create a new worktree and tmux window for a branch |
-| `worktree-attach` | Attach to an existing tmux session |
-| `worktree-rm` | Destroy a worktree and its tmux window |
+| Script            | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
+| `worktree-init`   | Start a new tmux session for the current repository  |
+| `worktree-add`    | Create a new worktree and tmux window for a branch   |
+| `worktree-attach` | Attach to an existing tmux session                   |
+| `worktree-rm`     | Destroy a worktree and its tmux window               |
 | `worktree-notify` | Add notification bell to tmux window (used by hooks) |
 
 ## Settings
@@ -171,5 +173,4 @@ The `creating-skills` skill is adapted from [Anthropic's skill-creator](https://
 ## License
 
 - Repository licensed under [MIT](./LICENSE)
-- `creating-skills` skill licensed under [Apache 2.0](./claude/skills/creating-skills/LICENSE.txt)
-- Workflow skills licensed under [MIT](./claude/skills/brainstorming/LICENSE.txt)
+- Individual skills and agents may have their own licenses
