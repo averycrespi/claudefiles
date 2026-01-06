@@ -23,6 +23,7 @@
       "Bash(gh pr view:*)",
       "Bash(git add:*)",
       "Bash(git blame:*)",
+      "Bash(git commit:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git remote get-url:*)",
@@ -47,7 +48,7 @@
       "Skill(confluence)",
       "Skill(skill-creator)"
     ],
-    "deny": ["Bash(gh pr create:*)", "Bash(git commit:*)", "Bash(git push:*)"]
+    "deny": []
   },
   "hooks": {
     "Notification": [
