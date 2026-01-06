@@ -4,17 +4,16 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Features
 
-- 🤖 **Agents** for research, code reviews, and security analysis
-- ⚡ **Commands** for task workflows and prompt engineering
-- 🧠 **Skills** for Jira, Confluence, and skill creation
-- 📜 **Scripts** for parallel development using Git worktrees
-- ⚙️ **Settings** for permissions, notifications, and the status line
+- **Workflow skills** for structured development (adapted from [superpowers](https://github.com/obra/superpowers))
+- **Integration skills** for Jira and Confluence
+- **Worktree scripts** for parallel development with tmux
+- **Permission and notification settings** for a better experience
 
 ## Requirements
 
-- [Claude Code](https://www.claude.com/product/claude-code) to make use of these resources
+- [Claude Code](https://claude.ai/download) to make use of these resources
 - [Homebrew](https://brew.sh/) for macOS dependency management
-- [Bun](https://bun.com/) for the status line
+- [Bun](https://bun.sh/) for the status line
 - macOS is assumed, but can be adapted for Linux
 
 ## Setup
@@ -33,108 +32,144 @@ The setup script will:
 - Configure MCP servers in Claude Code
 - Add the scripts directory to your `PATH`
 
-### Atlassian CLI
+### Jira Integration
 
-To use the `jira` skill, you must authenticate with the Atlassian CLI:
+To use the `jira` skill, authenticate with the Atlassian CLI:
 
 ```sh
-# Authenticate with your Jira Cloud instance (one-time setup)
 acli jira auth login
-
-# Verify authentication
-acli jira auth status
+acli jira auth status  # Verify authentication
 ```
 
-### Confluence
+### Confluence Integration
 
-To use the `confluence` skill, you must export the following environment variable:
+To use the `confluence` skill, export the following environment variables:
 
 ```sh
 # Add to your shell profile (~/.zshrc, ~/.bashrc, etc.)
-export CONFLUENCE_DOMAIN="mycompany.atlassian.net"  # Your Confluence domain
-export CONFLUENCE_EMAIL="your.email@example.com"    # Your email address
-export CONFLUENCE_API_TOKEN="your-api-token-here"   # API token from Atlassian
+export CONFLUENCE_DOMAIN="mycompany.atlassian.net"
+export CONFLUENCE_EMAIL="your.email@example.com"
+export CONFLUENCE_API_TOKEN="your-api-token-here"
 ```
 
-To create an API token:
-1. Go to https://id.atlassian.com/manage-profile/security/api-tokens
-2. Click "Create API token"
-3. Give it a label (e.g., "Claude Code")
-4. Copy the token and add it to your environment variables
+Create an API token at https://id.atlassian.com/manage-profile/security/api-tokens
 
-## Components
+## Workflow
 
-### Agents
+### The Development Workflow
 
-> [Agents](https://code.claude.com/docs/en/sub-agents) are specialized AI personalities which Claude Code can delegate tasks to.
-> They can be manually invoked by the user, or be automatically invoked by Claude Code.
-> Each agent has its own isolated context windows, and can share its results with the main context.
+This repository includes a structured development workflow adapted from [superpowers](https://github.com/obra/superpowers):
 
-- Use the [`code-reviewer`](./claude/agents/code-reviewer.md) agent for reviewing code
-- Use the [`research-assistant`](./claude/agents/research-assistant.md) agent for in-depth research and analysis
-- Use the [`security-analyst`](./claude/agents/security-analyst.md) agent to find vulnerabilities
+```
+/brainstorm → /write-plan → /execute-plan → /complete-work
+```
 
-### Commands
+1. **Brainstorming** - Explore requirements and design through collaborative dialogue
+2. **Writing Plans** - Create detailed implementation plans with bite-sized tasks
+3. **Executing Plans** - Implement tasks with spec and code quality reviews
+4. **Completing Work** - Verify tests pass and create PR or keep branch
 
-> [Commands](https://code.claude.com/docs/en/slash-commands) are macros for frequently use prompts.
-> They must be manually invoked by the user.
+### Slash Commands
 
-Task workflow:
-- Use `/task:specify requirements` to generate a spec through Socratic questioning, written to `SPEC.md`
-- Use `/task:plan [spec-file]` to transform a spec into a detailed execution plan, written to `PLAN.md`
-- Use `/task:execute [plan-file]` to execute a plan from a file, with progress logged to `EXECUTION.md`
-- Use `/task:verify [spec-file]` to validate the final state against a spec, reporting to `VERIFICATION.md`
-- Recommendation: To prevent context bloat, run `/clear` between each step
+| Command | Description |
+|---------|-------------|
+| `/brainstorm` | Explore requirements and design before implementation |
+| `/write-plan` | Create detailed implementation plan with bite-sized tasks |
+| `/execute-plan` | Execute plan with inline implementation and subagent reviews |
+| `/complete-work` | Verify tests and present options to finish work |
 
-Prompt engineering:
-- Use `/prompt:refine prompt-file` to improve your existing Claude prompts
-- Use `/prompt:suggest` to analyze your Claude usage history and suggest custom commands
+### How It Differs from Superpowers
 
-### Skills
+The original superpowers repository uses a **subagent for each task** during plan execution - one subagent implements, another reviews for spec compliance, another reviews for code quality. This provides fresh context per task but is slow and token-intensive.
 
-> [Skills](https://www.claude.com/blog/skills) are specialized instruction sets for domain-specific expertise.
-> They can be manually invoked by the user, or be automatically invoked by Claude Code.
+This repository uses a **hybrid approach**:
+- **Implementation happens inline** (in the main context) - faster, no subagent startup overhead
+- **Reviews still use subagents** (spec compliance + code quality) - maintains independent perspective
 
-- Use the [`jira`](./claude/skills/jira/README.md) skill to retrieve information about projects, boards, and issues from Jira Cloud
-- Use the [`confluence`](./claude/skills/confluence/README.md) skill to search and read documentation from Confluence
-- Use the [`skill-creator`](./claude/skills/skill-creator/README.md) skill to create new skills
+This reduces subagents per task from 3 to 2, significantly improving speed while preserving review quality.
 
-### Scripts
+## Skills
 
-Worktree management:
-- Use [`worktree-init`](./scripts/worktree-init) to start a new tmux session for the current repository
-- Use [`worktree-add`](./scripts/worktree-add) to create a new worktree and tmux window for a branch
-- Use [`worktree-attach`](./scripts/worktree-attach) to attach to an existing tmux session for the current repository
-- Use [`worktree-rm`](./scripts/worktree-rm) to destroy a worktree and its associated tmux window
-- The Claude Code [hooks](./claude/settings.json) will call [`worktree-notify`](./scripts/worktree-notify) when Claude is done or needs attention
+### Workflow Skills
 
-Safe Git commands:
-- Claude will use [safe-git-commit](./scripts/safe-git-commit) instead of `git commit`
-- Claude will use [safe-git-push](./scripts/safe-git-push) instead of `git push`
-- Claude will use [safe-gh-pr-create](./scripts/safe-gh-pr-create) instead of `gh pr create`
+Adapted from [superpowers](https://github.com/obra/superpowers). These skills guide structured development:
 
-### Settings
+| Skill | Purpose |
+|-------|---------|
+| `brainstorming` | Turn ideas into designs through collaborative dialogue |
+| `writing-plans` | Create detailed implementation plans with TDD steps |
+| `executing-plans` | Execute plans with inline implementation + subagent reviews |
+| `completing-work` | Verify tests, present options, create PR |
 
-> See [settings.json](./claude/settings.json) for all settings.
+### Integration Skills
 
-Allowed permissions:
+Connect to external services for seamless context:
+
+| Skill | Purpose |
+|-------|---------|
+| `jira` | Read-only access to Jira issues, boards, and sprints |
+| `confluence` | Search and read Confluence documentation |
+
+### Reference Skills
+
+Referenced by other skills for development practices:
+
+| Skill | Purpose |
+|-------|---------|
+| `test-driven-development` | TDD discipline: red-green-refactor cycle |
+
+### Meta Skills
+
+For extending Claude Code's capabilities:
+
+| Skill | Purpose |
+|-------|---------|
+| `creating-skills` | Guide for creating new skills |
+
+## Agents
+
+| Agent | Purpose |
+|-------|---------|
+| `code-reviewer` | Review code changes against plans and standards |
+
+## Scripts
+
+### Worktree Management
+
+For parallel development using Git worktrees and tmux:
+
+| Script | Purpose |
+|--------|---------|
+| `worktree-init` | Start a new tmux session for the current repository |
+| `worktree-add` | Create a new worktree and tmux window for a branch |
+| `worktree-attach` | Attach to an existing tmux session |
+| `worktree-rm` | Destroy a worktree and its tmux window |
+| `worktree-notify` | Add notification bell to tmux window (used by hooks) |
+
+## Settings
+
+See [settings.json](./claude/settings.json) for all settings.
+
+**Permissions:**
 - Common Unix commands
-- Read-only Git operations
-- Safe Git scripts
+- Git operations
 - Skills and their scripts
 - Context7 MCP tools
 
-Denied permissions:
-- Git commit and push commands; use safe wrappers instead
-- GitHub create PR command; use safe wrapper instead
+**Hooks:**
+- Desktop notification when Claude needs attention or finishes
 
-Hooks:
-- Send a notification when Claude needs your attention
+**Status line:**
+- [ccusage](https://ccusage.com/guide/statusline) integration for usage tracking
 
-Status line:
-- Configures the [ccusage status line](https://ccusage.com/guide/statusline)
+## Attribution
+
+The workflow skills in this repository are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.
+
+The `creating-skills` skill is adapted from [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skill-creator), licensed under Apache 2.0.
 
 ## License
 
 - Repository licensed under [MIT](./LICENSE)
-- `skill-creator` skill licensed under [Apache](./claude/skills/skill-creator/LICENSE.txt)
+- `creating-skills` skill licensed under [Apache 2.0](./claude/skills/creating-skills/LICENSE.txt)
+- Workflow skills licensed under [MIT](./claude/skills/brainstorming/LICENSE.txt)
