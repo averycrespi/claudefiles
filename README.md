@@ -71,6 +71,20 @@ This repository includes a structured development workflow adapted from [superpo
 3. **Executing Plans** - Implement tasks with spec and code quality reviews
 4. **Completing Work** - Verify tests pass and create PR or keep branch
 
+### When to Use This Workflow
+
+**Use the structured workflow** (`/brainstorm` → `/write-plan` → `/execute-plan`) when:
+- Building a significant feature that spans multiple files
+- You want independent code reviews after each task
+- The implementation would benefit from upfront design discussion
+- You want a written plan you can review before execution
+
+**Use Claude Code's built-in planning mode** when:
+- Making smaller, well-defined changes
+- The scope is clear and doesn't need exploration
+- You want faster iteration with less ceremony
+- The task is straightforward enough to not need independent reviews
+
 ### Slash Commands
 
 | Command          | Description                                                  |
