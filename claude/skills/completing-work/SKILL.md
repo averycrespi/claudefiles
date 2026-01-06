@@ -1,17 +1,17 @@
 ---
-name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options
+name: completing-work
+description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion by presenting structured options
 ---
 
-# Finishing a Development Branch
+# Completing Work
 
 ## Overview
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → Present options → Execute choice.
 
-**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+**Announce at start:** "I'm using the completing-work skill to complete this work."
 
 ## The Process
 

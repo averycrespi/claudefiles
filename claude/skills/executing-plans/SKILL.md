@@ -27,7 +27,7 @@ For each task:
   8. Mark task complete
 
 After all tasks:
-  Use finishing-a-development-branch
+  Use completing-work
 ```
 
 ### Step 1: Load and Review Plan
@@ -117,7 +117,7 @@ Proceed to next task.
 After all tasks complete:
 
 1. Run full test suite to verify everything works together
-2. **REQUIRED SUB-SKILL:** Use Skill(finishing-a-development-branch)
+2. **REQUIRED SUB-SKILL:** Use Skill(completing-work)
 3. Follow that skill to verify tests, present options, execute choice
 
 ## When to Stop and Ask
@@ -168,7 +168,7 @@ Implementation → Spec Review → Code Quality Review
 
 **Required skills:**
 - **test-driven-development** - Implementation discipline
-- **finishing-a-development-branch** - Complete development after all tasks
+- **completing-work** - Complete development after all tasks
 
 **Used by:**
 - **writing-plans** - Creates plans this skill executes
