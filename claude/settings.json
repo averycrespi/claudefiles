@@ -29,6 +29,7 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git remote get-url:*)",
+      "Bash(git rev-parse:*)",
       "Bash(git status:*)",
       "Bash(safe-gh-pr-create:*)",
       "Bash(safe-git-commit:*)",
