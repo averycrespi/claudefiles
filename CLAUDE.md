@@ -10,6 +10,8 @@ This repository contains opinionated resources for working with Claude Code:
 - **Worktree scripts** for parallel development with tmux
 - **Permission and notification settings** for a better experience
 
+See [DESIGN.md](./DESIGN.md) for rationale behind key architectural decisions.
+
 ## Setup
 
 ```bash

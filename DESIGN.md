@@ -34,3 +34,19 @@ This repository uses Bash scripts for integrations (Jira, Confluence, worktree m
 - **Lower context overhead** - MCPs consume tokens with tool definitions and intermediate results; scripts are lightweight
 - **Self-contained** - Scripts are version-controlled, easy to debug, and require no additional infrastructure
 - **Stability** - MCP is still maturing and requires ongoing maintenance as the protocol evolves
+
+## User-Managed Worktrees
+
+The original [superpowers](https://github.com/obra/superpowers) repository allows Claude Code to manage Git worktrees directly. This repository takes a different approach: **you run the worktree scripts yourself**, then start a Claude Code session within that worktree.
+
+The reason is Claude Code's permission model. Permissions are scoped to the directory where the session starts. If Claude tried to manage worktrees across different paths, it would either:
+
+1. Constantly prompt for new permissions as it accesses different directories
+2. Require running with `--dangerously-skip-permissions`
+
+Neither is acceptable. The simpler solution is a clean separation of concerns:
+
+- **You** control the worktree lifecycle (create, switch, destroy)
+- **Claude** works within whichever directory you start it in
+
+This means you can spin up multiple worktrees in separate tmux windows, each with its own Claude Code session working in parallel on different branches.
