@@ -32,15 +32,47 @@ The setup script will install dependencies, symlink configuration files to `~/.c
 A structured approach to development adapted from [superpowers](https://github.com/obra/superpowers):
 
 ```
-/brainstorm → /write-plan → /execute-plan → /complete-work
+/brainstorm
+    │
+    ├── Ask clarifying questions
+    ├── Explore 2-3 approaches
+    ├── Present design for validation
+    └── Commit design document
+            │
+            ▼
+/write-plan
+    │
+    ├── Break work into bite-sized tasks
+    ├── Specify exact files and code
+    └── Save implementation plan
+            │
+            ▼
+/execute-plan
+    │
+    └── For each task:
+            ├── Implement using TDD
+            ├── Commit changes
+            ├── Spec review (subagent)
+            └── Code quality review (subagent)
+                    │
+                    ▼
+            Run full test suite
+                    │
+                    ▼
+/complete-work
+    │
+    ├── Verify tests pass
+    └── Create PR or keep branch
 ```
 
-| Command          | Description                                                    |
-| ---------------- | -------------------------------------------------------------- |
-| `/brainstorm`    | Explore requirements and design through collaborative dialogue |
-| `/write-plan`    | Create detailed implementation plan with bite-sized tasks      |
-| `/execute-plan`  | Execute plan with inline implementation and subagent reviews   |
-| `/complete-work` | Verify tests pass and create PR or keep branch                 |
+Each command is a thin wrapper around its corresponding skill:
+
+| Command          | Skill             | Description                                                    |
+| ---------------- | ----------------- | -------------------------------------------------------------- |
+| `/brainstorm`    | `brainstorming`   | Explore requirements and design through collaborative dialogue |
+| `/write-plan`    | `writing-plans`   | Create detailed implementation plan with bite-sized tasks      |
+| `/execute-plan`  | `executing-plans` | Execute plan with inline implementation and subagent reviews   |
+| `/complete-work` | `completing-work` | Verify tests pass and create PR or keep branch                 |
 
 ### When to Use This Workflow
 
