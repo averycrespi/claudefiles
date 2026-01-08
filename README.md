@@ -39,16 +39,16 @@ A structured approach to development adapted from [superpowers](https://github.c
     ├── Present design for validation
     ├── Commit design document
     └── Ask user if they want to write a plan
-          │
-          ▼
+         │
+         ▼
 /write-plan
     │
     ├── Break work into bite-sized tasks
     ├── Specify exact files and code
     ├── Save implementation plan
     └── Ask user if they want to execute the plan
-          │
-          ▼
+         │
+         ▼
 /execute-plan
     │
     ├── For each task:
@@ -58,8 +58,8 @@ A structured approach to development adapted from [superpowers](https://github.c
     │       ├── Code quality review (subagent)
     │       └── Iterate until reviews pass
     └── Complete the work
-          │
-          ▼
+         │
+         ▼
 /complete-work
     │
     ├── Verify tests pass
