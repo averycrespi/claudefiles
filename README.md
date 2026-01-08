@@ -4,21 +4,18 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Features
 
-- **Workflow skills** for structured development (adapted from [superpowers](https://github.com/obra/superpowers))
-- **Integration skills** for Jira and Confluence
-- **Worktree scripts** for parallel development with tmux
-- **Permission and notification settings** for a better experience
+- [Structured Development Workflow](#structured-development-workflow) - Brainstorm, plan, execute, and complete work with independent reviews
+- [Worktree Scripts](#worktree-scripts) - Parallel development using Git worktrees and tmux
+- [Integrations](#integrations) - Connect to Jira and Confluence for seamless context
 
 ## Requirements
 
-- [Claude Code](https://claude.ai/download) to make use of these resources
+- [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
 - [Bun](https://bun.sh/) for the status line
 - macOS is assumed, but can be adapted for Linux
 
-## Setup
-
-### Quickstart
+## Quick Start
 
 ```sh
 git clone git@github.com:averycrespi/claudefiles.git
@@ -26,15 +23,61 @@ cd claudefiles
 ./setup.sh
 ```
 
-The setup script will:
-- Install dependencies via Homebrew
-- Symlink configuration files to `~/.claude/`
-- Configure MCP servers in Claude Code
-- Add the scripts directory to your `PATH`
+The setup script will install dependencies, symlink configuration files to `~/.claude/`, configure MCP servers, and add scripts to your `PATH`.
 
-### Jira Integration
+---
 
-To use the `jira` skill, authenticate with the Atlassian CLI:
+## Structured Development Workflow
+
+A structured approach to development adapted from [superpowers](https://github.com/obra/superpowers):
+
+```
+/brainstorm → /write-plan → /execute-plan → /complete-work
+```
+
+| Command          | Description                                                    |
+| ---------------- | -------------------------------------------------------------- |
+| `/brainstorm`    | Explore requirements and design through collaborative dialogue |
+| `/write-plan`    | Create detailed implementation plan with bite-sized tasks      |
+| `/execute-plan`  | Execute plan with inline implementation and subagent reviews   |
+| `/complete-work` | Verify tests pass and create PR or keep branch                 |
+
+### When to Use This Workflow
+
+**Use the structured workflow** when:
+- Building a significant feature that spans multiple files
+- You want independent code reviews after each task
+- The implementation would benefit from upfront design discussion
+- You want a written plan you can review before execution
+
+**Use Claude Code's built-in planning mode** when:
+- Making smaller, well-defined changes
+- The scope is clear and doesn't need exploration
+- You want faster iteration with less ceremony
+
+---
+
+## Worktree Scripts
+
+Scripts for parallel development using Git worktrees and tmux:
+
+| Script            | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
+| `worktree-init`   | Start a new tmux session for the current repository  |
+| `worktree-add`    | Create a new worktree and tmux window for a branch   |
+| `worktree-attach` | Attach to an existing tmux session                   |
+| `worktree-rm`     | Destroy a worktree and its tmux window               |
+| `worktree-notify` | Add notification bell to tmux window (used by hooks) |
+
+---
+
+## Integrations
+
+### Jira
+
+Read-only access to Jira issues, boards, and sprints via the Atlassian CLI.
+
+**Setup:**
 
 ```sh
 acli jira auth login
@@ -43,9 +86,11 @@ acli jira auth status  # Verify authentication
 
 For more information, see the [Jira skill README](./claude/skills/jira/README.md).
 
-### Confluence Integration
+### Confluence
 
-To use the `confluence` skill, export the following environment variables:
+Search and read Confluence documentation.
+
+**Setup:**
 
 ```sh
 # Add to your shell profile (~/.zshrc, ~/.bashrc, etc.)
@@ -56,69 +101,11 @@ export CONFLUENCE_API_TOKEN="your-api-token-here"
 
 For more information, see the [Confluence skill README](./claude/skills/confluence/README.md).
 
-## Workflow
+---
 
-### The Development Workflow
-
-This repository includes a structured development workflow adapted from [superpowers](https://github.com/obra/superpowers):
-
-```
-/brainstorm → /write-plan → /execute-plan → /complete-work
-```
-
-1. **Brainstorming** - Explore requirements and design through collaborative dialogue
-2. **Writing Plans** - Create detailed implementation plans with bite-sized tasks
-3. **Executing Plans** - Implement tasks with spec and code quality reviews
-4. **Completing Work** - Verify tests pass and create PR or keep branch
-
-### When to Use This Workflow
-
-**Use the structured workflow** (`/brainstorm` → `/write-plan` → `/execute-plan`) when:
-- Building a significant feature that spans multiple files
-- You want independent code reviews after each task
-- The implementation would benefit from upfront design discussion
-- You want a written plan you can review before execution
-
-**Use Claude Code's built-in planning mode** when:
-- Making smaller, well-defined changes
-- The scope is clear and doesn't need exploration
-- You want faster iteration with less ceremony
-- The task is straightforward enough to not need independent reviews
-
-### Slash Commands
-
-| Command          | Description                                                  |
-| ---------------- | ------------------------------------------------------------ |
-| `/brainstorm`    | Explore requirements and design before implementation        |
-| `/write-plan`    | Create detailed implementation plan with bite-sized tasks    |
-| `/execute-plan`  | Execute plan with inline implementation and subagent reviews |
-| `/complete-work` | Verify tests and present options to finish work              |
-
-## Skills
-
-### Workflow Skills
-
-Adapted from [superpowers](https://github.com/obra/superpowers). These skills guide structured development:
-
-| Skill             | Purpose                                                     |
-| ----------------- | ----------------------------------------------------------- |
-| `brainstorming`   | Turn ideas into designs through collaborative dialogue      |
-| `writing-plans`   | Create detailed implementation plans with TDD steps         |
-| `executing-plans` | Execute plans with inline implementation + subagent reviews |
-| `completing-work` | Verify tests, present options, create PR                    |
-
-### Integration Skills
-
-Connect to external services for seamless context:
-
-| Skill        | Purpose                                              |
-| ------------ | ---------------------------------------------------- |
-| `jira`       | Read-only access to Jira issues, boards, and sprints |
-| `confluence` | Search and read Confluence documentation             |
+## Miscellaneous
 
 ### Reference Skills
-
-Referenced by other skills for development practices:
 
 | Skill                     | Purpose                                  |
 | ------------------------- | ---------------------------------------- |
@@ -126,47 +113,25 @@ Referenced by other skills for development practices:
 
 ### Meta Skills
 
-For extending Claude Code's capabilities:
-
 | Skill             | Purpose                       |
 | ----------------- | ----------------------------- |
 | `creating-skills` | Guide for creating new skills |
 
-## Agents
+### Agents
 
 | Agent           | Purpose                                         |
 | --------------- | ----------------------------------------------- |
 | `code-reviewer` | Review code changes against plans and standards |
 
-## Scripts
+### Settings
 
-### Worktree Management
+Configured in [settings.json](./claude/settings.json):
 
-For parallel development using Git worktrees and tmux:
+- **Permissions** - Common Unix commands, Git operations, skills and their scripts, Context7 MCP tools
+- **Hooks** - Desktop notification when Claude needs attention or finishes
+- **Status line** - [ccusage](https://ccusage.com/guide/statusline) integration for usage tracking
 
-| Script            | Purpose                                              |
-| ----------------- | ---------------------------------------------------- |
-| `worktree-init`   | Start a new tmux session for the current repository  |
-| `worktree-add`    | Create a new worktree and tmux window for a branch   |
-| `worktree-attach` | Attach to an existing tmux session                   |
-| `worktree-rm`     | Destroy a worktree and its tmux window               |
-| `worktree-notify` | Add notification bell to tmux window (used by hooks) |
-
-## Settings
-
-See [settings.json](./claude/settings.json) for all settings.
-
-**Permissions:**
-- Common Unix commands
-- Git operations
-- Skills and their scripts
-- Context7 MCP tools
-
-**Hooks:**
-- Desktop notification when Claude needs attention or finishes
-
-**Status line:**
-- [ccusage](https://ccusage.com/guide/statusline) integration for usage tracking
+---
 
 ## Attribution
 
