@@ -94,16 +94,6 @@ This repository includes a structured development workflow adapted from [superpo
 | `/execute-plan`  | Execute plan with inline implementation and subagent reviews |
 | `/complete-work` | Verify tests and present options to finish work              |
 
-### How It Differs from Superpowers
-
-The original superpowers repository uses a **subagent for each task** during plan execution - one subagent implements, another reviews for spec compliance, another reviews for code quality. This provides fresh context per task but is slow and token-intensive.
-
-This repository uses a **hybrid approach**:
-- **Implementation happens inline** (in the main context) - faster, no subagent startup overhead
-- **Reviews still use subagents** (spec compliance + code quality) - maintains independent perspective
-
-This reduces subagents per task from 3 to 2, significantly improving speed while preserving review quality.
-
 ## Skills
 
 ### Workflow Skills
