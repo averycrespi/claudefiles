@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) across all projects.
 
 ## Git Operations
 
+### General Instructions
+
+- Use `git` directly without `-C` flag - the working directory is already the repository root
+
 ### Conventional Commits
+
+Always use conventional commits when writing commit messages:
 
 **Format:**
 ```
