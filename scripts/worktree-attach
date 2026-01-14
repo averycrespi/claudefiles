@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# Attaches to an existing tmux session for a worktree.
+# Attaches to the tmux session for the current repository.
 #
-# This script attaches to the tmux session if it exists, otherwise returns an error.
-# It always attaches to the first window in the session.
+# If the tmux session for the repository doesn't exist, it will be created.
 #
 # Usage:
 #   worktree-attach
@@ -26,36 +25,22 @@ git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null)
 if [[ "$git_common_dir" == ".git" ]]; then
 	# We're in the main repository
 	session_name="${repo_name}-worktree"
-	window_name="main"
 else
 	# We're in a worktree - extract the worktree name
 	worktree_path=$(git rev-parse --show-toplevel)
 	worktree_name=$(basename "$worktree_path")
 	session_name="${repo_name}-worktree"
-	window_name="$worktree_name"
 fi
 
-# Check if the tmux session exists
-if ! tmux has-session -t "$session_name" 2>/dev/null; then
-	echo "Error: tmux session '$session_name' does not exist" >&2
-	echo "Run 'worktree-init' first to create the session" >&2
-	exit 1
-fi
+# Create tmux session if it doesn't exist
+worktree-init
 
-# Check if the window exists
-if ! tmux list-windows -t "$session_name" -F "#{window_name}" | grep -q "^${window_name}$"; then
-	echo "Error: Window '$window_name' does not exist in session '$session_name'" >&2
-	echo "Available windows:" >&2
-	tmux list-windows -t "$session_name" -F "  - #{window_name}" >&2
-	exit 1
-fi
-
-# Attach to the session and select the window
-echo "Attaching to tmux session: $session_name, window: $window_name"
+# Attach to the session
+echo "Attaching to tmux session: $session_name"
 if [[ -n "${TMUX:-}" ]]; then
-	# Already inside tmux, switch to the target session and window
-	tmux switch-client -t "$session_name:$window_name"
+	# Already inside tmux: switch to the target session
+	tmux switch-client -t "$session_name"
 else
-	# Not inside tmux, attach to the session and select the window
-	tmux attach-session -t "$session_name:$window_name"
+	# Not inside tmux: attach to the session and select
+	tmux attach-session -t "$session_name"
 fi

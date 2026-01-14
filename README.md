@@ -97,7 +97,7 @@ Scripts for parallel development using Git worktrees and tmux:
 | Script                       | Purpose                                                                     |
 | ---------------------------- | --------------------------------------------------------------------------- |
 | `worktree-init`              | Start a new tmux session for the current repository                         |
-| `worktree-attach`            | Attach to an existing tmux session for the current repository               |
+| `worktree-attach`            | Attach to the tmux session for the current repository                       |
 | `worktree-add <branch-name>` | Create a new worktree and tmux window for a branch                          |
 | `worktree-rm <branch-name>`  | Destroy the worktree and tmux window for a branch                           |
 | `worktree-notify`            | Add notification bell to tmux window for the current branch (used by hooks) |
