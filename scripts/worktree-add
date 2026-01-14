@@ -14,29 +14,29 @@ set -euo pipefail
 
 # Requirement: must have one argument (branch name)
 if [[ $# -eq 0 ]]; then
-  echo "Error: Branch name is required" >&2
-  echo "Usage: $(basename "$0") <branch-name>" >&2
-  echo "Example: $(basename "$0") feature/auth" >&2
-  exit 1
+	echo "Error: Branch name is required" >&2
+	echo "Usage: $(basename "$0") <branch-name>" >&2
+	echo "Example: $(basename "$0") feature/auth" >&2
+	exit 1
 fi
 
 # Requirement: branch name must not be empty
 branch_name="$1"
 if [[ -z "$branch_name" ]]; then
-  echo "Error: Branch name cannot be empty" >&2
-  exit 1
+	echo "Error: Branch name cannot be empty" >&2
+	exit 1
 fi
 
 # Requirement: must be in a git repository
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "Error: Not in a git repository" >&2
-  exit 1
+	echo "Error: Not in a git repository" >&2
+	exit 1
 fi
 
 # Requirement: must be in the main git repository
 if [[ "$(git rev-parse --git-common-dir 2>/dev/null)" != ".git" ]]; then
-  echo "Error: This command must be run from the main git repository, not a worktree" >&2
-  exit 1
+	echo "Error: This command must be run from the main git repository, not a worktree" >&2
+	exit 1
 fi
 
 # Initialize tmux session if it doesn't exist
@@ -50,36 +50,36 @@ worktree_dir="$(dirname "$repo_root")/${repo_name}-worktree-${window_name}"
 
 # Create worktree if it doesn't exist
 if [[ ! -d "$worktree_dir" ]]; then
-  echo "Creating worktree at: $worktree_dir"
-  if git show-ref --verify --quiet "refs/heads/$branch_name"; then
-    git worktree add --quiet "$worktree_dir" "$branch_name"
-  else
-    git worktree add --quiet -b "$branch_name" "$worktree_dir"
-  fi
+	echo "Creating worktree at: $worktree_dir"
+	if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+		git worktree add --quiet "$worktree_dir" "$branch_name"
+	else
+		git worktree add --quiet -b "$branch_name" "$worktree_dir"
+	fi
 else
-  echo "Worktree already exists at: $worktree_dir"
+	echo "Worktree already exists at: $worktree_dir"
 fi
 
 echo "Searching for setup scripts ..."
 setup_scripts=()
 
 if [[ -d "$worktree_dir/scripts" ]]; then
-  for script_name in "init" "init.sh" "setup" "setup.sh"; do
-    script_path="$worktree_dir/scripts/$script_name"
-    if [[ -f "$script_path" && -x "$script_path" ]]; then
-      echo "Found setup script: $script_path"
-      setup_scripts+=("$script_path")
-    fi
-  done
+	for script_name in "init" "init.sh" "setup" "setup.sh"; do
+		script_path="$worktree_dir/scripts/$script_name"
+		if [[ -f "$script_path" && -x "$script_path" ]]; then
+			echo "Found setup script: $script_path"
+			setup_scripts+=("$script_path")
+		fi
+	done
 fi
 
 if [[ ${#setup_scripts[@]} -gt 0 ]]; then
-  for script in "${setup_scripts[@]}"; do
-    echo "Running setup script: $script"
-    (cd "$worktree_dir" && "$script")
-  done
+	for script in "${setup_scripts[@]}"; do
+		echo "Running setup script: $script"
+		(cd "$worktree_dir" && "$script")
+	done
 else
-  echo "No setup scripts found"
+	echo "No setup scripts found"
 fi
 
 repo_claude_dir="$repo_root/.claude"
@@ -89,25 +89,25 @@ worktree_local_settings_file="$worktree_claude_dir/settings.local.json"
 
 # Copy local Claude settings to worktree if they don't exist
 if [[ -f "$repo_local_settings_file" ]]; then
-  echo "Found local Claude settings at: $repo_local_settings_file"
-  if [[ ! -f "$worktree_local_settings_file" ]]; then
-    echo "Copying local Claude settings to: $worktree_local_settings_file"
-    mkdir -p "$worktree_claude_dir"
-    cp "$repo_local_settings_file" "$worktree_local_settings_file"
-  else
-    echo "Local Claude settings already exist in worktree"
-  fi
+	echo "Found local Claude settings at: $repo_local_settings_file"
+	if [[ ! -f "$worktree_local_settings_file" ]]; then
+		echo "Copying local Claude settings to: $worktree_local_settings_file"
+		mkdir -p "$worktree_claude_dir"
+		cp "$repo_local_settings_file" "$worktree_local_settings_file"
+	else
+		echo "Local Claude settings already exist in worktree"
+	fi
 else
-  echo "No local Claude settings found in repo"
+	echo "No local Claude settings found in repo"
 fi
 
 # Create tmux window if it doesn't exist (with or without notification)
 if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | sed 's/^🔔 //' | grep -q "^$window_name$"; then
-  echo "Creating tmux window: $window_name"
-  tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_dir" -d
+	echo "Creating tmux window: $window_name"
+	tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_dir" -d
 
-  echo "Launching Claude Code"
-  tmux send-keys -t "$session_name:$window_name" "claude --permission-mode acceptEdits" C-m
+	echo "Launching Claude Code"
+	tmux send-keys -t "$session_name:$window_name" "claude --permission-mode acceptEdits" C-m
 else
-  echo "tmux window already exists: $window_name"
+	echo "tmux window already exists: $window_name"
 fi
