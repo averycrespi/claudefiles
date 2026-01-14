@@ -87,13 +87,13 @@ This repository includes a structured development workflow:
 
 For parallel development using Git worktrees and tmux:
 
-| Script            | Purpose                                              |
-| ----------------- | ---------------------------------------------------- |
-| `worktree-init`   | Start a new tmux session for the current repository  |
-| `worktree-add`    | Create a new worktree and tmux window for a branch   |
-| `worktree-attach` | Attach to an existing tmux session                   |
-| `worktree-rm`     | Destroy a worktree and its tmux window               |
-| `worktree-notify` | Add notification bell to tmux window (used by hooks) |
+| Script                       | Purpose                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `worktree-init`              | Start a new tmux session for the current repository                         |
+| `worktree-attach`            | Attach to the tmux session for the current repository                       |
+| `worktree-add <branch-name>` | Create a new worktree and tmux window for a branch                          |
+| `worktree-rm <branch-name>`  | Destroy the worktree and tmux window for a branch                           |
+| `worktree-notify`            | Add notification bell to tmux window for the current branch (used by hooks) |
 
 ## Repository Structure
 
