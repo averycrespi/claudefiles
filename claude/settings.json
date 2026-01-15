@@ -55,8 +55,7 @@
       "Skill(jira)",
       "Skill(creating-skills)",
       "Skill(test-driven-development)",
-      "Skill(writing-plans)",
-      "Bash(echo \"BASE_SHA: $(git rev-parse HEAD~1)\" && echo \"HEAD_SHA: $(git rev-parse HEAD)\")"
+      "Skill(writing-plans)"
     ],
     "deny": []
   },

@@ -64,11 +64,16 @@ git add -A
 git commit -m "feat: [task description]"
 ```
 
-Capture the commit SHA for review:
+Capture the commit SHAs for review by running these commands directly:
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)
-HEAD_SHA=$(git rev-parse HEAD)
+git rev-parse HEAD~1
 ```
+Note this output as BASE_SHA.
+
+```bash
+git rev-parse HEAD
+```
+Note this output as HEAD_SHA.
 
 #### 2d. Dispatch Spec Reviewer
 
