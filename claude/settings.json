@@ -30,6 +30,7 @@
       "Bash(git log:*)",
       "Bash(git remote get-url:*)",
       "Bash(git rev-parse:*)",
+      "Bash(git show:*)",
       "Bash(git status:*)",
       "Bash(safe-gh-pr-create:*)",
       "Bash(safe-git-commit:*)",
