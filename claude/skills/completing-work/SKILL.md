@@ -141,6 +141,10 @@ Report: "Keeping branch <name>."
 - **Problem:** "What should I do next?" → ambiguous
 - **Fix:** Present exactly 2 structured options
 
+**Noisy reflections**
+- **Problem:** Proposing too many trivial or already-documented learnings
+- **Fix:** Only propose actionable, project-specific patterns not already in CLAUDE.md
+
 ## Red Flags
 
 **Never:**
@@ -151,4 +155,5 @@ Report: "Keeping branch <name>."
 
 **Always:**
 - Verify tests before offering options
+- Skip reflection silently if no learnings to propose
 - Present exactly 2 options
