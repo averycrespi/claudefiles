@@ -37,6 +37,62 @@ Stop. Don't proceed to Step 2.
 
 **If tests pass:** Continue to Step 2.
 
+### Step 2: Reflect on Learnings
+
+**If you have project-specific learnings from this session, present them for user approval.**
+
+**What to look for:**
+- Explicit corrections or guidance from the user during the session
+- Findings from spec-reviewer and code-quality-reviewer subagents
+- Friction points you figured out (build commands, test setup, file locations, naming conventions)
+- Patterns discovered in existing code that weren't documented
+
+**What makes a good reflection:**
+- Actionable for future sessions (not one-off fixes)
+- Project-specific (not general programming knowledge)
+- Concise enough to fit naturally in CLAUDE.md
+
+**What to exclude:**
+- User preferences (belong in user's global CLAUDE.md, not project CLAUDE.md)
+- Temporary workarounds or environment-specific quirks
+- Things already documented in the project
+
+**If you have learnings to propose:**
+
+Use `AskUserQuestion` with `multiSelect: true`:
+
+```
+AskUserQuestion(
+  questions: [{
+    question: "Which learnings should be preserved in CLAUDE.md?",
+    header: "Reflections",
+    multiSelect: true,
+    options: [
+      {
+        label: "<short label>",
+        description: "<learning> → <target section in CLAUDE.md>"
+      },
+      // ... more options
+    ]
+  }]
+)
+```
+
+**Example:**
+```
+options: [
+  { label: "Build prereq", description: "Run `npm run build` before tests → ## Development" },
+  { label: "API naming", description: "Query params use snake_case → new ## API Conventions" }
+]
+```
+
+**After user selects:**
+- If user selects any options → Update project CLAUDE.md, placing learnings in proposed sections
+- Commit: `docs(CLAUDE.md): <summarize selected learnings>`
+- If user selects nothing → Skip, continue to Step 3
+
+**If no learnings to propose:** Skip silently, continue to Step 3.
+
 ### Step 2: Present Options
 
 Present exactly these 2 options:
