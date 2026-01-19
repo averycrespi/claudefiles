@@ -93,7 +93,7 @@ options: [
 
 **If no learnings to propose:** Skip silently, continue to Step 3.
 
-### Step 2: Present Options
+### Step 3: Present Options
 
 Present exactly these 2 options:
 
@@ -108,7 +108,7 @@ Which option?
 
 **Don't add explanation** - keep options concise.
 
-### Step 3: Execute Choice
+### Step 4: Execute Choice
 
 #### Option 1: Push and Create PR
 
