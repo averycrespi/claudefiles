@@ -9,7 +9,7 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Present options → Execute choice.
+**Core principle:** Verify tests → Reflect on learnings → Present options → Execute choice.
 
 **Announce at start:** "I'm using the completing-work skill to complete this work."
 
