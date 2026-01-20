@@ -58,11 +58,23 @@
       "Skill(jira)",
       "Skill(creating-skills)",
       "Skill(test-driven-development)",
-      "Skill(writing-plans)"
+      "Skill(writing-plans)",
+      "Skill(using-skills)"
     ],
     "deny": []
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",

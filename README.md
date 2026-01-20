@@ -146,9 +146,10 @@ For more information, see the [Confluence skill README](./claude/skills/confluen
 
 ### Meta Skills
 
-| Skill             | Purpose                       |
-| ----------------- | ----------------------------- |
-| `creating-skills` | Guide for creating new skills |
+| Skill             | Purpose                                            |
+| ----------------- | -------------------------------------------------- |
+| `using-skills`    | Skill enforcement rules (injected at session start)|
+| `creating-skills` | Guide for creating new skills                      |
 
 ### Agents
 
@@ -161,7 +162,9 @@ For more information, see the [Confluence skill README](./claude/skills/confluen
 Configured in [settings.json](./claude/settings.json):
 
 - **Permissions** - Common Unix commands, Git operations, skills and their scripts, Context7 MCP tools
-- **Hooks** - Desktop notification when Claude needs attention or finishes
+- **Hooks**
+  - SessionStart hook injects `using-skills` to enforce skill usage
+  - Notification hooks for desktop alerts when Claude needs attention or finishes
 - **Status line** - [ccusage](https://ccusage.com/guide/statusline) integration for usage tracking
 
 ---
