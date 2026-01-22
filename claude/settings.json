@@ -11,6 +11,7 @@
       "Bash(jq:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
+      "Bash(mkdir -p:*)",
       "Bash(pandoc:*)",
       "Bash(pwd:*)",
       "Bash(rg:*)",
