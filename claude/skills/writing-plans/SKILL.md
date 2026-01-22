@@ -13,7 +13,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Save plans to:** `.claude_plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `.plans/YYYY-MM-DD-<feature-name>.md`
 
 ## Bite-Sized Task Granularity
 
@@ -98,7 +98,7 @@ git commit -m "feat: add specific feature"
 
 After saving the plan, ask the user if they want to execute:
 
-**"Plan complete and saved to `.claude_plans/<filename>.md`. Ready to execute?"**
+**"Plan complete and saved to `.plans/<filename>.md`. Ready to execute?"**
 
 **If yes:**
 - **REQUIRED SUB-SKILL:** Use Skill(executing-plans)
