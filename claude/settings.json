@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Read(~/.claude/skills/**)",
       "Bash(cd:*)",
       "Bash(cut:*)",
       "Bash(diff:*)",
@@ -48,9 +49,6 @@
       "Bash(~/.claude/skills/confluence/scripts/confluence-view:*)",
       "mcp__context7__get-library-docs",
       "mcp__context7__resolve-library-id",
-      "Read(~/.claude/skills/**)",
-      "Edit(.claude/plans/**)",
-      "Write(.claude/plans/**)",
       "Skill(brainstorming)",
       "Skill(completing-work)",
       "Skill(confluence)",

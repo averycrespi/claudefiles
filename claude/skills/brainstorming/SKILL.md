@@ -35,7 +35,7 @@ Start by understanding the current project context, then ask questions one at a 
 ## After the Design
 
 **Documentation:**
-- Write the validated design to `.claude/plans/YYYY-MM-DD-<topic>-design.md` in the project root (NOT in the home directory)
+- Write the validated design to `.claude_plans/YYYY-MM-DD-<topic>-design.md` in the project root
 - Commit the design document to git
 
 **Implementation (if continuing):**
