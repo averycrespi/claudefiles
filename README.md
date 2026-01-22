@@ -32,24 +32,24 @@ The setup script will install dependencies, symlink configuration files to `~/.c
 A structured approach to development adapted from [superpowers](https://github.com/obra/superpowers):
 
 ```
-/brainstorm
+Skill(brainstorming)
     │
     ├── Ask clarifying questions
     ├── Explore 2-3 approaches
     ├── Present design for validation
-    ├── Commit design document
+    ├── Save and commit design document
     └── Ask user if they want to write a plan
          │
          ▼
-/write-plan
+Skill(writing-plans)
     │
     ├── Break work into bite-sized tasks
     ├── Specify exact files and code
-    ├── Save implementation plan
+    ├── Save and commit implementation plan
     └── Ask user if they want to execute the plan
          │
          ▼
-/execute-plan
+Skill(executing-plans)
     │
     ├── For each task:
     │       ├── Implement using TDD
@@ -60,20 +60,11 @@ A structured approach to development adapted from [superpowers](https://github.c
     └── Complete the work
          │
          ▼
-/complete-work
+Skill(completing-work)
     │
     ├── Verify tests pass
-    └── Create PR or keep branch
+    └── Ask user if they want to create PR or keep branch
 ```
-
-Each command is a thin wrapper around its corresponding skill:
-
-| Command          | Skill             | Description                                                    |
-| ---------------- | ----------------- | -------------------------------------------------------------- |
-| `/brainstorm`    | `brainstorming`   | Explore requirements and design through collaborative dialogue |
-| `/write-plan`    | `writing-plans`   | Create detailed implementation plan with bite-sized tasks      |
-| `/execute-plan`  | `executing-plans` | Execute plan with inline implementation and subagent reviews   |
-| `/complete-work` | `completing-work` | Verify tests pass and create PR or keep branch                 |
 
 ### When to Use This Workflow
 
@@ -146,10 +137,10 @@ For more information, see the [Confluence skill README](./claude/skills/confluen
 
 ### Meta Skills
 
-| Skill             | Purpose                                            |
-| ----------------- | -------------------------------------------------- |
-| `using-skills`    | Skill enforcement rules (injected at session start)|
-| `creating-skills` | Guide for creating new skills                      |
+| Skill             | Purpose                                             |
+| ----------------- | --------------------------------------------------- |
+| `using-skills`    | Skill enforcement rules (injected at session start) |
+| `creating-skills` | Guide for creating new skills                       |
 
 ### Agents
 
