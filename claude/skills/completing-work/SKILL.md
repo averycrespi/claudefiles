@@ -9,11 +9,34 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Reflect on learnings → Present options → Execute choice.
+**Core principle:** Verify task completion → Verify tests → Reflect on learnings → Present options → Execute choice.
 
 **Announce at start:** "I'm using the completing-work skill to complete this work."
 
 ## The Process
+
+### Step 0: Verify Task Completion
+
+**Before verifying tests, check that all tasks are complete:**
+
+```
+TaskList
+```
+
+**If any tasks remain `in_progress` or `pending`:**
+```
+Warning: [N] tasks not marked complete:
+- Task 2: [subject] (in_progress)
+- Task 5: [subject] (pending)
+
+Continue anyway, or return to complete tasks?
+```
+
+Use `AskUserQuestion` to let user decide.
+
+**If all tasks `completed`:** Proceed silently to Step 1.
+
+**If no tasks exist:** Proceed silently to Step 1 (plan may have been executed without native task tracking).
 
 ### Step 1: Verify Tests
 
@@ -154,6 +177,7 @@ Report: "Keeping branch <name>."
 - Force-push without explicit request
 
 **Always:**
+- Verify task completion before verifying tests
 - Verify tests before offering options
 - Skip reflection silently if no learnings to propose
 - Present exactly 2 options
