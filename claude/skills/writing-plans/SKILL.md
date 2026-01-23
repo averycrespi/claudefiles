@@ -109,3 +109,53 @@ After saving the plan, ask the user if they want to execute:
 **If no:**
 - Plan is saved for later execution
 - User can run `Skill(executing-plans)` in any session
+
+---
+
+## Native Task Integration
+
+**REQUIRED:** Use Claude Code's native task tools to create structured tasks alongside the plan document.
+
+### Creating Native Tasks
+
+As each task is written in the plan, create a corresponding native task:
+
+```
+TaskCreate:
+  subject: "Task N: [Component Name]"
+  description: |
+    **Files:**
+    - Create: `exact/path/to/file.py`
+    - Test: `tests/path/test.py`
+
+    **Steps:**
+    1. Write failing test
+    2. Run test to verify failure
+    3. Implement minimal code
+    4. Run test to verify pass
+    5. Commit
+
+    **Acceptance Criteria:**
+    - Test exists and fails initially
+    - Implementation passes test
+    - Committed with descriptive message
+  activeForm: "Implementing [Component Name]"
+```
+
+### Setting Dependencies
+
+After all tasks are created, set `blockedBy` relationships based on task order:
+
+```
+TaskUpdate:
+  taskId: [task-id]
+  addBlockedBy: [prerequisite-task-ids]
+```
+
+Task 2 is blocked by Task 1, Task 3 is blocked by Task 2, etc., unless the plan specifies otherwise.
+
+### Notes
+
+- Plan document remains the permanent record (persists across sessions)
+- Native tasks provide CLI-visible progress tracking
+- Tasks are session-scoped; executing-plans will re-create from plan if needed
