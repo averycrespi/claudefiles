@@ -22,8 +22,25 @@ Start by understanding the current project context, then ask questions one at a 
 
 **Exploring approaches:**
 - Propose 2-3 different approaches with trade-offs
-- Present options conversationally with your recommendation and reasoning
+- Explain each approach conversationally first, with your recommendation and reasoning
 - Lead with your recommended option and explain why
+- Then use `AskUserQuestion` to capture the decision:
+
+```javascript
+AskUserQuestion(
+  questions: [{
+    question: "Which approach should we take?",
+    header: "Approach",
+    multiSelect: false,
+    options: [
+      { label: "<Approach> (Recommended)", description: "<trade-offs>" },
+      { label: "<Approach 2>", description: "<trade-offs>" }
+    ]
+  }]
+)
+```
+
+- If user selects "Other", ask follow-up questions to understand their alternative
 
 **Presenting the design:**
 - Once you believe you understand what you're building, present the design
