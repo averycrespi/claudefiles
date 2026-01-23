@@ -35,16 +35,29 @@ After all tasks:
 1. Read plan file
 2. Review critically - identify any questions or concerns
 3. If concerns: Raise them before starting
-4. If no concerns: Create TodoWrite with all tasks and proceed
+4. If no concerns: Check for existing tasks and proceed
+
+**Check for existing tasks:**
+```
+TaskList
+```
+
+- If tasks exist from writing-plans: use them
+- If no tasks (new session): re-create tasks from plan using TaskCreate
 
 ### Step 2: Execute Each Task
 
 For each task in order:
 
 #### 2a. Mark In Progress
+
 ```
-Mark task as in_progress in TodoWrite
+TaskUpdate:
+  taskId: [task-id]
+  status: in_progress
 ```
+
+This triggers the CLI spinner showing the task's `activeForm`.
 
 #### 2b. Implement Inline
 
@@ -112,7 +125,9 @@ Fill in:
 #### 2f. Mark Complete
 
 ```
-Mark task as completed in TodoWrite
+TaskUpdate:
+  taskId: [task-id]
+  status: completed
 ```
 
 Proceed to next task.
@@ -177,3 +192,13 @@ Implementation → Spec Review → Code Quality Review
 
 **Used by:**
 - **writing-plans** - Creates plans this skill executes
+
+---
+
+## Native Task Notes
+
+- Tasks created by writing-plans persist for the session
+- If starting a new session with an existing plan, re-create tasks using TaskCreate
+- Plan document remains the source of truth for *what* to do
+- Native tasks track *progress* through the work
+- The `activeForm` field shows in the CLI spinner during `in_progress` status
