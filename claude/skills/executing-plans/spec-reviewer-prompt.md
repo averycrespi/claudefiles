@@ -57,7 +57,7 @@ Task tool (general-purpose):
 
     **Verify by reading code, not by trusting report.**
 
-    Report:
-    - If compliant: "Spec compliant - [brief confirmation]"
-    - If issues: "Issues found:" followed by specific list with file:line references
+    Report format (use EXACTLY this format for parsing):
+    - If compliant: "APPROVED: [brief confirmation of what was verified]"
+    - If issues: "ISSUES:\n- [issue 1 with file:line]\n- [issue 2 with file:line]"
 ```
