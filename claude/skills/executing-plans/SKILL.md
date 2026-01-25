@@ -35,20 +35,23 @@ After all triplets:
   Use completing-work
 ```
 
-### Step 1: Load and Review Plan
+### Step 1: Load Plan and Initialize Tasks
 
 1. Read plan file
 2. Review critically - identify any questions or concerns
 3. If concerns: Raise them before starting
-4. If no concerns: Check for existing tasks and proceed
+4. If no concerns: Initialize task tracking
 
-**Check for existing tasks:**
+**Initialize task tracking:**
+
 ```
 TaskList
 ```
 
-- If tasks exist from writing-plans: use them
-- If no tasks (new session): re-create tasks from plan using TaskCreate
+- **If tasks exist for this plan:** Ask the user: "Found existing tasks. Continue from where you left off, or start fresh in a new session?"
+  - **Continue:** Use existing tasks, resume from first non-completed triplet
+  - **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
+- **If no tasks exist:** Create all task triplets from the plan (see "Creating Tasks from Plan" below)
 
 ### Step 2: Execute Each Task Triplet
 
