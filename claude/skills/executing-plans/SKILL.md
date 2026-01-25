@@ -53,6 +53,66 @@ TaskList
   - **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
 - **If no tasks exist:** Create all task triplets from the plan (see "Creating Tasks from Plan" below)
 
+### Creating Tasks from Plan
+
+Parse the plan document and create a **task triplet** for each task:
+
+**For each Task N in the plan:**
+
+1. **Create Implementation task:**
+   ```
+   TaskCreate:
+     subject: "Task N: Implement [Component Name]"
+     description: |
+       [Copy task content from plan: Files, Steps, Acceptance Criteria]
+     activeForm: "Implementing [Component Name]"
+   ```
+
+2. **Create Spec Review task:**
+   ```
+   TaskCreate:
+     subject: "Task N: Spec Review"
+     description: |
+       Review implementation of Task N for spec compliance.
+       Verify all requirements are met, nothing extra added.
+       Use spec-reviewer-prompt.md template.
+     activeForm: "Reviewing spec compliance for [Component Name]"
+   ```
+
+3. **Create Code Review task:**
+   ```
+   TaskCreate:
+     subject: "Task N: Code Review"
+     description: |
+       Review implementation of Task N for code quality.
+       Check tests, error handling, maintainability.
+       Use code-quality-reviewer-prompt.md template.
+     activeForm: "Reviewing code quality for [Component Name]"
+   ```
+
+**After all tasks created, set blocking relationships:**
+
+```
+# Within each triplet:
+TaskUpdate:
+  taskId: [spec-review-id]
+  addBlockedBy: [implement-id]
+
+TaskUpdate:
+  taskId: [code-review-id]
+  addBlockedBy: [spec-review-id]
+
+# Between triplets (Task N+1 blocked by Task N's code review):
+TaskUpdate:
+  taskId: [task-N+1-implement-id]
+  addBlockedBy: [task-N-code-review-id]
+```
+
+This creates the execution chain:
+```
+Implement 1 → Spec Review 1 → Code Review 1 → Implement 2 → Spec Review 2 → ...
+```
+
 ### Step 2: Execute Each Task Triplet
 
 For each task triplet in order:
