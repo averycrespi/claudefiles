@@ -96,7 +96,10 @@ git commit -m "feat: add specific feature"
 
 ## Execution Handoff
 
-After saving the plan, ask the user if they want to execute:
+After saving the plan:
+- Commit the plan document to git
+
+Then ask the user if they want to execute:
 
 **"Plan complete and saved to `.plans/<filename>.md`. Ready to execute?"**
 
