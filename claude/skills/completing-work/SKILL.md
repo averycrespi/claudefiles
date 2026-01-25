@@ -13,6 +13,8 @@ Guide completion of development work by presenting clear options and handling ch
 
 **Announce at start:** "I'm using the completing-work skill to complete this work."
 
+**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
+
 ## The Process
 
 ### Step 0: Verify Task Completion
@@ -101,6 +103,8 @@ AskUserQuestion(
 )
 ```
 
+(See asking-questions skill for detailed AskUserQuestion patterns)
+
 **Example:**
 ```
 options: [
@@ -118,18 +122,21 @@ options: [
 
 ### Step 3: Present Options
 
-Present exactly these 2 options:
+Use `AskUserQuestion` to present exactly 2 options:
 
+```javascript
+AskUserQuestion(
+  questions: [{
+    question: "Implementation complete. What would you like to do?",
+    header: "Complete",
+    multiSelect: false,
+    options: [
+      { label: "Push and create PR", description: "Push branch and create draft pull request" },
+      { label: "Keep branch as-is", description: "I'll handle it later" }
+    ]
+  }]
+)
 ```
-Implementation complete. What would you like to do?
-
-1. Push and create a Pull Request
-2. Keep the branch as-is (I'll handle it later)
-
-Which option?
-```
-
-**Don't add explanation** - keep options concise.
 
 ### Step 4: Execute Choice
 

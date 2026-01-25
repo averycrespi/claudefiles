@@ -131,9 +131,10 @@ For more information, see the [Confluence skill README](./claude/skills/confluen
 
 ### Reference Skills
 
-| Skill                     | Purpose                                  |
-| ------------------------- | ---------------------------------------- |
-| `test-driven-development` | TDD discipline: red-green-refactor cycle |
+| Skill                     | Purpose                                           |
+| ------------------------- | ------------------------------------------------- |
+| `asking-questions`        | Consistent question patterns for workflow skills  |
+| `test-driven-development` | TDD discipline: red-green-refactor cycle          |
 
 ### Meta Skills
 

@@ -13,6 +13,8 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
+**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
+
 **Save plans to:** `.plans/YYYY-MM-DD-<feature-name>.md`
 
 ## Bite-Sized Task Granularity
@@ -99,9 +101,21 @@ git commit -m "feat: add specific feature"
 After saving the plan:
 - Commit the plan document to git
 
-Then ask the user if they want to execute:
+Then ask the user if they want to execute using `AskUserQuestion`:
 
-**"Plan complete and saved to `.plans/<filename>.md`. Ready to execute?"**
+```javascript
+AskUserQuestion(
+  questions: [{
+    question: "Plan complete. Ready to execute?",
+    header: "Execute",
+    multiSelect: false,
+    options: [
+      { label: "Yes, execute now", description: "Start implementing with review gates" },
+      { label: "No, save for later", description: "Plan saved, execute anytime with /execute-plan" }
+    ]
+  }]
+)
+```
 
 **If yes:**
 - **REQUIRED SUB-SKILL:** Use Skill(executing-plans)

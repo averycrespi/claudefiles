@@ -13,6 +13,8 @@ Execute implementation plans by implementing tasks inline (fast) with independen
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
+**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
+
 ## The Process
 
 ```
@@ -48,7 +50,22 @@ After all triplets:
 TaskList
 ```
 
-- **If tasks exist for this plan:** Ask the user: "Found existing tasks. Continue from where you left off, or start fresh in a new session?"
+- **If tasks exist for this plan:** Use `AskUserQuestion` to ask:
+
+```javascript
+AskUserQuestion(
+  questions: [{
+    question: "Found existing tasks for this plan. How would you like to proceed?",
+    header: "Resume",
+    multiSelect: false,
+    options: [
+      { label: "Continue (Recommended)", description: "Resume from first incomplete task" },
+      { label: "Start fresh", description: "Start new session for clean execution" }
+    ]
+  }]
+)
+```
+
   - **Continue:** Use existing tasks, resume from first non-completed triplet
   - **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
 - **If no tasks exist:** Create all task triplets from the plan (see "Creating Tasks from Plan" below)
