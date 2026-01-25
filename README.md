@@ -31,39 +31,31 @@ The setup script will install dependencies, symlink configuration files to `~/.c
 
 A structured approach to development adapted from [superpowers](https://github.com/obra/superpowers):
 
-```
-Skill(brainstorming)
-    │
-    ├── Ask clarifying questions
-    ├── Explore 2-3 approaches
-    ├── Present design for validation
-    ├── Save and commit design document
-    └── Ask user if they want to write a plan
-         │
-         ▼
-Skill(writing-plans)
-    │
-    ├── Break work into bite-sized tasks
-    ├── Specify exact files and code
-    ├── Save and commit implementation plan
-    └── Ask user if they want to execute the plan
-         │
-         ▼
-Skill(executing-plans)
-    │
-    ├── For each task:
-    │       ├── Implement using TDD
-    │       ├── Commit changes
-    │       ├── Spec review (subagent)
-    │       ├── Code quality review (subagent)
-    │       └── Iterate until reviews pass
-    └── Complete the work
-         │
-         ▼
-Skill(completing-work)
-    │
-    ├── Verify tests pass
-    └── Ask user if they want to create PR or keep branch
+```mermaid
+flowchart TD
+    subgraph Brainstorming["brainstorming"]
+        B1[Ask clarifying questions] --> B2[Explore 2-3 approaches]
+        B2 --> B3[Present design for validation]
+        B3 --> B4[Save design document]
+    end
+
+    subgraph Planning["writing-plans"]
+        P1[Break work into tasks] --> P2[Specify files and code]
+        P2 --> P3[Save implementation plan]
+    end
+
+    subgraph Executing["executing-plans"]
+        E1[Implement with TDD] --> E2[Commit changes]
+        E2 --> E3[Spec + code review]
+        E3 -->|pass| E4[Next task]
+        E3 -->|fail| E1
+    end
+
+    subgraph Completing["completing-work"]
+        C1[Verify tests pass] --> C2[Create PR or keep branch]
+    end
+
+    Brainstorming --> Planning --> Executing --> Completing
 ```
 
 ### When to Use This Workflow
@@ -131,10 +123,10 @@ For more information, see the [Confluence skill README](./claude/skills/confluen
 
 ### Reference Skills
 
-| Skill                     | Purpose                                           |
-| ------------------------- | ------------------------------------------------- |
-| `asking-questions`        | Consistent question patterns for workflow skills  |
-| `test-driven-development` | TDD discipline: red-green-refactor cycle          |
+| Skill                     | Purpose                                          |
+| ------------------------- | ------------------------------------------------ |
+| `asking-questions`        | Consistent question patterns for workflow skills |
+| `test-driven-development` | TDD discipline: red-green-refactor cycle         |
 
 ### Meta Skills
 
