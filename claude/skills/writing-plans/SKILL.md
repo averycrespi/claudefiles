@@ -118,11 +118,12 @@ After saving the plan, ask the user if they want to execute:
 
 ### Creating Native Tasks
 
-As each task is written in the plan, create a corresponding native task:
+As each task is written in the plan, create a **task triplet** (Implement, Spec Review, Code Review):
 
+**Implementation task:**
 ```
 TaskCreate:
-  subject: "Task N: [Component Name]"
+  subject: "Task N: Implement [Component Name]"
   description: |
     **Files:**
     - Create: `exact/path/to/file.py`
@@ -142,20 +143,53 @@ TaskCreate:
   activeForm: "Implementing [Component Name]"
 ```
 
+**Spec review task:**
+```
+TaskCreate:
+  subject: "Task N: Spec Review"
+  description: |
+    Review implementation of Task N for spec compliance.
+    Verify all requirements are met, nothing extra added.
+    Use spec-reviewer-prompt.md template.
+  activeForm: "Reviewing spec compliance for [Component Name]"
+```
+
+**Code review task:**
+```
+TaskCreate:
+  subject: "Task N: Code Review"
+  description: |
+    Review implementation of Task N for code quality.
+    Check tests, error handling, maintainability.
+    Use code-quality-reviewer-prompt.md template.
+  activeForm: "Reviewing code quality for [Component Name]"
+```
+
 ### Setting Dependencies
 
-After all tasks are created, set `blockedBy` relationships based on task order:
+After all tasks are created, set `blockedBy` relationships to form triplet chains:
 
 ```
+# Within each triplet:
 TaskUpdate:
-  taskId: [task-id]
-  addBlockedBy: [prerequisite-task-ids]
+  taskId: [spec-review-id]
+  addBlockedBy: [implement-id]
+
+TaskUpdate:
+  taskId: [code-review-id]
+  addBlockedBy: [spec-review-id]
+
+# Between triplets (Task 2 blocked by Task 1's code review):
+TaskUpdate:
+  taskId: [task-2-implement-id]
+  addBlockedBy: [task-1-code-review-id]
 ```
 
-Task 2 is blocked by Task 1, Task 3 is blocked by Task 2, etc., unless the plan specifies otherwise.
+This creates the chain: Implement 1 → Spec Review 1 → Code Review 1 → Implement 2 → ...
 
 ### Notes
 
 - Plan document remains the permanent record (persists across sessions)
 - Native tasks provide CLI-visible progress tracking
+- Task triplets enforce review gates via blocking relationships
 - Tasks are session-scoped; executing-plans will re-create from plan if needed
