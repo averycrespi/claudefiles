@@ -291,10 +291,10 @@ Implementation → Spec Review → Code Quality Review
 
 ## Native Task Notes
 
-- Tasks created by writing-plans include triplets: Implement, Spec Review, Code Review
-- If starting a new session with an existing plan, re-create all triplets with blocking relationships
+- Tasks are created by this skill at the start of execution, not during planning
+- Task triplets: Implement, Spec Review, Code Review for each plan task
 - Blocking chain: Implement N → Spec Review N → Code Review N → Implement N+1
-- Plan document remains the source of truth for *what* to do
+- Plan document is the source of truth for *what* to do
 - Native tasks track *progress* and *enforce review gates*
 - The `activeForm` field shows in the CLI spinner during `in_progress` status
-- Review tasks must be marked complete before the next triplet can start (enforced by blockedBy)
+- If resuming execution, existing tasks are reused; otherwise created fresh
