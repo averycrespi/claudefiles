@@ -60,36 +60,36 @@ git diff {BASE_SHA}..{HEAD_SHA}
 - Documentation complete?
 - No obvious bugs?
 
-## Output Format
+## Output Format (use EXACTLY one of these for parsing)
 
-### Strengths
-[What's well done? Be specific.]
+**If approved with no issues:**
+```
+APPROVED: [brief summary of strengths and why it's ready]
+```
 
-### Issues
+**If approved with minor issues (not blocking):**
+```
+APPROVED_WITH_MINOR: [brief summary of strengths]
+Minor issues noted:
+- [issue 1 with file:line]
+- [issue 2 with file:line]
+```
 
-#### Critical (Must Fix)
-[Bugs, security issues, data loss risks, broken functionality]
+**If issues require fixes before proceeding:**
+```
+ISSUES:
+Critical:
+- [issue with file:line - what's wrong, why it matters]
+Important:
+- [issue with file:line - what's wrong, why it matters]
+```
 
-#### Important (Should Fix)
-[Architecture problems, missing features, poor error handling, test gaps]
-
-#### Minor (Nice to Have)
-[Code style, optimization opportunities, documentation improvements]
-
-**For each issue:**
-- File:line reference
-- What's wrong
-- Why it matters
-- How to fix (if not obvious)
-
-### Recommendations
-[Improvements for code quality, architecture, or process]
-
-### Assessment
-
-**Ready to merge?** [Yes/No/With fixes]
-
-**Reasoning:** [Technical assessment in 1-2 sentences]
+**Guidelines:**
+- Start your response with EXACTLY one of: `APPROVED:`, `APPROVED_WITH_MINOR:`, or `ISSUES:`
+- Critical = bugs, security issues, data loss risks, broken functionality
+- Important = architecture problems, missing features, poor error handling
+- Minor = code style, optimization opportunities (use APPROVED_WITH_MINOR)
+- Be specific with file:line references
 
 ## Critical Rules
 
@@ -107,40 +107,25 @@ git diff {BASE_SHA}..{HEAD_SHA}
 - Be vague ("improve error handling")
 - Avoid giving a clear verdict
 
-## Example Output
+## Example Outputs
 
+**Example 1: Approved**
 ```
-### Strengths
-- Clean database schema with proper migrations (db.ts:15-42)
-- Comprehensive test coverage (18 tests, all edge cases)
-- Good error handling with fallbacks (summarizer.ts:85-92)
+APPROVED: Clean implementation with proper database schema (db.ts:15-42), comprehensive test coverage (18 tests), and good error handling with fallbacks (summarizer.ts:85-92). Ready to merge.
+```
 
-### Issues
+**Example 2: Approved with minor issues**
+```
+APPROVED_WITH_MINOR: Solid implementation with good architecture and tests.
+Minor issues noted:
+- indexer.ts:130 - No "X of Y" progress counter for long operations
+- config.ts:45 - Magic number could be a named constant
+```
 
-#### Important
-1. **Missing help text in CLI wrapper**
-   - File: index-conversations:1-31
-   - Issue: No --help flag, users won't discover --concurrency
-   - Fix: Add --help case with usage examples
-
-2. **Date validation missing**
-   - File: search.ts:25-27
-   - Issue: Invalid dates silently return no results
-   - Fix: Validate ISO format, throw error with example
-
-#### Minor
-1. **Progress indicators**
-   - File: indexer.ts:130
-   - Issue: No "X of Y" counter for long operations
-   - Impact: Users don't know how long to wait
-
-### Recommendations
-- Add progress reporting for user experience
-- Consider config file for excluded projects (portability)
-
-### Assessment
-
-**Ready to merge: With fixes**
-
-**Reasoning:** Core implementation is solid with good architecture and tests. Important issues (help text, date validation) are easily fixed and don't affect core functionality.
+**Example 3: Issues requiring fixes**
+```
+ISSUES:
+Important:
+- index-conversations:1-31 - Missing --help flag, users won't discover --concurrency option
+- search.ts:25-27 - Invalid dates silently return no results, should validate and throw error
 ```

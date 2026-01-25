@@ -20,17 +20,12 @@ Task tool (code-reviewer):
   - DESCRIPTION: [brief description of changes]
 ```
 
-**Code reviewer returns:**
-- Strengths (what's well done)
-- Issues categorized by severity:
-  - Critical (must fix)
-  - Important (should fix)
-  - Minor (nice to have)
-- Assessment (ready to merge? yes/no/with fixes)
+**Code reviewer output format (use EXACTLY this format for parsing):**
+- If approved: "APPROVED: [brief summary of what's well done]"
+- If approved with minor issues: "APPROVED_WITH_MINOR: [summary]\nMinor issues noted:\n- [issue 1]\n- [issue 2]"
+- If issues requiring fixes: "ISSUES:\nCritical:\n- [issue with file:line]\nImportant:\n- [issue with file:line]"
 
 **Handling feedback:**
-- **Critical issues:** Fix immediately, amend commit, re-review
-- **Important issues:** Fix immediately, amend commit, re-review
-- **Minor issues:** Judgment call - fix now or note for later
-
-**Only proceed to next task after code quality review approves (or approves with minor issues noted).**
+- **APPROVED:** Proceed to next phase
+- **APPROVED_WITH_MINOR:** Proceed, issues noted for later
+- **ISSUES (Critical/Important):** Fix immediately, amend commit, re-review
