@@ -16,17 +16,22 @@ Execute implementation plans by implementing tasks inline (fast) with independen
 ## The Process
 
 ```
-For each task:
-  1. Load task from plan
+For each task triplet (Implement → Spec Review → Code Review):
+  1. Mark "Implement" in_progress
   2. Implement inline (TDD)
   3. Commit
-  4. Dispatch spec reviewer subagent
-  5. Fix issues if any (inline)
-  6. Dispatch code quality reviewer subagent
-  7. Fix issues if any (inline)
-  8. Mark task complete
+  4. Mark "Implement" complete
+  5. Mark "Spec Review" in_progress
+  6. Dispatch spec reviewer subagent
+  7. If APPROVED → mark "Spec Review" complete
+     If ISSUES → fix inline, amend, re-dispatch
+  8. Mark "Code Review" in_progress
+  9. Dispatch code quality reviewer subagent
+  10. If APPROVED → mark "Code Review" complete
+      If ISSUES → fix inline, amend, re-dispatch
+  11. Proceed to next triplet (now unblocked)
 
-After all tasks:
+After all triplets:
   Use completing-work
 ```
 
