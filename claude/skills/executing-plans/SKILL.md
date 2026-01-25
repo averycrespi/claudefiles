@@ -50,23 +50,22 @@ TaskList
 - If tasks exist from writing-plans: use them
 - If no tasks (new session): re-create tasks from plan using TaskCreate
 
-### Step 2: Execute Each Task
+### Step 2: Execute Each Task Triplet
 
-For each task in order:
+For each task triplet in order:
 
-#### 2a. Mark In Progress
+#### 2a. Implementation Phase
 
+**Mark in progress:**
 ```
 TaskUpdate:
-  taskId: [task-id]
+  taskId: [implement-task-id]
   status: in_progress
 ```
 
 This triggers the CLI spinner showing the task's `activeForm`.
 
-#### 2b. Implement Inline
-
-Follow the plan's steps exactly. Use TDD:
+**Implement using TDD:**
 - Write failing test
 - Verify it fails
 - Write minimal implementation
@@ -75,45 +74,67 @@ Follow the plan's steps exactly. Use TDD:
 
 **Reference:** Skill(test-driven-development) for TDD discipline.
 
-#### 2c. Commit
-
+**Commit:**
 ```bash
 git add -A
 git commit -m "feat: [task description]"
 ```
 
-Capture the commit SHAs for review by running these commands directly:
+Capture commit SHAs:
 ```bash
-git rev-parse HEAD~1
+git rev-parse HEAD~1  # BASE_SHA
+git rev-parse HEAD    # HEAD_SHA
 ```
-Note this output as BASE_SHA.
 
-```bash
-git rev-parse HEAD
+**Mark complete:**
 ```
-Note this output as HEAD_SHA.
+TaskUpdate:
+  taskId: [implement-task-id]
+  status: completed
+```
 
-#### 2d. Dispatch Spec Reviewer
+#### 2b. Spec Review Phase
 
-Use prompt template at `./spec-reviewer-prompt.md`
+**Mark in progress:**
+```
+TaskUpdate:
+  taskId: [spec-review-task-id]
+  status: in_progress
+```
 
-Fill in:
-- Task requirements (full text from plan)
-- What was implemented (your summary)
+**Dispatch spec reviewer subagent:**
 
-**If spec reviewer finds issues:**
+Use prompt template at `./spec-reviewer-prompt.md`. Fill in task requirements and implementation summary.
+
+**Parse subagent output:**
+- If output starts with `APPROVED:` → mark spec review complete
+- If output starts with `ISSUES:` → fix issues inline, amend commit, re-dispatch
+
+**Fix/re-review loop:**
 1. Fix issues inline
 2. Amend commit: `git add -A && git commit --amend --no-edit`
 3. Re-dispatch spec reviewer
-4. Repeat until approved
+4. Repeat until `APPROVED`
 
-**Only proceed to code quality review after spec compliance passes.**
+**Mark complete (only after APPROVED):**
+```
+TaskUpdate:
+  taskId: [spec-review-task-id]
+  status: completed
+```
 
-#### 2e. Dispatch Code Quality Reviewer
+#### 2c. Code Quality Review Phase
 
-Use prompt template at `./code-quality-reviewer-prompt.md`
+**Mark in progress:**
+```
+TaskUpdate:
+  taskId: [code-review-task-id]
+  status: in_progress
+```
 
-The code-reviewer subagent uses the template at `./code-reviewer-template.md`.
+**Dispatch code quality reviewer subagent:**
+
+Use prompt template at `./code-quality-reviewer-prompt.md`. The code-reviewer subagent uses the template at `./code-reviewer-template.md`.
 
 Fill in:
 - WHAT_WAS_IMPLEMENTED: Task summary
@@ -122,20 +143,25 @@ Fill in:
 - HEAD_SHA: Current commit
 - DESCRIPTION: Brief description
 
-**If code reviewer finds issues:**
-- **Critical:** Fix immediately, amend commit, re-review
-- **Important:** Fix immediately, amend commit, re-review
-- **Minor:** Note for later or fix now (judgment call)
+**Parse subagent output:**
+- If output starts with `APPROVED:` → mark code review complete
+- If output starts with `APPROVED_WITH_MINOR:` → mark complete, note minor issues
+- If output starts with `ISSUES:` → fix critical/important issues, amend, re-dispatch
 
-#### 2f. Mark Complete
+**Fix/re-review loop (for critical/important issues):**
+1. Fix issues inline
+2. Amend commit: `git add -A && git commit --amend --no-edit`
+3. Re-dispatch code reviewer
+4. Repeat until `APPROVED` or `APPROVED_WITH_MINOR`
 
+**Mark complete:**
 ```
 TaskUpdate:
-  taskId: [task-id]
+  taskId: [code-review-task-id]
   status: completed
 ```
 
-Proceed to next task.
+Proceed to next triplet.
 
 ### Step 3: Complete Development
 
