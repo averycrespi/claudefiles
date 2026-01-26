@@ -29,7 +29,7 @@ The setup script will install dependencies, symlink configuration files to `~/.c
 
 ## Structured Development Workflow
 
-A workflow for reliably turning ideas into pull requests, adapted from [superpowers](https://github.com/obra/superpowers)
+A workflow for reliably turning ideas into pull requests, adapted from [superpowers](https://github.com/obra/superpowers).
 
 ### Overview
 
