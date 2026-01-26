@@ -48,8 +48,6 @@
       "Bash(acli jira auth status:*)",
       "Bash(~/.claude/skills/confluence/scripts/confluence-search:*)",
       "Bash(~/.claude/skills/confluence/scripts/confluence-view:*)",
-      "mcp__context7__get-library-docs",
-      "mcp__context7__resolve-library-id",
       "Skill(brainstorming)",
       "Skill(completing-work)",
       "Skill(confluence)",

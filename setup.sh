@@ -13,14 +13,6 @@ CLAUDE_DIR="$HOME/.claude"
 echo "Stowing Claude Code configuration to $CLAUDE_DIR ..."
 mkdir -p "$CLAUDE_DIR" && stow claude -t "$CLAUDE_DIR"
 
-echo 'Configuring MCP servers for Claude Code ...'
-if ! claude mcp list | grep -q 'context7'; then
-  echo 'Adding context7 MCP server to user scope ...'
-  claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
-else
-  echo 'context7 MCP server already configured'
-fi
-
 echo 'Identifying your shell ...'
 SHELL_RC=""
 if [ -n "${ZSH_VERSION-}" ]; then
