@@ -4,9 +4,9 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Features
 
-- [Structured Development Workflow](#structured-development-workflow) - Brainstorm, plan, execute, and complete work with independent reviews
-- [Worktree Scripts](#worktree-scripts) - Parallel development using Git worktrees and tmux
-- [Integrations](#integrations) - Connect to Jira and Confluence for seamless context
+- [Structured Development Workflow](#structured-development-workflow) - Reliably turn ideas into pull requests
+- [Worktree Scripts](#worktree-scripts) - Develop in parallel using Git worktrees and tmux
+- [Integrations](#integrations) - Connect to external resources for seamless context
 
 ## Requirements
 
@@ -29,42 +29,59 @@ The setup script will install dependencies, symlink configuration files to `~/.c
 
 ## Structured Development Workflow
 
-A structured approach to development adapted from [superpowers](https://github.com/obra/superpowers):
+A workflow for reliably turning ideas into pull requests, adapted from [superpowers](https://github.com/obra/superpowers)
+
+### Overview
+
+```mermaid
+flowchart TD
+    subgraph Brainstorming["brainstorming"]
+        B1[Ask clarifying questions] --> B2[Explore 2-3 approaches]
+        B2 --> B3[Present design for validation]
+        B3 --> B4[Save design document]
+    end
+
+    subgraph Planning["writing-plans"]
+        P1[Break work into tasks] --> P2[Specify files and code]
+        P2 --> P3[Save implementation plan]
+    end
+
+    subgraph Executing["executing-plans"]
+        E1[Implement with TDD] --> E2[Commit changes]
+        E2 --> E3[Spec + code review]
+        E3 -->|pass| E4[Next task]
+        E3 -->|fail| E1
+    end
+
+    subgraph Completing["completing-work"]
+        C1[Verify tests pass] --> C2[Create PR or keep branch]
+    end
+
+    Brainstorming --> Planning --> Executing --> Completing
+```
+
+### How to Use This Workflow
+
+Use the integrations to load any relevant context:
 
 ```
-Skill(brainstorming)
-    │
-    ├── Ask clarifying questions
-    ├── Explore 2-3 approaches
-    ├── Present design for validation
-    ├── Save and commit design document
-    └── Ask user if they want to write a plan
-         │
-         ▼
-Skill(writing-plans)
-    │
-    ├── Break work into bite-sized tasks
-    ├── Specify exact files and code
-    ├── Save and commit implementation plan
-    └── Ask user if they want to execute the plan
-         │
-         ▼
-Skill(executing-plans)
-    │
-    ├── For each task:
-    │       ├── Implement using TDD
-    │       ├── Commit changes
-    │       ├── Spec review (subagent)
-    │       ├── Code quality review (subagent)
-    │       └── Iterate until reviews pass
-    └── Complete the work
-         │
-         ▼
-Skill(completing-work)
-    │
-    ├── Verify tests pass
-    └── Ask user if they want to create PR or keep branch
+> You: Read Jira ticket ABC-123.
+> Claude: Using Skill(jira) ...
 ```
+
+```
+> You: Find and read the Confluence page for project XYZ.
+> Claude: Using Skill(confluence) ...
+```
+
+Ask Claude to brainstorm your idea:
+
+```
+> You: Brainstorm how we can implement ticket ABC-123.
+> Claude: Using Skill(brainstorming) ...
+```
+
+Answer Claude's question as you proceed through the workflow.
 
 ### When to Use This Workflow
 
@@ -124,42 +141,6 @@ export CONFLUENCE_API_TOKEN="your-api-token-here"
 ```
 
 For more information, see the [Confluence skill README](./claude/skills/confluence/README.md).
-
----
-
-## Miscellaneous
-
-### Reference Skills
-
-| Skill                     | Purpose                                           |
-| ------------------------- | ------------------------------------------------- |
-| `asking-questions`        | Consistent question patterns for workflow skills  |
-| `test-driven-development` | TDD discipline: red-green-refactor cycle          |
-
-### Meta Skills
-
-| Skill             | Purpose                                             |
-| ----------------- | --------------------------------------------------- |
-| `using-skills`    | Skill enforcement rules (injected at session start) |
-| `creating-skills` | Guide for creating new skills                       |
-
-### Agents
-
-| Agent           | Purpose                                         |
-| --------------- | ----------------------------------------------- |
-| `code-reviewer` | Review code changes against plans and standards |
-
-### Settings
-
-Configured in [settings.json](./claude/settings.json):
-
-- **Permissions** - Common Unix commands, Git operations, skills and their scripts, Context7 MCP tools
-- **Hooks**
-  - SessionStart hook injects `using-skills` to enforce skill usage
-  - Notification hooks for desktop alerts when Claude needs attention or finishes
-- **Status line** - [ccusage](https://ccusage.com/guide/statusline) integration for usage tracking
-
----
 
 ## Attribution
 
