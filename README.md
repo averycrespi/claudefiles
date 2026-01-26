@@ -4,7 +4,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Features
 
-- [Structured Development Workflow](#structured-development-workflow) - Turn ideas into pull requests
+- [Structured Development Workflow](#structured-development-workflow) - Reliably turn ideas into pull requests
 - [Worktree Scripts](#worktree-scripts) - Develop in parallel using Git worktrees and tmux
 - [Integrations](#integrations) - Connect to external resources for seamless context
 
@@ -141,42 +141,6 @@ export CONFLUENCE_API_TOKEN="your-api-token-here"
 ```
 
 For more information, see the [Confluence skill README](./claude/skills/confluence/README.md).
-
----
-
-## Miscellaneous
-
-### Reference Skills
-
-| Skill                     | Purpose                                          |
-| ------------------------- | ------------------------------------------------ |
-| `asking-questions`        | Consistent question patterns for workflow skills |
-| `test-driven-development` | TDD discipline: red-green-refactor cycle         |
-
-### Meta Skills
-
-| Skill             | Purpose                                             |
-| ----------------- | --------------------------------------------------- |
-| `using-skills`    | Skill enforcement rules (injected at session start) |
-| `creating-skills` | Guide for creating new skills                       |
-
-### Agents
-
-| Agent           | Purpose                                         |
-| --------------- | ----------------------------------------------- |
-| `code-reviewer` | Review code changes against plans and standards |
-
-### Settings
-
-Configured in [settings.json](./claude/settings.json):
-
-- **Permissions** - Common Unix commands, Git operations, skills and their scripts, Context7 MCP tools
-- **Hooks**
-  - SessionStart hook injects `using-skills` to enforce skill usage
-  - Notification hooks for desktop alerts when Claude needs attention or finishes
-- **Status line** - [ccusage](https://ccusage.com/guide/statusline) integration for usage tracking
-
----
 
 ## Attribution
 
