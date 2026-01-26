@@ -4,9 +4,9 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Features
 
-- [Structured Development Workflow](#structured-development-workflow) - Brainstorm, plan, execute, and complete work with independent reviews
-- [Worktree Scripts](#worktree-scripts) - Parallel development using Git worktrees and tmux
-- [Integrations](#integrations) - Connect to Jira and Confluence for seamless context
+- [Structured Development Workflow](#structured-development-workflow) - Turn ideas into pull requests
+- [Worktree Scripts](#worktree-scripts) - Develop in parallel using Git worktrees and tmux
+- [Integrations](#integrations) - Connect to external resources for seamless context
 
 ## Requirements
 
@@ -29,7 +29,9 @@ The setup script will install dependencies, symlink configuration files to `~/.c
 
 ## Structured Development Workflow
 
-A structured approach to development adapted from [superpowers](https://github.com/obra/superpowers):
+A workflow for reliably turning ideas into pull requests, adapted from [superpowers](https://github.com/obra/superpowers)
+
+### Overview
 
 ```mermaid
 flowchart TD
@@ -57,6 +59,29 @@ flowchart TD
 
     Brainstorming --> Planning --> Executing --> Completing
 ```
+
+### How to Use This Workflow
+
+Use the integrations to load any relevant context:
+
+```
+> You: Read Jira ticket ABC-123.
+> Claude: Using Skill(jira) ...
+```
+
+```
+> You: Find and read the Confluence page for project XYZ.
+> Claude: Using Skill(confluence) ...
+```
+
+Ask Claude to brainstorm your idea:
+
+```
+> You: Brainstorm how we can implement ticket ABC-123.
+> Claude: Using Skill(brainstorming) ...
+```
+
+Answer Claude's question as you proceed through the workflow.
 
 ### When to Use This Workflow
 
