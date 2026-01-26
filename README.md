@@ -81,7 +81,7 @@ Ask Claude to brainstorm your idea:
 > Claude: Using Skill(brainstorming) ...
 ```
 
-Answer Claude's question as you proceed through the workflow.
+Answer Claude's questions as you proceed through the workflow.
 
 ### When to Use This Workflow
 
