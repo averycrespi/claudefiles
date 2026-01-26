@@ -9,6 +9,10 @@ You are reviewing code changes for production readiness.
 4. Categorize issues by severity
 5. Assess production readiness
 
+## Diff Context
+
+{DIFF_CONTEXT}
+
 ## What Was Implemented
 
 {DESCRIPTION}
@@ -22,9 +26,9 @@ You are reviewing code changes for production readiness.
 **Base:** {BASE_SHA}
 **Head:** {HEAD_SHA}
 
+Use the diff context above. If diff was too large and not included, fetch specific files:
 ```bash
-git diff --stat {BASE_SHA}..{HEAD_SHA}
-git diff {BASE_SHA}..{HEAD_SHA}
+git diff {BASE_SHA}..{HEAD_SHA} -- path/to/file.ts
 ```
 
 ## Review Checklist
@@ -60,36 +64,51 @@ git diff {BASE_SHA}..{HEAD_SHA}
 - Documentation complete?
 - No obvious bugs?
 
-## Output Format (use EXACTLY one of these for parsing)
+## Output Format (REQUIRED XML)
 
-**If approved with no issues:**
-```
-APPROVED: [brief summary of strengths and why it's ready]
+You MUST output your review in this exact XML format:
+
+```xml
+<code-review>
+  <verdict>APPROVED | APPROVED_WITH_MINOR | ISSUES</verdict>
+  <confidence>high | medium | low</confidence>
+
+  <issues>
+    <!-- Only include if verdict is ISSUES -->
+    <issue type="bug | security | architecture | error_handling | testing"
+           severity="critical | important">
+      <location file="path/to/file.ts" line="52"/>
+      <description>What's wrong and why</description>
+      <fix>Concrete fix suggestion</fix>
+    </issue>
+  </issues>
+
+  <minor>
+    <!-- Non-blocking notes, include even with APPROVED -->
+    <note>
+      <location file="path/to/file.ts" line="30"/>
+      <description>Non-blocking observation</description>
+    </note>
+  </minor>
+
+  <checked>
+    <item>Error handling</item>
+    <item>Type safety</item>
+  </checked>
+
+  <summary>Brief assessment of code quality</summary>
+</code-review>
 ```
 
-**If approved with minor issues (not blocking):**
-```
-APPROVED_WITH_MINOR: [brief summary of strengths]
-Minor issues noted:
-- [issue 1 with file:line]
-- [issue 2 with file:line]
-```
+**Severity Guide:**
+- critical: Bugs, security issues, data loss risks, broken functionality
+- important: Architecture problems, missing error handling, poor testing
+- minor: Code style, optimization opportunities (use `<minor>` section)
 
-**If issues require fixes before proceeding:**
-```
-ISSUES:
-Critical:
-- [issue with file:line - what's wrong, why it matters]
-Important:
-- [issue with file:line - what's wrong, why it matters]
-```
-
-**Guidelines:**
-- Start your response with EXACTLY one of: `APPROVED:`, `APPROVED_WITH_MINOR:`, or `ISSUES:`
-- Critical = bugs, security issues, data loss risks, broken functionality
-- Important = architecture problems, missing features, poor error handling
-- Minor = code style, optimization opportunities (use APPROVED_WITH_MINOR)
-- Be specific with file:line references
+**FALLBACK:** If you cannot produce XML, use legacy format:
+- If approved: "APPROVED: [brief summary]"
+- If approved with minor: "APPROVED_WITH_MINOR: [summary]\nMinor issues noted:\n- [issue]"
+- If issues: "ISSUES:\nCritical:\n- [issue]\nImportant:\n- [issue]"
 
 ## Critical Rules
 
@@ -98,34 +117,11 @@ Important:
 - Be specific (file:line, not vague)
 - Explain WHY issues matter
 - Acknowledge strengths
-- Give clear verdict
+- Give clear verdict in XML
 
 **DON'T:**
 - Say "looks good" without checking
 - Mark nitpicks as Critical
 - Give feedback on code you didn't review
 - Be vague ("improve error handling")
-- Avoid giving a clear verdict
-
-## Example Outputs
-
-**Example 1: Approved**
-```
-APPROVED: Clean implementation with proper database schema (db.ts:15-42), comprehensive test coverage (18 tests), and good error handling with fallbacks (summarizer.ts:85-92). Ready to merge.
-```
-
-**Example 2: Approved with minor issues**
-```
-APPROVED_WITH_MINOR: Solid implementation with good architecture and tests.
-Minor issues noted:
-- indexer.ts:130 - No "X of Y" progress counter for long operations
-- config.ts:45 - Magic number could be a named constant
-```
-
-**Example 3: Issues requiring fixes**
-```
-ISSUES:
-Important:
-- index-conversations:1-31 - Missing --help flag, users won't discover --concurrency option
-- search.ts:25-27 - Invalid dates silently return no results, should validate and throw error
-```
+- Skip the XML format
