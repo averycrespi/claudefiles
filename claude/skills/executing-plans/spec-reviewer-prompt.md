@@ -12,6 +12,10 @@ Task tool (general-purpose):
   prompt: |
     You are reviewing whether an implementation matches its specification.
 
+    ## Diff Context
+
+    {DIFF_CONTEXT}
+
     ## What Was Requested
 
     [FULL TEXT of task requirements from plan]
@@ -57,7 +61,39 @@ Task tool (general-purpose):
 
     **Verify by reading code, not by trusting report.**
 
-    Report format (use EXACTLY this format for parsing):
-    - If compliant: "APPROVED: [brief confirmation of what was verified]"
-    - If issues: "ISSUES:\n- [issue 1 with file:line]\n- [issue 2 with file:line]"
+    ## Output Format (REQUIRED XML)
+
+    You MUST output your review in this exact XML format:
+
+    ```xml
+    <spec-review>
+      <verdict>APPROVED | ISSUES</verdict>
+      <confidence>high | medium | low</confidence>
+
+      <issues>
+        <!-- Only include if verdict is ISSUES -->
+        <issue type="missing_requirement | extra_feature | misunderstanding"
+               severity="critical | important">
+          <location file="path/to/file.ts" line="45"/>
+          <description>What's wrong</description>
+          <requirement>Which requirement was violated</requirement>
+        </issue>
+      </issues>
+
+      <checked>
+        <item>Requirement 1 that was verified</item>
+        <item>Requirement 2 that was verified</item>
+      </checked>
+
+      <summary>Brief assessment of the implementation</summary>
+    </spec-review>
+    ```
+
+    **Severity Guide:**
+    - critical: Wrong thing built, fundamental misunderstanding
+    - important: Missing feature, extra unneeded work
+
+    **FALLBACK:** If you cannot produce XML, use legacy format:
+    - If compliant: "APPROVED: [brief confirmation]"
+    - If issues: "ISSUES:\n- [issue 1 with file:line]\n- [issue 2]"
 ```
