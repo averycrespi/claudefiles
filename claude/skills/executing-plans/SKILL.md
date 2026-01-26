@@ -18,22 +18,22 @@ Execute implementation plans by implementing tasks inline (fast) with independen
 ## The Process
 
 ```
-For each task triplet (Implement → Spec Review → Code Review):
+For each task pair (Implement → Review):
   1. Mark "Implement" in_progress
   2. Implement inline (TDD)
   3. Commit
   4. Mark "Implement" complete
-  5. Mark "Spec Review" in_progress
-  6. Dispatch spec reviewer subagent
-  7. If APPROVED → mark "Spec Review" complete
-     If ISSUES → fix inline, amend, re-dispatch
-  8. Mark "Code Review" in_progress
-  9. Dispatch code quality reviewer subagent
-  10. If APPROVED → mark "Code Review" complete
-      If ISSUES → fix inline, amend, re-dispatch
-  11. Proceed to next triplet (now unblocked)
+  5. Mark "Review" in_progress
+  6. Prepare diff context
+  7. Dispatch spec + code reviewers in parallel (background tasks)
+  8. Wait for both to complete
+  9. Parse XML outputs (with legacy fallback)
+  10. Merge results, determine overall verdict
+  11. If APPROVED → mark "Review" complete, proceed
+      If ISSUES → fix inline, amend, re-run both reviews
+  12. Proceed to next pair (now unblocked)
 
-After all triplets:
+After all pairs:
   Use completing-work
 ```
 
@@ -66,13 +66,13 @@ AskUserQuestion(
 )
 ```
 
-  - **Continue:** Use existing tasks, resume from first non-completed triplet
+  - **Continue:** Use existing tasks, resume from first non-completed pair
   - **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
-- **If no tasks exist:** Create all task triplets from the plan (see "Creating Tasks from Plan" below)
+- **If no tasks exist:** Create all task pairs from the plan (see "Creating Tasks from Plan" below)
 
 ### Creating Tasks from Plan
 
-Parse the plan document and create a **task triplet** for each task:
+Parse the plan document and create a **task pair** for each task:
 
 **For each Task N in the plan:**
 
@@ -85,54 +85,80 @@ Parse the plan document and create a **task triplet** for each task:
      activeForm: "Implementing [Component Name]"
    ```
 
-2. **Create Spec Review task:**
+2. **Create Review task:**
    ```
    TaskCreate:
-     subject: "Task N: Spec Review"
+     subject: "Task N: Review"
      description: |
-       Review implementation of Task N for spec compliance.
-       Verify all requirements are met, nothing extra added.
-       Use spec-reviewer-prompt.md template.
-     activeForm: "Reviewing spec compliance for [Component Name]"
-   ```
-
-3. **Create Code Review task:**
-   ```
-   TaskCreate:
-     subject: "Task N: Code Review"
-     description: |
-       Review implementation of Task N for code quality.
-       Check tests, error handling, maintainability.
-       Use code-quality-reviewer-prompt.md template.
-     activeForm: "Reviewing code quality for [Component Name]"
+       Run parallel spec and code reviews for Task N.
+       Parse XML outputs, merge results, present to implementer.
+       If issues: fix and re-review. If approved: proceed.
+     activeForm: "Reviewing [Component Name]"
    ```
 
 **After all tasks created, set blocking relationships:**
 
 ```
-# Within each triplet:
+# Within each pair:
 TaskUpdate:
-  taskId: [spec-review-id]
+  taskId: [review-id]
   addBlockedBy: [implement-id]
 
-TaskUpdate:
-  taskId: [code-review-id]
-  addBlockedBy: [spec-review-id]
-
-# Between triplets (Task N+1 blocked by Task N's code review):
+# Between pairs (Task N+1 blocked by Task N's review):
 TaskUpdate:
   taskId: [task-N+1-implement-id]
-  addBlockedBy: [task-N-code-review-id]
+  addBlockedBy: [task-N-review-id]
 ```
 
 This creates the execution chain:
 ```
-Implement 1 → Spec Review 1 → Code Review 1 → Implement 2 → Spec Review 2 → ...
+Implement 1 → Review 1 → Implement 2 → Review 2 → ...
 ```
 
-### Step 2: Execute Each Task Triplet
+### Preparing Diff Context
 
-For each task triplet in order:
+Before dispatching reviews, prepare the diff context to include in prompts.
+
+**Threshold:** 500 lines
+
+```javascript
+// Pseudocode - implement inline
+function prepareDiffContext(baseSha, headSha) {
+  const stat = `git diff --stat ${baseSha}..${headSha}`;
+  const fullDiff = `git diff ${baseSha}..${headSha}`;
+  const lineCount = fullDiff.split('\n').length;
+
+  if (lineCount <= 500) {
+    return `
+**Diff Stats:**
+\`\`\`
+${stat}
+\`\`\`
+
+**Full Diff:**
+\`\`\`diff
+${fullDiff}
+\`\`\`
+`;
+  } else {
+    return `
+**Diff Stats:**
+\`\`\`
+${stat}
+\`\`\`
+
+**Note:** Diff is ${lineCount} lines (exceeds 500 line threshold).
+Fetch specific files as needed using: \`git diff ${baseSha}..${headSha} -- path/to/file\`
+`;
+  }
+}
+```
+
+Run `git diff --stat` and `git diff` to get the values, count lines, and format accordingly.
+
+### Step 2: Execute Each Task Pair
+
+For each task pair in order:
 
 #### 2a. Implementation Phase
 
@@ -173,75 +199,148 @@ TaskUpdate:
   status: completed
 ```
 
-#### 2b. Spec Review Phase
+#### 2b. Parallel Review Phase
+
+After implementation is committed, run both reviews in parallel.
 
 **Mark in progress:**
 ```
 TaskUpdate:
-  taskId: [spec-review-task-id]
+  taskId: [review-task-id]
   status: in_progress
 ```
 
-**Dispatch spec reviewer subagent:**
+**Prepare diff context:**
 
-Use prompt template at `./spec-reviewer-prompt.md`. Fill in task requirements and implementation summary.
+```bash
+git diff --stat $BASE_SHA..$HEAD_SHA
+git diff $BASE_SHA..$HEAD_SHA
+```
 
-**Parse subagent output:**
-- If output starts with `APPROVED:` → mark spec review complete
-- If output starts with `ISSUES:` → fix issues inline, amend commit, re-dispatch
+If diff exceeds 500 lines, include only stats and instruct reviewers to fetch as needed.
 
-**Fix/re-review loop:**
-1. Fix issues inline
-2. Amend commit: `git add -A && git commit --amend --no-edit`
-3. Re-dispatch spec reviewer
-4. Repeat until `APPROVED`
+**Launch both reviews as background tasks:**
 
-**Mark complete (only after APPROVED):**
+```javascript
+// Launch spec review in background
+Task({
+  subagent_type: 'general-purpose',
+  description: 'Review spec compliance for Task N',
+  prompt: specReviewPrompt,  // From spec-reviewer-prompt.md with DIFF_CONTEXT filled
+  run_in_background: true
+})
+// Capture task_id from result
+
+// Launch code review in background (same message, parallel)
+Task({
+  subagent_type: 'code-reviewer',
+  description: 'Review code quality for Task N',
+  prompt: codeReviewPrompt,  // From code-reviewer-template.md with DIFF_CONTEXT filled
+  run_in_background: true
+})
+// Capture task_id from result
+```
+
+**Wait for both to complete:**
+
+```javascript
+TaskOutput({ task_id: specTaskId, block: true, timeout: 180000 })
+TaskOutput({ task_id: codeTaskId, block: true, timeout: 180000 })
+```
+
+**Parse outputs and merge results.**
+
+#### 2c. Parse Review Outputs
+
+Parse each review output, trying XML first with legacy fallback.
+
+**XML Parsing:**
+
+Extract `<spec-review>` or `<code-review>` tags and parse contents.
+
+**Legacy Fallback:**
+
+If no valid XML found, check for legacy prefixes:
+- `APPROVED:` → verdict: APPROVED, no issues
+- `APPROVED_WITH_MINOR:` → verdict: APPROVED_WITH_MINOR, parse minor notes
+- `ISSUES:` → verdict: ISSUES, parse issue list
+
+#### 2d. Merge Review Results
+
+Combine findings from both reviews into a single verdict.
+
+**Overall Verdict Logic:**
+
+```
+if spec has critical issues → SPEC_CRITICAL
+else if code has critical issues → CODE_CRITICAL
+else if either has important issues → ISSUES
+else if code is APPROVED_WITH_MINOR → APPROVED_WITH_MINOR
+else → APPROVED
+```
+
+**Issue Priority Order:**
+
+1. Spec Critical - wrong thing built
+2. Code Critical - bugs, security holes
+3. Spec Important - missing/extra features
+4. Code Important - architecture, error handling
+5. Minor notes - don't block
+
+**Related Issue Detection:**
+
+Issues in the same file within 5 lines are grouped together.
+
+#### 2e. Present Results and Act
+
+**Display merged results:**
+
+```
+Review Results:
+  Spec Review: [verdict] ([confidence] confidence)
+  Code Review: [verdict] ([confidence] confidence)
+
+Issues to Fix (N):
+
+  1. [Source Type] path/to/file.ts:45
+     Description of the issue
+     [For spec: Requirement: "..."]
+     [For code: Fix: "..."]
+
+Minor Notes (M):
+  - path/to/file.ts:30 - observation
+
+Action: [FIX_AND_REREVIEW | PROCEED | PROCEED_WITH_NOTES]
+```
+
+**Actions:**
+
+- **FIX_AND_REREVIEW:** Fix all critical/important issues, amend commit, re-run BOTH reviews
+- **PROCEED:** All approved, continue to next task
+- **PROCEED_WITH_NOTES:** Approved with minor issues noted, continue to next task
+
+**Re-review Strategy:**
+
+Always re-run both reviews after fixes (not just the one that failed):
+- Fixes might affect either domain
+- Clean slate is simpler to reason about
+- Parallel execution makes this cheap
+
+**Review Loop Limit:**
+
+After 3 review iterations without approval, ask user:
+- Continue trying
+- Proceed anyway (user accepts risk)
+- Stop for manual review
+
+**Mark complete (only after APPROVED or APPROVED_WITH_MINOR):**
 ```
 TaskUpdate:
-  taskId: [spec-review-task-id]
+  taskId: [review-task-id]
   status: completed
 ```
 
-#### 2c. Code Quality Review Phase
-
-**Mark in progress:**
-```
-TaskUpdate:
-  taskId: [code-review-task-id]
-  status: in_progress
-```
-
-**Dispatch code quality reviewer subagent:**
-
-Use prompt template at `./code-quality-reviewer-prompt.md`. The code-reviewer subagent uses the template at `./code-reviewer-template.md`.
-
-Fill in:
-- WHAT_WAS_IMPLEMENTED: Task summary
-- PLAN_OR_REQUIREMENTS: Task text from plan
-- BASE_SHA: Commit before this task
-- HEAD_SHA: Current commit
-- DESCRIPTION: Brief description
-
-**Parse subagent output:**
-- If output starts with `APPROVED:` → mark code review complete
-- If output starts with `APPROVED_WITH_MINOR:` → mark complete, note minor issues
-- If output starts with `ISSUES:` → fix critical/important issues, amend, re-dispatch
-
-**Fix/re-review loop (for critical/important issues):**
-1. Fix issues inline
-2. Amend commit: `git add -A && git commit --amend --no-edit`
-3. Re-dispatch code reviewer
-4. Repeat until `APPROVED` or `APPROVED_WITH_MINOR`
-
-**Mark complete:**
-```
-TaskUpdate:
-  taskId: [code-review-task-id]
-  status: completed
-```
-
-Proceed to next triplet.
+Proceed to next pair.
 
 ### Step 3: Complete Development
 
@@ -270,30 +369,115 @@ After all tasks complete:
 ## Review Order Matters
 
 ```
-Implementation → Spec Review → Code Quality Review
-                     ↓              ↓
-              "Did we build    "Did we build
-               the right        it well?"
-               thing?"
+Implementation → [Spec Review ║ Code Review] → Merge → Act
+                        ↓              ↓
+                  "Did we build    "Did we build
+                   the right        it well?"
+                   thing?"
 ```
 
-**Never skip spec review.** Code quality review on wrong code is wasted effort.
+Reviews run in parallel but issues are prioritized:
 
-**Never skip code quality review.** Spec-compliant code can still be buggy or unmaintainable.
+1. **Spec Critical** - wrong thing built (fix first)
+2. **Code Critical** - bugs, security (fix second)
+3. **Spec Important** - missing features
+4. **Code Important** - architecture issues
+5. **Minor notes** - don't block
+
+**Never skip reviews.** Both domains matter:
+- Spec-compliant code can still be buggy
+- Well-built code can still be wrong
+
+**Re-review both** after any fix. Fixes can affect either domain.
 
 ## Red Flags
 
 **Never:**
-- Skip either review stage
-- Proceed to code quality before spec compliance passes
+- Skip either review
 - Ignore Critical or Important issues
 - Guess when blocked
+- Proceed after 3 failed review iterations without user consent
+- Auto-resolve conflicting findings between reviewers
 
 **Always:**
 - Follow plan steps exactly
 - Use TDD for implementation
+- Run both reviews in parallel
+- Re-run both reviews after fixes (not just the failed one)
 - Fix issues before proceeding to next task
 - Commit after each task (before review)
+- Present merged results clearly
+
+## Error Handling
+
+**Timeout Handling:**
+
+Reviews timeout after 180 seconds (3 minutes).
+
+```javascript
+TaskOutput({ task_id: taskId, block: true, timeout: 180000 })
+```
+
+If timeout:
+1. Retry the failed review once
+2. If still fails, ask user using AskUserQuestion:
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "Review timed out after retry. How would you like to proceed?",
+    header: "Timeout",
+    multiSelect: false,
+    options: [
+      { label: "Retry again", description: "Try the review one more time" },
+      { label: "Skip review", description: "Proceed without this review (risky)" },
+      { label: "Stop", description: "Stop execution for manual intervention" }
+    ]
+  }]
+})
+```
+
+**Parse Failure Handling:**
+
+If output contains neither valid XML nor legacy format:
+1. Retry the review once
+2. If still unparseable, ask user
+
+**Both Reviews Fail:**
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "Both reviews failed. How would you like to proceed?",
+    header: "Review Failed",
+    multiSelect: false,
+    options: [
+      { label: "Retry both", description: "Run both reviews again" },
+      { label: "Skip reviews", description: "Proceed without review (risky)" },
+      { label: "Stop", description: "Stop for manual review" }
+    ]
+  }]
+})
+```
+
+**Review Loop Protection:**
+
+After 3 review iterations without full approval:
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "3 review iterations completed without full approval. How would you like to proceed?",
+    header: "Review Loop",
+    multiSelect: false,
+    options: [
+      { label: "Continue", description: "Keep trying to resolve issues" },
+      { label: "Proceed anyway", description: "Accept current state and move on" },
+      { label: "Stop", description: "Stop for manual review" }
+    ]
+  }]
+})
+```
 
 ## Integration
 
@@ -309,8 +493,8 @@ Implementation → Spec Review → Code Quality Review
 ## Native Task Notes
 
 - Tasks are created by this skill at the start of execution, not during planning
-- Task triplets: Implement, Spec Review, Code Review for each plan task
-- Blocking chain: Implement N → Spec Review N → Code Review N → Implement N+1
+- Task pairs: Implement, Review for each plan task (reviews run in parallel internally)
+- Blocking chain: Implement N → Review N → Implement N+1
 - Plan document is the source of truth for *what* to do
 - Native tasks track *progress* and *enforce review gates*
 - The `activeForm` field shows in the CLI spinner during `in_progress` status
