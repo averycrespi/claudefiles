@@ -23,7 +23,7 @@ cd claudefiles
 ./setup.sh
 ```
 
-The setup script will install dependencies, symlink configuration files to `~/.claude/`, configure MCP servers, and add scripts to your `PATH`.
+The setup script will install dependencies, symlink configuration files to `~/.claude/`, and add scripts to your `PATH`.
 
 ---
 
