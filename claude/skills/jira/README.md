@@ -1,10 +1,12 @@
 # Jira Integration Skill
 
-Seamlessly integrate Jira data into Claude Code conversations with automatic ticket detection and retrieval.
+Integrate Jira into Claude Code conversations with automatic ticket detection, retrieval, and the ability to create, update, and comment on issues.
 
 ## What It Does
 
-Automatically detects and fetches Jira issue information when you mention ticket IDs (e.g., "PROJ-123") or ask about sprints, boards, and projects. Provides transparent, read-only access to Jira Cloud via the Atlassian CLI.
+**Reading:** Automatically detects and fetches Jira issue information when you mention ticket IDs (e.g., "PROJ-123") or ask about sprints, boards, and projects.
+
+**Writing:** Create tickets, update fields, change status, and add comments - all with confirmation before execution.
 
 ## Setup
 
@@ -18,11 +20,17 @@ Automatically detects and fetches Jira issue information when you mention ticket
 
 ## Usage Examples
 
+**Reading:**
 - "What's PROJ-123 about?"
 - "Show me my current tickets"
 - "What's in the current sprint?"
-- "Find high priority bugs"
+
+**Writing:**
+- "Create a bug ticket for the login timeout issue"
+- "Mark PROJ-123 as in progress"
+- "Assign PROJ-456 to me"
+- "Add a comment to PROJ-789 that I'm investigating"
 
 ## Documentation
 
-See [SKILL.md](SKILL.md) for complete documentation including command reference, JQL patterns, and optimization strategies.
+See [SKILL.md](SKILL.md) for complete documentation including command reference, JQL patterns, and write operation patterns.
