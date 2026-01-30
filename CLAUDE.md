@@ -60,7 +60,7 @@ This repository includes a structured development workflow:
 
 | Skill        | Purpose                                              |
 | ------------ | ---------------------------------------------------- |
-| `jira`       | Read-only access to Jira issues, boards, and sprints |
+| `jira`       | Access Jira issues, boards, sprints; create and update tickets |
 | `confluence` | Search and read Confluence documentation             |
 
 ### Reference Skills
