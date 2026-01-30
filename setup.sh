@@ -40,8 +40,16 @@ else
   echo "$PATH_LINE"
 fi
 
+echo 'Adding Atlassian MCP server ...'
+if claude mcp get atlassian &>/dev/null; then
+  echo 'Atlassian MCP server already configured'
+else
+  claude mcp add --transport http atlassian https://mcp.atlassian.com/v1/mcp --scope user
+  echo 'Atlassian MCP server added'
+fi
+
 echo 'Done!'
 echo ''
-echo 'Optional: Atlassian integration'
+echo 'Optional: Atlassian authentication'
 echo '  Run /mcp in Claude Code and authenticate with your Atlassian account.'
 exit 0
