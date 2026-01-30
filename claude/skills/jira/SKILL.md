@@ -35,7 +35,8 @@ When ticket IDs appear in user messages:
 The skill provides domain-specific reference files for detailed command documentation:
 
 - **[`references/auth.md`](references/auth.md)** - Authentication commands and troubleshooting
-- **[`references/workitems.md`](references/workitems.md)** - Work item operations (view, search, comments)
+- **[`references/issues.md`](references/issues.md)** - Issue operations (view, search, create, edit, transition)
+- **[`references/comments.md`](references/comments.md)** - Comment operations (list, create)
 - **[`references/projects.md`](references/projects.md)** - Project commands and key conventions
 - **[`references/boards-sprints.md`](references/boards-sprints.md)** - Board and sprint operations
 - **[`references/jql.md`](references/jql.md)** - Comprehensive JQL query patterns
@@ -43,10 +44,11 @@ The skill provides domain-specific reference files for detailed command document
 
 **Loading strategy:**
 - Load references selectively based on query type to minimize token usage
-- For ticket queries: Load `workitems.md` and `jql.md`
+- For reading tickets: Load `issues.md` and `jql.md`
+- For creating/editing tickets: Load `issues.md`
+- For comments: Load `comments.md`
 - For sprint queries: Load `boards-sprints.md` and `jql.md`
 - For authentication issues: Load `auth.md`
-- For optimization guidance: Load `optimization.md`
 - Load multiple references in parallel when query spans domains
 
 ### Context Optimization
