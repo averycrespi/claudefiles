@@ -45,6 +45,74 @@ Unable to find issue PROJ-999. Would you like to search for similar issues?
 Permission denied for {KEY}. Check with Jira administrator for access.
 ```
 
+## Write Operation Errors
+
+### 400 Bad Request - Invalid Transition
+
+**Symptom**: Status transition not allowed by workflow
+
+**Recovery Pattern**:
+1. The error message shows available transitions
+2. Present valid status options to user
+3. Let user pick a valid transition
+
+**Example Response**:
+```
+Cannot transition PROJ-123 to "Done" directly. Available transitions from "To Do":
+- In Progress
+- Blocked
+
+Which status would you like?
+```
+
+### 400 Bad Request - Required Field Missing
+
+**Symptom**: Project requires fields not provided during create/edit
+
+**Recovery Pattern**:
+1. Parse error to identify missing field(s)
+2. Prompt user for required values
+3. Retry with complete data
+
+**Example Response**:
+```
+PROJ requires the "Component" field. Which component should this be assigned to?
+```
+
+### 400 Bad Request - Invalid Assignee
+
+**Symptom**: Specified user cannot be assigned to issue
+
+**Recovery Pattern**:
+1. Inform user the assignee is invalid
+2. Suggest using `@me` for self-assignment
+3. Or search for valid users in project
+
+**Example Response**:
+```
+User "invalid@example.com" cannot be assigned to issues in PROJ.
+Would you like to assign to yourself (@me) or specify a different user?
+```
+
+### 400 Bad Request - Invalid Issue Type
+
+**Symptom**: Issue type doesn't exist in project
+
+**Recovery Pattern**:
+1. Query available issue types for project
+2. Present options to user
+
+**Example Response**:
+```
+Issue type "Feature" not available in PROJ. Available types:
+- Bug
+- Story
+- Task
+- Epic
+
+Which type should this be?
+```
+
 ## Rate Limiting
 
 ### 429 Too Many Requests
