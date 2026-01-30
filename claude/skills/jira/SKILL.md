@@ -115,6 +115,93 @@ Created: 2025-11-01 | Updated: 2025-11-10
 - **Field selection**: Use minimal fields by default (`key,summary,status,priority,assignee`), fetch additional fields only when user needs details
 - **Result limits**: Always apply appropriate limits to prevent excessive context consumption
 
+## Write Operations
+
+Write operations modify Jira data and require user approval via Claude Code's permission system.
+
+### Creating Tickets
+
+When user asks to create a ticket (or context suggests one should be created):
+
+1. **Gather required information:**
+   - Project key (remember from session if previously used, otherwise ask)
+   - Issue type (Bug, Story, Task, etc.)
+   - Summary (can be derived from conversation context)
+   - Optional: description, assignee, labels
+
+2. **Show confirmation preview:**
+   ```
+   Creating ticket in PROJ:
+     Type: Bug
+     Summary: Fix timeout on slow connections
+     Description: Users report timeouts when... (truncated)
+     Assignee: @me
+   ```
+
+3. **Execute with user approval:**
+   ```bash
+   acli jira workitem create --project PROJ --type Bug --summary "Fix timeout on slow connections" --description "..." --assignee @me --json
+   ```
+
+### Editing Tickets
+
+When user asks to update a ticket:
+
+1. **Show what will change:**
+   ```
+   Editing PROJ-123:
+     Summary: "Old title" → "New title"
+     Assignee: unassigned → john@example.com
+   ```
+
+2. **Execute with user approval:**
+   ```bash
+   acli jira workitem edit --key PROJ-123 --summary "New title" --assignee john@example.com --json
+   ```
+
+### Transitioning Status
+
+When user asks to change ticket status:
+
+1. **Show the transition:**
+   ```
+   Transitioning PROJ-123:
+     Status: "To Do" → "In Progress"
+   ```
+
+2. **Execute with user approval:**
+   ```bash
+   acli jira workitem transition --key PROJ-123 --status "In Progress" --json
+   ```
+
+3. **Handle invalid transitions:** If transition fails, show available statuses and let user pick.
+
+### Adding Comments
+
+When user asks to comment on a ticket:
+
+1. **Show the comment:**
+   ```
+   Adding comment to PROJ-123:
+     "Started investigating - looks like a race condition..."
+   ```
+
+2. **Execute with user approval:**
+   ```bash
+   acli jira workitem comment create --key PROJ-123 --body "Started investigating..." --json
+   ```
+
+### Session Project Context
+
+To reduce friction when creating multiple tickets:
+
+1. Remember project key when user creates or views tickets
+2. Propose reusing that project for subsequent creates
+3. User can always override with explicit project specification
+4. Context resets each session (no persistent storage)
+
+See [`references/issues.md`](references/issues.md) and [`references/comments.md`](references/comments.md) for detailed command documentation.
+
 ## Security
 
 Read-only operations are enforced in settings.json:
