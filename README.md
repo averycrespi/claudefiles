@@ -62,16 +62,16 @@ flowchart TD
 
 ### How to Use This Workflow
 
-Use the integrations to load any relevant context:
+Claude will automatically use the Atlassian MCP tools when you mention Jira tickets or Confluence pages:
 
 ```
-> You: Read Jira ticket ABC-123.
-> Claude: Using Skill(jira) ...
+> You: What's the status of ABC-123?
+> Claude: [Uses Atlassian MCP to fetch issue details]
 ```
 
 ```
-> You: Find and read the Confluence page for project XYZ.
-> Claude: Using Skill(confluence) ...
+> You: Create a Jira ticket for the login bug we just discussed.
+> Claude: [Uses Atlassian MCP to create issue]
 ```
 
 Ask Claude to brainstorm your idea:
@@ -114,33 +114,25 @@ Scripts for parallel development using Git worktrees and tmux:
 
 ## Integrations
 
-### Jira
+### Atlassian (Jira + Confluence)
 
-Read-only access to Jira issues, boards, and sprints via the Atlassian CLI.
-
-**Setup:**
-
-```sh
-acli jira auth login
-acli jira auth status  # Verify authentication
-```
-
-For more information, see the [Jira skill README](./claude/skills/jira/README.md).
-
-### Confluence
-
-Search and read Confluence documentation.
+Read and write access to Jira issues, Confluence pages, and Compass via the official Atlassian MCP server.
 
 **Setup:**
 
-```sh
-# Add to your shell profile (~/.zshrc, ~/.bashrc, etc.)
-export CONFLUENCE_DOMAIN="mycompany.atlassian.net"
-export CONFLUENCE_EMAIL="your.email@example.com"
-export CONFLUENCE_API_TOKEN="your-api-token-here"
-```
+1. Start Claude Code in any project
+2. Run `/mcp` and select "Authenticate" for Atlassian
+3. Complete OAuth flow in browser
+4. Done - Jira and Confluence tools now available
 
-For more information, see the [Confluence skill README](./claude/skills/confluence/README.md).
+**Capabilities:**
+- **Jira:** Search, create, and update issues
+- **Confluence:** Search, create, and update pages
+- **Compass:** Query and create service components
+
+**Requirements:**
+- Atlassian Cloud account (Server/Data Center not supported)
+- Internet connection for remote MCP server
 
 ## Attribution
 
