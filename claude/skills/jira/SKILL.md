@@ -204,8 +204,9 @@ See [`references/issues.md`](references/issues.md) and [`references/comments.md`
 
 ## Security
 
-Read-only operations are enforced in settings.json:
-- Allowed: Retrieve issues, boards, sprints, projects, comments, search with JQL
-- Blocked: Create, update, delete, assign, transition, or modify any Jira data
+Operations are controlled by Claude Code's permission system:
 
-All write operations require explicit user approval and are denied by default.
+- **Read operations** (view, search, list): Allowed automatically via settings.json
+- **Write operations** (create, edit, transition, comment): Require user approval for each command
+
+This ensures users maintain control over any modifications to Jira data. Each write command is shown to the user before execution, and they must explicitly approve it.
