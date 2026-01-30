@@ -6,7 +6,7 @@ Project-specific instructions for this repository.
 
 This repository contains opinionated resources for working with Claude Code:
 - **Workflow skills** for structured development (adapted from [superpowers](https://github.com/obra/superpowers))
-- **Integration skills** for Jira and Confluence
+- **Atlassian MCP** for Jira, Confluence, and Compass
 - **Worktree scripts** for parallel development with tmux
 - **Permission and notification settings** for a better experience
 
@@ -56,12 +56,11 @@ This repository includes a structured development workflow:
 | `executing-plans` | Execute plans with inline implementation + subagent reviews |
 | `completing-work` | Verify tests, present options, create PR                    |
 
-### Integration Skills
+### Integrations
 
-| Skill        | Purpose                                              |
-| ------------ | ---------------------------------------------------- |
-| `jira`       | Read-only access to Jira issues, boards, and sprints |
-| `confluence` | Search and read Confluence documentation             |
+| Integration   | Purpose                                             |
+| ------------- | --------------------------------------------------- |
+| Atlassian MCP | Read/write access to Jira, Confluence, and Compass  |
 
 ### Reference Skills
 
