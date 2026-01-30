@@ -41,4 +41,7 @@ else
 fi
 
 echo 'Done!'
+echo ''
+echo 'Optional: Atlassian integration'
+echo '  Run /mcp in Claude Code and authenticate with your Atlassian account.'
 exit 0
