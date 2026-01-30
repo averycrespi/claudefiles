@@ -3,15 +3,15 @@ name: jira
 description: |
   This skill should be used when the user asks about Jira work items, sprints, boards,
   or projects. Activates when detecting: ticket IDs (PROJ-123), questions about "current
-  sprint", "my tickets", "Jira issues", board information, project status, or any Jira-related
-  queries. Provides read-only access to Jira Cloud via Atlassian CLI.
+  sprint", "my tickets", "Jira issues", board information, project status, or requests to
+  create, update, or comment on tickets. Provides access to Jira Cloud via Atlassian CLI.
 ---
 
 # Jira Integration Skill
 
 ## Purpose
 
-Transparently integrate Jira data into development discussions by automatically detecting and retrieving issue information, sprint data, and board contents using the Atlassian CLI (ACLI). Provide seamless read-only access to Jira without disrupting conversation flow.
+Integrate Jira into development discussions by automatically detecting and retrieving issue information, and enabling ticket creation, updates, and comments using the Atlassian CLI (ACLI). Read operations are automatic; write operations require user approval.
 
 ## When to Use This Skill
 
