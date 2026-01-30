@@ -25,15 +25,21 @@ Planning before coding prevents costly rewrites and forces architectural thinkin
 
 The 2 minutes spent planning saves 20 minutes of refactoring later.
 
-## Why Bash Scripts Over MCPs
+## Integration Strategy
 
-This repository uses Bash scripts for integrations (Jira, Confluence, worktree management) rather than MCP servers. Reasons:
+This repository uses different approaches based on integration needs:
 
-- **Agents are excellent at Bash** - Claude Code naturally understands how to invoke and interpret shell scripts
-- **Simpler setup** - Provide a script and let the agent figure out usage vs configuring a finicky MCP server
-- **Lower context overhead** - MCPs consume tokens with tool definitions and intermediate results; scripts are lightweight
-- **Self-contained** - Scripts are version-controlled, easy to debug, and require no additional infrastructure
-- **Stability** - MCP is still maturing and requires ongoing maintenance as the protocol evolves
+**MCP for cloud services with write operations (Atlassian):**
+- OAuth handles authentication cleanly
+- Write operations require official API support
+- Remote MCP eliminates local dependencies
+
+**Bash scripts for local tooling (worktrees, git helpers):**
+- Agents are excellent at Bash
+- Self-contained, no external dependencies
+- Full control over behavior
+
+The original Bash-based Atlassian integration was replaced with MCP when write operations became a requirement. The official Atlassian MCP server provides create/update capabilities that would require substantial custom development otherwise.
 
 ## User-Managed Worktrees
 
