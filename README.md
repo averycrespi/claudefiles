@@ -46,7 +46,7 @@ flowchart TD
         P2 --> P3[Save implementation plan]
     end
 
-    subgraph Executing["executing-plans"]
+    subgraph Executing["executing-plans / executing-plans-quickly"]
         E1[Implement with TDD] --> E2[Commit changes]
         E2 --> E3[Spec + code review]
         E3 -->|pass| E4[Next task]
@@ -95,6 +95,17 @@ Answer Claude's questions as you proceed through the workflow.
 - Making smaller, well-defined changes
 - The scope is clear and doesn't need exploration
 - You want faster iteration with less ceremony
+
+**Choosing an execution mode:**
+
+When you choose to execute a plan, you'll be offered two modes:
+
+| Mode | Best for | Trade-off |
+|------|----------|-----------|
+| **Execute with subagents** | Complex plans, autonomous work | Slower but prevents context pollution |
+| **Execute quickly** | Simple plans, interactive sessions | Faster but all work happens in main context |
+
+Both modes use the same task triplet structure (Implement → Spec Review → Code Review) and the same review discipline. The difference is whether work happens in subagents or inline.
 
 ---
 

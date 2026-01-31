@@ -58,12 +58,13 @@ This repository includes a structured development workflow:
 
 ### Workflow Skills
 
-| Skill             | Purpose                                                     |
-| ----------------- | ----------------------------------------------------------- |
-| `brainstorming`   | Turn ideas into designs through collaborative dialogue      |
-| `writing-plans`   | Create detailed implementation plans with TDD steps         |
-| `executing-plans` | Execute plans with inline implementation + subagent reviews |
-| `completing-work` | Verify tests, present options, create PR                    |
+| Skill                     | Purpose                                                     |
+| ------------------------- | ----------------------------------------------------------- |
+| `brainstorming`           | Turn ideas into designs through collaborative dialogue      |
+| `writing-plans`           | Create detailed implementation plans with TDD steps         |
+| `executing-plans`         | Execute plans with subagent implementation + reviews        |
+| `executing-plans-quickly` | Execute plans inline without subagents for simple tasks     |
+| `completing-work`         | Verify tests, present options, create PR                    |
 
 ### Integrations
 
