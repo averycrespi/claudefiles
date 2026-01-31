@@ -124,3 +124,7 @@ scripts/                # Worktree and utility scripts
 - Edit files in `claude/` directory
 - Run `./setup.sh` to apply changes via stow
 - Update README.md and this CLAUDE.md when making significant changes
+
+**IMPORTANT:** Never edit files directly in `~/.claude/`. Those are symlinks managed by stow. Always edit the source files in this repository's `claude/` directory. For example:
+- Edit `./claude/skills/foo.md`, NOT `~/.claude/skills/foo.md`
+- Edit `./claude/settings.json`, NOT `~/.claude/settings.json`
