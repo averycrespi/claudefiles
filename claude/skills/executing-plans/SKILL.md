@@ -1,15 +1,15 @@
 ---
 name: executing-plans
-description: Use when you have a written implementation plan to execute - implements inline with subagent review gates for spec compliance and code quality
+description: Use when you have a written implementation plan to execute - dispatches subagents for implementation and reviews to prevent context pollution
 ---
 
 # Executing Plans
 
 ## Overview
 
-Execute implementation plans by implementing tasks inline (fast) with independent subagent reviews (unbiased). Combines speed of inline execution with quality assurance of fresh-context reviewers.
+Execute implementation plans by dispatching subagents for each phase: implementation, spec review, and code quality review. The main context only orchestrates while subagents do the heavy lifting, preventing context pollution that degrades model quality.
 
-**Core principle:** Inline implementation + subagent review gates = fast execution with independent quality checks.
+**Core principle:** Subagent per phase + controller orchestration = preserved model quality throughout long execution runs.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
@@ -20,18 +20,19 @@ Execute implementation plans by implementing tasks inline (fast) with independen
 ```
 For each task triplet (Implement → Spec Review → Code Review):
   1. Mark "Implement" in_progress
-  2. Implement inline (TDD)
-  3. Commit
-  4. Mark "Implement" complete
-  5. Mark "Spec Review" in_progress
-  6. Dispatch spec reviewer subagent
-  7. If APPROVED → mark "Spec Review" complete
-     If ISSUES → fix inline, amend, re-dispatch
-  8. Mark "Code Review" in_progress
-  9. Dispatch code quality reviewer subagent
-  10. If APPROVED → mark "Code Review" complete
-      If ISSUES → fix inline, amend, re-dispatch
-  11. Proceed to next triplet (now unblocked)
+  2. Dispatch implementer subagent with full task text
+  3. Implementer implements, tests, commits, self-reviews
+  4. Parse implementer report, capture agent ID and commit SHA
+  5. Mark "Implement" complete
+  6. Mark "Spec Review" in_progress
+  7. Dispatch spec reviewer subagent
+  8. If APPROVED → mark "Spec Review" complete
+     If ISSUES → resume implementer to fix, re-dispatch spec reviewer
+  9. Mark "Code Review" in_progress
+  10. Dispatch code quality reviewer subagent
+  11. If APPROVED → mark "Code Review" complete
+      If ISSUES → resume implementer to fix, re-dispatch code reviewer
+  12. Proceed to next triplet (now unblocked)
 
 After all triplets:
   Use completing-work
@@ -145,26 +146,25 @@ TaskUpdate:
 
 This triggers the CLI spinner showing the task's `activeForm`.
 
-**Implement using TDD:**
-- Write failing test
-- Verify it fails
-- Write minimal implementation
-- Verify it passes
-- Refactor if needed
+**Dispatch implementer subagent:**
 
-**Reference:** Skill(test-driven-development) for TDD discipline.
+Use prompt template at `./implementer-prompt.md`. Fill in:
+- Task description (full text from plan)
+- Context (where task fits, dependencies, architectural notes)
+- Working directory
 
-**Commit:**
-```bash
-git add -A
-git commit -m "feat: [task description]"
+```
+Task tool (general-purpose):
+  description: "Implement Task N: [task name]"
+  prompt: [filled template from implementer-prompt.md]
 ```
 
-Capture commit SHAs:
-```bash
-git rev-parse HEAD~1  # BASE_SHA
-git rev-parse HEAD    # HEAD_SHA
-```
+**Parse implementer report:**
+
+Extract from subagent output:
+- `implementer_agent_id`: The agent ID returned by Task tool (for resumption)
+- `commit_sha`: The commit SHA from the report
+- `base_sha`: Commit before this task (HEAD~1 at dispatch time)
 
 **Mark complete:**
 ```
@@ -188,11 +188,20 @@ Use prompt template at `./spec-reviewer-prompt.md`. Fill in task requirements an
 
 **Parse subagent output:**
 - If output starts with `APPROVED:` → mark spec review complete
-- If output starts with `ISSUES:` → fix issues inline, amend commit, re-dispatch
+- If output starts with `ISSUES:` → resume implementer to fix, re-dispatch spec reviewer
 
 **Fix/re-review loop:**
-1. Fix issues inline
-2. Amend commit: `git add -A && git commit --amend --no-edit`
+1. Resume implementer subagent with fix instructions:
+   ```
+   Task tool (general-purpose):
+     resume: [implementer_agent_id]
+     prompt: |
+       The spec reviewer found issues:
+       [ISSUES from reviewer output]
+
+       Fix these issues, run tests, amend commit, report back.
+   ```
+2. Parse response for new commit SHA
 3. Re-dispatch spec reviewer
 4. Repeat until `APPROVED`
 
@@ -226,11 +235,20 @@ Fill in:
 **Parse subagent output:**
 - If output starts with `APPROVED:` → mark code review complete
 - If output starts with `APPROVED_WITH_MINOR:` → mark complete, note minor issues
-- If output starts with `ISSUES:` → fix critical/important issues, amend, re-dispatch
+- If output starts with `ISSUES:` → resume implementer to fix, re-dispatch code reviewer
 
 **Fix/re-review loop (for critical/important issues):**
-1. Fix issues inline
-2. Amend commit: `git add -A && git commit --amend --no-edit`
+1. Resume implementer subagent with fix instructions:
+   ```
+   Task tool (general-purpose):
+     resume: [implementer_agent_id]
+     prompt: |
+       The code quality reviewer found issues:
+       [ISSUES from reviewer output]
+
+       Fix these issues, run tests, amend commit, report back.
+   ```
+2. Parse response for new commit SHA
 3. Re-dispatch code reviewer
 4. Repeat until `APPROVED` or `APPROVED_WITH_MINOR`
 
@@ -263,6 +281,7 @@ After all tasks complete:
 
 ## Prompt Templates
 
+- `./implementer-prompt.md` - Dispatch implementer subagent (includes fix prompt)
 - `./spec-reviewer-prompt.md` - Verify implementation matches spec
 - `./code-quality-reviewer-prompt.md` - Verify implementation is well-built
 - `./code-reviewer-template.md` - Full template for code-reviewer subagent
