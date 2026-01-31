@@ -281,6 +281,7 @@ After all tasks complete:
 
 ## Prompt Templates
 
+- `./implementer-prompt.md` - Dispatch implementer subagent (includes fix prompt)
 - `./spec-reviewer-prompt.md` - Verify implementation matches spec
 - `./code-quality-reviewer-prompt.md` - Verify implementation is well-built
 - `./code-reviewer-template.md` - Full template for code-reviewer subagent
