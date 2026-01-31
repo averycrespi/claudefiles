@@ -106,23 +106,30 @@ Then ask the user if they want to execute using `AskUserQuestion`:
 ```javascript
 AskUserQuestion(
   questions: [{
-    question: "Plan complete. Ready to execute?",
+    question: "Plan is ready. How would you like to proceed?",
     header: "Execute",
     multiSelect: false,
     options: [
-      { label: "Yes, execute now", description: "Start implementing with review gates" },
-      { label: "No, save for later", description: "Plan saved, execute anytime with /execute-plan" }
+      { label: "Execute with subagents (Recommended)", description: "Full isolation - best for complex plans or autonomous work" },
+      { label: "Execute quickly", description: "Faster - does implementation and reviews in main context" },
+      { label: "Don't execute", description: "Stop here - execute manually later" }
     ]
   }]
 )
 ```
 
-**If yes:**
-- **REQUIRED SUB-SKILL:** Use Skill(executing-plans)
-- Implements tasks inline with subagent review gates
-- Spec compliance review after each task
-- Code quality review after each task
+**Based on selection:**
 
-**If no:**
+**Execute with subagents:**
+- **REQUIRED SUB-SKILL:** Use Skill(executing-plans)
+- Dispatches subagents for implementation and reviews
+- Best for complex plans or autonomous work
+
+**Execute quickly:**
+- **REQUIRED SUB-SKILL:** Use Skill(executing-plans-quickly)
+- Does implementation and reviews inline in main context
+- Best for simple plans or interactive sessions
+
+**Don't execute:**
 - Plan is saved for later execution
-- User can run `Skill(executing-plans)` in any session
+- User can invoke execution skills in any session
