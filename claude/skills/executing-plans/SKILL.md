@@ -146,26 +146,25 @@ TaskUpdate:
 
 This triggers the CLI spinner showing the task's `activeForm`.
 
-**Implement using TDD:**
-- Write failing test
-- Verify it fails
-- Write minimal implementation
-- Verify it passes
-- Refactor if needed
+**Dispatch implementer subagent:**
 
-**Reference:** Skill(test-driven-development) for TDD discipline.
+Use prompt template at `./implementer-prompt.md`. Fill in:
+- Task description (full text from plan)
+- Context (where task fits, dependencies, architectural notes)
+- Working directory
 
-**Commit:**
-```bash
-git add -A
-git commit -m "feat: [task description]"
+```
+Task tool (general-purpose):
+  description: "Implement Task N: [task name]"
+  prompt: [filled template from implementer-prompt.md]
 ```
 
-Capture commit SHAs:
-```bash
-git rev-parse HEAD~1  # BASE_SHA
-git rev-parse HEAD    # HEAD_SHA
-```
+**Parse implementer report:**
+
+Extract from subagent output:
+- `implementer_agent_id`: The agent ID returned by Task tool (for resumption)
+- `commit_sha`: The commit SHA from the report
+- `base_sha`: Commit before this task (HEAD~1 at dispatch time)
 
 **Mark complete:**
 ```
