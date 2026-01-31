@@ -1,6 +1,9 @@
 {
   "permissions": {
     "allow": [],
-    "deny": []
+    "deny": [
+      "Write(~/.claude/**)",
+      "Edit(~/.claude/**)"
+    ]
   }
 }
