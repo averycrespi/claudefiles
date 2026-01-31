@@ -1,15 +1,15 @@
 ---
 name: executing-plans
-description: Use when you have a written implementation plan to execute - implements inline with subagent review gates for spec compliance and code quality
+description: Use when you have a written implementation plan to execute - dispatches subagents for implementation and reviews to prevent context pollution
 ---
 
 # Executing Plans
 
 ## Overview
 
-Execute implementation plans by implementing tasks inline (fast) with independent subagent reviews (unbiased). Combines speed of inline execution with quality assurance of fresh-context reviewers.
+Execute implementation plans by dispatching subagents for each phase: implementation, spec review, and code quality review. The main context only orchestrates while subagents do the heavy lifting, preventing context pollution that degrades model quality.
 
-**Core principle:** Inline implementation + subagent review gates = fast execution with independent quality checks.
+**Core principle:** Subagent per phase + controller orchestration = preserved model quality throughout long execution runs.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
@@ -20,18 +20,19 @@ Execute implementation plans by implementing tasks inline (fast) with independen
 ```
 For each task triplet (Implement → Spec Review → Code Review):
   1. Mark "Implement" in_progress
-  2. Implement inline (TDD)
-  3. Commit
-  4. Mark "Implement" complete
-  5. Mark "Spec Review" in_progress
-  6. Dispatch spec reviewer subagent
-  7. If APPROVED → mark "Spec Review" complete
-     If ISSUES → fix inline, amend, re-dispatch
-  8. Mark "Code Review" in_progress
-  9. Dispatch code quality reviewer subagent
-  10. If APPROVED → mark "Code Review" complete
-      If ISSUES → fix inline, amend, re-dispatch
-  11. Proceed to next triplet (now unblocked)
+  2. Dispatch implementer subagent with full task text
+  3. Implementer implements, tests, commits, self-reviews
+  4. Parse implementer report, capture agent ID and commit SHA
+  5. Mark "Implement" complete
+  6. Mark "Spec Review" in_progress
+  7. Dispatch spec reviewer subagent
+  8. If APPROVED → mark "Spec Review" complete
+     If ISSUES → resume implementer to fix, re-dispatch spec reviewer
+  9. Mark "Code Review" in_progress
+  10. Dispatch code quality reviewer subagent
+  11. If APPROVED → mark "Code Review" complete
+      If ISSUES → resume implementer to fix, re-dispatch code reviewer
+  12. Proceed to next triplet (now unblocked)
 
 After all triplets:
   Use completing-work
