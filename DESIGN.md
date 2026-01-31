@@ -2,16 +2,17 @@
 
 This document explains key design decisions and rationale for this repository.
 
-## Inline Implementation vs Subagents
+## Full Subagent Execution
 
-The original [superpowers](https://github.com/obra/superpowers) repository uses a **subagent for each task** during plan execution: one subagent implements, another reviews for spec compliance, another reviews for code quality. This provides fresh context per task but is slow and token-intensive.
+The original [superpowers](https://github.com/obra/superpowers) repository uses a **subagent for each task** during plan execution: one subagent implements, another reviews for spec compliance, another reviews for code quality.
 
-This repository uses a **hybrid approach**:
+This repository uses the **same full subagent approach**:
 
-- **Implementation happens inline** (in the main context) - faster, no subagent startup overhead
-- **Reviews still use subagents** (spec compliance + code quality) - maintains independent perspective
+- **Implementation uses a subagent** - fresh context per task, no pollution of main context
+- **Reviews use subagents** (spec compliance + code quality) - maintains independent perspective
+- **Fix loops resume the implementer** - preserves implementation context for better fixes
 
-This reduces subagents per task from 3 to 2. The context pollution from inline implementation is worth the significant performance improvement.
+The main context only orchestrates: reads plan, dispatches subagents, tracks progress. This prevents context pollution that degrades model quality during long execution runs.
 
 ## Why Design and Plan Before Execution
 
