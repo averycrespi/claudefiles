@@ -188,11 +188,20 @@ Use prompt template at `./spec-reviewer-prompt.md`. Fill in task requirements an
 
 **Parse subagent output:**
 - If output starts with `APPROVED:` → mark spec review complete
-- If output starts with `ISSUES:` → fix issues inline, amend commit, re-dispatch
+- If output starts with `ISSUES:` → resume implementer to fix, re-dispatch spec reviewer
 
 **Fix/re-review loop:**
-1. Fix issues inline
-2. Amend commit: `git add -A && git commit --amend --no-edit`
+1. Resume implementer subagent with fix instructions:
+   ```
+   Task tool (general-purpose):
+     resume: [implementer_agent_id]
+     prompt: |
+       The spec reviewer found issues:
+       [ISSUES from reviewer output]
+
+       Fix these issues, run tests, amend commit, report back.
+   ```
+2. Parse response for new commit SHA
 3. Re-dispatch spec reviewer
 4. Repeat until `APPROVED`
 
@@ -226,11 +235,20 @@ Fill in:
 **Parse subagent output:**
 - If output starts with `APPROVED:` → mark code review complete
 - If output starts with `APPROVED_WITH_MINOR:` → mark complete, note minor issues
-- If output starts with `ISSUES:` → fix critical/important issues, amend, re-dispatch
+- If output starts with `ISSUES:` → resume implementer to fix, re-dispatch code reviewer
 
 **Fix/re-review loop (for critical/important issues):**
-1. Fix issues inline
-2. Amend commit: `git add -A && git commit --amend --no-edit`
+1. Resume implementer subagent with fix instructions:
+   ```
+   Task tool (general-purpose):
+     resume: [implementer_agent_id]
+     prompt: |
+       The code quality reviewer found issues:
+       [ISSUES from reviewer output]
+
+       Fix these issues, run tests, amend commit, report back.
+   ```
+2. Parse response for new commit SHA
 3. Re-dispatch code reviewer
 4. Repeat until `APPROVED` or `APPROVED_WITH_MINOR`
 
