@@ -65,7 +65,9 @@
       "mcp__atlassian__getConfluencePageFooterComments",
       "mcp__atlassian__getConfluencePageInlineComments"
     ],
-    "deny": []
+    "deny": [
+      "Bash(git -C:*)"
+    ]
   },
   "hooks": {
     "SessionStart": [
