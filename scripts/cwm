@@ -152,9 +152,79 @@ def cmd_init() -> None:
         run(["tmux", "new-session", "-d", "-s", session_name, "-n", "main"])
 
 
-def cmd_add(branch: str):
-    print(f"add {branch} not implemented")
-    sys.exit(1)
+def cmd_add(branch: str) -> None:
+    """Create worktree, tmux window, and launch Claude Code."""
+    if not is_git_repo():
+        error("Not in a git repository")
+
+    if not is_main_repo():
+        error("This command must be run from the main git repository, not a worktree")
+
+    # Ensure tmux session exists
+    cmd_init()
+
+    repo_root, repo_name, session_name = get_repo_info()
+    window_name = branch_to_window_name(branch)
+    worktree_dir = get_worktree_dir(repo_root, window_name)
+
+    # Create worktree if it doesn't exist
+    if worktree_dir.exists():
+        print(f"Worktree already exists at: {worktree_dir}")
+    else:
+        print(f"Creating worktree at: {worktree_dir}")
+        # Check if branch exists locally
+        result = run(
+            ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+            capture=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            run(["git", "worktree", "add", "--quiet", str(worktree_dir), branch])
+        else:
+            run(["git", "worktree", "add", "--quiet", "-b", branch, str(worktree_dir)])
+
+    # Run setup scripts if found
+    print("Searching for setup scripts ...")
+    scripts_dir = worktree_dir / "scripts"
+    setup_scripts = []
+    if scripts_dir.is_dir():
+        for script_name in ["init", "init.sh", "setup", "setup.sh"]:
+            script_path = scripts_dir / script_name
+            if script_path.is_file() and os.access(script_path, os.X_OK):
+                print(f"Found setup script: {script_path}")
+                setup_scripts.append(script_path)
+
+    if setup_scripts:
+        for script in setup_scripts:
+            print(f"Running setup script: {script}")
+            subprocess.run([str(script)], cwd=worktree_dir, check=True)
+    else:
+        print("No setup scripts found")
+
+    # Copy local Claude settings if they exist
+    repo_local_settings = repo_root / ".claude" / "settings.local.json"
+    worktree_local_settings = worktree_dir / ".claude" / "settings.local.json"
+
+    if repo_local_settings.is_file():
+        print(f"Found local Claude settings at: {repo_local_settings}")
+        if worktree_local_settings.is_file():
+            print("Local Claude settings already exist in worktree")
+        else:
+            print(f"Copying local Claude settings to: {worktree_local_settings}")
+            worktree_local_settings.parent.mkdir(parents=True, exist_ok=True)
+            worktree_local_settings.write_text(repo_local_settings.read_text())
+    else:
+        print("No local Claude settings found in repo")
+
+    # Create tmux window if it doesn't exist
+    if tmux_window_exists(session_name, window_name):
+        print(f"tmux window already exists: {window_name}")
+    else:
+        print(f"Creating tmux window: {window_name}")
+        run(["tmux", "new-window", "-t", session_name, "-n", window_name, "-c", str(worktree_dir), "-d"])
+
+        print("Launching Claude Code")
+        run(["tmux", "send-keys", "-t", f"{session_name}:{window_name}", "claude --permission-mode acceptEdits", "C-m"])
 
 
 def cmd_rm(branch: str):
