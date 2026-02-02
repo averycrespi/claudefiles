@@ -5,7 +5,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 ## Features
 
 - [Structured Development Workflow](#structured-development-workflow) - Reliably turn ideas into pull requests
-- [Worktree Scripts](#worktree-scripts) - Develop in parallel using Git worktrees and tmux
+- [Claude Worktree Manager (cwm)](#claude-worktree-manager) - Develop in parallel using Git worktrees and tmux
 - [Integrations](#integrations) - Connect to external resources for seamless context
 
 ## Requirements
@@ -13,6 +13,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
 - [Bun](https://bun.sh/) for the status line
+- [Python 3](https://www.python.org/downloads/) for `cwm`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -100,26 +101,26 @@ Answer Claude's questions as you proceed through the workflow.
 
 When you choose to execute a plan, you'll be offered two modes:
 
-| Mode | Best for | Trade-off |
-|------|----------|-----------|
-| **Execute with subagents** | Complex plans, autonomous work | Slower but prevents context pollution |
-| **Execute quickly** | Simple plans, interactive sessions | Faster but all work happens in main context |
+| Mode                       | Best for                           | Trade-off                                   |
+| -------------------------- | ---------------------------------- | ------------------------------------------- |
+| **Execute with subagents** | Complex plans, autonomous work     | Slower but prevents context pollution       |
+| **Execute quickly**        | Simple plans, interactive sessions | Faster but all work happens in main context |
 
 Both modes use the same task triplet structure (Implement → Spec Review → Code Review) and the same review discipline. The difference is whether work happens in subagents or inline.
 
 ---
 
-## Worktree Scripts
+## Claude Worktree Manager
 
 `cwm` (Claude Worktree Manager) provides commands for parallel development using Git worktrees and tmux:
 
-| Command              | Purpose                                                                     |
-| -------------------- | --------------------------------------------------------------------------- |
-| `cwm init`           | Start a new tmux session for the current repository                         |
-| `cwm attach`         | Attach to the tmux session for the current repository                       |
-| `cwm add <branch>`   | Create a new worktree and tmux window for a branch                          |
-| `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
-| `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
+| Command            | Purpose                                  |
+| ------------------ | ---------------------------------------- |
+| `cwm init`         | Create tmux session for repo             |
+| `cwm add <branch>` | Create worktree + window + launch Claude |
+| `cwm rm <branch>`  | Remove worktree + close window           |
+| `cwm attach`       | Attach to tmux session for repo          |
+| `cwm notify`       | Add bell to window (for hooks)           |
 
 ---
 

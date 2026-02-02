@@ -115,7 +115,7 @@ def main():
     rm_parser.add_argument("branch", help="Branch name")
 
     # attach
-    subparsers.add_parser("attach", help="Attach to tmux session")
+    subparsers.add_parser("attach", help="Attach to tmux session for repo")
 
     # notify
     subparsers.add_parser("notify", help="Add bell to window (for hooks)")
