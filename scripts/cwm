@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""cwm - Claude Worktree Manager
+
+Manage parallel Claude Code sessions across git worktrees using tmux.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def error(msg: str) -> None:
+    """Print error message to stderr and exit."""
+    print(f"Error: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def run(cmd: list[str], capture: bool = False, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a subprocess command."""
+    return subprocess.run(
+        cmd,
+        capture_output=capture,
+        text=True,
+        check=check,
+    )
+
+
+def run_output(cmd: list[str]) -> str:
+    """Run a command and return stdout, stripped."""
+    result = run(cmd, capture=True)
+    return result.stdout.strip()
+
+
+def is_git_repo() -> bool:
+    """Check if current directory is inside a git repository."""
+    result = run(["git", "rev-parse", "--is-inside-work-tree"], capture=True, check=False)
+    return result.returncode == 0
+
+
+def is_main_repo() -> bool:
+    """Check if current directory is in the main repo (not a worktree)."""
+    result = run_output(["git", "rev-parse", "--git-common-dir"])
+    return result == ".git"
+
+
+def get_repo_info() -> tuple[Path, str, str]:
+    """Get repo root, repo name, and tmux session name."""
+    repo_root = Path(run_output(["git", "rev-parse", "--show-toplevel"]))
+    repo_name = repo_root.name
+    session_name = f"{repo_name}-worktree"
+    return repo_root, repo_name, session_name
+
+
+def branch_to_window_name(branch: str) -> str:
+    """Sanitize branch name for use as tmux window name."""
+    return re.sub(r"[^a-zA-Z0-9-]", "-", branch)
+
+
+def get_worktree_dir(repo_root: Path, window_name: str) -> Path:
+    """Get the worktree directory path."""
+    repo_name = repo_root.name
+    return repo_root.parent / f"{repo_name}-worktree-{window_name}"
+
+
+def tmux_session_exists(session: str) -> bool:
+    """Check if a tmux session exists."""
+    result = run(["tmux", "has-session", "-t", session], capture=True, check=False)
+    return result.returncode == 0
+
+
+def tmux_window_exists(session: str, window: str) -> bool:
+    """Check if a tmux window exists (handles bell prefix)."""
+    result = run(["tmux", "list-windows", "-t", session, "-F", "#{window_name}"], capture=True, check=False)
+    if result.returncode != 0:
+        return False
+    windows = result.stdout.strip().split("\n")
+    # Check both with and without bell prefix
+    return window in windows or f"🔔 {window}" in windows
+
+
+def tmux_window_name_with_bell(session: str, window: str) -> str | None:
+    """Get the actual window name (with or without bell prefix), or None if not found."""
+    result = run(["tmux", "list-windows", "-t", session, "-F", "#{window_name}"], capture=True, check=False)
+    if result.returncode != 0:
+        return None
+    windows = result.stdout.strip().split("\n")
+    if window in windows:
+        return window
+    if f"🔔 {window}" in windows:
+        return f"🔔 {window}"
+    return None
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="cwm",
+        description="Claude Worktree Manager - manage parallel Claude Code sessions",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # init
+    subparsers.add_parser("init", help="Create tmux session for repo")
+
+    # add
+    add_parser = subparsers.add_parser("add", help="Create worktree + window + launch Claude")
+    add_parser.add_argument("branch", help="Branch name")
+
+    # rm
+    rm_parser = subparsers.add_parser("rm", help="Remove worktree + close window")
+    rm_parser.add_argument("branch", help="Branch name")
+
+    # attach
+    subparsers.add_parser("attach", help="Attach to tmux session")
+
+    # notify
+    subparsers.add_parser("notify", help="Add bell to window (for hooks)")
+
+    args = parser.parse_args()
+
+    if args.command == "init":
+        cmd_init()
+    elif args.command == "add":
+        cmd_add(args.branch)
+    elif args.command == "rm":
+        cmd_rm(args.branch)
+    elif args.command == "attach":
+        cmd_attach()
+    elif args.command == "notify":
+        cmd_notify()
+
+
+# Placeholder subcommand functions
+def cmd_init():
+    print("init not implemented")
+    sys.exit(1)
+
+
+def cmd_add(branch: str):
+    print(f"add {branch} not implemented")
+    sys.exit(1)
+
+
+def cmd_rm(branch: str):
+    print(f"rm {branch} not implemented")
+    sys.exit(1)
+
+
+def cmd_attach():
+    print("attach not implemented")
+    sys.exit(1)
+
+
+def cmd_notify():
+    print("notify not implemented")
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
