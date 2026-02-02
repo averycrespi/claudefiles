@@ -227,9 +227,38 @@ def cmd_add(branch: str) -> None:
         run(["tmux", "send-keys", "-t", f"{session_name}:{window_name}", "claude --permission-mode acceptEdits", "C-m"])
 
 
-def cmd_rm(branch: str):
-    print(f"rm {branch} not implemented")
-    sys.exit(1)
+def cmd_rm(branch: str) -> None:
+    """Remove worktree and close tmux window."""
+    if not is_git_repo():
+        error("Not in a git repository")
+
+    if not is_main_repo():
+        error("This command must be run from the main git repository, not a worktree")
+
+    repo_root, repo_name, session_name = get_repo_info()
+    window_name = branch_to_window_name(branch)
+    worktree_dir = get_worktree_dir(repo_root, window_name)
+
+    # Remove git worktree if it exists
+    if worktree_dir.exists():
+        print(f"Removing worktree at: {worktree_dir}")
+        run(["git", "worktree", "remove", str(worktree_dir)])
+    else:
+        print(f"Worktree does not exist at: {worktree_dir}")
+
+    # Close tmux window if session and window exist
+    if not tmux_session_exists(session_name):
+        print(f"tmux session does not exist: {session_name}")
+        return
+
+    print(f"tmux session exists: {session_name}")
+
+    actual_window_name = tmux_window_name_with_bell(session_name, window_name)
+    if actual_window_name:
+        print(f"Closing tmux window: {window_name}")
+        run(["tmux", "kill-window", "-t", f"{session_name}:{actual_window_name}"])
+    else:
+        print(f"tmux window does not exist: {window_name}")
 
 
 def cmd_attach():
