@@ -298,9 +298,62 @@ def cmd_attach() -> None:
         run(["tmux", "attach-session", "-t", session_name])
 
 
-def cmd_notify():
-    print("notify not implemented")
-    sys.exit(1)
+def cmd_notify() -> None:
+    """Add notification bell to tmux window name.
+
+    This command is designed to be called from hooks.
+    It exits 0 even when skipping to avoid breaking hooks.
+    """
+    try:
+        if not is_git_repo():
+            print("Skipped: Not in a git repository", file=sys.stderr)
+            return
+
+        if is_main_repo():
+            print("Skipped: This command must be run from a worktree, not the main repository", file=sys.stderr)
+            return
+
+        result = run(["git", "rev-parse", "--show-toplevel"], capture=True, check=False)
+        if result.returncode != 0:
+            print("Skipped: Could not determine worktree root", file=sys.stderr)
+            return
+
+        worktree_root = Path(result.stdout.strip())
+        worktree_name = worktree_root.name
+
+        # Parse repo and window from REPO-worktree-WINDOW format
+        match = re.match(r"^(.+)-worktree-(.+)$", worktree_name)
+        if not match:
+            print(f"Skipped: Worktree name '{worktree_name}' doesn't match expected format", file=sys.stderr)
+            return
+
+        repo_name = match.group(1)
+        window_name = match.group(2)
+        session_name = f"{repo_name}-worktree"
+
+        if not tmux_session_exists(session_name):
+            print(f"Skipped: tmux session '{session_name}' does not exist", file=sys.stderr)
+            return
+
+        # Check current window state
+        result = run(["tmux", "list-windows", "-t", session_name, "-F", "#{window_name}"], capture=True, check=False)
+        if result.returncode != 0:
+            print(f"Skipped: Could not list windows for session '{session_name}'", file=sys.stderr)
+            return
+
+        windows = result.stdout.strip().split("\n")
+
+        if f"🔔 {window_name}" in windows:
+            print(f"tmux window '{window_name}' already has a notification")
+        elif window_name not in windows:
+            print(f"Skipped: tmux window '{window_name}' does not exist", file=sys.stderr)
+        else:
+            print(f"Adding notification to tmux window: {window_name}")
+            result = run(["tmux", "rename-window", "-t", f"{session_name}:{window_name}", f"🔔 {window_name}"], capture=True, check=False)
+            if result.returncode != 0:
+                print(f"Skipped: Could not rename tmux window '{window_name}'", file=sys.stderr)
+    except Exception as e:
+        print(f"Skipped: Unexpected error: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
