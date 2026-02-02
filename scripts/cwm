@@ -261,9 +261,41 @@ def cmd_rm(branch: str) -> None:
         print(f"tmux window does not exist: {window_name}")
 
 
-def cmd_attach():
-    print("attach not implemented")
-    sys.exit(1)
+def cmd_attach() -> None:
+    """Attach to the tmux session for this repository."""
+    if not is_git_repo():
+        error("Not in a git repository")
+
+    # attach works from both main repo and worktrees
+    # Get the main repo info even if we're in a worktree
+    git_common_dir = run_output(["git", "rev-parse", "--git-common-dir"])
+
+    if git_common_dir == ".git":
+        # We're in the main repo
+        repo_root, repo_name, session_name = get_repo_info()
+    else:
+        # We're in a worktree - derive main repo from git-common-dir
+        # git-common-dir returns something like /path/to/main-repo/.git
+        main_git_dir = Path(git_common_dir).resolve()
+        repo_root = main_git_dir.parent
+        repo_name = repo_root.name
+        session_name = f"{repo_name}-worktree"
+
+    # Ensure session exists
+    if not tmux_session_exists(session_name):
+        # Need to be in main repo to create session
+        if git_common_dir != ".git":
+            error(f"tmux session does not exist: {session_name}. Run 'cwm init' from the main repository first.")
+        cmd_init()
+
+    print(f"Attaching to tmux session: {session_name}")
+
+    if os.environ.get("TMUX"):
+        # Already inside tmux: switch to the target session
+        run(["tmux", "switch-client", "-t", session_name])
+    else:
+        # Not inside tmux: attach to the session
+        run(["tmux", "attach-session", "-t", session_name])
 
 
 def cmd_notify():
