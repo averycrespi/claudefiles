@@ -111,15 +111,15 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 
 ## Worktree Scripts
 
-Scripts for parallel development using Git worktrees and tmux:
+`cwm` (Claude Worktree Manager) provides commands for parallel development using Git worktrees and tmux:
 
-| Script                       | Purpose                                                                     |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| `worktree-init`              | Start a new tmux session for the current repository                         |
-| `worktree-attach`            | Attach to the tmux session for the current repository                       |
-| `worktree-add <branch-name>` | Create a new worktree and tmux window for a branch                          |
-| `worktree-rm <branch-name>`  | Destroy the worktree and tmux window for a branch                           |
-| `worktree-notify`            | Add notification bell to tmux window for the current branch (used by hooks) |
+| Command              | Purpose                                                                     |
+| -------------------- | --------------------------------------------------------------------------- |
+| `cwm init`           | Start a new tmux session for the current repository                         |
+| `cwm attach`         | Attach to the tmux session for the current repository                       |
+| `cwm add <branch>`   | Create a new worktree and tmux window for a branch                          |
+| `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
+| `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
 
 ---
 

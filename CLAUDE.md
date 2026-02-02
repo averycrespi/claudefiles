@@ -7,7 +7,7 @@ Project-specific instructions for this repository.
 This repository contains opinionated resources for working with Claude Code:
 - **Workflow skills** for structured development (adapted from [superpowers](https://github.com/obra/superpowers))
 - **Atlassian MCP** for Jira, Confluence, and Compass
-- **Worktree scripts** for parallel development with tmux
+- **cwm command** for parallel development with tmux
 - **Permission and notification settings** for a better experience
 
 See [DESIGN.md](./DESIGN.md) for rationale behind key architectural decisions.
@@ -98,13 +98,13 @@ This repository includes a structured development workflow:
 
 For parallel development using Git worktrees and tmux:
 
-| Script                       | Purpose                                                                     |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| `worktree-init`              | Start a new tmux session for the current repository                         |
-| `worktree-attach`            | Attach to the tmux session for the current repository                       |
-| `worktree-add <branch-name>` | Create a new worktree and tmux window for a branch                          |
-| `worktree-rm <branch-name>`  | Destroy the worktree and tmux window for a branch                           |
-| `worktree-notify`            | Add notification bell to tmux window for the current branch (used by hooks) |
+| Command              | Purpose                                                                     |
+| -------------------- | --------------------------------------------------------------------------- |
+| `cwm init`           | Start a new tmux session for the current repository                         |
+| `cwm attach`         | Attach to the tmux session for the current repository                       |
+| `cwm add <branch>`   | Create a new worktree and tmux window for a branch                          |
+| `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
+| `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
 
 ## Repository Structure
 
