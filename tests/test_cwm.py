@@ -172,6 +172,30 @@ class TestCwm(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("already exists", result.stdout)
 
+    def test_rm(self):
+        """cwm rm removes worktree and tmux window."""
+        self.run_cwm("add", "rm-branch")
+        worktree_dir = self.get_worktree_dir("rm-branch")
+        self.assertTrue(worktree_dir.exists())
+        self.assertIn("rm-branch", self.tmux_list_windows())
+
+        result = self.run_cwm("rm", "rm-branch")
+        self.assertEqual(result.returncode, 0)
+
+        # Verify worktree and window are gone
+        self.assertFalse(worktree_dir.exists())
+        self.assertNotIn("rm-branch", self.tmux_list_windows())
+
+    def test_rm_idempotent(self):
+        """cwm rm succeeds when worktree and window don't exist."""
+        self.run_cwm("add", "rm-idem-branch")
+        self.run_cwm("rm", "rm-idem-branch")
+
+        # Run rm again - should succeed with "does not exist" messages
+        result = self.run_cwm("rm", "rm-idem-branch")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("does not exist", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
