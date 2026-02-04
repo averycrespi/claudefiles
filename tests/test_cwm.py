@@ -230,6 +230,33 @@ class TestCwm(unittest.TestCase):
         windows = self.tmux_list_windows()
         self.assertNotIn("\U0001f514 \U0001f514 notify-idem", windows)
 
+    def test_branch_name_sanitization(self):
+        """Branch names with special chars are sanitized for tmux window names."""
+        result = self.run_cwm("add", "feat/my-thing")
+        self.assertEqual(result.returncode, 0)
+
+        # feat/my-thing should become feat-my-thing
+        worktree_dir = self.get_worktree_dir("feat/my-thing")
+        self.assertTrue(worktree_dir.exists())
+        self.assertIn("feat-my-thing", self.tmux_list_windows())
+
+    def test_add_copies_local_settings(self):
+        """cwm add copies .claude/settings.local.json to worktree."""
+        # Create local settings in the main repo
+        claude_dir = Path(self.temp_dir) / ".claude"
+        claude_dir.mkdir(exist_ok=True)
+        settings = claude_dir / "settings.local.json"
+        settings.write_text('{"test": true}')
+
+        result = self.run_cwm("add", "settings-branch")
+        self.assertEqual(result.returncode, 0)
+
+        # Verify settings were copied
+        worktree_dir = self.get_worktree_dir("settings-branch")
+        copied_settings = worktree_dir / ".claude" / "settings.local.json"
+        self.assertTrue(copied_settings.exists())
+        self.assertEqual(copied_settings.read_text(), '{"test": true}')
+
 
 if __name__ == "__main__":
     unittest.main()
