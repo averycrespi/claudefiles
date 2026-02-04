@@ -1,10 +1,7 @@
-tap "atlassian/homebrew-acli"
-
-brew "acli"
 brew "gh"
 brew "git"
-brew "gitleaks"
 brew "jq"
 brew "rg"
 brew "stow"
 brew "terminal-notifier"
+brew "tmux"
