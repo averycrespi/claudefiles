@@ -36,44 +36,36 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 
 ```mermaid
 flowchart TD
-    subgraph Brainstorming["brainstorming"]
+    subgraph Brainstorming["Skill(brainstorming)"]
         B1[Ask clarifying questions] --> B2[Explore 2-3 approaches]
         B2 --> B3[Present design for validation]
-        B3 --> B4[Save design document]
+        B3 --> B4[Write design document]
     end
 
-    subgraph Planning["writing-plans"]
-        P1[Break work into tasks] --> P2[Specify files and code]
-        P2 --> P3[Save implementation plan]
+    subgraph Planning["Skill(writing-plans)"]
+        P1[Break work into tasks] --> P2[Specify detailed instructions for each task]
+        P2 --> P3[Write implementation plan]
     end
 
-    subgraph Executing["executing-plans / executing-plans-quickly"]
-        E1[Implement with TDD] --> E2[Commit changes]
-        E2 --> E3[Spec + code review]
-        E3 -->|pass| E4[Next task]
-        E3 -->|fail| E1
+    subgraph Executing["Skill(executing-plans)"]
+        E1[Pick next task] --> E2[Implement with TDD]
+        E2 --> E3[Commit changes]
+        E3 --> E4[Spec + code review]
+        E4 -->|fail| E2
+        E4 -->|pass| E5{More tasks?}
+        E5 -->|yes| E1
+        E5 -->|no| E6[Done]
     end
 
-    subgraph Completing["completing-work"]
-        C1[Verify tests pass] --> C2[Create PR or keep branch]
+    subgraph Completing["Skill(completing-work)"]
+        C1[Verify tests pass] --> C2[Reflect on learnings]
+        C2 --> C3[Create draft PR]
     end
 
     Brainstorming --> Planning --> Executing --> Completing
 ```
 
 ### How to Use This Workflow
-
-Claude will automatically use the Atlassian MCP tools when you mention Jira tickets or Confluence pages:
-
-```
-> You: What's the status of ABC-123?
-> Claude: [Uses Atlassian MCP to fetch issue details]
-```
-
-```
-> You: Create a Jira ticket for the login bug we just discussed.
-> Claude: [Uses Atlassian MCP to create issue]
-```
 
 Ask Claude to brainstorm your idea:
 
