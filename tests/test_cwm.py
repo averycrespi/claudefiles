@@ -98,6 +98,27 @@ class TestCwm(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("cwm", result.stdout)
 
+    def test_init_outside_git_repo(self):
+        """cwm init fails when not in a git repo."""
+        with tempfile.TemporaryDirectory() as non_git_dir:
+            result = self.run_cwm("init", cwd=non_git_dir)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Not in a git repository", result.stderr)
+
+    def test_add_outside_git_repo(self):
+        """cwm add fails when not in a git repo."""
+        with tempfile.TemporaryDirectory() as non_git_dir:
+            result = self.run_cwm("add", "some-branch", cwd=non_git_dir)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Not in a git repository", result.stderr)
+
+    def test_rm_outside_git_repo(self):
+        """cwm rm fails when not in a git repo."""
+        with tempfile.TemporaryDirectory() as non_git_dir:
+            result = self.run_cwm("rm", "some-branch", cwd=non_git_dir)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Not in a git repository", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
