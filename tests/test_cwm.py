@@ -137,6 +137,41 @@ class TestCwm(unittest.TestCase):
         self.assertIn("already exists", result.stdout)
         self.assertTrue(self.tmux_session_exists())
 
+    def test_add_new_branch(self):
+        """cwm add creates worktree and tmux window for a new branch."""
+        result = self.run_cwm("add", "test-branch")
+        self.assertEqual(result.returncode, 0)
+
+        # Verify worktree directory exists
+        worktree_dir = self.get_worktree_dir("test-branch")
+        self.assertTrue(worktree_dir.exists())
+        self.assertTrue((worktree_dir / ".git").exists())
+
+        # Verify tmux window exists
+        self.assertIn("test-branch", self.tmux_list_windows())
+
+    def test_add_existing_branch(self):
+        """cwm add works with an existing branch."""
+        # Create the branch first
+        subprocess.run(
+            ["git", "branch", "existing-branch"],
+            capture_output=True,
+            check=True,
+        )
+        result = self.run_cwm("add", "existing-branch")
+        self.assertEqual(result.returncode, 0)
+
+        worktree_dir = self.get_worktree_dir("existing-branch")
+        self.assertTrue(worktree_dir.exists())
+        self.assertIn("existing-branch", self.tmux_list_windows())
+
+    def test_add_idempotent(self):
+        """cwm add succeeds when worktree and window already exist."""
+        self.run_cwm("add", "idem-branch")
+        result = self.run_cwm("add", "idem-branch")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("already exists", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
