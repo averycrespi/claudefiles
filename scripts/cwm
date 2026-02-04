@@ -99,26 +99,46 @@ def tmux_window_name_with_bell(session: str, window: str) -> str | None:
 def main():
     parser = argparse.ArgumentParser(
         prog="cwm",
-        description="Claude Worktree Manager - manage parallel Claude Code sessions",
+        description="Claude Worktree Manager - manage parallel Claude Code sessions across git worktrees using tmux.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # init
-    subparsers.add_parser("init", help="Create tmux session for repo")
+    subparsers.add_parser(
+        "init",
+        help="Start a new tmux session for the current repository",
+        description="Create a tmux session named <repo>-worktree with a 'main' window. Safe to run multiple times; skips creation if the session already exists. Must be run from the main repository, not a worktree.",
+    )
 
     # add
-    add_parser = subparsers.add_parser("add", help="Create worktree + window + launch Claude")
-    add_parser.add_argument("branch", help="Branch name")
+    add_parser = subparsers.add_parser(
+        "add",
+        help="Create a worktree and launch Claude Code in a new tmux window",
+        description="Create a git worktree for the given branch, run any setup scripts found in scripts/, copy local Claude settings, and open a new tmux window running Claude Code. Creates the branch if it doesn't exist. Must be run from the main repository.",
+    )
+    add_parser.add_argument("branch", help="Branch name to create or check out (e.g. feat/my-feature)")
 
     # rm
-    rm_parser = subparsers.add_parser("rm", help="Remove worktree + close window")
-    rm_parser.add_argument("branch", help="Branch name")
+    rm_parser = subparsers.add_parser(
+        "rm",
+        help="Remove a worktree and close its tmux window",
+        description="Remove the git worktree for the given branch and close the corresponding tmux window. Safe to run if either the worktree or window has already been removed. Must be run from the main repository.",
+    )
+    rm_parser.add_argument("branch", help="Branch name of the worktree to remove")
 
     # attach
-    subparsers.add_parser("attach", help="Attach to tmux session for repo")
+    subparsers.add_parser(
+        "attach",
+        help="Attach to the tmux session for the current repository",
+        description="Attach to (or switch to, if already inside tmux) the worktree session for this repository. Works from both the main repo and any of its worktrees. Creates the session first if it doesn't exist yet.",
+    )
 
     # notify
-    subparsers.add_parser("notify", help="Add bell to window (for hooks)")
+    subparsers.add_parser(
+        "notify",
+        help="Add a notification bell to the current worktree's tmux window",
+        description="Prefix the tmux window name with a bell emoji to signal that Claude Code needs attention. Designed to be called from hooks; exits 0 even when skipping to avoid breaking hook chains. Must be run from a worktree, not the main repository.",
+    )
 
     args = parser.parse_args()
 
