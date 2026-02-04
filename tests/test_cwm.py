@@ -196,6 +196,40 @@ class TestCwm(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("does not exist", result.stdout)
 
+    def test_notify_from_main_repo(self):
+        """cwm notify skips silently when run from main repo."""
+        result = self.run_cwm("notify")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Skipped", result.stderr)
+
+    def test_notify_from_worktree(self):
+        """cwm notify adds bell emoji to tmux window name."""
+        self.run_cwm("add", "notify-branch")
+        worktree_dir = self.get_worktree_dir("notify-branch")
+
+        # Run notify from inside the worktree
+        result = self.run_cwm("notify", cwd=str(worktree_dir))
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Adding notification", result.stdout)
+
+        # Verify window has bell prefix
+        windows = self.tmux_list_windows()
+        self.assertIn("\U0001f514 notify-branch", windows)
+
+    def test_notify_already_notified(self):
+        """cwm notify is idempotent - no double bell."""
+        self.run_cwm("add", "notify-idem")
+        worktree_dir = self.get_worktree_dir("notify-idem")
+
+        self.run_cwm("notify", cwd=str(worktree_dir))
+        result = self.run_cwm("notify", cwd=str(worktree_dir))
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("already has a notification", result.stdout)
+
+        # Verify no double bell
+        windows = self.tmux_list_windows()
+        self.assertNotIn("\U0001f514 \U0001f514 notify-idem", windows)
+
 
 if __name__ == "__main__":
     unittest.main()
