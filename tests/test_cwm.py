@@ -119,6 +119,24 @@ class TestCwm(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("Not in a git repository", result.stderr)
 
+    def test_init(self):
+        """cwm init creates a tmux session."""
+        self.assertFalse(self.tmux_session_exists())
+        result = self.run_cwm("init")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Creating tmux session", result.stdout)
+        self.assertTrue(self.tmux_session_exists())
+        # Verify "main" window exists
+        self.assertIn("main", self.tmux_list_windows())
+
+    def test_init_idempotent(self):
+        """cwm init succeeds when session already exists."""
+        self.run_cwm("init")
+        result = self.run_cwm("init")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("already exists", result.stdout)
+        self.assertTrue(self.tmux_session_exists())
+
 
 if __name__ == "__main__":
     unittest.main()
