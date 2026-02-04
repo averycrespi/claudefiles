@@ -106,6 +106,16 @@ For parallel development using Git worktrees and tmux:
 | `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
 | `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
 
+## Testing
+
+Run cwm integration tests (requires tmux):
+
+```bash
+./tests/test_cwm.py -v
+```
+
+No external Python packages needed - uses only the standard library.
+
 ## Repository Structure
 
 ```
