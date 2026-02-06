@@ -87,7 +87,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "terminal-notifier -title 'Claude needs your attention' -message \"$PWD\" && afplay /System/Library/Sounds/Ping.aiff && cwm notify"
+            "command": "[ -z \"$CLAUDE_HEADLESS\" ] && terminal-notifier -title 'Claude needs your attention' -message \"$PWD\" && afplay /System/Library/Sounds/Ping.aiff && cwm notify"
           }
         ]
       }
@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "terminal-notifier -title 'Claude is done' -message \"$PWD\" && afplay /System/Library/Sounds/Glass.aiff && cwm notify"
+            "command": "[ -z \"$CLAUDE_HEADLESS\" ] && terminal-notifier -title 'Claude is done' -message \"$PWD\" && afplay /System/Library/Sounds/Glass.aiff && cwm notify"
           }
         ]
       }
