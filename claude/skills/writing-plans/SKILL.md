@@ -87,6 +87,13 @@ git commit -m "feat: add specific feature"
 ```
 </task>
 
+## Documentation Task
+
+Before writing tasks, scan the project's documentation files (README.md, CLAUDE.md, docs/, etc.) and identify which sections would become stale after the planned changes. Then:
+
+- **If docs need updating:** Add a final task that updates the specific files and sections affected. This task follows the same structure as any other task — list the files, the sections to change, the new content, and a commit. It gets spec-reviewed and code-reviewed like everything else.
+- **If no docs need updating** (e.g., pure internal refactor): Add a comment at the end of the plan: `<!-- No documentation updates needed -->` so it's a conscious decision, not an oversight.
+
 ## Remember
 - Exact file paths always
 - Complete code in plan (not "add validation")
