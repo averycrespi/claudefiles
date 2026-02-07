@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Use when you have a written implementation plan to execute - dispatches subagents for implementation and reviews to prevent context pollution
+description: Use when you have a written implementation plan file to execute - dispatches subagents for implementation and reviews to prevent context pollution
 ---
 
 # Executing Plans

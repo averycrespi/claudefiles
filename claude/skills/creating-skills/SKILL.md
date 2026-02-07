@@ -1,6 +1,6 @@
 ---
 name: creating-skills
-description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.
+description: Use when creating a new skill or updating an existing skill
 license: Complete terms in LICENSE.txt
 ---
 
@@ -41,7 +41,7 @@ skill-name/
 
 #### SKILL.md (required)
 
-**Metadata Quality:** The `name` and `description` in YAML frontmatter determine when Claude will use the skill. Be specific about what the skill does and when to use it. Use the third-person (e.g. "This skill should be used when..." instead of "Use this skill when...").
+**Metadata Quality:** The `name` and `description` in YAML frontmatter determine when Claude will use the skill. Descriptions should start with "Use when" followed by a specific, narrow trigger condition. Be precise about scope - overly broad descriptions cause false activations.
 
 #### Bundled Resources (optional)
 

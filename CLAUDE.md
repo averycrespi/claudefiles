@@ -82,7 +82,6 @@ This repository includes a structured development workflow:
 
 | Skill             | Purpose                                             |
 | ----------------- | --------------------------------------------------- |
-| `using-skills`    | Skill enforcement rules (injected at session start) |
 | `creating-skills` | Guide for creating new skills                       |
 
 ## Agents
@@ -123,7 +122,6 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── settings.json       # Permissions and hooks
 ├── agents/             # Custom agent definitions
 ├── commands/           # Slash command definitions
-├── hooks/              # Session hooks (skill enforcement, etc.)
 └── skills/             # Custom skill definitions
 scripts/                # Worktree and utility scripts
 ```

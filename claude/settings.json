@@ -43,7 +43,6 @@
       "Skill(creating-skills)",
       "Skill(test-driven-development)",
       "Skill(writing-plans)",
-      "Skill(using-skills)",
       "mcp__atlassian__atlassianUserInfo",
       "mcp__atlassian__getAccessibleAtlassianResources",
       "mcp__atlassian__search",
@@ -69,17 +68,6 @@
     ]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/session-start.sh"
-          }
-        ]
-      }
-    ],
     "Notification": [
       {
         "matcher": "",

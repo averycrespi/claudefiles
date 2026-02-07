@@ -1,6 +1,6 @@
 ---
 name: executing-plans-quickly
-description: Use when you have a written implementation plan to execute quickly - does implementation and reviews inline in main context without subagent dispatch
+description: Use when you have a written implementation plan file to execute quickly - does implementation and reviews inline in main context without subagent dispatch
 ---
 
 # Executing Plans Quickly

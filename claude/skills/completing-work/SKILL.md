@@ -1,6 +1,6 @@
 ---
 name: completing-work
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion by presenting structured options
+description: Use when finishing the structured development workflow after executing a plan - verifies task completion, reflects on learnings, and presents PR options
 ---
 
 # Completing Work
