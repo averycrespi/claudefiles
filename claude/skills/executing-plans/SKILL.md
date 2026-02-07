@@ -13,8 +13,6 @@ Execute implementation plans by dispatching subagents for each phase: implementa
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
-**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
-
 ## The Process
 
 ```

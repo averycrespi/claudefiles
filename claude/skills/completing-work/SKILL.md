@@ -13,8 +13,6 @@ Guide completion of development work by presenting clear options and handling ch
 
 **Announce at start:** "I'm using the completing-work skill to complete this work."
 
-**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
-
 ## The Process
 
 ### Step 0: Verify Task Completion
@@ -102,8 +100,6 @@ AskUserQuestion(
   }]
 )
 ```
-
-(See asking-questions skill for detailed AskUserQuestion patterns)
 
 **Example:**
 ```

@@ -13,8 +13,6 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
-
 **Save plans to:** `.plans/YYYY-MM-DD-<feature-name>.md`
 
 ## Bite-Sized Task Granularity

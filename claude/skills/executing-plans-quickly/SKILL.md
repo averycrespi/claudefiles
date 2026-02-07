@@ -13,8 +13,6 @@ Execute implementation plans inline in the main context. Same task triplet struc
 
 **Announce at start:** "I'm using the executing-plans-quickly skill to implement this plan inline."
 
-**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
-
 ## When to Use This Skill
 
 **Use this skill when:**

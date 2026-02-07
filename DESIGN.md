@@ -58,17 +58,10 @@ Neither is acceptable. The simpler solution is a clean separation of concerns:
 
 This means you can spin up multiple worktrees in separate tmux windows, each with its own Claude Code session working in parallel on different branches.
 
-## Asking Questions: Patterns vs Prescriptions
+## Asking Questions: Global CLAUDE.md vs Inline Examples
 
-The `asking-questions` skill teaches **how** to format questions (AskUserQuestion structure, when to use decision vs exploratory patterns, general guidelines). However, workflow skills still contain inline `AskUserQuestion` examples that show **what** specific questions to ask.
+Question-asking patterns (use `AskUserQuestion` for decisions, conversational text for open-ended, lead with recommendation, one question at a time) live in the global `CLAUDE.md` where they're always in context without sub-skill invocation overhead.
 
-This is intentional:
+Workflow skills still contain inline `AskUserQuestion` examples that prescribe **what** specific questions to ask. For example, `completing-work` prescribes exactly two options: "Push and create PR" and "Keep branch as-is". Without the inline example, Claude might word these differently each session, creating inconsistent UX.
 
-- **asking-questions** = patterns (how to format, when to use each type)
-- **Inline examples** = prescriptions (exact wording, specific options)
-
-For example, `completing-work` prescribes exactly two options: "Push and create PR" and "Keep branch as-is". Without the inline example, Claude might word these differently each session, creating inconsistent UX.
-
-The exception is `brainstorming`, which only references the asking-questions skill because its approach-selection options are dynamic (depends on what approaches were discussed).
-
-**Rule of thumb:** If the exact wording matters, keep the inline example. If the options are dynamic, just reference the skill.
+**Rule of thumb:** If the exact wording matters, keep the inline example. If the options are dynamic, the global CLAUDE.md patterns are sufficient.

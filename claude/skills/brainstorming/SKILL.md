@@ -11,8 +11,6 @@ Help turn ideas into fully formed designs and specs through natural collaborativ
 
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design in small sections (200-300 words), checking after each section whether it looks right so far.
 
-**REQUIRED SUB-SKILL:** Use Skill(asking-questions) for all user questions.
-
 ## The Process
 
 **Understanding the idea:**
@@ -26,7 +24,7 @@ Start by understanding the current project context, then ask questions one at a 
 - Propose 2-3 different approaches with trade-offs
 - Explain each approach conversationally first, with your recommendation and reasoning
 - Lead with your recommended option and explain why
-- Then use `AskUserQuestion` to capture the decision (see asking-questions skill for format)
+- Then use `AskUserQuestion` to capture the decision
 - If user selects "Other", ask follow-up questions to understand their alternative
 
 **Presenting the design:**
@@ -49,7 +47,7 @@ Start by understanding the current project context, then ask questions one at a 
 ## Key Principles
 
 - **One question at a time** - Don't overwhelm with multiple questions
-- **Multiple choice preferred** - See asking-questions skill for patterns
+- **Multiple choice preferred** - Faster for user, clearer communication
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
 - **Explore alternatives** - Always propose 2-3 approaches before settling
 - **Incremental validation** - Present design in sections, validate each

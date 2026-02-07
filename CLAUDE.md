@@ -76,7 +76,6 @@ This repository includes a structured development workflow:
 
 | Skill                     | Purpose                                           |
 | ------------------------- | ------------------------------------------------- |
-| `asking-questions`        | Consistent question patterns for workflow skills  |
 | `test-driven-development` | TDD discipline: red-green-refactor cycle          |
 
 ### Meta Skills

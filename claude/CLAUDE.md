@@ -54,3 +54,11 @@ test: add integration tests for checkout flow
 - No period at end of subject
 - Separate subject and body with blank line
 - Wrap body at 72 characters
+
+## Asking Questions
+
+- **Decisions (2-4 options):** Use `AskUserQuestion` — lead with recommendation and "(Recommended)" label, concise labels, descriptions explain trade-offs
+- **Open-ended/yes-no:** Ask conversationally in plain text
+- **One question per message** — don't overwhelm with multiple questions
+- **Don't ask what you can figure out** — check files, git history, and context first
+- **Handle "Other"** — follow up conversationally to understand the alternative
