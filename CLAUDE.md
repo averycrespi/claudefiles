@@ -34,13 +34,14 @@ See the README for detailed setup instructions.
 This repository includes a structured development workflow:
 
 ```
-/brainstorm → /write-plan → /execute-plan → /complete-work
+/architect → /brainstorm → /write-plan → /execute-plan → /complete-work
 ```
 
-1. **Brainstorming** - Explore requirements and design through collaborative dialogue
-2. **Writing Plans** - Create detailed implementation plans with bite-sized tasks
-3. **Executing Plans** - Implement tasks inline with subagent spec and code quality reviews
-4. **Completing Work** - Verify tests pass and create PR or keep branch
+1. **Architecting** - Explore a large problem space and decompose into work streams
+2. **Brainstorming** - Design a specific feature through collaborative dialogue
+3. **Writing Plans** - Create detailed implementation plans with bite-sized tasks
+4. **Executing Plans** - Implement tasks inline with subagent spec and code quality reviews
+5. **Completing Work** - Verify tests pass and create PR or keep branch
 
 ### When to Use This Workflow
 
@@ -60,6 +61,7 @@ This repository includes a structured development workflow:
 
 | Skill                     | Purpose                                                     |
 | ------------------------- | ----------------------------------------------------------- |
+| `architecting`            | Explore a large problem space and decompose into work streams |
 | `brainstorming`           | Turn ideas into designs through collaborative dialogue      |
 | `writing-plans`           | Create detailed implementation plans with TDD steps         |
 | `executing-plans`         | Execute plans with subagent implementation + reviews        |
