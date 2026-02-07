@@ -13,7 +13,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Save plans to:** `.plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `.plans/YYYY-MM-DD-<feature-name>-plan.md`
 
 ## Bite-Sized Task Granularity
 
