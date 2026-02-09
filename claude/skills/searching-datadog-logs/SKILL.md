@@ -1,85 +1,87 @@
 ---
 name: searching-datadog-logs
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: Use when searching Datadog logs, investigating errors in Datadog, or looking up log entries for a service or time range
 ---
 
 # Searching Datadog Logs
 
-## Overview
+Search Datadog logs via the API. Supports error-driven investigation (paste an error, find related logs) and exploratory search (describe what to search for).
 
-[TODO: 1-2 sentences explaining what this skill enables]
+## Prerequisites
 
-## Structuring This Skill
+Credentials must be stored in macOS Keychain before first use:
 
-[TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+```bash
+security add-generic-password -s datadog-api -a api-key -w <YOUR_DD_API_KEY>
+security add-generic-password -s datadog-api -a app-key -w <YOUR_DD_APP_KEY>
+```
 
-**1. Workflow-Based** (best for sequential processes)
-- Works well when there are clear step-by-step procedures
-- Example: DOCX skill with "Workflow Decision Tree" → "Reading" → "Creating" → "Editing"
-- Structure: ## Overview → ## Workflow Decision Tree → ## Step 1 → ## Step 2...
+## Workflow
 
-**2. Task-Based** (best for tool collections)
-- Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" → "Merge PDFs" → "Split PDFs" → "Extract Text"
-- Structure: ## Overview → ## Quick Start → ## Task Category 1 → ## Task Category 2...
+### Error-Driven Investigation
 
-**3. Reference/Guidelines** (best for standards or specifications)
-- Works well for brand guidelines, coding standards, or requirements
-- Example: Brand styling with "Brand Guidelines" → "Colors" → "Typography" → "Features"
-- Structure: ## Overview → ## Guidelines → ## Specifications → ## Usage...
+When the user pastes an error message or stack trace:
 
-**4. Capabilities-Based** (best for integrated systems)
-- Works well when the skill provides multiple interrelated features
-- Example: Product Management with "Core Capabilities" → numbered capability list
-- Structure: ## Overview → ## Core Capabilities → ### 1. Feature → ### 2. Feature...
+1. Extract key identifiers — service name, error type, keywords
+2. Load `references/query-syntax.md` and construct a Datadog query
+3. Run `scripts/search_logs.py --query "<query>"` with an appropriate time range
+4. Summarize results — count, common patterns, timestamps, notable entries
+5. Drill into specific logs with `scripts/get_log.py --id <log_id>` if needed
+6. Present findings and suggest next steps
 
-Patterns can be mixed and matched as needed. Most skills combine patterns (e.g., start with task-based, add workflow for complex operations).
+### Exploratory Search
 
-Delete this entire "Structuring This Skill" section when done - it's just guidance.]
+When the user describes what to search for:
 
-## [TODO: Replace with the first main section based on chosen structure]
+1. Load `references/query-syntax.md` and construct a query from the description
+2. Run `scripts/search_logs.py --query "<query>"` with the requested time range
+3. Summarize results — count, patterns, notable entries
+4. Refine the query if initial results are too broad or narrow
+5. Drill into specific logs with `scripts/get_log.py --id <log_id>` as needed
 
-[TODO: Add content here. See examples in existing skills:
-- Code samples for technical skills
-- Decision trees for complex workflows
-- Concrete examples with realistic user requests
-- References to scripts/templates/references as needed]
+## Scripts
 
-## Resources
+### search_logs.py
 
-This skill includes example resource directories that demonstrate how to organize different types of bundled resources:
+```
+python scripts/search_logs.py --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
+```
 
-### scripts/
-Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
+- `--query`: Datadog log query string (required)
+- `--from`: Start time, ISO 8601 (default: 15 minutes ago)
+- `--to`: End time, ISO 8601 (default: now)
+- `--limit`: Max logs to return (default: 100, max: 1000)
+- Outputs JSON array of log events to stdout
+- Handles pagination automatically
 
-**Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
+### get_log.py
 
-**Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
+```
+python scripts/get_log.py --id <log_id>
+```
 
-**Note:** Scripts may be executed without loading into context, but can still be read by Claude for patching or environment adjustments.
+- `--id`: Log event ID from a search result (required)
+- Outputs full JSON log event to stdout
 
-### references/
-Documentation and reference material intended to be loaded into context to inform Claude's process and thinking.
+## Presenting Results
 
-**Examples from other skills:**
-- Product management: `communication.md`, `context_building.md` - detailed workflow guides
-- BigQuery: API reference documentation and query examples
-- Finance: Schema documentation, company policies
+- Summarize results — never dump raw JSON to the user
+- Highlight: match count, time distribution, common error patterns, affected services
+- When results are truncated (hit limit), mention this and suggest narrowing the query
+- Include a Datadog web UI link so the user can continue investigating in the browser:
+  `https://app.datadoghq.com/logs?query=<url-encoded-query>&from_ts=<epoch_ms>&to_ts=<epoch_ms>`
 
-**Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Claude should reference while working.
+## When No Results Are Found
 
-### assets/
-Files not intended to be loaded into context, but rather used within the output Claude produces.
+Suggest modifications:
+- Broaden the time range
+- Remove or relax filters
+- Check facet and attribute names for typos
+- Try wildcard matching
 
-**Examples from other skills:**
-- Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
-- Typography: Font files (.ttf, .woff2)
+## Error Handling
 
-**Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
-
----
-
-**Any unneeded directories can be deleted.** Not every skill requires all three types of resources.
+- **Missing credentials**: Relay the setup commands from the error message
+- **403 Forbidden**: Keys may be invalid or lack `logs_read_data` permission
+- **429 Rate Limited**: Wait and retry, or inform the user
+- **Network errors**: Suggest checking connectivity
