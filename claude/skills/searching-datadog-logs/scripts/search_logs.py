@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Search Datadog logs via the Logs Search API.
+
+Usage:
+    python search_logs.py --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
+
+Examples:
+    python search_logs.py --query "service:web-api status:error"
+    python search_logs.py --query "service:web-api" --from "2025-01-01T00:00:00Z" --to "2025-01-02T00:00:00Z"
+    python search_logs.py --query "@user.id:12345" --limit 50
+"""
+
+import argparse
+import json
+import sys
+import urllib.request
+from datetime import datetime, timedelta, timezone
+
+from get_credentials import get_credentials
+
+DD_SITE = "datadoghq.com"
+SEARCH_URL = f"https://api.{DD_SITE}/api/v2/logs/events/search"
+MAX_LIMIT = 1000
+DEFAULT_LIMIT = 100
+PAGE_SIZE = 100
+
+
+def build_request_body(query, time_from=None, time_to=None, limit=DEFAULT_LIMIT, cursor=None):
+    """Build the JSON request body for the log search API."""
+    now = datetime.now(timezone.utc)
+    if time_to is None:
+        time_to = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if time_from is None:
+        time_from = (now - timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    limit = min(limit, MAX_LIMIT)
+
+    body = {
+        "filter": {
+            "query": query,
+            "from": time_from,
+            "to": time_to,
+        },
+        "page": {
+            "limit": limit,
+        },
+        "sort": "-timestamp",
+    }
+    if cursor:
+        body["page"]["cursor"] = cursor
+    return body
+
+
+def search_logs(query, time_from=None, time_to=None, limit=DEFAULT_LIMIT):
+    """Search Datadog logs, handling pagination automatically.
+
+    Returns a list of log event dicts, up to `limit` entries.
+    """
+    api_key, app_key = get_credentials()
+    all_logs = []
+    cursor = None
+
+    while len(all_logs) < limit:
+        body = build_request_body(
+            query=query,
+            time_from=time_from,
+            time_to=time_to,
+            limit=limit,
+            cursor=cursor,
+        )
+        data = json.dumps(body).encode()
+        req = urllib.request.Request(
+            SEARCH_URL,
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "DD-API-KEY": api_key,
+                "DD-APPLICATION-KEY": app_key,
+            },
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req) as resp:
+            result = json.loads(resp.read())
+
+        logs = result.get("data", [])
+        if not logs:
+            break
+
+        all_logs.extend(logs)
+        cursor = result.get("meta", {}).get("page", {}).get("after")
+        if not cursor:
+            break
+
+    return all_logs[:limit]
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Search Datadog logs")
+    parser.add_argument("--query", required=True, help="Datadog log query string")
+    parser.add_argument("--from", dest="time_from", help="Start time (ISO 8601 or relative like 'now-1h'). Default: 15 minutes ago")
+    parser.add_argument("--to", dest="time_to", help="End time (ISO 8601 or relative). Default: now")
+    parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help=f"Max logs to return (default {DEFAULT_LIMIT}, max {MAX_LIMIT})")
+    args = parser.parse_args()
+
+    try:
+        logs = search_logs(
+            query=args.query,
+            time_from=args.time_from,
+            time_to=args.time_to,
+            limit=args.limit,
+        )
+        json.dump(logs, sys.stdout, indent=2)
+        print()
+    except Exception as e:
+        json.dump({"error": str(e)}, sys.stderr)
+        print(file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
