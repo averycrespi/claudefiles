@@ -44,7 +44,7 @@ When the user describes what to search for:
 ### search_logs.py
 
 ```
-python scripts/search_logs.py --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
+scripts/search_logs.py --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
 ```
 
 - `--query`: Datadog log query string (required)
