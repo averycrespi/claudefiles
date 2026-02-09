@@ -3,7 +3,7 @@
 
 import subprocess
 
-KEYCHAIN_SERVICE = "datadog-api"
+KEYCHAIN_SERVICE = "searching-datadog-logs"
 
 
 class CredentialError(Exception):

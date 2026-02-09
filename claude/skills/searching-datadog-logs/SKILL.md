@@ -12,8 +12,8 @@ Search Datadog logs via the API. Supports error-driven investigation (paste an e
 Credentials must be stored in macOS Keychain before first use:
 
 ```bash
-security add-generic-password -s datadog-api -a api-key -w <YOUR_DD_API_KEY>
-security add-generic-password -s datadog-api -a app-key -w <YOUR_DD_APP_KEY>
+security add-generic-password -s searching-datadog-logs -a api-key -w <YOUR_DD_API_KEY>
+security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_APP_KEY>
 ```
 
 ## Workflow
