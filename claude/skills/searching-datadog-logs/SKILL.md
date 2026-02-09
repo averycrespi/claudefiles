@@ -26,7 +26,7 @@ When the user pastes an error message or stack trace:
 2. Load `references/query-syntax.md` and construct a Datadog query
 3. Run `scripts/search_logs.py --query "<query>"` with an appropriate time range
 4. Summarize results — count, common patterns, timestamps, notable entries
-5. Drill into specific logs with `scripts/get_log.py --id <log_id>` if needed
+5. Examine individual log entries from the search output for deeper investigation
 6. Present findings and suggest next steps
 
 ### Exploratory Search
@@ -37,7 +37,7 @@ When the user describes what to search for:
 2. Run `scripts/search_logs.py --query "<query>"` with the requested time range
 3. Summarize results — count, patterns, notable entries
 4. Refine the query if initial results are too broad or narrow
-5. Drill into specific logs with `scripts/get_log.py --id <log_id>` as needed
+5. Examine individual log entries from the search output for deeper investigation
 
 ## Scripts
 
@@ -53,15 +53,6 @@ python scripts/search_logs.py --query <query> [--from <timestamp>] [--to <timest
 - `--limit`: Max logs to return (default: 100, max: 1000)
 - Outputs JSON array of log events to stdout
 - Handles pagination automatically
-
-### get_log.py
-
-```
-python scripts/get_log.py --id <log_id>
-```
-
-- `--id`: Log event ID from a search result (required)
-- Outputs full JSON log event to stdout
 
 ## Presenting Results
 
