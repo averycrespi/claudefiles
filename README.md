@@ -154,12 +154,12 @@ Search Datadog logs directly from Claude using the `searching-datadog-logs` skil
 
 **Setup:**
 
-1. Store your Datadog API credentials in macOS Keychain:
-   ```bash
-   security add-generic-password -s datadog-api -a api-key -w <YOUR_DD_API_KEY>
-   security add-generic-password -s datadog-api -a app-key -w <YOUR_DD_APP_KEY>
-   ```
-2. Done - ask Claude to search Datadog logs
+Store your Datadog API credentials in macOS Keychain:
+
+```bash
+security add-generic-password -s searching-datadog-logs -a api-key -w <YOUR_DD_API_KEY>
+security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_APP_KEY>
+```
 
 **Capabilities:**
 - Search logs by query, service, status, time range
