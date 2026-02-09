@@ -82,6 +82,6 @@ Suggest modifications:
 ## Error Handling
 
 - **Missing credentials**: Relay the setup commands from the error message
-- **403 Forbidden**: Keys may be invalid or lack `logs_read_data` permission
+- **403 Forbidden**: Keys may be invalid or lack `logs_read_data` and `logs_read_index_data` permissions
 - **429 Rate Limited**: Wait and retry, or inform the user
 - **Network errors**: Suggest checking connectivity
