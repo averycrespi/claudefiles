@@ -34,7 +34,7 @@
       "Bash(git rev-parse:*)",
       "Bash(git show:*)",
       "Bash(git status:*)",
-      "Bash(~/.claude/skills/searching-datadog-logs/scripts/search_logs.py:*)",
+      "Bash(~/.claude/skills/searching-datadog-logs/scripts/search_logs:*)",
       "Skill(brainstorming)",
       "Skill(completing-work)",
       "Skill(executing-plans)",

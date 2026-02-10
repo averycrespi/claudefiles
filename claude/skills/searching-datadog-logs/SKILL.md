@@ -24,7 +24,7 @@ When the user pastes an error message or stack trace:
 
 1. Extract key identifiers — service name, error type, keywords
 2. Load `references/query-syntax.md` and construct a Datadog query
-3. Run `scripts/search_logs.py --query "<query>"` with an appropriate time range
+3. Run `~/.claude/skills/searching-datadog-logs/scripts/search_logs --query "<query>"` with an appropriate time range
 4. Summarize results — count, common patterns, timestamps, notable entries
 5. Examine individual log entries from the search output for deeper investigation
 6. Present findings and suggest next steps
@@ -34,17 +34,17 @@ When the user pastes an error message or stack trace:
 When the user describes what to search for:
 
 1. Load `references/query-syntax.md` and construct a query from the description
-2. Run `scripts/search_logs.py --query "<query>"` with the requested time range
+2. Run `~/.claude/skills/searching-datadog-logs/scripts/search_logs --query "<query>"` with the requested time range
 3. Summarize results — count, patterns, notable entries
 4. Refine the query if initial results are too broad or narrow
 5. Examine individual log entries from the search output for deeper investigation
 
 ## Scripts
 
-### search_logs.py
+### search_logs
 
 ```
-scripts/search_logs.py --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
+~/.claude/skills/searching-datadog-logs/scripts/search_logs --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
 ```
 
 - `--query`: Datadog log query string (required)

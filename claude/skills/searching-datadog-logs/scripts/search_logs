@@ -2,12 +2,12 @@
 """Search Datadog logs via the Logs Search API.
 
 Usage:
-    python search_logs.py --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
+    ./search_logs --query <query> [--from <timestamp>] [--to <timestamp>] [--limit <n>]
 
 Examples:
-    python search_logs.py --query "service:web-api status:error"
-    python search_logs.py --query "service:web-api" --from "2025-01-01T00:00:00Z" --to "2025-01-02T00:00:00Z"
-    python search_logs.py --query "@user.id:12345" --limit 50
+    ./search_logs --query "service:web-api status:error"
+    ./search_logs --query "service:web-api" --from "2025-01-01T00:00:00Z" --to "2025-01-02T00:00:00Z"
+    ./search_logs --query "@user.id:12345" --limit 50
 """
 
 import argparse
