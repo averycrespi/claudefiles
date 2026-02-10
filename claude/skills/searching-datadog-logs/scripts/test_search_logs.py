@@ -16,7 +16,7 @@ class TestBuildRequestBody(unittest.TestCase):
         self.assertEqual(body["filter"]["query"], "service:web-api")
         self.assertIn("from", body["filter"])
         self.assertIn("to", body["filter"])
-        self.assertEqual(body["page"]["limit"], 100)
+        self.assertEqual(body["page"]["limit"], 10)
 
     def test_custom_time_range(self):
         body = build_request_body(

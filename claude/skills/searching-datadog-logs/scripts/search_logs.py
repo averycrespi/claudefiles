@@ -21,7 +21,7 @@ from get_credentials import get_credentials
 DD_SITE = "datadoghq.com"
 SEARCH_URL = f"https://api.{DD_SITE}/api/v2/logs/events/search"
 MAX_LIMIT = 1000
-DEFAULT_LIMIT = 100
+DEFAULT_LIMIT = 10
 PAGE_SIZE = 100
 
 
@@ -128,8 +128,9 @@ def main():
             time_to=args.time_to,
             limit=args.limit,
         )
-        json.dump(logs, sys.stdout, indent=2)
-        print()
+        print(f"# {len(logs)} logs found")
+        for log in logs:
+            print(json.dumps(flatten_log(log), separators=(",", ":")))
     except Exception as e:
         json.dump({"error": str(e)}, sys.stderr)
         print(file=sys.stderr)
