@@ -151,7 +151,7 @@ def search_logs(query, time_from=None, time_to=None, limit=DEFAULT_LIMIT):
 def main():
     parser = argparse.ArgumentParser(description="Search Datadog logs")
     parser.add_argument("--query", required=True, help="Datadog log query string")
-    parser.add_argument("--from", dest="time_from", help="Start time (ISO 8601 or relative like 'now-1h'). Default: 15 minutes ago")
+    parser.add_argument("--from", dest="time_from", help="Start time (ISO 8601 or relative like 'now-1h'). Default: 24 hours ago")
     parser.add_argument("--to", dest="time_to", help="End time (ISO 8601 or relative). Default: now")
     parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help=f"Max logs to return (default {DEFAULT_LIMIT}, max {MAX_LIMIT})")
     args = parser.parse_args()
