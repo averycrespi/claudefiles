@@ -148,6 +148,25 @@ Read and write access to Jira issues, Confluence pages, and Compass via the offi
 - Atlassian Cloud account (Server/Data Center not supported)
 - Internet connection for remote MCP server
 
+### Datadog Logs
+
+Search Datadog logs directly from Claude using the `searching-datadog-logs` skill.
+
+**Setup:**
+
+Store your Datadog API credentials in macOS Keychain:
+
+```bash
+security add-generic-password -s searching-datadog-logs -a api-key -w <YOUR_DD_API_KEY>
+security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_APP_KEY>
+```
+
+**Capabilities:**
+- Search logs by query, service, status, time range
+- Fetch full log details by ID
+- Error-driven investigation from stack traces
+- Exploratory search with query refinement
+
 ## Attribution
 
 The workflow skills in this repository are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.

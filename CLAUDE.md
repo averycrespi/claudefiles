@@ -70,9 +70,10 @@ This repository includes a structured development workflow:
 
 ### Integrations
 
-| Integration   | Purpose                                             |
-| ------------- | --------------------------------------------------- |
-| Atlassian MCP | Read/write access to Jira, Confluence, and Compass  |
+| Integration              | Purpose                                             |
+| ------------------------ | --------------------------------------------------- |
+| Atlassian MCP            | Read/write access to Jira, Confluence, and Compass  |
+| `searching-datadog-logs` | Search Datadog logs via the API                     |
 
 ### Reference Skills
 
