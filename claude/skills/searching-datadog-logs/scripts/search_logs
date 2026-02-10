@@ -86,7 +86,7 @@ def build_request_body(query, time_from=None, time_to=None, limit=DEFAULT_LIMIT,
     if time_from is None:
         time_from = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    limit = min(limit, MAX_LIMIT)
+    limit = min(limit, MAX_LIMIT, PAGE_SIZE)
 
     body = {
         "filter": {
@@ -151,8 +151,8 @@ def search_logs(query, time_from=None, time_to=None, limit=DEFAULT_LIMIT):
 def main():
     parser = argparse.ArgumentParser(description="Search Datadog logs")
     parser.add_argument("--query", required=True, help="Datadog log query string")
-    parser.add_argument("--from", dest="time_from", help="Start time (ISO 8601 or relative like 'now-1h'). Default: 24 hours ago")
-    parser.add_argument("--to", dest="time_to", help="End time (ISO 8601 or relative). Default: now")
+    parser.add_argument("--from", dest="time_from", help="Start time, ISO 8601 (default: 24 hours ago)")
+    parser.add_argument("--to", dest="time_to", help="End time, ISO 8601 (default: now)")
     parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help=f"Max logs to return (default {DEFAULT_LIMIT}, max {MAX_LIMIT})")
     args = parser.parse_args()
 

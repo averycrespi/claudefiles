@@ -23,7 +23,7 @@ security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_A
 When the user pastes an error message or stack trace:
 
 1. Extract key identifiers — service name, error type, keywords
-2. Load `references/query-syntax.md` and construct a Datadog query
+2. Construct a Datadog query
 3. Run `~/.claude/skills/searching-datadog-logs/scripts/search_logs --query "<query>"` with an appropriate time range
 4. Summarize results — count, common patterns, timestamps, notable entries
 5. Examine individual log entries from the search output for deeper investigation
@@ -33,7 +33,7 @@ When the user pastes an error message or stack trace:
 
 When the user describes what to search for:
 
-1. Load `references/query-syntax.md` and construct a query from the description
+1. Construct a query from the description
 2. Run `~/.claude/skills/searching-datadog-logs/scripts/search_logs --query "<query>"` with the requested time range
 3. Summarize results — count, patterns, notable entries
 4. Refine the query if initial results are too broad or narrow
