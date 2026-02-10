@@ -84,7 +84,7 @@ def build_request_body(query, time_from=None, time_to=None, limit=DEFAULT_LIMIT,
     if time_to is None:
         time_to = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     if time_from is None:
-        time_from = (now - timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        time_from = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     limit = min(limit, MAX_LIMIT)
 

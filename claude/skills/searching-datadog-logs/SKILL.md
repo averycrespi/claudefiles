@@ -48,9 +48,9 @@ When the user describes what to search for:
 ```
 
 - `--query`: Datadog log query string (required)
-- `--from`: Start time, ISO 8601 (default: 15 minutes ago)
+- `--from`: Start time, ISO 8601 (default: 24 hours ago)
 - `--to`: End time, ISO 8601 (default: now)
-- `--limit`: Max logs to return (default: 100, max: 1000)
+- `--limit`: Max logs to return (default: 10, max: 1000)
 - Outputs JSON array of log events to stdout
 - Handles pagination automatically
 
