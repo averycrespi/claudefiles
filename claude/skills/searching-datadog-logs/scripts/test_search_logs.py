@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 from urllib.error import HTTPError
 from io import BytesIO
 
-from search_logs import search_logs, build_request_body
+from search_logs import search_logs, build_request_body, flatten_log
 
 
 class TestBuildRequestBody(unittest.TestCase):
@@ -107,6 +107,66 @@ class TestSearchLogs(unittest.TestCase):
 
         logs = search_logs(query="*", limit=3)
         self.assertEqual(len(logs), 3)
+
+
+class TestFlattenLog(unittest.TestCase):
+    def test_promotes_attributes_to_top_level(self):
+        raw = {
+            "id": "AgAAAY123",
+            "type": "log",
+            "attributes": {
+                "status": "error",
+                "service": "web-api",
+                "timestamp": "2025-01-01T12:34:56.789Z",
+                "host": "ip-10-0-1-42",
+                "message": "Connection refused",
+                "tags": ["env:prod", "team:backend"],
+                "attributes": {
+                    "hostname": "web-api-prod-1",
+                    "error.kind": "ConnectionError",
+                },
+            },
+        }
+        result = flatten_log(raw)
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["service"], "web-api")
+        self.assertEqual(result["timestamp"], "2025-01-01T12:34:56.789Z")
+        self.assertEqual(result["host"], "ip-10-0-1-42")
+        self.assertEqual(result["message"], "Connection refused")
+        self.assertEqual(result["tags"], ["env:prod", "team:backend"])
+        self.assertEqual(result["hostname"], "web-api-prod-1")
+        self.assertEqual(result["error.kind"], "ConnectionError")
+
+    def test_drops_id_and_type(self):
+        raw = {
+            "id": "AgAAAY123",
+            "type": "log",
+            "attributes": {
+                "message": "hello",
+                "attributes": {},
+            },
+        }
+        result = flatten_log(raw)
+        self.assertNotIn("id", result)
+        self.assertNotIn("type", result)
+
+    def test_handles_missing_nested_attributes(self):
+        raw = {
+            "id": "log1",
+            "type": "log",
+            "attributes": {
+                "status": "info",
+                "message": "ok",
+            },
+        }
+        result = flatten_log(raw)
+        self.assertEqual(result["status"], "info")
+        self.assertEqual(result["message"], "ok")
+
+    def test_handles_empty_attributes(self):
+        raw = {"id": "log1", "type": "log", "attributes": {}}
+        result = flatten_log(raw)
+        self.assertEqual(result, {})
 
 
 if __name__ == "__main__":

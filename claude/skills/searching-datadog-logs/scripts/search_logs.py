@@ -25,6 +25,24 @@ DEFAULT_LIMIT = 100
 PAGE_SIZE = 100
 
 
+def flatten_log(event):
+    """Flatten a raw Datadog log event into a compact dict.
+
+    Drops id and type, promotes attributes to top level,
+    and merges nested custom attributes.
+    """
+    attrs = event.get("attributes", {})
+    flat = {}
+    for key, value in attrs.items():
+        if key == "attributes":
+            continue
+        flat[key] = value
+    nested = attrs.get("attributes", {})
+    for key, value in nested.items():
+        flat[key] = value
+    return flat
+
+
 def build_request_body(query, time_from=None, time_to=None, limit=DEFAULT_LIMIT, cursor=None):
     """Build the JSON request body for the log search API."""
     now = datetime.now(timezone.utc)
