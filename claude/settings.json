@@ -24,6 +24,7 @@
       "Bash(wc:*)",
       "Bash(gh pr checks:*)",
       "Bash(gh pr diff:*)",
+      "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
       "Bash(git add:*)",
       "Bash(git blame:*)",
