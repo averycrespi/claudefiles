@@ -5,6 +5,7 @@
       "Bash(cd:*)",
       "Bash(cut:*)",
       "Bash(diff:*)",
+      "Bash(echo:*)",
       "Bash(file:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
@@ -63,9 +64,7 @@
       "mcp__atlassian__getConfluencePageFooterComments",
       "mcp__atlassian__getConfluencePageInlineComments"
     ],
-    "deny": [
-      "Bash(git -C:*)"
-    ]
+    "deny": ["Bash(git -C:*)"]
   },
   "hooks": {
     "Notification": [
