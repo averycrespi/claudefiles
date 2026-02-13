@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Read(~/.claude/skills/**)",
+      "Write(/tmp/**)",
       "Bash(cd:*)",
       "Bash(cut:*)",
       "Bash(diff:*)",
@@ -64,7 +65,27 @@
       "mcp__atlassian__getConfluencePageFooterComments",
       "mcp__atlassian__getConfluencePageInlineComments"
     ],
-    "deny": ["Bash(git -C:*)"]
+    "deny": [
+      "Read(~/.aws/**)",
+      "Read(~/.bash_secrets)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.docker/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.ssh/**)",
+      "Bash(git -C:*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": [
+      "aws:*",
+      "docker:*",
+      "docker-compose:*",
+      "gh:*",
+      "git:*"
+    ],
+    "allowUnsandboxedCommands": true
   },
   "hooks": {
     "Notification": [
