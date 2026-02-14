@@ -126,6 +126,7 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── agents/             # Custom agent definitions
 ├── commands/           # Slash command definitions
 ├── hooks/              # PreToolUse hooks (e.g., gitleaks)
+├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
 scripts/                # Worktree and utility scripts
 ```

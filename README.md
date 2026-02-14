@@ -12,7 +12,6 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
-- [Bun](https://bun.sh/) for the status line
 - [Python 3](https://www.python.org/downloads/) for `cwm`
 - macOS is assumed, but can be adapted for Linux
 
@@ -171,6 +170,8 @@ security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_A
 The workflow skills in this repository are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.
 
 The `creating-skills` skill is adapted from [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skill-creator), licensed under Apache 2.0.
+
+The status line script is adapted from [claude-code-tools](https://github.com/pchalasani/claude-code-tools) by Prasad Chalasani, licensed under MIT.
 
 ## License
 

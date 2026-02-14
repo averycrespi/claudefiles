@@ -114,7 +114,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "bunx ccusage statusline"
+    "command": "bash ~/.claude/scripts/statusline.sh"
   },
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
