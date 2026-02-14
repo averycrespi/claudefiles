@@ -76,6 +76,17 @@
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-gitleaks"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",
