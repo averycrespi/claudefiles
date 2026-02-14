@@ -75,18 +75,6 @@
       "Bash(git -C:*)"
     ]
   },
-  "sandbox": {
-    "enabled": true,
-    "autoAllowBashIfSandboxed": true,
-    "excludedCommands": [
-      "aws:*",
-      "docker:*",
-      "docker-compose:*",
-      "gh:*",
-      "git:*"
-    ],
-    "allowUnsandboxedCommands": true
-  },
   "hooks": {
     "Notification": [
       {
@@ -119,5 +107,18 @@
   },
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
-  }
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": true,
+    "excludedCommands": [
+      "aws:*",
+      "docker:*",
+      "docker-compose:*",
+      "gh:*",
+      "git:*"
+    ]
+  },
+  "effortLevel": "medium"
 }
