@@ -37,7 +37,7 @@ This repository includes a structured development workflow:
 /architect → /brainstorm → /write-plan → /execute-plan → /complete-work
 ```
 
-1. **Architecting** - Explore a large problem space and decompose into work streams
+1. **Architecting** - Describe the shape of a system: components, responsibilities, boundaries
 2. **Brainstorming** - Design a specific feature through collaborative dialogue
 3. **Writing Plans** - Create detailed implementation plans with bite-sized tasks
 4. **Executing Plans** - Implement tasks inline with subagent spec and code quality reviews
@@ -61,7 +61,7 @@ This repository includes a structured development workflow:
 
 | Skill                     | Purpose                                                     |
 | ------------------------- | ----------------------------------------------------------- |
-| `architecting`            | Explore a large problem space and decompose into work streams |
+| `architecting`            | Describe the shape of a system: components, responsibilities, boundaries |
 | `brainstorming`           | Turn ideas into designs through collaborative dialogue      |
 | `writing-plans`           | Create detailed implementation plans with TDD steps         |
 | `executing-plans`         | Execute plans with subagent implementation + reviews        |

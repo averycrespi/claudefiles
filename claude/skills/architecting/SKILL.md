@@ -1,17 +1,19 @@
 ---
 name: architecting
-description: Use when exploring a large set of changes that span multiple features or work streams and need high-level structural thinking before designing individual features
+description: Use when exploring a large set of changes that span multiple features or components and need high-level structural thinking before designing individual pieces
 ---
 
 # Architecting Ideas Into Architectures
 
 ## Overview
 
-Help turn large, cross-cutting ideas into structured architectures through collaborative dialogue. Unlike the brainstorming skill (which designs a single feature), this skill maps a broader problem space — how changes interact with the existing system, what trade-offs to make, and how work decomposes into discrete streams.
+Help turn large, cross-cutting ideas into structured system descriptions through collaborative dialogue. Unlike the brainstorming skill (which designs a single component), this skill describes the shape of a broader system — what components exist, how they relate, what responsibilities they have, and why key decisions were made.
 
-Start by surveying the current system, then ask questions one at a time to understand the scope and constraints. Once the problem space is understood, present the architecture in sections, checking after each section whether it looks right so far.
+**Describe the system, don't plan the build.** The architecture document answers "what does this system look like?" not "how do we build it?" If you find yourself writing about ordering, sequencing, or steps — stop and reframe as structure.
 
-**Announce at start:** "I'm using the architecting skill to explore the structure of this work."
+Start by surveying the current system, then ask questions one at a time to understand the scope and constraints. Once the system shape is understood, present the architecture in sections, checking after each section whether it looks right so far.
+
+**Announce at start:** "I'm using the architecting skill to describe the shape of this system."
 
 ## The Process
 
@@ -21,78 +23,73 @@ Start by surveying the current system, then ask questions one at a time to under
 - Identify relevant architectural patterns already in use
 
 **Framing the problem:**
-- Ask questions one at a time to understand what's driving the change
+- Ask questions one at a time to understand what should exist that doesn't today
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message
-- Focus on understanding: high-level goals, constraints, what's in scope vs. out
+- Focus on understanding: what the system should look like, what's in scope vs. out
 
-**Mapping the scope:**
-- Identify what areas of the system the changes touch
-- Surface hidden connections — "changing X also affects Y — is that intentional?"
+**Drawing boundaries:**
+- Define what's inside the system and what's outside
+- Surface hidden connections — "this component also needs to talk to Y — is that intentional?"
 - Establish explicit non-goals to prevent scope creep
 
 **Exploring approaches:**
-- Propose 2-3 high-level strategies with trade-offs
-- Focus on how each approach interacts with the existing system
-- Call out which established patterns each approach follows or breaks, and why
-- Lead with the recommended approach and explain the reasoning
+- Propose 2-3 different system shapes with trade-offs
+- Focus on how each shape interacts with the existing system
+- Call out which established patterns each shape follows or breaks, and why
+- Lead with the recommended shape and explain the reasoning
 - Then use `AskUserQuestion` to capture the decision
 - If user selects "Other", ask follow-up questions to understand their alternative
 
-**Identifying risks:**
-- Surface things that might be harder than they look
-- Call out rabbit holes to avoid
-- Note ordering constraints and migration concerns
-- Identify areas of uncertainty that need spikes or prototypes
+**Surfacing constraints:**
+- Identify things that shape or bound the design
+- Call out limitations that must be accepted intentionally
+- Note constraints from the existing system that the design must respect
 
 **Presenting the architecture:**
-- Once the approach is chosen, present the architecture in sections of 200-300 words
+- Once the shape is chosen, present the architecture in sections of 200-300 words
 - Ask after each section whether it looks right so far
-- Cover: system interaction, trade-offs, work stream decomposition, sequencing
+- Cover: system overview, components, decisions, constraints
 - Be ready to go back and revise if something doesn't fit
 
 ## Architecture Document
 
 **Save to:** `.plans/YYYY-MM-DD-<topic>-architecture.md`
 
-The architecture document captures high-level structure, not implementation details. Use this outline, omitting sections that don't apply:
+The architecture document describes the system's shape, not how to build it. Use this outline, omitting sections that don't apply:
 
 ```markdown
 # [Topic] Architecture
 
 ## Context
 What exists today. Current system state, relevant patterns,
-recent changes that matter.
+established conventions that matter.
 
 ## Goals & Non-Goals
 What this work achieves. What is explicitly out of scope.
 
-## Approach
-The chosen high-level strategy and why. Alternatives considered
-and why they were rejected.
+## System Overview
+High-level description of the system shape. How the pieces
+fit together. A paragraph or two that someone could read and
+understand the whole picture.
 
-## System Interaction
-How the changes integrate with the existing system. Which
-established patterns are followed, which are broken and why.
+## Components
+### [Component Name]
+**Responsibility:** What this component does and why it exists.
+**Interface:** What it exposes to other components.
+**Dependencies:** What it needs from other components.
 
-## Trade-offs
-What is accepted in exchange for what. Explicit about the
-costs of the chosen approach.
+### [Component Name]
+...
 
-## Risks & Rabbit Holes
-What could go wrong. What might be more complex than it looks.
-What to avoid getting drawn into.
+## Decisions
+Key choices made and why. For each decision:
+what was chosen, what alternatives were considered,
+and the reasoning.
 
-## Work Streams
-### 1. [Stream Name]
-Brief description, key decisions, dependencies.
-
-### 2. [Stream Name]
-Brief description, key decisions, dependencies.
-
-## Sequencing
-Suggested order and rationale. What can be parallelized.
-What must happen first.
+## Constraints & Limitations
+Things that shape or bound the design. Known limitations
+that are accepted intentionally.
 ```
 
 ## After the Architecture
@@ -101,17 +98,17 @@ What must happen first.
 - Write the validated architecture to `.plans/YYYY-MM-DD-<topic>-architecture.md` in the project root
 - Commit the architecture document to git
 
-**Designing work streams (if continuing):**
+**Designing components (if continuing):**
 
-Ask which work stream to start with using `AskUserQuestion`, listing the work streams from the architecture as options. Then use Skill(brainstorming) to design the selected work stream, passing relevant context from the architecture document.
+Ask which component to design first using `AskUserQuestion`, listing the components from the architecture as options. Then use Skill(brainstorming) to design the selected component, passing relevant context from the architecture document.
 
 ## Key Principles
 
+- **Descriptive, not prescriptive** - Describe what the system looks like, not how to build it
 - **One question at a time** - Don't overwhelm with multiple questions
 - **Multiple choice preferred** - Faster for user, clearer communication
 - **Start from what exists** - Always survey the current system before proposing changes
-- **Stay high-level** - Resist the pull toward implementation details; that's what /brainstorm and /write-plan are for
-- **Explicit trade-offs** - Every approach has costs; name them
+- **Stay structural** - Resist the pull toward implementation details; that's what /brainstorm and /write-plan are for
 - **Non-goals matter** - Defining what's out of scope is as important as what's in
 - **Challenge assumptions** - Surface hidden constraints and question whether they still hold
 - **Be flexible** - Go back and revise when something doesn't fit
