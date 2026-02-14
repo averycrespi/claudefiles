@@ -38,9 +38,8 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 flowchart TD
     subgraph Architecting["Skill(architecting)"]
         A1[Survey existing system] --> A2[Ask clarifying questions]
-        A2 --> A3[Explore high-level approaches]
-        A3 --> A4[Decompose into work streams]
-        A4 --> A5[Write architecture document]
+        A2 --> A3[Explore system shapes]
+        A3 --> A4[Write architecture document]
     end
 
     subgraph Brainstorming["Skill(brainstorming)"]
