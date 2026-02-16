@@ -1,6 +1,7 @@
 ---
 name: searching-datadog-logs
 description: Use when searching Datadog logs, investigating errors in Datadog, or looking up log entries for a service or time range
+context: fork
 ---
 
 # Searching Datadog Logs
@@ -65,6 +66,7 @@ When the user describes what to search for:
 ## When No Results Are Found
 
 Suggest modifications:
+
 - Broaden the time range
 - Remove or relax filters
 - Check facet and attribute names for typos
