@@ -65,6 +65,7 @@ flowchart TD
     subgraph Completing["Skill(completing-work)"]
         C1[Verify tests pass] --> C2[Reflect on learnings]
         C2 --> C3[Create draft PR]
+        C3 --> C4[Holistic PR review]
     end
 
     Architecting --> Brainstorming --> Planning --> Executing --> Completing
