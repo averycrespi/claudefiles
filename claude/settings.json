@@ -75,19 +75,18 @@
       "Bash(git -C:*)"
     ]
   },
-  "sandbox": {
-    "enabled": true,
-    "autoAllowBashIfSandboxed": true,
-    "excludedCommands": [
-      "aws:*",
-      "docker:*",
-      "docker-compose:*",
-      "gh:*",
-      "git:*"
-    ],
-    "allowUnsandboxedCommands": true
-  },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-gitleaks"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",
@@ -115,9 +114,22 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "bunx ccusage statusline"
+    "command": "bash ~/.claude/scripts/statusline.sh"
   },
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
-  }
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": true,
+    "excludedCommands": [
+      "aws:*",
+      "docker:*",
+      "docker-compose:*",
+      "gh:*",
+      "git:*"
+    ]
+  },
+  "effortLevel": "medium"
 }

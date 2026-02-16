@@ -1,5 +1,6 @@
 brew "gh"
 brew "git"
+brew "gitleaks"
 brew "jq"
 brew "rg"
 brew "stow"
