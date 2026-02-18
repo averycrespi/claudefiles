@@ -56,3 +56,31 @@ test: add integration tests for checkout flow
 - **One question per message** — don't overwhelm with multiple questions
 - **Don't ask what you can figure out** — check files, git history, and context first
 - **Handle "Other"** — follow up conversationally to understand the alternative
+
+## Pull Request Descriptions
+
+**Title:** `TICKET-123: short description` if ticket available, otherwise conventional commit format. Under 70 characters.
+
+**Body:**
+
+```
+## Context
+- Why this change exists and what was wrong/missing before
+- Link to ticket or design doc if available
+
+## Changes
+- What changed, grouped by concept (not file-by-file)
+
+## Review Notes
+- Non-obvious decisions, alternatives rejected, areas needing careful review
+- Omit section if changes are straightforward
+
+## Test Plan
+- [ ] Steps to verify the changes work
+```
+
+**Key principles:**
+- Explain *why*, not *how* — the diff already shows how
+- Write for future readers, not just the current reviewer
+- Be specific ("handles expired sessions mid-request") not vague ("fixes edge case")
+- Don't substitute a ticket link for actual motivation
