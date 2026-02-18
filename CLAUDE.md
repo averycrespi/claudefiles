@@ -92,7 +92,6 @@ This repository includes a structured development workflow:
 | Agent           | Purpose                                           |
 | --------------- | ------------------------------------------------- |
 | `code-reviewer` | Review code changes against plans and standards   |
-| `pr-reviewer`   | Holistic review of full PR after creation         |
 
 ## Scripts
 

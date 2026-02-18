@@ -9,7 +9,7 @@ description: Use when finishing the structured development workflow after execut
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify task completion → Verify tests → Reflect on learnings → Present options → Execute choice → Holistic PR review.
+**Core principle:** Verify task completion → Verify tests → Reflect on learnings → Present options → Execute choice.
 
 **Announce at start:** "I'm using the completing-work skill to complete this work."
 
@@ -157,26 +157,6 @@ EOF
 
 Report: "Keeping branch <name>."
 
-### Step 5: Holistic PR Review
-
-**Only runs when user chose "Push and create PR" in Step 3. Skip silently otherwise.**
-
-After the PR is created, dispatch the `pr-reviewer` agent to perform a holistic review of the full changeset:
-
-```
-Task tool (pr-reviewer):
-  description: "Holistic review of PR #<number>"
-  prompt: |
-    Review PR #<number> in this repository.
-
-    This PR was created as part of the structured development workflow.
-    Individual tasks were already reviewed for spec compliance and code quality.
-    Your job is to review the FULL changeset holistically — looking for
-    cross-cutting concerns that per-task reviews wouldn't catch.
-```
-
-Report to user: "PR review posted as a comment on #<number>."
-
 ## Common Mistakes
 
 **Skipping test verification**
@@ -204,4 +184,4 @@ Report to user: "PR review posted as a comment on #<number>."
 - Verify tests before offering options
 - Skip reflection silently if no learnings to propose
 - Present exactly 2 options
-- Dispatch pr-reviewer after PR creation (advisory, not blocking)
+- Present exactly 2 options (push + PR, or keep branch)
