@@ -142,15 +142,8 @@ AskUserQuestion(
 # Push branch
 git push -u origin <feature-branch>
 
-# Create PR in draft mode
-gh pr create --draft --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<2-3 bullets of what changed>
-
-## Test Plan
-- [ ] <verification steps>
-EOF
-)"
+# Create draft PR
+gh pr create --draft
 ```
 
 #### Option 2: Keep As-Is
