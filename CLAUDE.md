@@ -66,7 +66,7 @@ This repository includes a structured development workflow:
 | `writing-plans`           | Create detailed implementation plans with TDD steps         |
 | `executing-plans`         | Execute plans with subagent implementation + reviews        |
 | `executing-plans-quickly` | Execute plans inline without subagents for simple tasks     |
-| `completing-work`         | Verify tests, present options, create PR                    |
+| `completing-work`         | Verify tests, present options, create or update PR          |
 
 ### Integrations
 

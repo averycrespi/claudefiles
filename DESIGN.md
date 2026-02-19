@@ -62,6 +62,6 @@ This means you can spin up multiple worktrees in separate tmux windows, each wit
 
 Question-asking patterns (use `AskUserQuestion` for decisions, conversational text for open-ended, lead with recommendation, one question at a time) live in the global `CLAUDE.md` where they're always in context without sub-skill invocation overhead.
 
-Workflow skills still contain inline `AskUserQuestion` examples that prescribe **what** specific questions to ask. For example, `completing-work` prescribes exactly two options: "Push and create PR" and "Keep branch as-is". Without the inline example, Claude might word these differently each session, creating inconsistent UX.
+Workflow skills still contain inline `AskUserQuestion` examples that prescribe **what** specific questions to ask. For example, `completing-work` prescribes exactly two options that vary based on context: "Push and create PR" or "Push and update PR" (depending on whether a PR already exists) and "Keep branch as-is". Without the inline example, Claude might word these differently each session, creating inconsistent UX.
 
 **Rule of thumb:** If the exact wording matters, keep the inline example. If the options are dynamic, the global CLAUDE.md patterns are sufficient.
