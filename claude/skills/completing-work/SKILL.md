@@ -116,9 +116,31 @@ options: [
 
 **If no learnings to propose:** Skip silently, continue to Step 3.
 
-### Step 3: Present Options
+### Step 3: Detect Existing PR and Present Options
 
-Use `AskUserQuestion` to present exactly 2 options:
+**Before presenting options, check if a PR already exists for this branch:**
+
+```bash
+gh pr view --json url,title,number
+```
+
+**If a PR exists**, use `AskUserQuestion` to present exactly 2 options:
+
+```javascript
+AskUserQuestion(
+  questions: [{
+    question: "Implementation complete. PR #<number> exists for this branch. What would you like to do?",
+    header: "Complete",
+    multiSelect: false,
+    options: [
+      { label: "Push and update PR", description: "Push branch and update PR title and description" },
+      { label: "Keep branch as-is", description: "I'll handle it later" }
+    ]
+  }]
+)
+```
+
+**If no PR exists**, use `AskUserQuestion` to present exactly 2 options:
 
 ```javascript
 AskUserQuestion(
@@ -136,7 +158,7 @@ AskUserQuestion(
 
 ### Step 4: Execute Choice
 
-#### Option 1: Push and Create PR
+#### Option: Push and Create PR
 
 ```bash
 # Push branch
@@ -146,7 +168,19 @@ git push -u origin <feature-branch>
 gh pr create --draft
 ```
 
-#### Option 2: Keep As-Is
+#### Option: Push and Update PR
+
+```bash
+# Push branch
+git push
+
+# Update PR title and description based on all commits relative to base branch
+gh pr edit <number> --title "..." --body "..."
+```
+
+The updated PR title and description are regenerated from scratch based on all commits on the branch relative to the base branch. Follow the PR description template from the project or global CLAUDE.md.
+
+#### Option: Keep As-Is
 
 Report: "Keeping branch <name>."
 
@@ -176,5 +210,4 @@ Report: "Keeping branch <name>."
 - Verify task completion before verifying tests
 - Verify tests before offering options
 - Skip reflection silently if no learnings to propose
-- Present exactly 2 options
-- Present exactly 2 options (push + PR, or keep branch)
+- Present exactly 2 options (create PR, update PR, or keep branch — depending on whether a PR exists)
