@@ -85,6 +85,9 @@ provision:
       echo '. "$HOME/.asdf/asdf.sh"' >> "$HOME/.bashrc"
     fi
 
+    # --- gopls (Go language server) ---
+    go install golang.org/x/tools/gopls@latest
+
     # --- Claude Code ---
     npm install -g @anthropic-ai/claude-code
 

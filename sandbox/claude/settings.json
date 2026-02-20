@@ -2,5 +2,8 @@
   "permissions": {
     "allow": [],
     "deny": []
+  },
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
   }
 }
