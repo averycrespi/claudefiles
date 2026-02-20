@@ -89,10 +89,6 @@ func tmuxSessionName(repoDir string) string {
 	return filepath.Base(repoDir) + "-worktree"
 }
 
-func tmuxSessionExists(session string) bool {
-	return exec.Command("tmux", "has-session", "-t", session).Run() == nil
-}
-
 func tmuxListWindows(t *testing.T, session string) []string {
 	t.Helper()
 	out, err := exec.Command("tmux", "list-windows", "-t", session, "-F", "#{window_name}").Output()
@@ -148,17 +144,6 @@ func TestSmoke(t *testing.T) {
 	}
 }
 
-func TestInitOutsideGitRepo(t *testing.T) {
-	dir := resolvedTempDir(t)
-	_, stderr, code := runCCO(t, dir, resolvedTempDir(t), "init")
-	if code == 0 {
-		t.Error("init should fail outside git repo")
-	}
-	if !strings.Contains(stderr, "not a git repository") {
-		t.Errorf("expected 'not a git repository' in stderr, got: %s", stderr)
-	}
-}
-
 func TestAddOutsideGitRepo(t *testing.T) {
 	dir := resolvedTempDir(t)
 	_, stderr, code := runCCO(t, dir, resolvedTempDir(t), "add", "some-branch")
@@ -178,47 +163,6 @@ func TestRmOutsideGitRepo(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "not a git repository") {
 		t.Errorf("expected 'not a git repository' in stderr, got: %s", stderr)
-	}
-}
-
-func TestInit(t *testing.T) {
-	dir := setupRepo(t)
-	session := tmuxSessionName(dir)
-	t.Cleanup(func() { killTmuxSession(session) })
-
-	if tmuxSessionExists(session) {
-		t.Fatal("session should not exist before init")
-	}
-
-	stdout, _, code := runCCO(t, dir, resolvedTempDir(t), "init")
-	if code != 0 {
-		t.Fatalf("init exited %d", code)
-	}
-	if !strings.Contains(stdout, "Creating tmux session") {
-		t.Errorf("expected 'Creating tmux session' in output, got: %s", stdout)
-	}
-	if !tmuxSessionExists(session) {
-		t.Error("session should exist after init")
-	}
-	windows := tmuxListWindows(t, session)
-	if !contains(windows, "main") {
-		t.Errorf("expected 'main' window, got: %v", windows)
-	}
-}
-
-func TestInitIdempotent(t *testing.T) {
-	dir := setupRepo(t)
-	session := tmuxSessionName(dir)
-	xdg := resolvedTempDir(t)
-	t.Cleanup(func() { killTmuxSession(session) })
-
-	runCCO(t, dir, xdg, "init")
-	stdout, _, code := runCCO(t, dir, xdg, "-v", "init")
-	if code != 0 {
-		t.Fatalf("second init exited %d", code)
-	}
-	if !strings.Contains(stdout, "already exists") {
-		t.Errorf("expected 'already exists' on second init, got: %s", stdout)
 	}
 }
 
@@ -437,22 +381,22 @@ func TestVerboseFlag(t *testing.T) {
 	xdg := resolvedTempDir(t)
 	t.Cleanup(func() { killTmuxSession(session) })
 
-	// First init creates the session (Info level)
-	runCCO(t, dir, xdg, "init")
+	// First add creates the session and worktree
+	runCCO(t, dir, xdg, "add", "verbose-branch")
 
-	// Second init without -v should not show "already exists"
-	stdout, _, code := runCCO(t, dir, xdg, "init")
+	// Second add without -v should not show "already exists"
+	stdout, _, code := runCCO(t, dir, xdg, "add", "verbose-branch")
 	if code != 0 {
-		t.Fatalf("init exited %d", code)
+		t.Fatalf("add exited %d", code)
 	}
 	if strings.Contains(stdout, "already exists") {
 		t.Error("without -v, debug messages should be hidden")
 	}
 
-	// Second init with -v should show "already exists"
-	stdout, _, code = runCCO(t, dir, xdg, "-v", "init")
+	// Second add with -v should show "already exists"
+	stdout, _, code = runCCO(t, dir, xdg, "-v", "add", "verbose-branch")
 	if code != 0 {
-		t.Fatalf("init -v exited %d", code)
+		t.Fatalf("add -v exited %d", code)
 	}
 	if !strings.Contains(stdout, "already exists") {
 		t.Errorf("with -v, expected 'already exists' in output, got: %s", stdout)
