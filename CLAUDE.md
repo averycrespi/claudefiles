@@ -111,7 +111,6 @@ For parallel development using Git worktrees and tmux:
 
 | Command              | Purpose                                                                     |
 | -------------------- | --------------------------------------------------------------------------- |
-| `cco init`           | Start a new tmux session for the current repository                         |
 | `cco add <branch>`   | Create a session (worktree + window) and launch Claude Code                 |
 | `cco rm <branch>`    | Remove a session (worktree + window)                                        |
 | `cco attach`         | Attach to the tmux session for the current repository                       |

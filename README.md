@@ -129,7 +129,6 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 
 | Command              | Purpose                                  |
 | -------------------- | ---------------------------------------- |
-| `cco init`           | Create tmux session for repo             |
 | `cco add <branch>`   | Create session + launch Claude           |
 | `cco rm <branch>`    | Remove session + close window            |
 | `cco attach`         | Attach to tmux session for repo          |

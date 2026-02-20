@@ -156,7 +156,7 @@ func Attach(path string) error {
 
 	if !tmux.SessionExists(sessionName) {
 		if info.IsWorktree {
-			return fmt.Errorf("tmux session does not exist: %s. Run 'cco init' from the main repository first", sessionName)
+			return fmt.Errorf("tmux session does not exist: %s. Run 'cco add <branch>' from the main repository first", sessionName)
 		}
 		if err := Init(path); err != nil {
 			return err
