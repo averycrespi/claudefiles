@@ -1,0 +1,114 @@
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/ubuntu-24.04
+
+cpus: 4
+memory: "4GiB"
+disk: "100GiB"
+
+containerd:
+  system: false
+  user: false
+
+provision:
+# Install Docker Engine
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v docker >/dev/null 2>&1 && exit 0
+    export DEBIAN_FRONTEND=noninteractive
+    curl -fsSL https://get.docker.com | sh
+
+# Add user to docker group
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    usermod -aG docker "{{.User}}"
+
+# Block all traffic to the host gateway to prevent accessing host services.
+# Lima SSH uses a vsock or serial connection, not the network gateway,
+# so limactl shell continues to work.
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    GATEWAY=$(ip route | awk '/default/ {print $3}')
+    if [ -n "$GATEWAY" ]; then
+      iptables -C OUTPUT -d "$GATEWAY" -j DROP 2>/dev/null || \
+        iptables -A OUTPUT -d "$GATEWAY" -j DROP
+    fi
+
+# Install dev tools, asdf runtimes, and Claude Code
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+
+    export DEBIAN_FRONTEND=noninteractive
+
+    # --- Core dev tools ---
+    sudo apt-get update
+    sudo apt-get install -y \
+      build-essential \
+      curl \
+      git \
+      jq \
+      ripgrep \
+      unzip \
+      wget
+
+    # --- asdf version manager ---
+    if [ ! -d "$HOME/.asdf" ]; then
+      git clone https://github.com/asdf-vm/asdf.git "$HOME/.asdf" --branch v0.16.7
+    fi
+    # shellcheck disable=SC1091
+    . "$HOME/.asdf/asdf.sh"
+
+    # asdf plugins and runtimes
+    asdf plugin add nodejs || true
+    asdf plugin add python || true
+    asdf plugin add golang || true
+
+    asdf install nodejs latest
+    asdf install python latest
+    asdf install golang latest
+
+    asdf set --home nodejs latest
+    asdf set --home python latest
+    asdf set --home golang latest
+
+    # Add asdf to shell profile
+    if ! grep -q 'asdf.sh' "$HOME/.bashrc"; then
+      echo '. "$HOME/.asdf/asdf.sh"' >> "$HOME/.bashrc"
+    fi
+
+    # --- Claude Code ---
+    npm install -g @anthropic-ai/claude-code
+
+    # --- Copy sandbox Claude config ---
+    # The sandbox claude/ directory is accessible via the Lima mount.
+    # This will be wired up when mounts are configured.
+
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v docker >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "docker is not installed yet"
+      exit 1
+    fi
+    if ! timeout 30s bash -c "until pgrep dockerd; do sleep 3; done"; then
+      echo >&2 "dockerd is not running"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+
+hostResolver:
+  enabled: false
+
+message: |
+  Claude Code sandbox VM is ready.
+  Run `limactl shell claude-sandbox` to enter the VM.
