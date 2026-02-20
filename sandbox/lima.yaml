@@ -7,6 +7,13 @@ cpus: 4
 memory: "4GiB"
 disk: "100GiB"
 
+mounts:
+- location: "~/.gitconfig"
+  writable: false
+- location: "~/.claude-sandbox"
+  mountPoint: "/tmp/claude-sandbox-config"
+  writable: false
+
 containerd:
   system: false
   user: false
@@ -92,8 +99,8 @@ provision:
     npm install -g @anthropic-ai/claude-code
 
     # --- Copy sandbox Claude config ---
-    # The sandbox claude/ directory is accessible via the Lima mount.
-    # This will be wired up when mounts are configured.
+    mkdir -p "$HOME/.claude"
+    cp -r /tmp/claude-sandbox-config/* "$HOME/.claude/"
 
 probes:
 - script: |

@@ -40,6 +40,20 @@ else
   echo "$PATH_LINE"
 fi
 
+echo 'Symlinking sandbox Claude config ...'
+SANDBOX_CLAUDE="$HOME/.claude-sandbox"
+SANDBOX_SOURCE="$REPO_DIR/sandbox/claude"
+if [ -d "$SANDBOX_SOURCE" ]; then
+  if [ -L "$SANDBOX_CLAUDE" ]; then
+    echo "Sandbox symlink already exists at $SANDBOX_CLAUDE"
+  else
+    ln -s "$SANDBOX_SOURCE" "$SANDBOX_CLAUDE"
+    echo "Created symlink $SANDBOX_CLAUDE -> $SANDBOX_SOURCE"
+  fi
+else
+  echo "Sandbox source not found at $SANDBOX_SOURCE, skipping"
+fi
+
 echo 'Adding Atlassian MCP server ...'
 if claude mcp get atlassian &>/dev/null; then
   echo 'Atlassian MCP server already configured'
