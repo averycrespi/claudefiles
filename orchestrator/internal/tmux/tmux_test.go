@@ -1,6 +1,7 @@
 package tmux
 
 import (
+	"os/exec"
 	"testing"
 )
 
@@ -105,6 +106,24 @@ func TestSendKeys(t *testing.T) {
 	CreateSession(session, "main")
 	if err := SendKeys(session, "main", "echo hello"); err != nil {
 		t.Fatalf("SendKeys() error: %v", err)
+	}
+}
+
+func TestSocketIsolation(t *testing.T) {
+	session := testSession(t)
+	if err := CreateSession(session, "main"); err != nil {
+		t.Fatalf("CreateSession() error: %v", err)
+	}
+
+	// Session should exist on the cco socket
+	if !SessionExists(session) {
+		t.Error("session should exist on cco socket")
+	}
+
+	// Session should NOT exist on the default socket
+	cmd := exec.Command("tmux", "has-session", "-t", session)
+	if cmd.Run() == nil {
+		t.Error("session should NOT exist on default tmux socket")
 	}
 }
 

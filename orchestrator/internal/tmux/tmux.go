@@ -9,13 +9,20 @@ import (
 
 const bellPrefix = "🔔 "
 
+const SocketName = "cco"
+
+func tmuxCmd(args ...string) *exec.Cmd {
+	fullArgs := append([]string{"-L", SocketName}, args...)
+	return exec.Command("tmux", fullArgs...)
+}
+
 func SessionExists(name string) bool {
-	cmd := exec.Command("tmux", "has-session", "-t", name)
+	cmd := tmuxCmd("has-session", "-t", name)
 	return cmd.Run() == nil
 }
 
 func CreateSession(name, windowName string) error {
-	cmd := exec.Command("tmux", "new-session", "-d", "-s", name, "-n", windowName)
+	cmd := tmuxCmd("new-session", "-d", "-s", name, "-n", windowName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("tmux new-session failed: %s", strings.TrimSpace(string(out)))
@@ -53,7 +60,7 @@ func ActualWindowName(session, window string) string {
 }
 
 func CreateWindow(session, window, cwd string) error {
-	cmd := exec.Command("tmux", "new-window", "-t", session, "-n", window, "-c", cwd, "-d")
+	cmd := tmuxCmd("new-window", "-t", session, "-n", window, "-c", cwd, "-d")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("tmux new-window failed: %s", strings.TrimSpace(string(out)))
@@ -62,7 +69,7 @@ func CreateWindow(session, window, cwd string) error {
 }
 
 func KillWindow(session, window string) error {
-	cmd := exec.Command("tmux", "kill-window", "-t", session+":"+window)
+	cmd := tmuxCmd("kill-window", "-t", session+":"+window)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("tmux kill-window failed: %s", strings.TrimSpace(string(out)))
@@ -71,7 +78,7 @@ func KillWindow(session, window string) error {
 }
 
 func KillSession(name string) error {
-	cmd := exec.Command("tmux", "kill-session", "-t", name)
+	cmd := tmuxCmd("kill-session", "-t", name)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("tmux kill-session failed: %s", strings.TrimSpace(string(out)))
@@ -80,7 +87,7 @@ func KillSession(name string) error {
 }
 
 func SendKeys(session, window, command string) error {
-	cmd := exec.Command("tmux", "send-keys", "-t", session+":"+window, command, "C-m")
+	cmd := tmuxCmd("send-keys", "-t", session+":"+window, command, "C-m")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("tmux send-keys failed: %s", strings.TrimSpace(string(out)))
@@ -89,7 +96,7 @@ func SendKeys(session, window, command string) error {
 }
 
 func RenameWindow(session, oldName, newName string) error {
-	cmd := exec.Command("tmux", "rename-window", "-t", session+":"+oldName, newName)
+	cmd := tmuxCmd("rename-window", "-t", session+":"+oldName, newName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("tmux rename-window failed: %s", strings.TrimSpace(string(out)))
@@ -98,7 +105,7 @@ func RenameWindow(session, oldName, newName string) error {
 }
 
 func ListWindows(session string) ([]string, error) {
-	cmd := exec.Command("tmux", "list-windows", "-t", session, "-F", "#{window_name}")
+	cmd := tmuxCmd("list-windows", "-t", session, "-F", "#{window_name}")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("tmux list-windows failed: %w", err)
