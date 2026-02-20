@@ -136,6 +136,8 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 
 Sessions are stored at `~/.local/share/cco/sessions/{repo}/{branch}/`.
 
+**Note:** cco uses a dedicated tmux socket (`cco`) to avoid interfering with personal tmux sessions. Use `tmux -L cco ls` to list cco sessions.
+
 ---
 
 ## Integrations

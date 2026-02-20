@@ -116,6 +116,8 @@ For parallel development using Git worktrees and tmux:
 | `cco attach [branch]` | Attach to the tmux session, optionally at a specific branch window          |
 | `cco notify`         | Add notification bell to tmux window for the current session                |
 
+**Note:** cco uses a dedicated tmux socket (`cco`) to avoid interfering with personal tmux sessions. Use `tmux -L cco ls` to list cco sessions.
+
 ## Testing
 
 Run cwm integration tests (requires tmux):
