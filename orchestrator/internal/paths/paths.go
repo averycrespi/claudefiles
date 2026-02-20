@@ -19,9 +19,9 @@ func DataDir() string {
 	return filepath.Join(base, "cco")
 }
 
-// SessionDir returns the full path to a session's worktree directory.
-func SessionDir(repo, branch string) string {
-	return filepath.Join(DataDir(), "sessions", repo, SanitizeBranch(branch))
+// WorktreeDir returns the full path to a workspace's worktree directory.
+func WorktreeDir(repo, branch string) string {
+	return filepath.Join(DataDir(), "worktrees", repo, SanitizeBranch(branch))
 }
 
 // SanitizeBranch replaces non-alphanumeric characters (except hyphens) with hyphens.
@@ -31,7 +31,7 @@ func SanitizeBranch(branch string) string {
 
 // TmuxSessionName returns the tmux session name for a repository.
 func TmuxSessionName(repo string) string {
-	return repo + "-worktree"
+	return "cco-" + repo
 }
 
 // TmuxWindowName returns the tmux window name for a branch.

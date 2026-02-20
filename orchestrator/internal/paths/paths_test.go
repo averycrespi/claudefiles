@@ -23,12 +23,12 @@ func TestDataDir_XDG(t *testing.T) {
 	}
 }
 
-func TestSessionDir(t *testing.T) {
+func TestWorktreeDir(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", "/data")
-	dir := SessionDir("myapp", "feat/thing")
-	expected := "/data/cco/sessions/myapp/feat-thing"
+	dir := WorktreeDir("myapp", "feat/thing")
+	expected := "/data/cco/worktrees/myapp/feat-thing"
 	if dir != expected {
-		t.Errorf("SessionDir() = %q, want %q", dir, expected)
+		t.Errorf("WorktreeDir() = %q, want %q", dir, expected)
 	}
 }
 
@@ -52,8 +52,8 @@ func TestSanitizeBranch(t *testing.T) {
 
 func TestTmuxSessionName(t *testing.T) {
 	name := TmuxSessionName("myapp")
-	if name != "myapp-worktree" {
-		t.Errorf("TmuxSessionName() = %q, want %q", name, "myapp-worktree")
+	if name != "cco-myapp" {
+		t.Errorf("TmuxSessionName() = %q, want %q", name, "cco-myapp")
 	}
 }
 
