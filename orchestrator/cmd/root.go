@@ -11,7 +11,7 @@ var verbose bool
 
 var rootCmd = &cobra.Command{
 	Use:   "cco",
-	Short: "Claude Code Orchestrator - manage parallel Claude Code sessions",
+	Short: "Claude Code Orchestrator - manage parallel Claude Code workspaces",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logging.SetVerbose(verbose)
 	},

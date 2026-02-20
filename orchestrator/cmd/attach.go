@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/session"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
 var attachCmd = &cobra.Command{
 	Use:   "attach [branch]",
 	Short: "Attach to the tmux session, optionally at a specific branch window",
-	Long: `Attach to (or switch to) the worktree session.
+	Long: `Attach to (or switch to) the workspace's tmux session.
 
 	If a branch is provided, attach directly to that branch's window.
 	If no branch is provided, attach to the session as-is.
@@ -28,7 +28,7 @@ var attachCmd = &cobra.Command{
 		if len(args) > 0 {
 			branch = args[0]
 		}
-		return session.Attach(cwd, branch)
+		return workspace.Attach(cwd, branch)
 	},
 }
 

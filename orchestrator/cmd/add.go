@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/session"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
 var addCmd = &cobra.Command{
 	Use:   "add <branch>",
-	Short: "Create a session and launch Claude Code",
-	Long: `Create a session for the given branch and launch Claude Code.
+	Short: "Create a workspace and launch Claude Code",
+	Long: `Create a workspace for the given branch and launch Claude Code.
 
 	This command is idempotent, and can safely be run multiple times:
 	- If the branch does not exist -> create the branch
@@ -25,7 +25,7 @@ var addCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("could not get working directory: %w", err)
 		}
-		return session.Add(cwd, args[0])
+		return workspace.Add(cwd, args[0])
 	},
 }
 
