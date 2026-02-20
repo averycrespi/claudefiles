@@ -125,8 +125,9 @@ func Remove(repoRoot, branch string) error {
 }
 
 // Attach attaches to the tmux session for the repository at the given path.
+// If branch is non-empty, attaches to the specific window for that branch.
 // Works from both the main repo and worktrees.
-func Attach(path string) error {
+func Attach(path, branch string) error {
 	info, err := git.RepoInfo(path)
 	if err != nil {
 		return err
@@ -156,6 +157,16 @@ func Attach(path string) error {
 		if err := Init(path); err != nil {
 			return err
 		}
+	}
+
+	if branch != "" {
+		windowName := paths.TmuxWindowName(branch)
+		if !tmux.WindowExists(sessionName, windowName) {
+			return fmt.Errorf("tmux window does not exist for branch: %s", branch)
+		}
+		actualName := tmux.ActualWindowName(sessionName, windowName)
+		logging.Info("attaching to tmux window: %s:%s", sessionName, windowName)
+		return tmux.AttachToWindow(sessionName, actualName)
 	}
 
 	logging.Info("attaching to tmux session: %s", sessionName)
