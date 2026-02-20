@@ -13,6 +13,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
 - [Python 3](https://www.python.org/downloads/) for `cwm`
+- [Go](https://go.dev/) 1.21+ for building `cco`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -121,6 +122,20 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 | `cwm rm <branch>`  | Remove worktree + close window           |
 | `cwm attach`       | Attach to tmux session for repo          |
 | `cwm notify`       | Add bell to window (for hooks)           |
+
+## Claude Code Orchestrator
+
+`cco` (Claude Code Orchestrator) manages parallel Claude Code sessions using Git worktrees and tmux. It replaces `cwm` with centralized session storage.
+
+| Command              | Purpose                                  |
+| -------------------- | ---------------------------------------- |
+| `cco init`           | Create tmux session for repo             |
+| `cco add <branch>`   | Create session + launch Claude           |
+| `cco rm <branch>`    | Remove session + close window            |
+| `cco attach`         | Attach to tmux session for repo          |
+| `cco notify`         | Add bell to window (for hooks)           |
+
+Sessions are stored at `~/.local/share/cco/sessions/{repo}/{branch}/`.
 
 ---
 

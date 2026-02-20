@@ -107,6 +107,16 @@ For parallel development using Git worktrees and tmux:
 | `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
 | `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
 
+### Session Management (cco)
+
+| Command              | Purpose                                                                     |
+| -------------------- | --------------------------------------------------------------------------- |
+| `cco init`           | Start a new tmux session for the current repository                         |
+| `cco add <branch>`   | Create a session (worktree + window) and launch Claude Code                 |
+| `cco rm <branch>`    | Remove a session (worktree + window)                                        |
+| `cco attach`         | Attach to the tmux session for the current repository                       |
+| `cco notify`         | Add notification bell to tmux window for the current session                |
+
 ## Testing
 
 Run cwm integration tests (requires tmux):
@@ -116,6 +126,12 @@ Run cwm integration tests (requires tmux):
 ```
 
 No external Python packages needed - uses only the standard library.
+
+Run cco integration tests (requires tmux and Go):
+
+```bash
+cd orchestrator && go test -v -count=1 -timeout 60s
+```
 
 ## Repository Structure
 
