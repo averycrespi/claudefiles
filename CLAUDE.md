@@ -107,14 +107,14 @@ For parallel development using Git worktrees and tmux:
 | `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
 | `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
 
-### Session Management (cco)
+### Workspace Management (cco)
 
 | Command              | Purpose                                                                     |
 | -------------------- | --------------------------------------------------------------------------- |
-| `cco add <branch>`   | Create a session (worktree + window) and launch Claude Code                 |
-| `cco rm <branch>`    | Remove a session (worktree + window)                                        |
+| `cco add <branch>`   | Create a workspace (worktree + window) and launch Claude Code               |
+| `cco rm <branch>`    | Remove a workspace (worktree + window)                                      |
 | `cco attach [branch]` | Attach to the tmux session, optionally at a specific branch window          |
-| `cco notify`         | Add notification bell to tmux window for the current session                |
+| `cco notify`         | Add notification bell to tmux window for the current workspace              |
 
 **Note:** cco uses a dedicated tmux socket (`cco`) to avoid interfering with personal tmux sessions. Use `tmux -L cco ls` to list cco sessions.
 

@@ -125,16 +125,16 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 
 ## Claude Code Orchestrator
 
-`cco` (Claude Code Orchestrator) manages parallel Claude Code sessions using Git worktrees and tmux. It replaces `cwm` with centralized session storage.
+`cco` (Claude Code Orchestrator) manages parallel Claude Code workspaces using Git worktrees and tmux. It replaces `cwm` with centralized worktree storage.
 
 | Command              | Purpose                                  |
 | -------------------- | ---------------------------------------- |
-| `cco add <branch>`   | Create session + launch Claude           |
-| `cco rm <branch>`    | Remove session + close window            |
+| `cco add <branch>`   | Create workspace + launch Claude         |
+| `cco rm <branch>`    | Remove workspace + close window          |
 | `cco attach [branch]` | Attach to tmux session, optionally at a branch window |
 | `cco notify`         | Add bell to window (for hooks)           |
 
-Sessions are stored at `~/.local/share/cco/sessions/{repo}/{branch}/`.
+Worktrees are stored at `~/.local/share/cco/worktrees/{repo}/{branch}/`.
 
 **Note:** cco uses a dedicated tmux socket (`cco`) to avoid interfering with personal tmux sessions. Use `tmux -L cco ls` to list cco sessions.
 
