@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/averycrespi/claudefiles/orchestrator/internal/tmux"
 )
 
 var ccoBinary string
@@ -91,7 +93,7 @@ func tmuxSessionName(repoDir string) string {
 
 func tmuxListWindows(t *testing.T, session string) []string {
 	t.Helper()
-	out, err := exec.Command("tmux", "list-windows", "-t", session, "-F", "#{window_name}").Output()
+	out, err := exec.Command("tmux", "-L", tmux.SocketName, "list-windows", "-t", session, "-F", "#{window_name}").Output()
 	if err != nil {
 		return nil
 	}
@@ -103,7 +105,7 @@ func tmuxListWindows(t *testing.T, session string) []string {
 }
 
 func killTmuxSession(session string) {
-	exec.Command("tmux", "kill-session", "-t", session).Run()
+	exec.Command("tmux", "-L", tmux.SocketName, "kill-session", "-t", session).Run()
 }
 
 func sessionDir(xdgDataHome, repoDir, branch string) string {
