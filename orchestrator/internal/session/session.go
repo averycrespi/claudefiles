@@ -30,7 +30,7 @@ func Init(repoRoot string) error {
 		return nil
 	}
 
-	logging.Info("Creating tmux session: %s with main window", sessionName)
+	logging.Info("creating tmux session: %s with main window", sessionName)
 	return tmux.CreateSession(sessionName, "main")
 }
 
@@ -55,7 +55,7 @@ func Add(repoRoot, branch string) error {
 
 	// Create worktree if it doesn't exist
 	if _, err := os.Stat(sessionDir); os.IsNotExist(err) {
-		logging.Info("Creating worktree at: %s", sessionDir)
+		logging.Info("creating worktree at: %s", sessionDir)
 		if err := os.MkdirAll(filepath.Dir(sessionDir), 0o755); err != nil {
 			return fmt.Errorf("could not create session directory: %w", err)
 		}
@@ -63,11 +63,11 @@ func Add(repoRoot, branch string) error {
 			return err
 		}
 	} else {
-		logging.Debug("Worktree already exists at: %s", sessionDir)
+		logging.Debug("worktree already exists at: %s", sessionDir)
 	}
 
 	// Run setup scripts if found
-	logging.Debug("Searching for setup scripts ...")
+	logging.Debug("searching for setup scripts ...")
 	runSetupScripts(sessionDir)
 
 	// Copy local Claude settings if they exist
@@ -77,11 +77,11 @@ func Add(repoRoot, branch string) error {
 	if tmux.WindowExists(sessionName, windowName) {
 		logging.Debug("tmux window already exists: %s", windowName)
 	} else {
-		logging.Info("Creating tmux window: %s", windowName)
+		logging.Info("creating tmux window: %s", windowName)
 		if err := tmux.CreateWindow(sessionName, windowName, sessionDir); err != nil {
 			return err
 		}
-		logging.Info("Launching Claude Code")
+		logging.Info("launching Claude Code")
 		if err := tmux.SendKeys(sessionName, windowName, "claude --permission-mode acceptEdits"); err != nil {
 			return err
 		}
@@ -106,9 +106,9 @@ func Remove(repoRoot, branch string) error {
 
 	// Remove worktree if it exists
 	if _, err := os.Stat(sessionDir); os.IsNotExist(err) {
-		logging.Debug("Worktree does not exist at: %s", sessionDir)
+		logging.Debug("worktree does not exist at: %s", sessionDir)
 	} else {
-		logging.Info("Removing worktree at: %s", sessionDir)
+		logging.Info("removing worktree at: %s", sessionDir)
 		if err := git.RemoveWorktree(info.Root, sessionDir); err != nil {
 			return err
 		}
@@ -122,7 +122,7 @@ func Remove(repoRoot, branch string) error {
 
 	actualName := tmux.ActualWindowName(sessionName, windowName)
 	if actualName != "" {
-		logging.Info("Closing tmux window: %s", windowName)
+		logging.Info("closing tmux window: %s", windowName)
 		return tmux.KillWindow(sessionName, actualName)
 	}
 	logging.Debug("tmux window does not exist: %s", windowName)
@@ -163,7 +163,7 @@ func Attach(path string) error {
 		}
 	}
 
-	logging.Info("Attaching to tmux session: %s", sessionName)
+	logging.Info("attaching to tmux session: %s", sessionName)
 	return tmux.Attach(sessionName)
 }
 
@@ -172,12 +172,12 @@ func Attach(path string) error {
 func Notify(path string) error {
 	info, err := git.RepoInfo(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Skipped: %v\n", err)
+		fmt.Fprintf(os.Stderr, "skipped: %v\n", err)
 		return nil
 	}
 
 	if !info.IsWorktree {
-		fmt.Fprintln(os.Stderr, "Skipped: This command must be run from a worktree, not the main repository")
+		fmt.Fprintln(os.Stderr, "skipped: this command must be run from a worktree, not the main repository")
 		return nil
 	}
 
@@ -187,28 +187,28 @@ func Notify(path string) error {
 	sessionsDir := filepath.Join(paths.DataDir(), "sessions")
 	relPath, err := filepath.Rel(sessionsDir, info.Root)
 	if err != nil || relPath == "." || strings.HasPrefix(relPath, "..") {
-		fmt.Fprintf(os.Stderr, "Skipped: Worktree path '%s' is not under cco sessions directory\n", info.Root)
+		fmt.Fprintf(os.Stderr, "skipped: worktree path '%s' is not under cco sessions directory\n", info.Root)
 		return nil
 	}
 
 	dir, branch := filepath.Split(relPath)
 	repoName := filepath.Clean(dir)
 	if repoName == "" || repoName == "." || branch == "" {
-		fmt.Fprintf(os.Stderr, "Skipped: Could not parse repo/branch from path '%s'\n", info.Root)
+		fmt.Fprintf(os.Stderr, "skipped: could not parse repo/branch from path '%s'\n", info.Root)
 		return nil
 	}
 
 	sessionName := paths.TmuxSessionName(repoName)
 
 	if !tmux.SessionExists(sessionName) {
-		fmt.Fprintf(os.Stderr, "Skipped: tmux session '%s' does not exist\n", sessionName)
+		fmt.Fprintf(os.Stderr, "skipped: tmux session '%s' does not exist\n", sessionName)
 		return nil
 	}
 
 	windowName := branch
 	windows, err := tmux.ListWindows(sessionName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Skipped: Could not list windows for session '%s'\n", sessionName)
+		fmt.Fprintf(os.Stderr, "skipped: could not list windows for session '%s'\n", sessionName)
 		return nil
 	}
 
@@ -222,15 +222,15 @@ func Notify(path string) error {
 
 	for _, w := range windows {
 		if w == windowName {
-			logging.Info("Adding notification to tmux window: %s", windowName)
+			logging.Info("adding notification to tmux window: %s", windowName)
 			if err := tmux.RenameWindow(sessionName, windowName, bellName); err != nil {
-				fmt.Fprintf(os.Stderr, "Skipped: Could not rename tmux window '%s'\n", windowName)
+				fmt.Fprintf(os.Stderr, "skipped: could not rename tmux window '%s'\n", windowName)
 			}
 			return nil
 		}
 	}
 
-	fmt.Fprintf(os.Stderr, "Skipped: tmux window '%s' does not exist\n", windowName)
+	fmt.Fprintf(os.Stderr, "skipped: tmux window '%s' does not exist\n", windowName)
 	return nil
 }
 
@@ -248,17 +248,17 @@ func runSetupScripts(sessionDir string) {
 		if fi.Mode()&0o111 == 0 {
 			continue
 		}
-		logging.Info("Running setup script: %s", scriptPath)
+		logging.Info("running setup script: %s", scriptPath)
 		cmd := exec.Command(scriptPath)
 		cmd.Dir = sessionDir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: setup script %s failed: %v\n", name, err)
+			fmt.Fprintf(os.Stderr, "warning: setup script %s failed: %v\n", name, err)
 		}
 		return
 	}
-	logging.Debug("No setup scripts found")
+	logging.Debug("no setup scripts found")
 }
 
 // copyLocalSettings copies .claude/settings.local.json from the main repo to the session dir.
@@ -268,24 +268,24 @@ func copyLocalSettings(repoRoot, sessionDir string) {
 
 	srcFile, err := os.Open(src)
 	if err != nil {
-		logging.Debug("No local Claude settings found in repo")
+		logging.Debug("no local Claude settings found in repo")
 		return
 	}
 	defer srcFile.Close()
 
 	if _, err := os.Stat(dst); err == nil {
-		logging.Debug("Local Claude settings already exist in worktree")
+		logging.Debug("local Claude settings already exist in worktree")
 		return
 	}
 
-	logging.Info("Copying local Claude settings to: %s", dst)
+	logging.Info("copying local Claude settings to: %s", dst)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not create .claude dir: %v\n", err)
+		fmt.Fprintf(os.Stderr, "warning: could not create .claude dir: %v\n", err)
 		return
 	}
 	dstFile, err := os.Create(dst)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not create settings file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "warning: could not create settings file: %v\n", err)
 		return
 	}
 	defer dstFile.Close()

@@ -276,8 +276,8 @@ func TestNotifyFromMainRepo(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("notify exited %d", code)
 	}
-	if !strings.Contains(stderr, "Skipped") {
-		t.Errorf("expected 'Skipped' in stderr when notify run from main repo, got: %s", stderr)
+	if !strings.Contains(stderr, "skipped") {
+		t.Errorf("expected 'skipped' in stderr when notify run from main repo, got: %s", stderr)
 	}
 }
 
@@ -294,8 +294,8 @@ func TestNotifyFromWorktree(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("notify exited %d", code)
 	}
-	if !strings.Contains(stdout, "Adding notification") {
-		t.Errorf("expected 'Adding notification' in stdout, got: %s", stdout)
+	if !strings.Contains(stdout, "adding notification") {
+		t.Errorf("expected 'adding notification' in stdout, got: %s", stdout)
 	}
 
 	windows := tmuxListWindows(t, session)
