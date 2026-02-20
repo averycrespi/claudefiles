@@ -417,6 +417,34 @@ func TestAttachAutoInit(t *testing.T) {
 	}
 }
 
+func TestNotifySkipsActiveWindow(t *testing.T) {
+	dir := setupRepo(t)
+	session := tmuxSessionName(dir)
+	xdg := resolvedTempDir(t)
+	t.Cleanup(func() { killTmuxSession(session) })
+
+	runCCO(t, dir, xdg, "add", "active-branch")
+	sd := worktreeDir(xdg, dir, "active-branch")
+
+	// Select the active-branch window so it becomes active
+	exec.Command("tmux", "-L", tmux.SocketName, "select-window", "-t", session+":active-branch").Run()
+
+	// Notify should skip because the window is active
+	_, stderr, code := runCCO(t, sd, xdg, "notify")
+	if code != 0 {
+		t.Fatalf("notify exited %d", code)
+	}
+	if !strings.Contains(stderr, "skipped: window 'active-branch' is currently active") {
+		t.Errorf("expected skip message for active window, got stderr: %s", stderr)
+	}
+
+	// Window should NOT have bell prefix
+	windows := tmuxListWindows(t, session)
+	if contains(windows, "🔔 active-branch") {
+		t.Error("active window should not get bell prefix")
+	}
+}
+
 func TestVerboseFlag(t *testing.T) {
 	dir := setupRepo(t)
 	session := tmuxSessionName(dir)

@@ -228,6 +228,10 @@ func Notify(path string) error {
 
 	for _, w := range windows {
 		if w == windowName {
+			if tmux.IsActiveWindow(tmuxSession, windowName) {
+				fmt.Fprintf(os.Stderr, "skipped: window '%s' is currently active\n", windowName)
+				return nil
+			}
 			logging.Info("adding notification to tmux window: %s", windowName)
 			if err := tmux.RenameWindow(tmuxSession, windowName, bellName); err != nil {
 				fmt.Fprintf(os.Stderr, "skipped: could not rename tmux window '%s'\n", windowName)
