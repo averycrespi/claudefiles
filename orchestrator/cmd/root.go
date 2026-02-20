@@ -11,14 +11,14 @@ var verbose bool
 
 var rootCmd = &cobra.Command{
 	Use:   "cco",
-	Short: "Claude Code Orchestrator - manage parallel Claude Code workspaces",
+	Short: "Orchestrate Claude Code workspaces",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logging.SetVerbose(verbose)
 	},
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show detailed progress output")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show verbose output")
 }
 
 func Execute() {

@@ -17,8 +17,9 @@ var rmCmd = &cobra.Command{
 	- If the tmux window exists -> close the window
 	- If the worktree exists -> remove the worktree
 
-	The branch itself will NOT be deleted.
-	Must be run from the main repository.`,
+	Notes:
+	- The branch itself will NOT be deleted
+	- Must be run from the main repository, not a worktree`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()
