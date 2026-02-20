@@ -27,10 +27,18 @@ var addCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("could not get working directory: %w", err)
 		}
-		return workspace.Add(cwd, args[0])
+		if err := workspace.Add(cwd, args[0]); err != nil {
+			return err
+		}
+		attach, _ := cmd.Flags().GetBool("attach")
+		if attach {
+			return workspace.Attach(cwd, args[0])
+		}
+		return nil
 	},
 }
 
 func init() {
+	addCmd.Flags().BoolP("attach", "a", false, "Attach to the workspace after creation")
 	rootCmd.AddCommand(addCmd)
 }
