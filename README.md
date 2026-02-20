@@ -131,7 +131,7 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 | -------------------- | ---------------------------------------- |
 | `cco add <branch>`   | Create session + launch Claude           |
 | `cco rm <branch>`    | Remove session + close window            |
-| `cco attach`         | Attach to tmux session for repo          |
+| `cco attach [branch]` | Attach to tmux session, optionally at a branch window |
 | `cco notify`         | Add bell to window (for hooks)           |
 
 Sessions are stored at `~/.local/share/cco/sessions/{repo}/{branch}/`.
