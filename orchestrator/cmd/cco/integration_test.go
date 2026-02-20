@@ -88,7 +88,7 @@ func runCCO(t *testing.T, dir string, xdgDataHome string, args ...string) (strin
 }
 
 func tmuxSessionName(repoDir string) string {
-	return filepath.Base(repoDir) + "-worktree"
+	return "cco-" + filepath.Base(repoDir)
 }
 
 func tmuxListWindows(t *testing.T, session string) []string {
@@ -108,9 +108,9 @@ func killTmuxSession(session string) {
 	exec.Command("tmux", "-L", tmux.SocketName, "kill-session", "-t", session).Run()
 }
 
-func sessionDir(xdgDataHome, repoDir, branch string) string {
+func worktreeDir(xdgDataHome, repoDir, branch string) string {
 	sanitized := sanitizeBranch(branch)
-	return filepath.Join(xdgDataHome, "cco", "sessions", filepath.Base(repoDir), sanitized)
+	return filepath.Join(xdgDataHome, "cco", "worktrees", filepath.Base(repoDir), sanitized)
 }
 
 func sanitizeBranch(branch string) string {
@@ -179,9 +179,9 @@ func TestAddNewBranch(t *testing.T) {
 		t.Fatalf("add exited %d", code)
 	}
 
-	sd := sessionDir(xdg, dir, "test-branch")
+	sd := worktreeDir(xdg, dir, "test-branch")
 	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		t.Errorf("session dir should exist at %s", sd)
+		t.Errorf("worktree dir should exist at %s", sd)
 	}
 
 	windows := tmuxListWindows(t, session)
@@ -202,9 +202,9 @@ func TestAddExistingBranch(t *testing.T) {
 		t.Fatalf("add exited %d", code)
 	}
 
-	sd := sessionDir(xdg, dir, "existing-branch")
+	sd := worktreeDir(xdg, dir, "existing-branch")
 	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		t.Error("session dir should exist")
+		t.Error("worktree dir should exist")
 	}
 	windows := tmuxListWindows(t, session)
 	if !contains(windows, "existing-branch") {
@@ -235,9 +235,9 @@ func TestRm(t *testing.T) {
 	t.Cleanup(func() { killTmuxSession(session) })
 
 	runCCO(t, dir, xdg, "add", "rm-branch")
-	sd := sessionDir(xdg, dir, "rm-branch")
+	sd := worktreeDir(xdg, dir, "rm-branch")
 	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		t.Fatal("session dir should exist before rm")
+		t.Fatal("worktree dir should exist before rm")
 	}
 
 	_, _, code := runCCO(t, dir, xdg, "rm", "rm-branch")
@@ -246,7 +246,7 @@ func TestRm(t *testing.T) {
 	}
 
 	if _, err := os.Stat(sd); !os.IsNotExist(err) {
-		t.Error("session dir should not exist after rm")
+		t.Error("worktree dir should not exist after rm")
 	}
 	windows := tmuxListWindows(t, session)
 	if contains(windows, "rm-branch") {
@@ -290,7 +290,7 @@ func TestNotifyFromWorktree(t *testing.T) {
 	t.Cleanup(func() { killTmuxSession(session) })
 
 	runCCO(t, dir, xdg, "add", "notify-branch")
-	sd := sessionDir(xdg, dir, "notify-branch")
+	sd := worktreeDir(xdg, dir, "notify-branch")
 
 	stdout, _, code := runCCO(t, sd, xdg, "notify")
 	if code != 0 {
@@ -313,7 +313,7 @@ func TestNotifyIdempotent(t *testing.T) {
 	t.Cleanup(func() { killTmuxSession(session) })
 
 	runCCO(t, dir, xdg, "add", "notify-idem")
-	sd := sessionDir(xdg, dir, "notify-idem")
+	sd := worktreeDir(xdg, dir, "notify-idem")
 
 	runCCO(t, sd, xdg, "notify")
 	stdout, _, code := runCCO(t, sd, xdg, "-v", "notify")
@@ -341,9 +341,9 @@ func TestBranchNameSanitization(t *testing.T) {
 		t.Fatalf("add exited %d", code)
 	}
 
-	sd := sessionDir(xdg, dir, "feat/my-thing")
+	sd := worktreeDir(xdg, dir, "feat/my-thing")
 	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		t.Error("session dir should exist")
+		t.Error("worktree dir should exist")
 	}
 	windows := tmuxListWindows(t, session)
 	if !contains(windows, "feat-my-thing") {
@@ -366,7 +366,7 @@ func TestAddCopiesLocalSettings(t *testing.T) {
 		t.Fatalf("add exited %d", code)
 	}
 
-	sd := sessionDir(xdg, dir, "settings-branch")
+	sd := worktreeDir(xdg, dir, "settings-branch")
 	copied := filepath.Join(sd, ".claude", "settings.local.json")
 	data, err := os.ReadFile(copied)
 	if err != nil {
