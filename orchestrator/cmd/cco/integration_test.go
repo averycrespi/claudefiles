@@ -375,6 +375,46 @@ func TestAddCopiesLocalSettings(t *testing.T) {
 	}
 }
 
+func TestAttachNonexistentWindow(t *testing.T) {
+	dir := setupRepo(t)
+	session := tmuxSessionName(dir)
+	xdg := resolvedTempDir(t)
+	t.Cleanup(func() { killTmuxSession(session) })
+
+	// Create session via add
+	runCCO(t, dir, xdg, "add", "some-branch")
+
+	// Attach to a branch that has no window should fail
+	_, stderr, code := runCCO(t, dir, xdg, "attach", "nonexistent")
+	if code == 0 {
+		t.Error("attach to nonexistent window should fail")
+	}
+	if !strings.Contains(stderr, "tmux window does not exist for branch") {
+		t.Errorf("expected 'tmux window does not exist for branch' in stderr, got: %s", stderr)
+	}
+}
+
+func TestAttachAutoInit(t *testing.T) {
+	dir := setupRepo(t)
+	session := tmuxSessionName(dir)
+	xdg := resolvedTempDir(t)
+	t.Cleanup(func() { killTmuxSession(session) })
+
+	// Attach without an existing session should auto-init (creates the session)
+	// The attach itself will fail since we're not in a real terminal,
+	// but the init should succeed.
+	_, stderr, code := runCCO(t, dir, xdg, "attach")
+
+	// The attach will fail because we're not in a real tmux/terminal,
+	// but the error should be from tmux attach, not from "session does not exist"
+	if code == 0 {
+		return
+	}
+	if strings.Contains(stderr, "session does not exist") {
+		t.Errorf("attach should auto-init, but got session-not-found error: %s", stderr)
+	}
+}
+
 func TestVerboseFlag(t *testing.T) {
 	dir := setupRepo(t)
 	session := tmuxSessionName(dir)
