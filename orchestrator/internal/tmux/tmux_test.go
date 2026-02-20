@@ -148,6 +148,31 @@ func TestInsideCcoSocket(t *testing.T) {
 	}
 }
 
+func TestIsActiveWindow(t *testing.T) {
+	session := testSession(t)
+	CreateSession(session, "main")
+	dir := t.TempDir()
+	CreateWindow(session, "other", dir)
+
+	// The first window created with the session is active by default
+	if !IsActiveWindow(session, "main") {
+		t.Error("main window should be active (it was created with the session)")
+	}
+	if IsActiveWindow(session, "other") {
+		t.Error("other window should not be active")
+	}
+}
+
+func TestIsActiveWindowNonexistent(t *testing.T) {
+	session := testSession(t)
+	CreateSession(session, "main")
+
+	// Nonexistent window should return false (not error)
+	if IsActiveWindow(session, "no-such-window") {
+		t.Error("nonexistent window should return false")
+	}
+}
+
 func TestWindowExistsWithBellPrefix(t *testing.T) {
 	session := testSession(t)
 	CreateSession(session, "main")

@@ -133,6 +133,19 @@ func insideCcoSocket(tmuxEnv string) bool {
 	return base == SocketName
 }
 
+func IsActiveWindow(session, window string) bool {
+	if !WindowExists(session, window) {
+		return false
+	}
+	actual := ActualWindowName(session, window)
+	cmd := tmuxCmd("display-message", "-t", session+":"+actual, "-p", "#{window_active}")
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) == "1"
+}
+
 func Attach(session string) error {
 	if insideCcoSocket(os.Getenv("TMUX")) {
 		cmd := tmuxCmd("switch-client", "-t", session)
