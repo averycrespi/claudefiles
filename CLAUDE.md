@@ -29,6 +29,8 @@ This is a public repository. When creating or modifying content:
 
 See the README for detailed setup instructions.
 
+**Optional:** [Lima](https://github.com/lima-vm/lima) (`brew install lima`) is only needed for the sandbox VM.
+
 ## Development Workflow
 
 This repository includes a structured development workflow:
@@ -128,6 +130,11 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── hooks/              # PreToolUse hooks (e.g., gitleaks)
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
+sandbox/                 # Lima VM sandbox for isolated execution
+├── claude/             # Guest Claude Code config (copied into VM)
+│   ├── CLAUDE.md       # Sandbox-specific instructions
+│   └── settings.json   # Minimal settings
+└── lima.yaml           # Lima VM template
 scripts/                # Worktree and utility scripts
 ```
 

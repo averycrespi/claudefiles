@@ -165,6 +165,41 @@ security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_A
 - Error-driven investigation from stack traces
 - Exploratory search with query refinement
 
+---
+
+## Lima Sandbox
+
+Run Claude Code inside an isolated Linux VM for safe plan execution.
+
+**Requirements:**
+- [Lima](https://github.com/lima-vm/lima) (`brew install lima`)
+
+**Create the VM (first time only):**
+
+```sh
+limactl start --name=claude-sandbox sandbox/lima.yaml
+```
+
+**Enter the VM:**
+
+```sh
+limactl shell claude-sandbox
+```
+
+**Authenticate Claude Code (first time only):**
+
+```sh
+claude --dangerously-skip-permissions
+```
+
+**Stop the VM:**
+
+```sh
+limactl stop claude-sandbox
+```
+
+The VM is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
+
 ## Attribution
 
 The workflow skills in this repository are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.
