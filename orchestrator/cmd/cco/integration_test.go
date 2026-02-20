@@ -213,7 +213,7 @@ func TestInitIdempotent(t *testing.T) {
 	t.Cleanup(func() { killTmuxSession(session) })
 
 	runCCO(t, dir, xdg, "init")
-	stdout, _, code := runCCO(t, dir, xdg, "init")
+	stdout, _, code := runCCO(t, dir, xdg, "-v", "init")
 	if code != 0 {
 		t.Fatalf("second init exited %d", code)
 	}
@@ -273,7 +273,7 @@ func TestAddIdempotent(t *testing.T) {
 	t.Cleanup(func() { killTmuxSession(session) })
 
 	runCCO(t, dir, xdg, "add", "idem-branch")
-	stdout, _, code := runCCO(t, dir, xdg, "add", "idem-branch")
+	stdout, _, code := runCCO(t, dir, xdg, "-v", "add", "idem-branch")
 	if code != 0 {
 		t.Fatalf("second add exited %d", code)
 	}
@@ -317,7 +317,7 @@ func TestRmIdempotent(t *testing.T) {
 	runCCO(t, dir, xdg, "add", "rm-idem")
 	runCCO(t, dir, xdg, "rm", "rm-idem")
 
-	stdout, _, code := runCCO(t, dir, xdg, "rm", "rm-idem")
+	stdout, _, code := runCCO(t, dir, xdg, "-v", "rm", "rm-idem")
 	if code != 0 {
 		t.Fatalf("second rm exited %d", code)
 	}
@@ -370,7 +370,7 @@ func TestNotifyIdempotent(t *testing.T) {
 	sd := sessionDir(xdg, dir, "notify-idem")
 
 	runCCO(t, sd, xdg, "notify")
-	stdout, _, code := runCCO(t, sd, xdg, "notify")
+	stdout, _, code := runCCO(t, sd, xdg, "-v", "notify")
 	if code != 0 {
 		t.Fatalf("second notify exited %d", code)
 	}
@@ -428,5 +428,33 @@ func TestAddCopiesLocalSettings(t *testing.T) {
 	}
 	if string(data) != `{"test": true}` {
 		t.Errorf("copied settings = %q, want %q", string(data), `{"test": true}`)
+	}
+}
+
+func TestVerboseFlag(t *testing.T) {
+	dir := setupRepo(t)
+	session := tmuxSessionName(dir)
+	xdg := resolvedTempDir(t)
+	t.Cleanup(func() { killTmuxSession(session) })
+
+	// First init creates the session (Info level)
+	runCCO(t, dir, xdg, "init")
+
+	// Second init without -v should not show "already exists"
+	stdout, _, code := runCCO(t, dir, xdg, "init")
+	if code != 0 {
+		t.Fatalf("init exited %d", code)
+	}
+	if strings.Contains(stdout, "already exists") {
+		t.Error("without -v, debug messages should be hidden")
+	}
+
+	// Second init with -v should show "already exists"
+	stdout, _, code = runCCO(t, dir, xdg, "-v", "init")
+	if code != 0 {
+		t.Fatalf("init -v exited %d", code)
+	}
+	if !strings.Contains(stdout, "already exists") {
+		t.Errorf("with -v, expected 'already exists' in output, got: %s", stdout)
 	}
 }
