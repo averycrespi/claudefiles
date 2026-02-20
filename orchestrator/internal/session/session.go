@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/averycrespi/claudefiles/orchestrator/internal/git"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/tmux"
 )
@@ -25,11 +26,11 @@ func Init(repoRoot string) error {
 
 	sessionName := paths.TmuxSessionName(info.Name)
 	if tmux.SessionExists(sessionName) {
-		fmt.Printf("tmux session already exists: %s\n", sessionName)
+		logging.Debug("tmux session already exists: %s", sessionName)
 		return nil
 	}
 
-	fmt.Printf("Creating tmux session: %s with main window\n", sessionName)
+	logging.Info("Creating tmux session: %s with main window", sessionName)
 	return tmux.CreateSession(sessionName, "main")
 }
 
@@ -54,7 +55,7 @@ func Add(repoRoot, branch string) error {
 
 	// Create worktree if it doesn't exist
 	if _, err := os.Stat(sessionDir); os.IsNotExist(err) {
-		fmt.Printf("Creating worktree at: %s\n", sessionDir)
+		logging.Info("Creating worktree at: %s", sessionDir)
 		if err := os.MkdirAll(filepath.Dir(sessionDir), 0o755); err != nil {
 			return fmt.Errorf("could not create session directory: %w", err)
 		}
@@ -62,11 +63,11 @@ func Add(repoRoot, branch string) error {
 			return err
 		}
 	} else {
-		fmt.Printf("Worktree already exists at: %s\n", sessionDir)
+		logging.Debug("Worktree already exists at: %s", sessionDir)
 	}
 
 	// Run setup scripts if found
-	fmt.Println("Searching for setup scripts ...")
+	logging.Debug("Searching for setup scripts ...")
 	runSetupScripts(sessionDir)
 
 	// Copy local Claude settings if they exist
@@ -74,13 +75,13 @@ func Add(repoRoot, branch string) error {
 
 	// Create tmux window if it doesn't exist
 	if tmux.WindowExists(sessionName, windowName) {
-		fmt.Printf("tmux window already exists: %s\n", windowName)
+		logging.Debug("tmux window already exists: %s", windowName)
 	} else {
-		fmt.Printf("Creating tmux window: %s\n", windowName)
+		logging.Info("Creating tmux window: %s", windowName)
 		if err := tmux.CreateWindow(sessionName, windowName, sessionDir); err != nil {
 			return err
 		}
-		fmt.Println("Launching Claude Code")
+		logging.Info("Launching Claude Code")
 		if err := tmux.SendKeys(sessionName, windowName, "claude --permission-mode acceptEdits"); err != nil {
 			return err
 		}
@@ -105,9 +106,9 @@ func Remove(repoRoot, branch string) error {
 
 	// Remove worktree if it exists
 	if _, err := os.Stat(sessionDir); os.IsNotExist(err) {
-		fmt.Printf("Worktree does not exist at: %s\n", sessionDir)
+		logging.Debug("Worktree does not exist at: %s", sessionDir)
 	} else {
-		fmt.Printf("Removing worktree at: %s\n", sessionDir)
+		logging.Info("Removing worktree at: %s", sessionDir)
 		if err := git.RemoveWorktree(info.Root, sessionDir); err != nil {
 			return err
 		}
@@ -115,16 +116,16 @@ func Remove(repoRoot, branch string) error {
 
 	// Close tmux window if it exists
 	if !tmux.SessionExists(sessionName) {
-		fmt.Printf("tmux session does not exist: %s\n", sessionName)
+		logging.Debug("tmux session does not exist: %s", sessionName)
 		return nil
 	}
 
 	actualName := tmux.ActualWindowName(sessionName, windowName)
 	if actualName != "" {
-		fmt.Printf("Closing tmux window: %s\n", windowName)
+		logging.Info("Closing tmux window: %s", windowName)
 		return tmux.KillWindow(sessionName, actualName)
 	}
-	fmt.Printf("tmux window does not exist: %s\n", windowName)
+	logging.Debug("tmux window does not exist: %s", windowName)
 	return nil
 }
 
@@ -162,7 +163,7 @@ func Attach(path string) error {
 		}
 	}
 
-	fmt.Printf("Attaching to tmux session: %s\n", sessionName)
+	logging.Info("Attaching to tmux session: %s", sessionName)
 	return tmux.Attach(sessionName)
 }
 
@@ -214,14 +215,14 @@ func Notify(path string) error {
 	bellName := "🔔 " + windowName
 	for _, w := range windows {
 		if w == bellName {
-			fmt.Printf("tmux window '%s' already has a notification\n", windowName)
+			logging.Debug("tmux window '%s' already has a notification", windowName)
 			return nil
 		}
 	}
 
 	for _, w := range windows {
 		if w == windowName {
-			fmt.Printf("Adding notification to tmux window: %s\n", windowName)
+			logging.Info("Adding notification to tmux window: %s", windowName)
 			if err := tmux.RenameWindow(sessionName, windowName, bellName); err != nil {
 				fmt.Fprintf(os.Stderr, "Skipped: Could not rename tmux window '%s'\n", windowName)
 			}
@@ -247,7 +248,7 @@ func runSetupScripts(sessionDir string) {
 		if fi.Mode()&0o111 == 0 {
 			continue
 		}
-		fmt.Printf("Running setup script: %s\n", scriptPath)
+		logging.Info("Running setup script: %s", scriptPath)
 		cmd := exec.Command(scriptPath)
 		cmd.Dir = sessionDir
 		cmd.Stdout = os.Stdout
@@ -257,7 +258,7 @@ func runSetupScripts(sessionDir string) {
 		}
 		return
 	}
-	fmt.Println("No setup scripts found")
+	logging.Debug("No setup scripts found")
 }
 
 // copyLocalSettings copies .claude/settings.local.json from the main repo to the session dir.
@@ -267,17 +268,17 @@ func copyLocalSettings(repoRoot, sessionDir string) {
 
 	srcFile, err := os.Open(src)
 	if err != nil {
-		fmt.Println("No local Claude settings found in repo")
+		logging.Debug("No local Claude settings found in repo")
 		return
 	}
 	defer srcFile.Close()
 
 	if _, err := os.Stat(dst); err == nil {
-		fmt.Println("Local Claude settings already exist in worktree")
+		logging.Debug("Local Claude settings already exist in worktree")
 		return
 	}
 
-	fmt.Printf("Copying local Claude settings to: %s\n", dst)
+	logging.Info("Copying local Claude settings to: %s", dst)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not create .claude dir: %v\n", err)
 		return
