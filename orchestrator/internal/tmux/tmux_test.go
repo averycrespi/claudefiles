@@ -127,6 +127,27 @@ func TestSocketIsolation(t *testing.T) {
 	}
 }
 
+func TestInsideCcoSocket(t *testing.T) {
+	tests := []struct {
+		name   string
+		tmux   string
+		expect bool
+	}{
+		{"empty", "", false},
+		{"default socket", "/tmp/tmux-501/default,1234,0", false},
+		{"cco socket", "/tmp/tmux-501/cco,1234,0", true},
+		{"private tmp cco", "/private/tmp/tmux-501/cco,5678,1", true},
+		{"similar name", "/tmp/tmux-501/cco-other,1234,0", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := insideCcoSocket(tt.tmux); got != tt.expect {
+				t.Errorf("insideCcoSocket(%q) = %v, want %v", tt.tmux, got, tt.expect)
+			}
+		})
+	}
+}
+
 func TestWindowExistsWithBellPrefix(t *testing.T) {
 	session := testSession(t)
 	CreateSession(session, "main")

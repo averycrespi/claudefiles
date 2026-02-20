@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -117,15 +118,30 @@ func ListWindows(session string) ([]string, error) {
 	return strings.Split(raw, "\n"), nil
 }
 
+func insideCcoSocket(tmuxEnv string) bool {
+	if tmuxEnv == "" {
+		return false
+	}
+	// $TMUX format: /path/to/socket,pid,index
+	// Extract socket path (everything before first comma)
+	socketPath := tmuxEnv
+	if i := strings.Index(tmuxEnv, ","); i >= 0 {
+		socketPath = tmuxEnv[:i]
+	}
+	// Check if the socket file basename matches our socket name exactly
+	base := filepath.Base(socketPath)
+	return base == SocketName
+}
+
 func Attach(session string) error {
-	if os.Getenv("TMUX") != "" {
-		cmd := exec.Command("tmux", "switch-client", "-t", session)
+	if insideCcoSocket(os.Getenv("TMUX")) {
+		cmd := tmuxCmd("switch-client", "-t", session)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
 	}
-	cmd := exec.Command("tmux", "attach-session", "-t", session)
+	cmd := tmuxCmd("attach-session", "-t", session)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -134,14 +150,14 @@ func Attach(session string) error {
 
 func AttachToWindow(session, window string) error {
 	target := session + ":" + window
-	if os.Getenv("TMUX") != "" {
-		cmd := exec.Command("tmux", "switch-client", "-t", target)
+	if insideCcoSocket(os.Getenv("TMUX")) {
+		cmd := tmuxCmd("switch-client", "-t", target)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
 	}
-	cmd := exec.Command("tmux", "attach-session", "-t", target)
+	cmd := tmuxCmd("attach-session", "-t", target)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
