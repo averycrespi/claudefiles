@@ -57,21 +57,16 @@ func Add(repoRoot, branch string) error {
 	if _, err := os.Stat(sessionDir); os.IsNotExist(err) {
 		logging.Info("creating worktree at: %s", sessionDir)
 		if err := os.MkdirAll(filepath.Dir(sessionDir), 0o755); err != nil {
-			return fmt.Errorf("could not create session directory: %w", err)
+			return fmt.Errorf("could not create worktree directory: %w", err)
 		}
 		if err := git.AddWorktree(info.Root, sessionDir, branch); err != nil {
 			return err
 		}
+		runSetupScripts(sessionDir)
+		copyLocalSettings(info.Root, sessionDir)
 	} else {
 		logging.Debug("worktree already exists at: %s", sessionDir)
 	}
-
-	// Run setup scripts if found
-	logging.Debug("searching for setup scripts ...")
-	runSetupScripts(sessionDir)
-
-	// Copy local Claude settings if they exist
-	copyLocalSettings(info.Root, sessionDir)
 
 	// Create tmux window if it doesn't exist
 	if tmux.WindowExists(sessionName, windowName) {
@@ -81,7 +76,7 @@ func Add(repoRoot, branch string) error {
 		if err := tmux.CreateWindow(sessionName, windowName, sessionDir); err != nil {
 			return err
 		}
-		logging.Info("launching Claude Code")
+		logging.Info("launching Claude Code in tmux window")
 		if err := tmux.SendKeys(sessionName, windowName, "claude --permission-mode acceptEdits"); err != nil {
 			return err
 		}

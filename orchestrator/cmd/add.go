@@ -11,8 +11,15 @@ import (
 var addCmd = &cobra.Command{
 	Use:   "add <branch>",
 	Short: "Create a session and launch Claude Code",
-	Long:  "Create a git worktree, tmux window, run setup scripts, and launch Claude Code. Creates the branch if it doesn't exist. Must be run from the main repository.",
-	Args:  cobra.ExactArgs(1),
+	Long: `Create a session for the given branch and launch Claude Code.
+
+	This command is idempotent, and can safely be run multiple times:
+	- If the branch does not exist -> create the branch
+	- If the worktree does not exist -> create the worktree & perform setup
+	- If the tmux window does not exist -> create the window & launch Claude Code
+
+	Must be run from the main repository, not a worktree.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()
 		if err != nil {
