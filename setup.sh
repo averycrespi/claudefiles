@@ -9,9 +9,9 @@ set -euo pipefail
 echo 'Installing macOS dependencies from Brewfile ...'
 brew bundle
 
-echo 'Building cco (Claude Code Orchestrator) ...'
+echo 'Installing cco (Claude Code Orchestrator) ...'
 REPO_DIR=$(git rev-parse --show-toplevel)
-(cd "$REPO_DIR/orchestrator" && go build -o "$REPO_DIR/scripts/cco" .)
+(cd "$REPO_DIR/orchestrator" && go install ./cmd/cco)
 
 CLAUDE_DIR="$HOME/.claude"
 echo "Stowing Claude Code configuration to $CLAUDE_DIR ..."
