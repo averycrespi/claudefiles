@@ -9,11 +9,11 @@ import (
 
 var attachCmd = &cobra.Command{
 	Use:   "attach [branch]",
-	Short: "Attach to the tmux session or window",
-	Long: `Attach to the repository's tmux session, or a specific window in the session.
+	Short: "Attach to a workspace (or the session itself)",
+	Long: `Attach to a workspace's tmux window, or the session itself.
 
 This command has two modes of operation:
-- If a branch is provided -> attach to the branch's window in the session
+- If a branch is provided -> attach to the workspace's window in the session
 - If no branch is provided -> just attach to the session itself
 
 Notes:
