@@ -4,26 +4,46 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/lima"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
 )
 
+// limaClient defines the lima operations needed by the sandbox service.
+type limaClient interface {
+	Status() (string, error)
+	Create(templatePath string) error
+	Start() error
+	Stop() error
+	Delete() error
+	Copy(src, dst string) error
+}
+
+// Service manages the sandbox VM lifecycle.
+type Service struct {
+	lima   limaClient
+	logger logging.Logger
+}
+
+// NewService returns a sandbox Service.
+func NewService(lima limaClient, logger logging.Logger) *Service {
+	return &Service{lima: lima, logger: logger}
+}
+
 // Create creates, starts, and provisions the sandbox VM.
-func Create() error {
-	status, err := lima.Status()
+func (s *Service) Create() error {
+	status, err := s.lima.Status()
 	if err != nil {
 		return err
 	}
 	switch status {
 	case "Running":
-		logging.Info("Sandbox is already created and running")
-		return Provision()
+		s.logger.Info("Sandbox is already created and running")
+		return s.Provision()
 	case "Stopped":
-		logging.Info("Sandbox exists but is stopped, starting...")
-		if err := lima.Start(); err != nil {
+		s.logger.Info("Sandbox exists but is stopped, starting...")
+		if err := s.lima.Start(); err != nil {
 			return err
 		}
-		return Provision()
+		return s.Provision()
 	}
 
 	templatePath, err := writeTempFile("cco-lima-*.yaml", limaTemplate)
@@ -32,15 +52,15 @@ func Create() error {
 	}
 	defer os.Remove(templatePath)
 
-	if err := lima.Create(templatePath); err != nil {
+	if err := s.lima.Create(templatePath); err != nil {
 		return err
 	}
-	return Provision()
+	return s.Provision()
 }
 
 // Start starts a stopped sandbox VM.
-func Start() error {
-	status, err := lima.Status()
+func (s *Service) Start() error {
+	status, err := s.lima.Status()
 	if err != nil {
 		return err
 	}
@@ -48,59 +68,67 @@ func Start() error {
 	case "":
 		return fmt.Errorf("sandbox not created, run `cco box create`")
 	case "Running":
-		logging.Info("Sandbox is already running")
+		s.logger.Info("Sandbox is already running")
 		return nil
 	}
-	return lima.Start()
+	return s.lima.Start()
 }
 
 // Stop stops a running sandbox VM.
-func Stop() error {
-	status, err := lima.Status()
+func (s *Service) Stop() error {
+	status, err := s.lima.Status()
 	if err != nil {
 		return err
 	}
 	switch status {
 	case "":
-		logging.Info("Sandbox is not created")
+		s.logger.Info("Sandbox is not created")
 		return nil
 	case "Stopped":
-		logging.Info("Sandbox is already stopped")
+		s.logger.Info("Sandbox is already stopped")
 		return nil
 	}
-	return lima.Stop()
+	return s.lima.Stop()
 }
 
 // Destroy deletes the sandbox VM. Limactl prompts for confirmation.
-func Destroy() error {
-	status, err := lima.Status()
+func (s *Service) Destroy() error {
+	status, err := s.lima.Status()
 	if err != nil {
 		return err
 	}
 	if status == "" {
-		logging.Info("Sandbox is not created")
+		s.logger.Info("Sandbox is not created")
 		return nil
 	}
-	return lima.Delete()
+	return s.lima.Delete()
 }
 
-// Status prints the sandbox VM status.
-func Status() error {
-	status, err := lima.Status()
+// StatusString returns the sandbox VM status as a display string.
+func (s *Service) StatusString() (string, error) {
+	status, err := s.lima.Status()
+	if err != nil {
+		return "", err
+	}
+	if status == "" {
+		return "NotCreated", nil
+	}
+	return status, nil
+}
+
+// Status prints the sandbox VM status to stdout.
+func (s *Service) Status() error {
+	status, err := s.StatusString()
 	if err != nil {
 		return err
 	}
-	if status == "" {
-		fmt.Println("NotCreated")
-	} else {
-		fmt.Println(status)
-	}
+	fmt.Println(status)
 	return nil
 }
 
 // Provision copies Claude config files into the sandbox VM.
-func Provision() error {
-	status, err := lima.Status()
+func (s *Service) Provision() error {
+	status, err := s.lima.Status()
 	if err != nil {
 		return err
 	}
@@ -123,14 +151,14 @@ func Provision() error {
 	}
 	defer os.Remove(settingsPath)
 
-	if err := lima.Copy(claudeMDPath, "~/.claude/CLAUDE.md"); err != nil {
+	if err := s.lima.Copy(claudeMDPath, "~/.claude/CLAUDE.md"); err != nil {
 		return err
 	}
-	if err := lima.Copy(settingsPath, "~/.claude/settings.json"); err != nil {
+	if err := s.lima.Copy(settingsPath, "~/.claude/settings.json"); err != nil {
 		return err
 	}
 
-	logging.Info("Provisioned Claude config into sandbox")
+	s.logger.Info("Provisioned Claude config into sandbox")
 	return nil
 }
 
