@@ -71,7 +71,7 @@ cco uses a **dedicated tmux socket** (`cco`) so it doesn't interfere with person
 **Storage layout:**
 
 ```
-~/.local/share/cco/worktrees/{repo}/{branch}/
+~/.local/share/cco/worktrees/{repo}/{repo}-{branch}/
 ```
 
 The storage path respects `$XDG_DATA_HOME` if set.

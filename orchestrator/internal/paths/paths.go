@@ -21,7 +21,7 @@ func DataDir() string {
 
 // WorktreeDir returns the full path to a workspace's worktree directory.
 func WorktreeDir(repo, branch string) string {
-	return filepath.Join(DataDir(), "worktrees", repo, SanitizeBranch(branch))
+	return filepath.Join(DataDir(), "worktrees", repo, repo+"-"+SanitizeBranch(branch))
 }
 
 // SanitizeBranch replaces non-alphanumeric characters (except hyphens) with hyphens.

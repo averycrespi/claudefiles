@@ -197,9 +197,9 @@ func Notify(path string) error {
 		return nil
 	}
 
-	dir, branch := filepath.Split(relPath)
+	dir, leaf := filepath.Split(relPath)
 	repoName := filepath.Clean(dir)
-	if repoName == "" || repoName == "." || branch == "" {
+	if repoName == "" || repoName == "." || leaf == "" {
 		fmt.Fprintf(os.Stderr, "skipped: could not parse repo/branch from path '%s'\n", info.Root)
 		return nil
 	}
@@ -211,7 +211,8 @@ func Notify(path string) error {
 		return nil
 	}
 
-	windowName := branch
+	// The leaf directory is "{repo}-{sanitized_branch}", strip the repo prefix
+	windowName := strings.TrimPrefix(leaf, repoName+"-")
 	windows, err := tmux.ListWindows(tmuxSession)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "skipped: could not list windows for session '%s'\n", tmuxSession)

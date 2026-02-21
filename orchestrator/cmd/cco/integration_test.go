@@ -109,8 +109,9 @@ func killTmuxSession(session string) {
 }
 
 func worktreeDir(xdgDataHome, repoDir, branch string) string {
+	repo := filepath.Base(repoDir)
 	sanitized := sanitizeBranch(branch)
-	return filepath.Join(xdgDataHome, "cco", "worktrees", filepath.Base(repoDir), sanitized)
+	return filepath.Join(xdgDataHome, "cco", "worktrees", repo, repo+"-"+sanitized)
 }
 
 func sanitizeBranch(branch string) string {

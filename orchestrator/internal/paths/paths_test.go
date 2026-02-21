@@ -26,7 +26,7 @@ func TestDataDir_XDG(t *testing.T) {
 func TestWorktreeDir(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", "/data")
 	dir := WorktreeDir("myapp", "feat/thing")
-	expected := "/data/cco/worktrees/myapp/feat-thing"
+	expected := "/data/cco/worktrees/myapp/myapp-feat-thing"
 	if dir != expected {
 		t.Errorf("WorktreeDir() = %q, want %q", dir, expected)
 	}
