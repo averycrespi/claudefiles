@@ -4,19 +4,55 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/git"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/tmux"
 )
 
+// gitClient defines the git operations needed by the workspace service.
+type gitClient interface {
+	RepoInfo(path string) (git.Info, error)
+	AddWorktree(repoRoot, worktreeDir, branch string) error
+	RemoveWorktree(repoRoot, worktreeDir string) error
+	CommonDir(path string) (string, error)
+}
+
+// tmuxClient defines the tmux operations needed by the workspace service.
+type tmuxClient interface {
+	SessionExists(session string) bool
+	CreateSession(session, window string) error
+	CreateWindow(session, window, dir string) error
+	KillWindow(session, window string) error
+	WindowExists(session, window string) bool
+	ListWindows(session string) ([]string, error)
+	RenameWindow(session, oldName, newName string) error
+	SendKeys(session, window, keys string) error
+	ActualWindowName(session, window string) string
+	IsActiveWindow(session, window string) bool
+	Attach(session string) error
+	AttachToWindow(session, window string) error
+}
+
+// Service manages workspace lifecycle.
+type Service struct {
+	git    gitClient
+	tmux   tmuxClient
+	logger logging.Logger
+	runner exec.Runner // used for running setup scripts; nil disables setup
+}
+
+// NewService returns a workspace Service.
+func NewService(g gitClient, t tmuxClient, l logging.Logger, r exec.Runner) *Service {
+	return &Service{git: g, tmux: t, logger: l, runner: r}
+}
+
 // Init ensures a tmux session exists for the repository.
-func Init(repoRoot string) error {
-	info, err := git.RepoInfo(repoRoot)
+func (s *Service) Init(repoRoot string) error {
+	info, err := s.git.RepoInfo(repoRoot)
 	if err != nil {
 		return err
 	}
@@ -25,18 +61,18 @@ func Init(repoRoot string) error {
 	}
 
 	tmuxSession := paths.TmuxSessionName(info.Name)
-	if tmux.SessionExists(tmuxSession) {
-		logging.Debug("tmux session already exists: %s", tmuxSession)
+	if s.tmux.SessionExists(tmuxSession) {
+		s.logger.Debug("tmux session already exists: %s", tmuxSession)
 		return nil
 	}
 
-	logging.Info("creating tmux session: %s with main window", tmuxSession)
-	return tmux.CreateSession(tmuxSession, "main")
+	s.logger.Info("creating tmux session: %s with main window", tmuxSession)
+	return s.tmux.CreateSession(tmuxSession, "main")
 }
 
 // Add creates a new workspace: worktree, tmux window, setup, and Claude launch.
-func Add(repoRoot, branch string) error {
-	info, err := git.RepoInfo(repoRoot)
+func (s *Service) Add(repoRoot, branch string) error {
+	info, err := s.git.RepoInfo(repoRoot)
 	if err != nil {
 		return err
 	}
@@ -45,7 +81,7 @@ func Add(repoRoot, branch string) error {
 	}
 
 	// Ensure tmux session exists
-	if err := Init(repoRoot); err != nil {
+	if err := s.Init(repoRoot); err != nil {
 		return err
 	}
 
@@ -55,29 +91,29 @@ func Add(repoRoot, branch string) error {
 
 	// Create worktree if it doesn't exist
 	if _, err := os.Stat(worktreeDir); os.IsNotExist(err) {
-		logging.Info("creating worktree at: %s", worktreeDir)
+		s.logger.Info("creating worktree at: %s", worktreeDir)
 		if err := os.MkdirAll(filepath.Dir(worktreeDir), 0o755); err != nil {
 			return fmt.Errorf("could not create worktree directory: %w", err)
 		}
-		if err := git.AddWorktree(info.Root, worktreeDir, branch); err != nil {
+		if err := s.git.AddWorktree(info.Root, worktreeDir, branch); err != nil {
 			return err
 		}
-		runSetupScripts(worktreeDir)
-		copyLocalSettings(info.Root, worktreeDir)
+		s.runSetupScripts(worktreeDir)
+		copyLocalSettings(info.Root, worktreeDir, s.logger)
 	} else {
-		logging.Debug("worktree already exists at: %s", worktreeDir)
+		s.logger.Debug("worktree already exists at: %s", worktreeDir)
 	}
 
 	// Create tmux window if it doesn't exist
-	if tmux.WindowExists(tmuxSession, windowName) {
-		logging.Debug("tmux window already exists: %s", windowName)
+	if s.tmux.WindowExists(tmuxSession, windowName) {
+		s.logger.Debug("tmux window already exists: %s", windowName)
 	} else {
-		logging.Info("creating tmux window: %s", windowName)
-		if err := tmux.CreateWindow(tmuxSession, windowName, worktreeDir); err != nil {
+		s.logger.Info("creating tmux window: %s", windowName)
+		if err := s.tmux.CreateWindow(tmuxSession, windowName, worktreeDir); err != nil {
 			return err
 		}
-		logging.Info("launching Claude Code in tmux window")
-		if err := tmux.SendKeys(tmuxSession, windowName, "claude --permission-mode acceptEdits"); err != nil {
+		s.logger.Info("launching Claude Code in tmux window")
+		if err := s.tmux.SendKeys(tmuxSession, windowName, "claude --permission-mode acceptEdits"); err != nil {
 			return err
 		}
 	}
@@ -86,8 +122,8 @@ func Add(repoRoot, branch string) error {
 }
 
 // Remove removes a workspace: worktree and tmux window.
-func Remove(repoRoot, branch string) error {
-	info, err := git.RepoInfo(repoRoot)
+func (s *Service) Remove(repoRoot, branch string) error {
+	info, err := s.git.RepoInfo(repoRoot)
 	if err != nil {
 		return err
 	}
@@ -101,48 +137,46 @@ func Remove(repoRoot, branch string) error {
 
 	// Remove worktree if it exists
 	if _, err := os.Stat(worktreeDir); os.IsNotExist(err) {
-		logging.Debug("worktree does not exist at: %s", worktreeDir)
+		s.logger.Debug("worktree does not exist at: %s", worktreeDir)
 	} else {
-		logging.Info("removing worktree at: %s", worktreeDir)
-		if err := git.RemoveWorktree(info.Root, worktreeDir); err != nil {
+		s.logger.Info("removing worktree at: %s", worktreeDir)
+		if err := s.git.RemoveWorktree(info.Root, worktreeDir); err != nil {
 			return err
 		}
 	}
 
 	// Close tmux window if it exists
-	if !tmux.SessionExists(tmuxSession) {
-		logging.Debug("tmux session does not exist: %s", tmuxSession)
+	if !s.tmux.SessionExists(tmuxSession) {
+		s.logger.Debug("tmux session does not exist: %s", tmuxSession)
 		return nil
 	}
 
-	actualName := tmux.ActualWindowName(tmuxSession, windowName)
+	actualName := s.tmux.ActualWindowName(tmuxSession, windowName)
 	if actualName != "" {
-		logging.Info("closing tmux window: %s", windowName)
-		return tmux.KillWindow(tmuxSession, actualName)
+		s.logger.Info("closing tmux window: %s", windowName)
+		return s.tmux.KillWindow(tmuxSession, actualName)
 	}
-	logging.Debug("tmux window does not exist: %s", windowName)
+	s.logger.Debug("tmux window does not exist: %s", windowName)
 	return nil
 }
 
 // Attach attaches to the tmux session for the repository at the given path.
 // If branch is non-empty, attaches to the specific window for that branch.
 // Works from both the main repo and worktrees.
-func Attach(path, branch string) error {
-	info, err := git.RepoInfo(path)
+func (s *Service) Attach(path, branch string) error {
+	info, err := s.git.RepoInfo(path)
 	if err != nil {
 		return err
 	}
 
 	var repoName string
 	if info.IsWorktree {
-		cmd := exec.Command("git", "rev-parse", "--git-common-dir")
-		cmd.Dir = path
-		out, err := cmd.Output()
+		commonDir, err := s.git.CommonDir(path)
 		if err != nil {
 			return fmt.Errorf("could not determine main repo: %w", err)
 		}
-		commonDir := filepath.Clean(filepath.Join(path, strings.TrimSpace(string(out))))
-		mainRoot := filepath.Dir(commonDir)
+		resolved := filepath.Clean(filepath.Join(path, commonDir))
+		mainRoot := filepath.Dir(resolved)
 		repoName = filepath.Base(mainRoot)
 	} else {
 		repoName = info.Name
@@ -150,33 +184,33 @@ func Attach(path, branch string) error {
 
 	tmuxSession := paths.TmuxSessionName(repoName)
 
-	if !tmux.SessionExists(tmuxSession) {
+	if !s.tmux.SessionExists(tmuxSession) {
 		if info.IsWorktree {
 			return fmt.Errorf("tmux session does not exist: %s. Run 'cco add <branch>' from the main repository first", tmuxSession)
 		}
-		if err := Init(path); err != nil {
+		if err := s.Init(path); err != nil {
 			return err
 		}
 	}
 
 	if branch != "" {
 		windowName := paths.TmuxWindowName(branch)
-		if !tmux.WindowExists(tmuxSession, windowName) {
+		if !s.tmux.WindowExists(tmuxSession, windowName) {
 			return fmt.Errorf("tmux window does not exist for branch: %s", branch)
 		}
-		actualName := tmux.ActualWindowName(tmuxSession, windowName)
-		logging.Info("attaching to tmux window: %s:%s", tmuxSession, windowName)
-		return tmux.AttachToWindow(tmuxSession, actualName)
+		actualName := s.tmux.ActualWindowName(tmuxSession, windowName)
+		s.logger.Info("attaching to tmux window: %s:%s", tmuxSession, windowName)
+		return s.tmux.AttachToWindow(tmuxSession, actualName)
 	}
 
-	logging.Info("attaching to tmux session: %s", tmuxSession)
-	return tmux.Attach(tmuxSession)
+	s.logger.Info("attaching to tmux session: %s", tmuxSession)
+	return s.tmux.Attach(tmuxSession)
 }
 
 // Notify adds a bell emoji to the tmux window for the current workspace.
 // Designed to be called from hooks -- prints skip reason to stderr and always returns nil.
-func Notify(path string) error {
-	info, err := git.RepoInfo(path)
+func (s *Service) Notify(path string) error {
+	info, err := s.git.RepoInfo(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "skipped: %v\n", err)
 		return nil
@@ -187,9 +221,6 @@ func Notify(path string) error {
 		return nil
 	}
 
-	// Derive session info from the worktree path.
-	// For cco-managed worktrees, the path is:
-	//   ~/.local/share/cco/worktrees/{repo}/{branch}/
 	worktreesDir := filepath.Join(paths.DataDir(), "worktrees")
 	relPath, err := filepath.Rel(worktreesDir, info.Root)
 	if err != nil || relPath == "." || strings.HasPrefix(relPath, "..") {
@@ -206,14 +237,13 @@ func Notify(path string) error {
 
 	tmuxSession := paths.TmuxSessionName(repoName)
 
-	if !tmux.SessionExists(tmuxSession) {
+	if !s.tmux.SessionExists(tmuxSession) {
 		fmt.Fprintf(os.Stderr, "skipped: tmux session '%s' does not exist\n", tmuxSession)
 		return nil
 	}
 
-	// The leaf directory is "{repo}-{sanitized_branch}", strip the repo prefix
 	windowName := strings.TrimPrefix(leaf, repoName+"-")
-	windows, err := tmux.ListWindows(tmuxSession)
+	windows, err := s.tmux.ListWindows(tmuxSession)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "skipped: could not list windows for session '%s'\n", tmuxSession)
 		return nil
@@ -222,19 +252,19 @@ func Notify(path string) error {
 	bellName := "🔔 " + windowName
 	for _, w := range windows {
 		if w == bellName {
-			logging.Debug("tmux window '%s' already has a notification", windowName)
+			s.logger.Debug("tmux window '%s' already has a notification", windowName)
 			return nil
 		}
 	}
 
 	for _, w := range windows {
 		if w == windowName {
-			if tmux.IsActiveWindow(tmuxSession, windowName) {
+			if s.tmux.IsActiveWindow(tmuxSession, windowName) {
 				fmt.Fprintf(os.Stderr, "skipped: window '%s' is currently active\n", windowName)
 				return nil
 			}
-			logging.Info("adding notification to tmux window: %s", windowName)
-			if err := tmux.RenameWindow(tmuxSession, windowName, bellName); err != nil {
+			s.logger.Info("adding notification to tmux window: %s", windowName)
+			if err := s.tmux.RenameWindow(tmuxSession, windowName, bellName); err != nil {
 				fmt.Fprintf(os.Stderr, "skipped: could not rename tmux window '%s'\n", windowName)
 			}
 			return nil
@@ -246,7 +276,10 @@ func Notify(path string) error {
 }
 
 // runSetupScripts looks for and runs setup scripts in the workspace directory.
-func runSetupScripts(worktreeDir string) {
+func (s *Service) runSetupScripts(worktreeDir string) {
+	if s.runner == nil {
+		return
+	}
 	scriptsDir := filepath.Join(worktreeDir, "scripts")
 	candidates := []string{"init", "init.sh", "setup", "setup.sh"}
 
@@ -259,37 +292,33 @@ func runSetupScripts(worktreeDir string) {
 		if fi.Mode()&0o111 == 0 {
 			continue
 		}
-		logging.Info("running setup script: %s", scriptPath)
-		cmd := exec.Command(scriptPath)
-		cmd.Dir = worktreeDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		s.logger.Info("running setup script: %s", scriptPath)
+		if err := s.runner.RunInteractive(scriptPath); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: setup script %s failed: %v\n", name, err)
 		}
 		return
 	}
-	logging.Debug("no setup scripts found")
+	s.logger.Debug("no setup scripts found")
 }
 
 // copyLocalSettings copies .claude/settings.local.json from the main repo to the worktree dir.
-func copyLocalSettings(repoRoot, worktreeDir string) {
+func copyLocalSettings(repoRoot, worktreeDir string, logger logging.Logger) {
 	src := filepath.Join(repoRoot, ".claude", "settings.local.json")
 	dst := filepath.Join(worktreeDir, ".claude", "settings.local.json")
 
 	srcFile, err := os.Open(src)
 	if err != nil {
-		logging.Debug("no local Claude settings found in repo")
+		logger.Debug("no local Claude settings found in repo")
 		return
 	}
 	defer srcFile.Close()
 
 	if _, err := os.Stat(dst); err == nil {
-		logging.Debug("local Claude settings already exist in worktree")
+		logger.Debug("local Claude settings already exist in worktree")
 		return
 	}
 
-	logging.Info("copying local Claude settings to: %s", dst)
+	logger.Info("copying local Claude settings to: %s", dst)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not create .claude dir: %v\n", err)
 		return
