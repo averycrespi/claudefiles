@@ -1,130 +1,203 @@
 package tmux
 
 import (
-	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
 )
 
-// Use a unique session name per test to avoid collisions
-func testSession(t *testing.T) string {
-	t.Helper()
-	name := "cco-test-" + t.Name()
-	t.Cleanup(func() {
-		KillSession(name)
-	})
-	return name
+type mockRunner struct {
+	mock.Mock
 }
 
-func TestCreateSession(t *testing.T) {
-	session := testSession(t)
-	if SessionExists(session) {
-		t.Fatal("session should not exist before creation")
-	}
-	if err := CreateSession(session, "main"); err != nil {
-		t.Fatalf("CreateSession() error: %v", err)
-	}
-	if !SessionExists(session) {
-		t.Error("session should exist after creation")
-	}
+func (m *mockRunner) Run(name string, args ...string) ([]byte, error) {
+	callArgs := m.Called(name, args)
+	return callArgs.Get(0).([]byte), callArgs.Error(1)
 }
 
-func TestWindowExists(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	if !WindowExists(session, "main") {
-		t.Error("main window should exist")
-	}
-	if WindowExists(session, "nonexistent") {
-		t.Error("nonexistent window should not exist")
-	}
+func (m *mockRunner) RunDir(dir, name string, args ...string) ([]byte, error) {
+	callArgs := m.Called(dir, name, args)
+	return callArgs.Get(0).([]byte), callArgs.Error(1)
 }
 
-func TestCreateWindow(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	dir := t.TempDir()
-	if err := CreateWindow(session, "test-win", dir); err != nil {
-		t.Fatalf("CreateWindow() error: %v", err)
-	}
-	if !WindowExists(session, "test-win") {
-		t.Error("test-win should exist after creation")
-	}
+func (m *mockRunner) RunInteractive(name string, args ...string) error {
+	callArgs := m.Called(name, args)
+	return callArgs.Error(0)
 }
 
-func TestKillWindow(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	dir := t.TempDir()
-	CreateWindow(session, "kill-me", dir)
-	if err := KillWindow(session, "kill-me"); err != nil {
-		t.Fatalf("KillWindow() error: %v", err)
-	}
-	if WindowExists(session, "kill-me") {
-		t.Error("kill-me should not exist after KillWindow")
-	}
+var _ exec.Runner = (*mockRunner)(nil)
+
+func TestClient_SessionExists_True(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "has-session", "-t", "mysess"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	assert.True(t, client.SessionExists("mysess"))
 }
 
-func TestListWindows(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	dir := t.TempDir()
-	CreateWindow(session, "win-a", dir)
-	CreateWindow(session, "win-b", dir)
-	windows, err := ListWindows(session)
-	if err != nil {
-		t.Fatalf("ListWindows() error: %v", err)
-	}
-	found := map[string]bool{}
-	for _, w := range windows {
-		found[w] = true
-	}
-	for _, want := range []string{"main", "win-a", "win-b"} {
-		if !found[want] {
-			t.Errorf("ListWindows() missing %q, got %v", want, windows)
-		}
-	}
+func TestClient_SessionExists_False(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "has-session", "-t", "nosess"}).Return([]byte(""), assert.AnError)
+
+	client := NewClient(r)
+	assert.False(t, client.SessionExists("nosess"))
 }
 
-func TestRenameWindow(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	dir := t.TempDir()
-	CreateWindow(session, "old-name", dir)
-	if err := RenameWindow(session, "old-name", "new-name"); err != nil {
-		t.Fatalf("RenameWindow() error: %v", err)
-	}
-	if WindowExists(session, "old-name") {
-		t.Error("old-name should not exist after rename")
-	}
-	if !WindowExists(session, "new-name") {
-		t.Error("new-name should exist after rename")
-	}
+func TestClient_CreateSession(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "new-session", "-d", "-s", "sess", "-n", "main"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.CreateSession("sess", "main")
+
+	require.NoError(t, err)
+	r.AssertExpectations(t)
 }
 
-func TestSendKeys(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	if err := SendKeys(session, "main", "echo hello"); err != nil {
-		t.Fatalf("SendKeys() error: %v", err)
-	}
+func TestClient_CreateWindow(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "new-window", "-t", "sess", "-n", "win", "-c", "/dir", "-d"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.CreateWindow("sess", "win", "/dir")
+
+	require.NoError(t, err)
+	r.AssertExpectations(t)
 }
 
-func TestSocketIsolation(t *testing.T) {
-	session := testSession(t)
-	if err := CreateSession(session, "main"); err != nil {
-		t.Fatalf("CreateSession() error: %v", err)
-	}
+func TestClient_KillWindow(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "kill-window", "-t", "sess:win"}).Return([]byte(""), nil)
 
-	// Session should exist on the cco socket
-	if !SessionExists(session) {
-		t.Error("session should exist on cco socket")
-	}
+	client := NewClient(r)
+	err := client.KillWindow("sess", "win")
 
-	// Session should NOT exist on the default socket
-	cmd := exec.Command("tmux", "has-session", "-t", session)
-	if cmd.Run() == nil {
-		t.Error("session should NOT exist on default tmux socket")
-	}
+	require.NoError(t, err)
+}
+
+func TestClient_ListWindows(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\nfeature\n"), nil)
+
+	client := NewClient(r)
+	windows, err := client.ListWindows("sess")
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"main", "feature"}, windows)
+}
+
+func TestClient_ListWindows_Empty(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	windows, err := client.ListWindows("sess")
+
+	require.NoError(t, err)
+	assert.Nil(t, windows)
+}
+
+func TestClient_WindowExists_Direct(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\nfeat\n"), nil)
+
+	client := NewClient(r)
+	assert.True(t, client.WindowExists("sess", "feat"))
+}
+
+func TestClient_WindowExists_BellPrefix(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\n🔔 feat\n"), nil)
+
+	client := NewClient(r)
+	assert.True(t, client.WindowExists("sess", "feat"))
+}
+
+func TestClient_WindowExists_NotFound(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\n"), nil)
+
+	client := NewClient(r)
+	assert.False(t, client.WindowExists("sess", "nope"))
+}
+
+func TestClient_ActualWindowName_Direct(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\nfeat\n"), nil)
+
+	client := NewClient(r)
+	assert.Equal(t, "feat", client.ActualWindowName("sess", "feat"))
+}
+
+func TestClient_ActualWindowName_Bell(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\n🔔 feat\n"), nil)
+
+	client := NewClient(r)
+	assert.Equal(t, "🔔 feat", client.ActualWindowName("sess", "feat"))
+}
+
+func TestClient_ActualWindowName_NotFound(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\n"), nil)
+
+	client := NewClient(r)
+	assert.Equal(t, "", client.ActualWindowName("sess", "nope"))
+}
+
+func TestClient_SendKeys(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "send-keys", "-t", "sess:win", "echo hi", "C-m"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.SendKeys("sess", "win", "echo hi")
+
+	require.NoError(t, err)
+}
+
+func TestClient_RenameWindow(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "rename-window", "-t", "sess:old", "new"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.RenameWindow("sess", "old", "new")
+
+	require.NoError(t, err)
+}
+
+func TestClient_IsActiveWindow(t *testing.T) {
+	r := new(mockRunner)
+	// WindowExists calls ListWindows
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-windows", "-t", "sess", "-F", "#{window_name}"}).Return([]byte("main\nfeat\n"), nil)
+	// display-message for active check
+	r.On("Run", "tmux", []string{"-L", SocketName, "display-message", "-t", "sess:feat", "-p", "#{window_active}"}).Return([]byte("1\n"), nil)
+
+	client := NewClient(r)
+	assert.True(t, client.IsActiveWindow("sess", "feat"))
+}
+
+func TestClient_Attach(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunInteractive", "tmux", []string{"-L", SocketName, "attach-session", "-t", "sess"}).Return(nil)
+
+	client := NewClient(r)
+	err := client.Attach("sess")
+
+	require.NoError(t, err)
+}
+
+func TestClient_AttachToWindow(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunInteractive", "tmux", []string{"-L", SocketName, "attach-session", "-t", "sess:win"}).Return(nil)
+
+	client := NewClient(r)
+	err := client.AttachToWindow("sess", "win")
+
+	require.NoError(t, err)
 }
 
 func TestInsideCcoSocket(t *testing.T) {
@@ -141,45 +214,7 @@ func TestInsideCcoSocket(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := insideCcoSocket(tt.tmux); got != tt.expect {
-				t.Errorf("insideCcoSocket(%q) = %v, want %v", tt.tmux, got, tt.expect)
-			}
+			assert.Equal(t, tt.expect, insideCcoSocket(tt.tmux))
 		})
-	}
-}
-
-func TestIsActiveWindow(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	dir := t.TempDir()
-	CreateWindow(session, "other", dir)
-
-	// The first window created with the session is active by default
-	if !IsActiveWindow(session, "main") {
-		t.Error("main window should be active (it was created with the session)")
-	}
-	if IsActiveWindow(session, "other") {
-		t.Error("other window should not be active")
-	}
-}
-
-func TestIsActiveWindowNonexistent(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-
-	// Nonexistent window should return false (not error)
-	if IsActiveWindow(session, "no-such-window") {
-		t.Error("nonexistent window should return false")
-	}
-}
-
-func TestWindowExistsWithBellPrefix(t *testing.T) {
-	session := testSession(t)
-	CreateSession(session, "main")
-	dir := t.TempDir()
-	CreateWindow(session, "notified", dir)
-	RenameWindow(session, "notified", "🔔 notified")
-	if !WindowExists(session, "notified") {
-		t.Error("WindowExists should find window with bell prefix")
 	}
 }

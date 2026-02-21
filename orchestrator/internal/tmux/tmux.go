@@ -2,37 +2,50 @@ package tmux
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
 )
 
 const bellPrefix = "🔔 "
 
 const SocketName = "cco"
 
-func tmuxCmd(args ...string) *exec.Cmd {
-	fullArgs := append([]string{"-L", SocketName}, args...)
-	return exec.Command("tmux", fullArgs...)
+// Client wraps tmux operations with an injectable command runner.
+type Client struct {
+	runner  exec.Runner
+	TmuxEnv string // value of $TMUX, used to detect if already inside cco socket
 }
 
-func SessionExists(name string) bool {
-	cmd := tmuxCmd("has-session", "-t", name)
-	return cmd.Run() == nil
+// NewClient returns a tmux Client using the given command runner.
+func NewClient(runner exec.Runner) *Client {
+	return &Client{runner: runner}
 }
 
-func CreateSession(name, windowName string) error {
-	cmd := tmuxCmd("new-session", "-d", "-s", name, "-n", windowName)
-	out, err := cmd.CombinedOutput()
+func (c *Client) tmuxArgs(args ...string) []string {
+	return append([]string{"-L", SocketName}, args...)
+}
+
+func (c *Client) run(args ...string) ([]byte, error) {
+	return c.runner.Run("tmux", c.tmuxArgs(args...)...)
+}
+
+func (c *Client) SessionExists(name string) bool {
+	_, err := c.run("has-session", "-t", name)
+	return err == nil
+}
+
+func (c *Client) CreateSession(name, windowName string) error {
+	out, err := c.run("new-session", "-d", "-s", name, "-n", windowName)
 	if err != nil {
 		return fmt.Errorf("tmux new-session failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func WindowExists(session, window string) bool {
-	windows, err := ListWindows(session)
+func (c *Client) WindowExists(session, window string) bool {
+	windows, err := c.ListWindows(session)
 	if err != nil {
 		return false
 	}
@@ -44,8 +57,8 @@ func WindowExists(session, window string) bool {
 	return false
 }
 
-func ActualWindowName(session, window string) string {
-	windows, err := ListWindows(session)
+func (c *Client) ActualWindowName(session, window string) string {
+	windows, err := c.ListWindows(session)
 	if err != nil {
 		return ""
 	}
@@ -60,54 +73,48 @@ func ActualWindowName(session, window string) string {
 	return ""
 }
 
-func CreateWindow(session, window, cwd string) error {
-	cmd := tmuxCmd("new-window", "-t", session, "-n", window, "-c", cwd, "-d")
-	out, err := cmd.CombinedOutput()
+func (c *Client) CreateWindow(session, window, cwd string) error {
+	out, err := c.run("new-window", "-t", session, "-n", window, "-c", cwd, "-d")
 	if err != nil {
 		return fmt.Errorf("tmux new-window failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func KillWindow(session, window string) error {
-	cmd := tmuxCmd("kill-window", "-t", session+":"+window)
-	out, err := cmd.CombinedOutput()
+func (c *Client) KillWindow(session, window string) error {
+	out, err := c.run("kill-window", "-t", session+":"+window)
 	if err != nil {
 		return fmt.Errorf("tmux kill-window failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func KillSession(name string) error {
-	cmd := tmuxCmd("kill-session", "-t", name)
-	out, err := cmd.CombinedOutput()
+func (c *Client) KillSession(name string) error {
+	out, err := c.run("kill-session", "-t", name)
 	if err != nil {
 		return fmt.Errorf("tmux kill-session failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func SendKeys(session, window, command string) error {
-	cmd := tmuxCmd("send-keys", "-t", session+":"+window, command, "C-m")
-	out, err := cmd.CombinedOutput()
+func (c *Client) SendKeys(session, window, command string) error {
+	out, err := c.run("send-keys", "-t", session+":"+window, command, "C-m")
 	if err != nil {
 		return fmt.Errorf("tmux send-keys failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func RenameWindow(session, oldName, newName string) error {
-	cmd := tmuxCmd("rename-window", "-t", session+":"+oldName, newName)
-	out, err := cmd.CombinedOutput()
+func (c *Client) RenameWindow(session, oldName, newName string) error {
+	out, err := c.run("rename-window", "-t", session+":"+oldName, newName)
 	if err != nil {
 		return fmt.Errorf("tmux rename-window failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func ListWindows(session string) ([]string, error) {
-	cmd := tmuxCmd("list-windows", "-t", session, "-F", "#{window_name}")
-	out, err := cmd.Output()
+func (c *Client) ListWindows(session string) ([]string, error) {
+	out, err := c.run("list-windows", "-t", session, "-F", "#{window_name}")
 	if err != nil {
 		return nil, fmt.Errorf("tmux list-windows failed: %w", err)
 	}
@@ -122,57 +129,37 @@ func insideCcoSocket(tmuxEnv string) bool {
 	if tmuxEnv == "" {
 		return false
 	}
-	// $TMUX format: /path/to/socket,pid,index
-	// Extract socket path (everything before first comma)
 	socketPath := tmuxEnv
 	if i := strings.Index(tmuxEnv, ","); i >= 0 {
 		socketPath = tmuxEnv[:i]
 	}
-	// Check if the socket file basename matches our socket name exactly
 	base := filepath.Base(socketPath)
 	return base == SocketName
 }
 
-func IsActiveWindow(session, window string) bool {
-	if !WindowExists(session, window) {
+func (c *Client) IsActiveWindow(session, window string) bool {
+	if !c.WindowExists(session, window) {
 		return false
 	}
-	actual := ActualWindowName(session, window)
-	cmd := tmuxCmd("display-message", "-t", session+":"+actual, "-p", "#{window_active}")
-	out, err := cmd.Output()
+	actual := c.ActualWindowName(session, window)
+	out, err := c.run("display-message", "-t", session+":"+actual, "-p", "#{window_active}")
 	if err != nil {
 		return false
 	}
 	return strings.TrimSpace(string(out)) == "1"
 }
 
-func Attach(session string) error {
-	if insideCcoSocket(os.Getenv("TMUX")) {
-		cmd := tmuxCmd("switch-client", "-t", session)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
+func (c *Client) Attach(session string) error {
+	if insideCcoSocket(c.TmuxEnv) {
+		return c.runner.RunInteractive("tmux", c.tmuxArgs("switch-client", "-t", session)...)
 	}
-	cmd := tmuxCmd("attach-session", "-t", session)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return c.runner.RunInteractive("tmux", c.tmuxArgs("attach-session", "-t", session)...)
 }
 
-func AttachToWindow(session, window string) error {
+func (c *Client) AttachToWindow(session, window string) error {
 	target := session + ":" + window
-	if insideCcoSocket(os.Getenv("TMUX")) {
-		cmd := tmuxCmd("switch-client", "-t", target)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
+	if insideCcoSocket(c.TmuxEnv) {
+		return c.runner.RunInteractive("tmux", c.tmuxArgs("switch-client", "-t", target)...)
 	}
-	cmd := tmuxCmd("attach-session", "-t", target)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return c.runner.RunInteractive("tmux", c.tmuxArgs("attach-session", "-t", target)...)
 }
