@@ -91,4 +91,4 @@ hostResolver:
 
 message: |
   Claude Code sandbox VM is ready.
-  Run `limactl shell claude-sandbox` to enter the VM.
+  Run `limactl shell cco-sandbox` to enter the VM.
