@@ -7,13 +7,6 @@ cpus: 4
 memory: "4GiB"
 disk: "100GiB"
 
-mounts:
-- location: "~/.gitconfig"
-  writable: false
-- location: "~/.claude-sandbox"
-  mountPoint: "/tmp/claude-sandbox-config"
-  writable: false
-
 containerd:
   system: false
   user: false
@@ -97,10 +90,6 @@ provision:
 
     # --- Claude Code ---
     npm install -g @anthropic-ai/claude-code
-
-    # --- Copy sandbox Claude config ---
-    mkdir -p "$HOME/.claude"
-    cp -r /tmp/claude-sandbox-config/* "$HOME/.claude/"
 
 probes:
 - script: |
