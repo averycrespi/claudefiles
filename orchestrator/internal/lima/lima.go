@@ -3,9 +3,9 @@ package lima
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
 )
 
 const VMName = "cco-sandbox"
@@ -26,11 +26,19 @@ func parseStatus(data []byte) (string, error) {
 	return instances[0].Status, nil
 }
 
+// Client wraps limactl operations with an injectable command runner.
+type Client struct {
+	runner exec.Runner
+}
+
+// NewClient returns a lima Client using the given command runner.
+func NewClient(runner exec.Runner) *Client {
+	return &Client{runner: runner}
+}
+
 // Status returns the VM status: "Running", "Stopped", or "" if not found.
-func Status() (string, error) {
-	cmd := exec.Command("limactl", "list", "--json", VMName)
-	cmd.Stderr = os.Stderr
-	out, err := cmd.Output()
+func (c *Client) Status() (string, error) {
+	out, err := c.runner.Run("limactl", "list", "--json", VMName)
 	if err != nil {
 		return "", fmt.Errorf("limactl list failed: %s", strings.TrimSpace(string(out)))
 	}
@@ -38,58 +46,41 @@ func Status() (string, error) {
 }
 
 // Create starts a new VM from a template file path.
-func Create(templatePath string) error {
-	cmd := exec.Command("limactl", "start", "--name="+VMName, templatePath)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+func (c *Client) Create(templatePath string) error {
+	if err := c.runner.RunInteractive("limactl", "start", "--name="+VMName, templatePath); err != nil {
 		return fmt.Errorf("limactl start failed: %s", err)
 	}
 	return nil
 }
 
 // Start boots a stopped VM.
-func Start() error {
-	cmd := exec.Command("limactl", "start", VMName)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+func (c *Client) Start() error {
+	if err := c.runner.RunInteractive("limactl", "start", VMName); err != nil {
 		return fmt.Errorf("limactl start failed: %s", err)
 	}
 	return nil
 }
 
 // Stop halts a running VM.
-func Stop() error {
-	cmd := exec.Command("limactl", "stop", VMName)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+func (c *Client) Stop() error {
+	if err := c.runner.RunInteractive("limactl", "stop", VMName); err != nil {
 		return fmt.Errorf("limactl stop failed: %s", err)
 	}
 	return nil
 }
 
 // Delete removes the VM. Limactl prompts for confirmation interactively.
-func Delete() error {
-	cmd := exec.Command("limactl", "delete", VMName)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+func (c *Client) Delete() error {
+	if err := c.runner.RunInteractive("limactl", "delete", VMName); err != nil {
 		return fmt.Errorf("limactl delete failed: %s", err)
 	}
 	return nil
 }
 
 // Copy copies a local file into the VM at the given guest path.
-func Copy(localPath, guestPath string) error {
+func (c *Client) Copy(localPath, guestPath string) error {
 	dest := VMName + ":" + guestPath
-	cmd := exec.Command("limactl", "cp", localPath, dest)
-	cmd.Stderr = os.Stderr
-	out, err := cmd.Output()
+	out, err := c.runner.Run("limactl", "cp", localPath, dest)
 	if err != nil {
 		return fmt.Errorf("limactl cp failed: %s", strings.TrimSpace(string(out)))
 	}
