@@ -2,9 +2,10 @@ package git
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
 )
 
 // Info contains information about a git repository.
@@ -14,25 +15,29 @@ type Info struct {
 	IsWorktree bool   // True if path is inside a worktree (not the main repo)
 }
 
+// Client wraps git operations with an injectable command runner.
+type Client struct {
+	runner exec.Runner
+}
+
+// NewClient returns a git Client using the given command runner.
+func NewClient(runner exec.Runner) *Client {
+	return &Client{runner: runner}
+}
+
 // RepoInfo returns information about the git repository at the given path.
-func RepoInfo(path string) (Info, error) {
-	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
-	cmd.Dir = path
-	if out, err := cmd.CombinedOutput(); err != nil {
+func (c *Client) RepoInfo(path string) (Info, error) {
+	if out, err := c.runner.RunDir(path, "git", "rev-parse", "--is-inside-work-tree"); err != nil {
 		return Info{}, fmt.Errorf("not a git repository: %s", strings.TrimSpace(string(out)))
 	}
 
-	cmd = exec.Command("git", "rev-parse", "--show-toplevel")
-	cmd.Dir = path
-	out, err := cmd.Output()
+	out, err := c.runner.RunDir(path, "git", "rev-parse", "--show-toplevel")
 	if err != nil {
 		return Info{}, fmt.Errorf("could not determine repo root: %w", err)
 	}
 	root := strings.TrimSpace(string(out))
 
-	cmd = exec.Command("git", "rev-parse", "--git-common-dir")
-	cmd.Dir = path
-	out, err = cmd.Output()
+	out, err = c.runner.RunDir(path, "git", "rev-parse", "--git-common-dir")
 	if err != nil {
 		return Info{}, fmt.Errorf("could not determine git common dir: %w", err)
 	}
@@ -47,26 +52,21 @@ func RepoInfo(path string) (Info, error) {
 }
 
 // BranchExists checks if a local branch exists.
-func BranchExists(repoRoot, branch string) bool {
-	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
-	cmd.Dir = repoRoot
-	return cmd.Run() == nil
+func (c *Client) BranchExists(repoRoot, branch string) bool {
+	_, err := c.runner.RunDir(repoRoot, "git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
+	return err == nil
 }
 
 // AddWorktree creates a git worktree at the given path.
 // If the branch exists locally, it checks it out. Otherwise, it creates a new branch.
-func AddWorktree(repoRoot, path, branch string) error {
-	if BranchExists(repoRoot, branch) {
-		cmd := exec.Command("git", "worktree", "add", "--quiet", path, branch)
-		cmd.Dir = repoRoot
-		out, err := cmd.CombinedOutput()
+func (c *Client) AddWorktree(repoRoot, path, branch string) error {
+	if c.BranchExists(repoRoot, branch) {
+		out, err := c.runner.RunDir(repoRoot, "git", "worktree", "add", "--quiet", path, branch)
 		if err != nil {
 			return fmt.Errorf("git worktree add failed: %s", strings.TrimSpace(string(out)))
 		}
 	} else {
-		cmd := exec.Command("git", "worktree", "add", "--quiet", "-b", branch, path)
-		cmd.Dir = repoRoot
-		out, err := cmd.CombinedOutput()
+		out, err := c.runner.RunDir(repoRoot, "git", "worktree", "add", "--quiet", "-b", branch, path)
 		if err != nil {
 			return fmt.Errorf("git worktree add -b failed: %s", strings.TrimSpace(string(out)))
 		}
@@ -75,12 +75,20 @@ func AddWorktree(repoRoot, path, branch string) error {
 }
 
 // RemoveWorktree removes a git worktree at the given path.
-func RemoveWorktree(repoRoot, path string) error {
-	cmd := exec.Command("git", "worktree", "remove", path)
-	cmd.Dir = repoRoot
-	out, err := cmd.CombinedOutput()
+func (c *Client) RemoveWorktree(repoRoot, path string) error {
+	out, err := c.runner.RunDir(repoRoot, "git", "worktree", "remove", path)
 	if err != nil {
 		return fmt.Errorf("git worktree remove failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
+}
+
+// CommonDir returns the git common directory for the repo at path.
+// For worktrees this points back to the main repo's .git directory.
+func (c *Client) CommonDir(path string) (string, error) {
+	out, err := c.runner.RunDir(path, "git", "rev-parse", "--git-common-dir")
+	if err != nil {
+		return "", fmt.Errorf("could not determine git common dir: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
 }

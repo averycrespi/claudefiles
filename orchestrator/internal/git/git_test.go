@@ -1,114 +1,137 @@
 package git
 
 import (
-	"os"
-	"os/exec"
-	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
 )
 
-// helper: create a temp git repo with an initial commit
-func setupRepo(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	// Resolve symlinks so paths match git's resolved output (needed on macOS
-	// where /var is a symlink to /private/var).
-	dir, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatalf("EvalSymlinks: %v", err)
-	}
-	run(t, dir, "git", "init")
-	run(t, dir, "git", "commit", "--allow-empty", "-m", "init")
-	return dir
+// mockRunner implements exec.Runner for unit tests.
+type mockRunner struct {
+	mock.Mock
 }
 
-func run(t *testing.T, dir string, name string, args ...string) {
-	t.Helper()
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("%s %v failed: %s\n%s", name, args, err, out)
-	}
+func (m *mockRunner) Run(name string, args ...string) ([]byte, error) {
+	callArgs := m.Called(name, args)
+	return callArgs.Get(0).([]byte), callArgs.Error(1)
 }
 
-func TestRepoInfo_MainRepo(t *testing.T) {
-	dir := setupRepo(t)
-	info, err := RepoInfo(dir)
-	if err != nil {
-		t.Fatalf("RepoInfo() error: %v", err)
-	}
-	if info.Name != filepath.Base(dir) {
-		t.Errorf("Name = %q, want %q", info.Name, filepath.Base(dir))
-	}
-	if info.Root != dir {
-		t.Errorf("Root = %q, want %q", info.Root, dir)
-	}
-	if info.IsWorktree {
-		t.Error("IsWorktree = true, want false")
-	}
+func (m *mockRunner) RunDir(dir, name string, args ...string) ([]byte, error) {
+	callArgs := m.Called(dir, name, args)
+	return callArgs.Get(0).([]byte), callArgs.Error(1)
 }
 
-func TestRepoInfo_NotARepo(t *testing.T) {
-	dir := t.TempDir()
-	_, err := RepoInfo(dir)
-	if err == nil {
-		t.Error("RepoInfo() expected error for non-repo dir")
-	}
+func (m *mockRunner) RunInteractive(name string, args ...string) error {
+	callArgs := m.Called(name, args)
+	return callArgs.Error(0)
 }
 
-func TestBranchExists(t *testing.T) {
-	dir := setupRepo(t)
-	run(t, dir, "git", "branch", "test-branch")
-	if !BranchExists(dir, "test-branch") {
-		t.Error("BranchExists(test-branch) = false, want true")
-	}
-	if BranchExists(dir, "nonexistent") {
-		t.Error("BranchExists(nonexistent) = true, want false")
-	}
+var _ exec.Runner = (*mockRunner)(nil)
+
+func TestClient_RepoInfo_MainRepo(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/repo", "git", []string{"rev-parse", "--is-inside-work-tree"}).Return([]byte("true\n"), nil)
+	r.On("RunDir", "/repo", "git", []string{"rev-parse", "--show-toplevel"}).Return([]byte("/repo\n"), nil)
+	r.On("RunDir", "/repo", "git", []string{"rev-parse", "--git-common-dir"}).Return([]byte(".git\n"), nil)
+
+	client := NewClient(r)
+	info, err := client.RepoInfo("/repo")
+
+	require.NoError(t, err)
+	assert.Equal(t, "repo", info.Name)
+	assert.Equal(t, "/repo", info.Root)
+	assert.False(t, info.IsWorktree)
+	r.AssertExpectations(t)
 }
 
-func TestAddWorktree(t *testing.T) {
-	dir := setupRepo(t)
-	wtDir := filepath.Join(t.TempDir(), "wt")
-	err := AddWorktree(dir, wtDir, "new-branch")
-	if err != nil {
-		t.Fatalf("AddWorktree() error: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(wtDir, ".git")); os.IsNotExist(err) {
-		t.Error("worktree .git file not created")
-	}
-	info, err := RepoInfo(wtDir)
-	if err != nil {
-		t.Fatalf("RepoInfo(worktree) error: %v", err)
-	}
-	if !info.IsWorktree {
-		t.Error("IsWorktree = false, want true")
-	}
+func TestClient_RepoInfo_Worktree(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/wt", "git", []string{"rev-parse", "--is-inside-work-tree"}).Return([]byte("true\n"), nil)
+	r.On("RunDir", "/wt", "git", []string{"rev-parse", "--show-toplevel"}).Return([]byte("/wt\n"), nil)
+	r.On("RunDir", "/wt", "git", []string{"rev-parse", "--git-common-dir"}).Return([]byte("/repo/.git/worktrees/wt\n"), nil)
+
+	client := NewClient(r)
+	info, err := client.RepoInfo("/wt")
+
+	require.NoError(t, err)
+	assert.True(t, info.IsWorktree)
 }
 
-func TestAddWorktree_ExistingBranch(t *testing.T) {
-	dir := setupRepo(t)
-	run(t, dir, "git", "branch", "existing")
-	wtDir := filepath.Join(t.TempDir(), "wt")
-	err := AddWorktree(dir, wtDir, "existing")
-	if err != nil {
-		t.Fatalf("AddWorktree() error: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(wtDir, ".git")); os.IsNotExist(err) {
-		t.Error("worktree .git file not created")
-	}
+func TestClient_RepoInfo_NotARepo(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/tmp", "git", []string{"rev-parse", "--is-inside-work-tree"}).Return([]byte("fatal: not a git repository\n"), assert.AnError)
+
+	client := NewClient(r)
+	_, err := client.RepoInfo("/tmp")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not a git repository")
 }
 
-func TestRemoveWorktree(t *testing.T) {
-	dir := setupRepo(t)
-	wtDir := filepath.Join(t.TempDir(), "wt")
-	AddWorktree(dir, wtDir, "rm-branch")
-	err := RemoveWorktree(dir, wtDir)
-	if err != nil {
-		t.Fatalf("RemoveWorktree() error: %v", err)
-	}
-	if _, err := os.Stat(wtDir); !os.IsNotExist(err) {
-		t.Error("worktree directory still exists after removal")
-	}
+func TestClient_BranchExists(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/repo", "git", []string{"show-ref", "--verify", "--quiet", "refs/heads/main"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	assert.True(t, client.BranchExists("/repo", "main"))
+}
+
+func TestClient_BranchNotExists(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/repo", "git", []string{"show-ref", "--verify", "--quiet", "refs/heads/nope"}).Return([]byte(""), assert.AnError)
+
+	client := NewClient(r)
+	assert.False(t, client.BranchExists("/repo", "nope"))
+}
+
+func TestClient_AddWorktree_NewBranch(t *testing.T) {
+	r := new(mockRunner)
+	// BranchExists check fails → new branch
+	r.On("RunDir", "/repo", "git", []string{"show-ref", "--verify", "--quiet", "refs/heads/feat"}).Return([]byte(""), assert.AnError)
+	r.On("RunDir", "/repo", "git", []string{"worktree", "add", "--quiet", "-b", "feat", "/wt"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.AddWorktree("/repo", "/wt", "feat")
+
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+}
+
+func TestClient_AddWorktree_ExistingBranch(t *testing.T) {
+	r := new(mockRunner)
+	// BranchExists check succeeds → existing branch
+	r.On("RunDir", "/repo", "git", []string{"show-ref", "--verify", "--quiet", "refs/heads/feat"}).Return([]byte(""), nil)
+	r.On("RunDir", "/repo", "git", []string{"worktree", "add", "--quiet", "/wt", "feat"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.AddWorktree("/repo", "/wt", "feat")
+
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+}
+
+func TestClient_RemoveWorktree(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/repo", "git", []string{"worktree", "remove", "/wt"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.RemoveWorktree("/repo", "/wt")
+
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+}
+
+func TestClient_CommonDir(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/wt", "git", []string{"rev-parse", "--git-common-dir"}).Return([]byte("/repo/.git\n"), nil)
+
+	client := NewClient(r)
+	dir, err := client.CommonDir("/wt")
+
+	require.NoError(t, err)
+	assert.Equal(t, "/repo/.git", dir)
 }
