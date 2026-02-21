@@ -107,12 +107,7 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
 orchestrator/            # cco - Claude Code orchestrator (Go)
-sandbox/                 # Lima VM sandbox for isolated execution
-├── claude/             # Guest Claude Code config (copied into VM)
-│   ├── CLAUDE.md       # Sandbox-specific instructions
-│   └── settings.json   # Minimal settings
-└── lima.yaml           # Lima VM template
-scripts/                # Worktree and utility scripts
+scripts/                 # Worktree and utility scripts
 ```
 
 ## Modifying This Repository

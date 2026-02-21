@@ -171,13 +171,19 @@ Run Claude Code inside an isolated Linux VM for safe plan execution.
 **Create the VM (first time only):**
 
 ```sh
-limactl start --name=claude-sandbox sandbox/lima.yaml
+cco box create
+```
+
+**Check status:**
+
+```sh
+cco box status
 ```
 
 **Enter the VM:**
 
 ```sh
-limactl shell claude-sandbox
+limactl shell cco-sandbox
 ```
 
 **Authenticate Claude Code (first time only):**
@@ -186,10 +192,23 @@ limactl shell claude-sandbox
 claude --dangerously-skip-permissions
 ```
 
-**Stop the VM:**
+**Stop / start the VM:**
 
 ```sh
-limactl stop claude-sandbox
+cco box stop
+cco box start
+```
+
+**Re-provision configs after updating:**
+
+```sh
+cco box provision
+```
+
+**Delete the VM:**
+
+```sh
+cco box destroy
 ```
 
 The VM is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.

@@ -10,6 +10,7 @@ A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code)
 | `cco rm <branch>`     | Remove a workspace (worktree + tmux window)                        |
 | `cco attach [branch]` | Attach to the tmux session, optionally at a specific branch window |
 | `cco notify`          | Add notification bell to tmux window for the current workspace     |
+| `cco box <cmd>`       | Manage the Lima sandbox VM (create, start, stop, destroy, status, provision) |
 
 ### Usage Examples
 
@@ -49,8 +50,12 @@ cmd/                    # CLI command definitions (one file per command)
 ├── add.go             # cco add
 ├── rm.go              # cco rm
 ├── attach.go          # cco attach
-└── notify.go          # cco notify
+├── notify.go          # cco notify
+└── box*.go            # cco box (sandbox management)
 internal/
+├── lima/              # limactl wrapper: VM lifecycle operations
+├── sandbox/           # Sandbox coordinator (composes lima + embedded files)
+│   └── files/         # Embedded VM template and Claude configs
 ├── git/               # Git operations: repo detection, worktree add/remove
 ├── tmux/              # tmux operations: sessions, windows, send-keys
 ├── workspace/         # High-level workspace lifecycle (composes git + tmux)
