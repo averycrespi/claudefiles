@@ -42,28 +42,30 @@ cco notify                    # adds 🔔 prefix to the tmux window name
 
 ## Architecture
 
-cco is built in Go with [Cobra](https://github.com/spf13/cobra) for CLI scaffolding.
+cco is built in Go with [Cobra](https://github.com/spf13/cobra) for CLI scaffolding and follows a dependency injection pattern for testability.
 
 ```
-cmd/                    # CLI command definitions (one file per command)
+cmd/                    # CLI commands + service wiring
 ├── root.go            # Root command, verbose flag
+├── wire.go            # Service constructors (composition root)
 ├── add.go             # cco add
 ├── rm.go              # cco rm
 ├── attach.go          # cco attach
 ├── notify.go          # cco notify
 └── box*.go            # cco box (sandbox management)
 internal/
-├── lima/              # limactl wrapper: VM lifecycle operations
-├── sandbox/           # Sandbox coordinator (composes lima + embedded files)
+├── exec/              # Runner interface: abstracts os/exec for testability
+├── lima/              # Lima Client: wraps limactl with Runner
+├── sandbox/           # Sandbox Service: composes lima Client + embedded files
 │   └── files/         # Embedded VM template and Claude configs
-├── git/               # Git operations: repo detection, worktree add/remove
-├── tmux/              # tmux operations: sessions, windows, send-keys
-├── workspace/         # High-level workspace lifecycle (composes git + tmux)
+├── git/               # Git Client: wraps git with Runner
+├── tmux/              # Tmux Client: wraps tmux with Runner
+├── workspace/         # Workspace Service: composes git + tmux Clients
 ├── paths/             # Storage paths and naming conventions
-└── logging/           # Verbose/debug logging
+└── logging/           # Logger interface with StdLogger and NoopLogger
 ```
 
-Each `cmd/` file delegates to `internal/workspace`, which composes `internal/git` and `internal/tmux` to perform operations.
+Each `cmd/` file creates services via `wire.go`, which wires together Clients and Services using `exec.OSRunner`. The workspace and sandbox services define consumer-side interfaces for their dependencies, enabling unit testing with mocks.
 
 ## How It Works
 
