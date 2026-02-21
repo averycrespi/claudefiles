@@ -28,20 +28,7 @@ provision:
     set -eux -o pipefail
     usermod -aG docker "{{.User}}"
 
-# Block all traffic to the host gateway to prevent accessing host services.
-# Lima SSH uses a vsock or serial connection, not the network gateway,
-# so limactl shell continues to work.
-- mode: system
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    GATEWAY=$(ip route | awk '/default/ {print $3}')
-    if [ -n "$GATEWAY" ]; then
-      iptables -C OUTPUT -d "$GATEWAY" -j DROP 2>/dev/null || \
-        iptables -A OUTPUT -d "$GATEWAY" -j DROP
-    fi
-
-# Install dev tools, asdf runtimes, and Claude Code
+# Install dev tools, Go, asdf, and Claude Code
 - mode: user
   script: |
     #!/bin/bash
@@ -60,36 +47,30 @@ provision:
       unzip \
       wget
 
-    # --- asdf version manager ---
-    if [ ! -d "$HOME/.asdf" ]; then
-      git clone https://github.com/asdf-vm/asdf.git "$HOME/.asdf" --branch v0.16.7
+    # --- Go ---
+    if ! command -v go >/dev/null 2>&1; then
+      GO_VERSION="1.24.1"
+      curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz" | sudo tar -C /usr/local -xz
     fi
-    # shellcheck disable=SC1091
-    . "$HOME/.asdf/asdf.sh"
+    export PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"
 
-    # asdf plugins and runtimes
-    asdf plugin add nodejs || true
-    asdf plugin add python || true
-    asdf plugin add golang || true
+    # --- asdf version manager ---
+    go install github.com/asdf-vm/asdf/cmd/asdf@v0.18.0
+    export ASDF_DATA_DIR="$HOME/.asdf"
+    export PATH="$HOME/go/bin:$ASDF_DATA_DIR/shims:$PATH"
 
-    asdf install nodejs latest
-    asdf install python latest
-    asdf install golang latest
-
-    asdf set --home nodejs latest
-    asdf set --home python latest
-    asdf set --home golang latest
-
-    # Add asdf to shell profile
-    if ! grep -q 'asdf.sh' "$HOME/.bashrc"; then
-      echo '. "$HOME/.asdf/asdf.sh"' >> "$HOME/.bashrc"
+    # Add Go and asdf to shell profile
+    if ! grep -q 'ASDF_DATA_DIR' "$HOME/.bashrc"; then
+      echo 'export PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"' >> "$HOME/.bashrc"
+      echo 'export ASDF_DATA_DIR="$HOME/.asdf"' >> "$HOME/.bashrc"
+      echo 'export PATH="$HOME/.local/bin:$ASDF_DATA_DIR/shims:$PATH"' >> "$HOME/.bashrc"
     fi
 
     # --- gopls (Go language server) ---
     go install golang.org/x/tools/gopls@latest
 
-    # --- Claude Code ---
-    npm install -g @anthropic-ai/claude-code
+    # --- Claude Code (native install) ---
+    curl -fsSL https://claude.ai/install.sh | bash
 
 probes:
 - script: |
