@@ -6,8 +6,9 @@ Project-specific instructions for this repository.
 
 This repository contains opinionated resources for working with Claude Code:
 - **Workflow skills** for structured development (adapted from [superpowers](https://github.com/obra/superpowers))
+- **cco** for parallel Claude Code workspaces (see [orchestrator README](./orchestrator/README.md))
+- **cwm** for parallel development with tmux
 - **Atlassian MCP** for Jira, Confluence, and Compass
-- **cwm command** for parallel development with tmux
 - **Permission and notification settings** for a better experience
 
 See [DESIGN.md](./DESIGN.md) for rationale behind key architectural decisions.
@@ -107,17 +108,6 @@ For parallel development using Git worktrees and tmux:
 | `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
 | `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
 
-### Workspace Management (cco)
-
-| Command              | Purpose                                                                     |
-| -------------------- | --------------------------------------------------------------------------- |
-| `cco add <branch>`   | Create a workspace (worktree + window) and launch Claude Code               |
-| `cco rm <branch>`    | Remove a workspace (worktree + window)                                      |
-| `cco attach [branch]` | Attach to the tmux session, optionally at a specific branch window          |
-| `cco notify`         | Add notification bell to tmux window for the current workspace              |
-
-**Note:** cco uses a dedicated tmux socket (`cco`) to avoid interfering with personal tmux sessions. Use `tmux -L cco ls` to list cco sessions.
-
 ## Testing
 
 Run cwm integration tests (requires tmux):
@@ -128,16 +118,10 @@ Run cwm integration tests (requires tmux):
 
 No external Python packages needed - uses only the standard library.
 
-Run cco unit tests:
+Run cco tests:
 
 ```bash
 cd orchestrator && go test ./... -count=1
-```
-
-Run cco integration tests (requires tmux and Go):
-
-```bash
-cd orchestrator && go test -v -count=1 -timeout 60s
 ```
 
 **Note:** tmux integration tests require sandbox to be disabled (`dangerouslyDisableSandbox`) due to Unix socket access at `/private/tmp/tmux-*/`. On macOS, use `filepath.EvalSymlinks` on temp dirs in Go tests to handle the `/var` → `/private/var` symlink.
