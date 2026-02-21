@@ -2,19 +2,34 @@ package logging
 
 import "fmt"
 
-var verbose bool
+// Logger abstracts logging for testability.
+type Logger interface {
+	Info(format string, args ...any)
+	Debug(format string, args ...any)
+}
 
-// SetVerbose controls whether Debug messages are printed.
-func SetVerbose(v bool) { verbose = v }
+// StdLogger implements Logger using fmt.Printf to stdout.
+type StdLogger struct {
+	verbose bool
+}
 
-// Info prints a message that is always shown to the user.
-func Info(format string, args ...any) {
+// NewStdLogger returns a Logger that prints to stdout.
+func NewStdLogger(verbose bool) *StdLogger {
+	return &StdLogger{verbose: verbose}
+}
+
+func (l *StdLogger) Info(format string, args ...any) {
 	fmt.Printf(format+"\n", args...)
 }
 
-// Debug prints a message only when verbose mode is enabled.
-func Debug(format string, args ...any) {
-	if verbose {
+func (l *StdLogger) Debug(format string, args ...any) {
+	if l.verbose {
 		fmt.Printf(format+"\n", args...)
 	}
 }
+
+// NoopLogger is a Logger that discards all output. Useful in tests.
+type NoopLogger struct{}
+
+func (NoopLogger) Info(string, ...any)  {}
+func (NoopLogger) Debug(string, ...any) {}

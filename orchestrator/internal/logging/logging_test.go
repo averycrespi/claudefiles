@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func captureStdout(t *testing.T, fn func()) string {
@@ -14,44 +16,51 @@ func captureStdout(t *testing.T, fn func()) string {
 	}
 	old := os.Stdout
 	os.Stdout = w
-
 	fn()
-
 	w.Close()
 	os.Stdout = old
-
 	var buf bytes.Buffer
 	buf.ReadFrom(r)
 	return buf.String()
 }
 
-func TestInfoAlwaysPrints(t *testing.T) {
-	SetVerbose(false)
-	out := captureStdout(t, func() {
-		Info("hello %s", "world")
-	})
-	if out != "hello world\n" {
-		t.Errorf("Info output = %q, want %q", out, "hello world\n")
-	}
+func TestStdLogger_ImplementsLogger(t *testing.T) {
+	var _ Logger = &StdLogger{}
 }
 
-func TestDebugSilentByDefault(t *testing.T) {
-	SetVerbose(false)
-	out := captureStdout(t, func() {
-		Debug("should not appear")
-	})
-	if out != "" {
-		t.Errorf("Debug output = %q, want empty", out)
-	}
+func TestNoopLogger_ImplementsLogger(t *testing.T) {
+	var _ Logger = NoopLogger{}
 }
 
-func TestDebugPrintsWhenVerbose(t *testing.T) {
-	SetVerbose(true)
-	defer SetVerbose(false)
+func TestStdLogger_InfoAlwaysPrints(t *testing.T) {
+	logger := NewStdLogger(false)
 	out := captureStdout(t, func() {
-		Debug("verbose %s", "msg")
+		logger.Info("hello %s", "world")
 	})
-	if out != "verbose msg\n" {
-		t.Errorf("Debug output = %q, want %q", out, "verbose msg\n")
-	}
+	assert.Equal(t, "hello world\n", out)
+}
+
+func TestStdLogger_DebugSilentByDefault(t *testing.T) {
+	logger := NewStdLogger(false)
+	out := captureStdout(t, func() {
+		logger.Debug("should not appear")
+	})
+	assert.Empty(t, out)
+}
+
+func TestStdLogger_DebugPrintsWhenVerbose(t *testing.T) {
+	logger := NewStdLogger(true)
+	out := captureStdout(t, func() {
+		logger.Debug("verbose %s", "msg")
+	})
+	assert.Equal(t, "verbose msg\n", out)
+}
+
+func TestNoopLogger_DoesNotPrint(t *testing.T) {
+	logger := NoopLogger{}
+	out := captureStdout(t, func() {
+		logger.Info("should not appear")
+		logger.Debug("should not appear")
+	})
+	assert.Empty(t, out)
 }
