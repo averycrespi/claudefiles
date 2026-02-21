@@ -5,15 +5,14 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 ## Features
 
 - [Structured Development Workflow](#structured-development-workflow) - Reliably turn ideas into pull requests
-- [Claude Worktree Manager (cwm)](#claude-worktree-manager) - Develop in parallel using Git worktrees and tmux
+- [Claude Code Orchestrator (cco)](#claude-code-orchestrator) - Develop in parallel using Git worktrees and tmux
 - [Integrations](#integrations) - Connect to external resources for seamless context
 
 ## Requirements
 
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
-- [Python 3](https://www.python.org/downloads/) for `cwm`
-- [Go](https://go.dev/) 1.21+ for building `cco`
+- [Go](https://go.dev/) 1.23for building `cco`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -24,7 +23,7 @@ cd claudefiles
 ./setup.sh
 ```
 
-The setup script will install dependencies, symlink configuration files to `~/.claude/`, and add scripts to your `PATH`.
+The setup script will install dependencies, symlink configuration files to `~/.claude/`, and install `cco`.
 
 ---
 
@@ -111,21 +110,11 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 
 ---
 
-## Claude Worktree Manager
-
-`cwm` (Claude Worktree Manager) provides commands for parallel development using Git worktrees and tmux:
-
-| Command            | Purpose                                  |
-| ------------------ | ---------------------------------------- |
-| `cwm init`         | Create tmux session for repo             |
-| `cwm add <branch>` | Create worktree + window + launch Claude |
-| `cwm rm <branch>`  | Remove worktree + close window           |
-| `cwm attach`       | Attach to tmux session for repo          |
-| `cwm notify`       | Add bell to window (for hooks)           |
-
 ## Claude Code Orchestrator
 
-`cco` manages parallel Claude Code workspaces using Git worktrees and tmux. See the [orchestrator README](./orchestrator/README.md) for full documentation.
+`cco` manages parallel Claude Code workspaces using Git worktrees and tmux.
+
+See the [orchestrator README](./orchestrator/README.md) for full documentation.
 
 ---
 

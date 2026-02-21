@@ -7,7 +7,6 @@ Project-specific instructions for this repository.
 This repository contains opinionated resources for working with Claude Code:
 - **Workflow skills** for structured development (adapted from [superpowers](https://github.com/obra/superpowers))
 - **cco** for parallel Claude Code workspaces (see [orchestrator README](./orchestrator/README.md))
-- **cwm** for parallel development with tmux
 - **Atlassian MCP** for Jira, Confluence, and Compass
 - **Permission and notification settings** for a better experience
 
@@ -94,29 +93,7 @@ This repository includes a structured development workflow:
 | --------------- | ------------------------------------------------- |
 | `code-reviewer` | Review code changes against plans and standards   |
 
-## Scripts
-
-### Worktree Management
-
-For parallel development using Git worktrees and tmux:
-
-| Command              | Purpose                                                                     |
-| -------------------- | --------------------------------------------------------------------------- |
-| `cwm init`           | Start a new tmux session for the current repository                         |
-| `cwm attach`         | Attach to the tmux session for the current repository                       |
-| `cwm add <branch>`   | Create a new worktree and tmux window for a branch                          |
-| `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
-| `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
-
 ## Testing
-
-Run cwm integration tests (requires tmux):
-
-```bash
-./tests/test_cwm.py -v
-```
-
-No external Python packages needed - uses only the standard library.
 
 Run cco tests:
 
@@ -137,7 +114,6 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── hooks/              # PreToolUse hooks (e.g., gitleaks)
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
-scripts/                # Worktree and utility scripts
 ```
 
 ## Modifying This Repository

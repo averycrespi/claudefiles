@@ -17,33 +17,6 @@ CLAUDE_DIR="$HOME/.claude"
 echo "Stowing Claude Code configuration to $CLAUDE_DIR ..."
 mkdir -p "$CLAUDE_DIR" && stow claude -t "$CLAUDE_DIR"
 
-echo 'Identifying your shell ...'
-SHELL_RC=""
-if [ -n "${ZSH_VERSION-}" ]; then
-	echo 'ZSH detected'
-	SHELL_RC="$HOME/.zshrc"
-elif [ -n "${BASH_VERSION-}" ]; then
-	echo 'BASH detected'
-	SHELL_RC="$HOME/.bashrc"
-else
-	echo 'Unable to identify your shell'
-fi
-
-echo 'Adding scripts directory to your PATH ...'
-REPO_DIR=$(git rev-parse --show-toplevel)
-PATH_LINE="export PATH=\"$REPO_DIR/scripts:\$PATH\""
-if [ -n "$SHELL_RC" ]; then
-	if ! grep -Fxq "$PATH_LINE" "$SHELL_RC"; then
-		echo "$PATH_LINE" >>"$SHELL_RC"
-		echo "Added scripts directory to PATH in $SHELL_RC"
-	else
-		echo "Scripts directory already in PATH in $SHELL_RC"
-	fi
-else
-	echo "Please add the following line to your shell configuration file:"
-	echo "$PATH_LINE"
-fi
-
 echo 'Adding Atlassian MCP server ...'
 if claude mcp get atlassian &>/dev/null; then
 	echo 'Atlassian MCP server already configured'
