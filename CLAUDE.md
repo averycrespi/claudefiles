@@ -32,6 +32,7 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── hooks/              # PreToolUse hooks (e.g., gitleaks)
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
+orchestrator/            # cco - Claude Code orchestrator (Go)
 ```
 
 ## Modifying This Repository
