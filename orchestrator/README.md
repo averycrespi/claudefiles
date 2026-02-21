@@ -4,12 +4,12 @@ A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code)
 
 ## Commands
 
-| Command              | Purpose                                                              |
-| -------------------- | -------------------------------------------------------------------- |
-| `cco add <branch>`   | Create a workspace (worktree + tmux window) and launch Claude Code   |
-| `cco rm <branch>`    | Remove a workspace (worktree + tmux window)                          |
-| `cco attach [branch]` | Attach to the tmux session, optionally at a specific branch window  |
-| `cco notify`         | Add notification bell to tmux window for the current workspace       |
+| Command               | Purpose                                                            |
+| --------------------- | ------------------------------------------------------------------ |
+| `cco add <branch>`    | Create a workspace (worktree + tmux window) and launch Claude Code |
+| `cco rm <branch>`     | Remove a workspace (worktree + tmux window)                        |
+| `cco attach [branch]` | Attach to the tmux session, optionally at a specific branch window |
+| `cco notify`          | Add notification bell to tmux window for the current workspace     |
 
 ### Usage Examples
 
@@ -105,7 +105,3 @@ go test ./... -count=1
 ```sh
 go test -v -count=1 -timeout 60s
 ```
-
-**Notes:**
-- Integration tests access the tmux Unix socket at `/private/tmp/tmux-*/`, which requires disabling the Claude Code sandbox (`dangerouslyDisableSandbox`)
-- On macOS, use `filepath.EvalSymlinks` on temp dirs in Go tests to handle the `/var` → `/private/var` symlink
