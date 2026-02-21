@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -27,12 +26,13 @@ Notes:
 		if err != nil {
 			return fmt.Errorf("could not get working directory: %w", err)
 		}
-		if err := workspace.Add(cwd, args[0]); err != nil {
+		svc := newWorkspaceService()
+		if err := svc.Add(cwd, args[0]); err != nil {
 			return err
 		}
 		attach, _ := cmd.Flags().GetBool("attach")
 		if attach {
-			return workspace.Attach(cwd, args[0])
+			return svc.Attach(cwd, args[0])
 		}
 		return nil
 	},

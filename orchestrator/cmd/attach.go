@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +30,7 @@ Notes:
 		if len(args) > 0 {
 			branch = args[0]
 		}
-		return workspace.Attach(cwd, branch)
+		return newWorkspaceService().Attach(cwd, branch)
 	},
 }
 

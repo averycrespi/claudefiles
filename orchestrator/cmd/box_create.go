@@ -1,19 +1,14 @@
 package cmd
 
-import (
-	"github.com/averycrespi/claudefiles/orchestrator/internal/sandbox"
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 var boxCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create, start, and provision the sandbox VM",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return sandbox.Create()
+		return newSandboxService().Create()
 	},
 }
 
-func init() {
-	boxCmd.AddCommand(boxCreateCmd)
-}
+func init() { boxCmd.AddCommand(boxCreateCmd) }

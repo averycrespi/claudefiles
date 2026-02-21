@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +24,7 @@ Notes:
 		if err != nil {
 			return fmt.Errorf("could not get working directory: %w", err)
 		}
-		return workspace.Notify(cwd)
+		return newWorkspaceService().Notify(cwd)
 	},
 }
 
