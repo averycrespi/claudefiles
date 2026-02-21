@@ -2,16 +2,6 @@
 
 Project-specific instructions for this repository.
 
-## Repository Overview
-
-This repository contains opinionated resources for working with Claude Code:
-- **Workflow skills** for structured development (adapted from [superpowers](https://github.com/obra/superpowers))
-- **Atlassian MCP** for Jira, Confluence, and Compass
-- **cwm command** for parallel development with tmux
-- **Permission and notification settings** for a better experience
-
-See [DESIGN.md](./DESIGN.md) for rationale behind key architectural decisions.
-
 ## Public Repository Guidelines
 
 This is a public repository. When creating or modifying content:
@@ -95,29 +85,15 @@ This repository includes a structured development workflow:
 | --------------- | ------------------------------------------------- |
 | `code-reviewer` | Review code changes against plans and standards   |
 
-## Scripts
-
-### Worktree Management
-
-For parallel development using Git worktrees and tmux:
-
-| Command              | Purpose                                                                     |
-| -------------------- | --------------------------------------------------------------------------- |
-| `cwm init`           | Start a new tmux session for the current repository                         |
-| `cwm attach`         | Attach to the tmux session for the current repository                       |
-| `cwm add <branch>`   | Create a new worktree and tmux window for a branch                          |
-| `cwm rm <branch>`    | Destroy the worktree and tmux window for a branch                           |
-| `cwm notify`         | Add notification bell to tmux window for the current branch (used by hooks) |
-
 ## Testing
 
-Run cwm integration tests (requires tmux):
+Run cco tests:
 
 ```bash
-./tests/test_cwm.py -v
+cd orchestrator && go test ./... -count=1
 ```
 
-No external Python packages needed - uses only the standard library.
+**Note:** tmux integration tests require sandbox to be disabled (`dangerouslyDisableSandbox`) due to Unix socket access at `/private/tmp/tmux-*/`. On macOS, use `filepath.EvalSymlinks` on temp dirs in Go tests to handle the `/var` → `/private/var` symlink.
 
 ## Repository Structure
 
@@ -130,6 +106,7 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── hooks/              # PreToolUse hooks (e.g., gitleaks)
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
+orchestrator/            # cco - Claude Code orchestrator (Go)
 sandbox/                 # Lima VM sandbox for isolated execution
 ├── claude/             # Guest Claude Code config (copied into VM)
 │   ├── CLAUDE.md       # Sandbox-specific instructions
@@ -142,7 +119,6 @@ scripts/                # Worktree and utility scripts
 
 - Edit files in `claude/` directory
 - Run `./setup.sh` to apply changes via stow
-- Update README.md and this CLAUDE.md when making significant changes
 
 **IMPORTANT:** Never edit files directly in `~/.claude/`. Those are symlinks managed by stow. Always edit the source files in this repository's `claude/` directory. For example:
 - Edit `./claude/skills/foo.md`, NOT `~/.claude/skills/foo.md`
