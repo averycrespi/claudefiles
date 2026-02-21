@@ -91,6 +91,57 @@ When `cco add` creates a new worktree, it:
 
 All commands are idempotent. Running `cco add` multiple times for the same branch is safe — it skips steps that are already done.
 
+## Lima Sandbox
+
+`cco box` manages an isolated Linux VM ([Lima](https://github.com/lima-vm/lima)) for running Claude Code safely.
+
+**Requirements:** Lima (`brew install lima`)
+
+**Create the VM (first time only):**
+
+```sh
+cco box create
+```
+
+**Check status:**
+
+```sh
+cco box status
+```
+
+**Enter the VM:**
+
+```sh
+limactl shell cco-sandbox
+```
+
+**Authenticate Claude Code (first time only):**
+
+```sh
+claude --dangerously-skip-permissions
+```
+
+**Stop / start the VM:**
+
+```sh
+cco box stop
+cco box start
+```
+
+**Re-provision configs after updating:**
+
+```sh
+cco box provision
+```
+
+**Delete the VM:**
+
+```sh
+cco box destroy
+```
+
+The VM is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
+
 ## Development
 
 **Build:**
