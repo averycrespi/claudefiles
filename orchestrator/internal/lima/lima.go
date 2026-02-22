@@ -86,3 +86,13 @@ func (c *Client) Copy(localPath, guestPath string) error {
 	}
 	return nil
 }
+
+// Shell opens an interactive shell or runs a command in the VM.
+func (c *Client) Shell(args ...string) error {
+	cmdArgs := []string{"shell", VMName}
+	cmdArgs = append(cmdArgs, args...)
+	if err := c.runner.RunInteractive("limactl", cmdArgs...); err != nil {
+		return fmt.Errorf("limactl shell failed: %s", err)
+	}
+	return nil
+}
