@@ -117,6 +117,7 @@ AskUserQuestion(
     options: [
       { label: "Execute with subagents (Recommended)", description: "Full isolation - best for complex plans or autonomous work" },
       { label: "Execute quickly", description: "Faster - does implementation and reviews in main context" },
+      { label: "Execute in sandbox", description: "Runs autonomously in a sandbox VM - doesn't block the host" },
       { label: "Don't execute", description: "Stop here - execute manually later" }
     ]
   }]
@@ -134,6 +135,11 @@ AskUserQuestion(
 - **REQUIRED SUB-SKILL:** Use Skill(executing-plans-quickly)
 - Does implementation and reviews inline in main context
 - Best for simple plans or interactive sessions
+
+**Execute in sandbox:**
+- **REQUIRED SUB-SKILL:** Use Skill(executing-plans-in-sandbox)
+- Pushes plan to sandbox VM, waits for results, reintegrates
+- Best for autonomous work where you don't want to block the host
 
 **Don't execute:**
 - Plan is saved for later execution
