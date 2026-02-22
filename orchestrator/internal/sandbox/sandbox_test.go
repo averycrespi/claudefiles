@@ -88,7 +88,7 @@ func TestEmbeddedLimaTemplate_ContainsExchangeMount(t *testing.T) {
 }
 
 func TestEmbeddedSettingsJSON_ValidJSON(t *testing.T) {
-	assert.Contains(t, string(settingsJSON), "permissions")
+	assert.Contains(t, string(settingsJSON), "skipDangerousModePermissionPrompt")
 }
 
 // --- Service tests ---
@@ -216,7 +216,7 @@ func TestService_Provision_Running(t *testing.T) {
 
 	require.NoError(t, err)
 	lima.AssertNumberOfCalls(t, "Copy", 3)
-	lima.AssertCalled(t, "Copy", mock.Anything, "~/.claude/skills/executing-plans-in-sandbox.md")
+	lima.AssertCalled(t, "Copy", mock.Anything, "~/.claude/skills/executing-plans-in-sandbox/SKILL.md")
 }
 
 func TestService_Create_AlreadyRunning(t *testing.T) {

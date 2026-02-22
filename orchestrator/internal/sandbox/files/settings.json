@@ -1,8 +1,5 @@
 {
-  "permissions": {
-    "allow": [],
-    "deny": []
-  },
+  "skipDangerousModePermissionPrompt": true,
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
   }
