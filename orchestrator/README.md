@@ -10,7 +10,7 @@ A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code)
 | `cco rm <branch>`     | Remove a workspace                                         |
 | `cco attach [branch]` | Attach to a window or session                              |
 | `cco notify`          | Add notification to current workspace (for hooks)          |
-| `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision) |
+| `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell) |
 
 ### Usage Examples
 
@@ -87,7 +87,7 @@ cco box status
 **Enter the sandbox:**
 
 ```sh
-limactl shell cco-sandbox
+cco box shell
 ```
 
 **Authenticate Claude Code (first time only):**
