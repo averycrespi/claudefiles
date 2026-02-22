@@ -37,10 +37,10 @@ func (s *Service) Create() error {
 	}
 	switch status {
 	case "Running":
-		s.logger.Info("Sandbox is already created and running")
+		s.logger.Info("sandbox is already created and running")
 		return s.Provision()
 	case "Stopped":
-		s.logger.Info("Sandbox exists but is stopped, starting...")
+		s.logger.Info("sandbox exists but is stopped, starting...")
 		if err := s.lima.Start(); err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (s *Service) Start() error {
 	case "":
 		return fmt.Errorf("sandbox not created, run `cco box create`")
 	case "Running":
-		s.logger.Info("Sandbox is already running")
+		s.logger.Info("sandbox is already running")
 		return nil
 	}
 	return s.lima.Start()
@@ -83,10 +83,10 @@ func (s *Service) Stop() error {
 	}
 	switch status {
 	case "":
-		s.logger.Info("Sandbox is not created")
+		s.logger.Info("sandbox is not created")
 		return nil
 	case "Stopped":
-		s.logger.Info("Sandbox is already stopped")
+		s.logger.Info("sandbox is already stopped")
 		return nil
 	}
 	return s.lima.Stop()
@@ -99,7 +99,7 @@ func (s *Service) Destroy() error {
 		return err
 	}
 	if status == "" {
-		s.logger.Info("Sandbox is not created")
+		s.logger.Info("sandbox is not created")
 		return nil
 	}
 	return s.lima.Delete()
@@ -159,7 +159,7 @@ func (s *Service) Provision() error {
 		return err
 	}
 
-	s.logger.Info("Provisioned Claude config into sandbox")
+	s.logger.Info("provisioned config into sandbox")
 	return nil
 }
 
