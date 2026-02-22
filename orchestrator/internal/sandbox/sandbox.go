@@ -248,16 +248,30 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedJob, error) {
 		return nil, fmt.Errorf("git clone in sandbox failed: %w", err)
 	}
 
-	// Build command string (does not launch Claude)
-	prompt := fmt.Sprintf("/executing-plans %s", planPath)
-	command := fmt.Sprintf("limactl shell --workdir / %s -- bash -l -c 'cd %s && claude --dangerously-skip-permissions %q'",
-		lima.VMName, guestWorkspace, prompt)
+	command := BuildLaunchCommand(jobID, planPath, nil)
 
 	return &PreparedJob{
 		JobID:   jobID,
 		Branch:  branch,
 		Command: command,
 	}, nil
+}
+
+// BuildLaunchCommand constructs the limactl command to launch Claude in the sandbox.
+// If patterns are provided, GOPROXY and GONOSUMCHECK env vars are injected.
+func BuildLaunchCommand(jobID, planPath string, patterns []string) string {
+	guestWorkspace := "/workspace/" + jobID
+	prompt := fmt.Sprintf("/executing-plans %s", planPath)
+
+	var envPrefix string
+	if len(patterns) > 0 {
+		proxyPath := fmt.Sprintf("file:///exchange/%s/gomodcache/cache/download,https://proxy.golang.org,direct", jobID)
+		nosumcheck := strings.Join(patterns, ",")
+		envPrefix = fmt.Sprintf("GOPROXY=%s GONOSUMCHECK=%s ", proxyPath, nosumcheck)
+	}
+
+	return fmt.Sprintf("limactl shell --workdir / %s -- bash -l -c '%scd %s && claude --dangerously-skip-permissions %q'",
+		lima.VMName, envPrefix, guestWorkspace, prompt)
 }
 
 // Pull polls for an output bundle and fast-forward merges it into the current branch.

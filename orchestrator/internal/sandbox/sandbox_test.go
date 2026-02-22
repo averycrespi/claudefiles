@@ -389,6 +389,45 @@ func TestService_Prepare_Running(t *testing.T) {
 	lima.AssertNumberOfCalls(t, "Shell", 1)
 }
 
+func TestService_Prepare_WithGoProxyPatterns(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Running", nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	runner := new(mockRunner)
+	runner.On("RunDir", "/repo", "git", "rev-parse", "--abbrev-ref", "HEAD").Return([]byte("main\n"), nil)
+	runner.On("RunDir", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]byte(""), nil)
+
+	svc := NewService(lima, logging.NoopLogger{}, runner)
+
+	result, err := svc.Prepare("/repo", ".plans/test-plan.md")
+	require.NoError(t, err)
+
+	exchangeDir := paths.JobExchangeDir(result.JobID)
+	downloadDir := filepath.Join(exchangeDir, "gomodcache", "cache", "download")
+	require.NoError(t, os.MkdirAll(downloadDir, 0o755))
+	defer os.RemoveAll(exchangeDir)
+
+	patterns := []string{"github.com/myorg/*", "github.com/other/*"}
+	cmd := BuildLaunchCommand(result.JobID, ".plans/test-plan.md", patterns)
+	assert.Contains(t, cmd, "GOPROXY=file:///exchange/"+result.JobID+"/gomodcache/cache/download")
+	assert.Contains(t, cmd, "GONOSUMCHECK=github.com/myorg/*,github.com/other/*")
+	assert.Contains(t, cmd, "claude")
+}
+
+func TestBuildLaunchCommand_NoPatterns(t *testing.T) {
+	cmd := BuildLaunchCommand("abc123", ".plans/test.md", nil)
+	assert.NotContains(t, cmd, "GOPROXY")
+	assert.NotContains(t, cmd, "GONOSUMCHECK")
+	assert.Contains(t, cmd, "claude")
+}
+
+func TestBuildLaunchCommand_WithPatterns(t *testing.T) {
+	cmd := BuildLaunchCommand("abc123", ".plans/test.md", []string{"github.com/myorg/*"})
+	assert.Contains(t, cmd, "GOPROXY=file:///exchange/abc123/gomodcache/cache/download,https://proxy.golang.org,direct")
+	assert.Contains(t, cmd, "GONOSUMCHECK=github.com/myorg/*")
+}
+
 func TestService_Pull_BundleNotFound_TimesOut(t *testing.T) {
 	lima := new(mockLimaClient)
 	runner := new(mockRunner)
