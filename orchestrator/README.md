@@ -1,6 +1,45 @@
 # Claude Code Orchestrator (cco)
 
-A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code) workspaces.
+Run multiple [Claude Code](https://www.anthropic.com/claude-code) sessions in parallel. Each session gets its own Git worktree and tmux window, so they don't interfere with each other or your main working tree. Optionally, run plans in an isolated sandbox VM.
+
+## How It Works
+
+Each workspace is a combination of:
+
+1. **Worktree** — an independent checkout of the repository at a specific branch
+2. **Window** — a tmux window where Claude Code runs
+
+cco uses a **dedicated tmux socket** (`cco`) so it doesn't interfere with personal tmux sessions. Use `tmux -L cco ls` to inspect sessions directly.
+
+**Storage layout:**
+
+```
+~/.local/share/cco/worktrees/{repo}/{repo}-{branch}/
+```
+
+The storage path respects `$XDG_DATA_HOME` if set.
+
+## Getting Started
+
+**Create a workspace and launch Claude Code:**
+
+```sh
+cco add feature-branch        # creates worktree + tmux window, launches Claude Code
+cco add feature-branch -a     # same, but also attaches to the window
+```
+
+**Switch to an existing workspace:**
+
+```sh
+cco attach                    # attach to the cco session
+cco attach feature-branch     # attach to a specific window
+```
+
+**Clean up when done:**
+
+```sh
+cco rm feature-branch         # removes worktree and window (keeps the branch)
+```
 
 ## Commands
 
@@ -12,65 +51,22 @@ A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code)
 | `cco notify`          | Add notification to current workspace (for hooks)          |
 | `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell, push, pull) |
 
-### Usage Examples
-
-**Start a new workspace:**
-
-```sh
-cco add feature-branch        # adds workspace, launches Claude Code
-cco add feature-branch -a     # same, but also attaches to the window
-```
-
-**Attach to an existing session:**
-
-```sh
-cco attach                    # attach to the session
-cco attach feature-branch     # attach to the feature branch window
-```
-
-**Clean up:**
-
-```sh
-cco rm feature-branch         # removes workspace (keeps the branch)
-```
-
-**Notifications (used by hooks):**
-
-```sh
-cco notify                    # adds notification to the current window
-```
-
-## How It Works
-
-Each workspace is a combination of:
-1. **Worktree** — an independent checkout of the repository at a specific branch
-2. **Window** — a terminal window inside a session where Claude Code runs
-
-cco uses a **dedicated tmux socket** (`cco`) so it doesn't interfere with personal tmux sessions. Use `tmux -L cco ls` to list cco sessions.
-
-**Storage layout:**
-
-```
-~/.local/share/cco/worktrees/{repo}/{repo}-{branch}/
-```
-
-The storage path respects `$XDG_DATA_HOME` if set.
-
-**Workspace setup:**
+## Workspace Setup
 
 When `cco add` creates a new worktree, it:
+
 1. Runs any executable setup script found at `scripts/{init,init.sh,setup,setup.sh}` in the worktree
 2. Copies `.claude/settings.local.json` from the main repo to the worktree
-
-**Idempotency:**
 
 All commands are idempotent. Running `cco add` multiple times for the same branch is safe — it skips steps that are already done.
 
 ## Sandbox
 
-`cco box` manages an isolated sandbox ([Lima](https://github.com/lima-vm/lima)) for running Claude Code safely.
+`cco box` manages an isolated [Lima](https://github.com/lima-vm/lima) VM for running Claude Code safely. This is useful for executing plans autonomously without risking your host environment.
 
 **Requirements:** Lima (`brew install lima`)
+
+### Lifecycle
 
 **Create the sandbox (first time only):**
 
@@ -78,29 +74,19 @@ All commands are idempotent. Running `cco add` multiple times for the same branc
 cco box create
 ```
 
-**Check status:**
-
-```sh
-cco box status
-```
-
-**Enter the sandbox:**
-
-```sh
-cco box shell
-```
-
 **Authenticate Claude Code (first time only):**
 
 ```sh
+cco box shell
 claude --dangerously-skip-permissions
 ```
 
-**Stop / start the sandbox:**
+**Start / stop / destroy:**
 
 ```sh
-cco box stop
 cco box start
+cco box stop
+cco box destroy
 ```
 
 **Re-provision after updating configs:**
@@ -109,22 +95,20 @@ cco box start
 cco box provision
 ```
 
-**Destroy the sandbox:**
+**Check status:**
 
 ```sh
-cco box destroy
+cco box status
 ```
 
-**Push a plan into the sandbox:**
+### Push / Pull
+
+Push a plan into the sandbox for autonomous execution, then pull the results back:
 
 ```sh
 cco box push .plans/2026-02-21-my-feature-plan.md
 # Job a3f7b2 started. Pull with: cco box pull a3f7b2
-```
 
-**Pull results back from the sandbox:**
-
-```sh
 cco box pull a3f7b2
 ```
 
