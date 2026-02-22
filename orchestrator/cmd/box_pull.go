@@ -12,11 +12,11 @@ import (
 )
 
 var boxPullCmd = &cobra.Command{
-	Use:   "pull <session-id>",
+	Use:   "pull <job-id>",
 	Short: "Pull sandbox results back to the host",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sessionID := args[0]
+		jobID := args[0]
 
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -24,7 +24,7 @@ var boxPullCmd = &cobra.Command{
 		}
 
 		svc := newSandboxService()
-		if err := svc.Pull(cwd, sessionID, 30*time.Minute, 3*time.Second); err != nil {
+		if err := svc.Pull(cwd, jobID, 30*time.Minute, 3*time.Second); err != nil {
 			return err
 		}
 
@@ -55,7 +55,7 @@ var boxPullCmd = &cobra.Command{
 			return nil
 		}
 
-		paneID, err := tc.FindPaneByOption(tmuxSession, "cco-session", sessionID)
+		paneID, err := tc.FindPaneByOption(tmuxSession, "cco-job", jobID)
 		if err != nil {
 			logger.Info("sandbox pane already closed")
 			return nil

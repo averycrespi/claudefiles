@@ -66,7 +66,7 @@ var boxPushCmd = &cobra.Command{
 			return fmt.Errorf("no workspace window for branch %q — run 'cco add %s' first", branch, branch)
 		}
 
-		// Prepare sandbox session (bundle, clone, build command)
+		// Prepare sandbox job (bundle, clone, build command)
 		svc := newSandboxService()
 		prepared, err := svc.Prepare(cwd, planPath)
 		if err != nil {
@@ -91,7 +91,7 @@ var boxPushCmd = &cobra.Command{
 			return fmt.Errorf("failed to set layout: %w", err)
 		}
 
-		if err := tc.SetPaneOption(paneID, "cco-session", prepared.SessionID); err != nil {
+		if err := tc.SetPaneOption(paneID, "cco-job", prepared.JobID); err != nil {
 			return fmt.Errorf("failed to set pane option: %w", err)
 		}
 
@@ -100,7 +100,7 @@ var boxPushCmd = &cobra.Command{
 		}
 
 		launched = true
-		logger.Info("session %s started — pull with: cco box pull %s", prepared.SessionID, prepared.SessionID)
+		logger.Info("job %s started — pull with: cco box pull %s", prepared.JobID, prepared.JobID)
 		return nil
 	},
 }
