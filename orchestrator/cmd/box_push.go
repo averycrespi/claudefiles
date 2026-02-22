@@ -15,7 +15,12 @@ import (
 var boxPushCmd = &cobra.Command{
 	Use:   "push <plan-path>",
 	Short: "Push a plan into the sandbox for execution",
-	Args:  cobra.ExactArgs(1),
+	Long: `Bundle the current branch, clone it in the sandbox VM, and launch Claude Code with the plan.
+
+Resolves the plan path relative to the current directory.
+Splits the workspace's tmux window and runs Claude in the new pane.
+Use 'cco box pull <job-id>' to pull results back when done.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := logging.NewStdLogger(verbose)
 

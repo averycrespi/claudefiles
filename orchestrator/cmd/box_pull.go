@@ -14,7 +14,11 @@ import (
 var boxPullCmd = &cobra.Command{
 	Use:   "pull <job-id>",
 	Short: "Pull sandbox results back to the host",
-	Args:  cobra.ExactArgs(1),
+	Long: `Poll for an output bundle from a sandbox job and fast-forward merge it into the current branch.
+
+Waits up to 30 minutes for the sandbox to produce a bundle.
+Cleans up the exchange directory and sandbox tmux pane on success.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		jobID := args[0]
 
