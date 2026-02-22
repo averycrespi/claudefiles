@@ -12,7 +12,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
-- [Go](https://go.dev/) 1.23for building `cco`
+- [Go](https://go.dev/) 1.23 for building `cco`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -112,9 +112,15 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 
 ## Claude Code Orchestrator
 
-`cco` manages parallel Claude Code workspaces using Git worktrees and tmux.
+`cco` lets you run multiple Claude Code sessions in parallel, each on its own branch. It uses Git worktrees and tmux to keep sessions isolated from each other and from your main working tree.
 
-See the [orchestrator README](./orchestrator/README.md) for full documentation.
+```sh
+cco add feature-branch      # create workspace, launch Claude Code
+cco attach feature-branch    # switch to it later
+cco rm feature-branch        # clean up when done (keeps the branch)
+```
+
+You can also run plans in an isolated sandbox VM with `cco box`. See the [orchestrator README](./orchestrator/README.md) for full documentation.
 
 ---
 
