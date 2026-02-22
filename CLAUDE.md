@@ -9,7 +9,7 @@ This is a public repository. When creating or modifying content:
 - **No internal details** - Don't reference specific companies, projects, team names, or internal URLs
 - **No private data** - Don't include API keys, tokens, credentials, or sensitive configuration
 - **Generic examples** - Use placeholders like `ABC-123` for tickets, `example.com` for domains
-- **Sanitize plans/designs** - Review `.plans/` and `.designs/` files before committing to ensure they contain no proprietary information
+- **Sanitize plans** - Review `.plans/` files before committing to ensure they contain no proprietary information
 
 ## Setup
 
@@ -19,14 +19,12 @@ This is a public repository. When creating or modifying content:
 
 See the README for detailed setup instructions.
 
-**Optional:** [Lima](https://github.com/lima-vm/lima) (`brew install lima`) is only needed for the sandbox VM.
-
 ## Development Workflow
 
 This repository includes a structured development workflow:
 
 ```
-/architect → /brainstorm → /write-plan → /execute-plan → /complete-work
+/architecting → /brainstorming → /writing-plans → /executing-plans → /completing-work
 ```
 
 1. **Architecting** - Describe the shape of a system: components, responsibilities, boundaries
@@ -51,40 +49,40 @@ This repository includes a structured development workflow:
 
 ### Workflow Skills
 
-| Skill                     | Purpose                                                     |
-| ------------------------- | ----------------------------------------------------------- |
-| `architecting`            | Describe the shape of a system: components, responsibilities, boundaries |
-| `brainstorming`           | Turn ideas into designs through collaborative dialogue      |
-| `writing-plans`           | Create detailed implementation plans with TDD steps         |
-| `executing-plans`         | Execute plans with subagent implementation + reviews        |
-| `executing-plans-quickly` | Execute plans inline without subagents for simple tasks     |
-| `executing-plans-in-sandbox` | Execute plans autonomously in a sandbox VM              |
-| `completing-work`         | Verify tests, present options, create or update PR          |
+| Skill                        | Purpose                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| `architecting`               | Describe the shape of a system: components, responsibilities, boundaries |
+| `brainstorming`              | Turn ideas into designs through collaborative dialogue                   |
+| `writing-plans`              | Create detailed implementation plans with TDD steps                      |
+| `executing-plans`            | Execute plans with subagent implementation + reviews                     |
+| `executing-plans-quickly`    | Execute plans inline without subagents for simple tasks                  |
+| `executing-plans-in-sandbox` | Execute plans autonomously in a sandbox VM                               |
+| `completing-work`            | Verify tests, present options, create or update PR                       |
 
 ### Integrations
 
-| Integration              | Purpose                                             |
-| ------------------------ | --------------------------------------------------- |
-| Atlassian MCP            | Read/write access to Jira, Confluence, and Compass  |
-| `searching-datadog-logs` | Search Datadog logs via the API                     |
+| Integration              | Purpose                                            |
+| ------------------------ | -------------------------------------------------- |
+| Atlassian MCP            | Read/write access to Jira, Confluence, and Compass |
+| `searching-datadog-logs` | Search Datadog logs via the API                    |
 
 ### Reference Skills
 
-| Skill                     | Purpose                                           |
-| ------------------------- | ------------------------------------------------- |
-| `test-driven-development` | TDD discipline: red-green-refactor cycle          |
+| Skill                     | Purpose                                  |
+| ------------------------- | ---------------------------------------- |
+| `test-driven-development` | TDD discipline: red-green-refactor cycle |
 
 ### Meta Skills
 
-| Skill             | Purpose                                             |
-| ----------------- | --------------------------------------------------- |
-| `creating-skills` | Guide for creating new skills                       |
+| Skill             | Purpose                       |
+| ----------------- | ----------------------------- |
+| `creating-skills` | Guide for creating new skills |
 
 ## Agents
 
-| Agent           | Purpose                                           |
-| --------------- | ------------------------------------------------- |
-| `code-reviewer` | Review code changes against plans and standards   |
+| Agent           | Purpose                                         |
+| --------------- | ----------------------------------------------- |
+| `code-reviewer` | Review code changes against plans and standards |
 
 ## Testing
 
