@@ -351,19 +351,19 @@ func (m *mockRunner) RunInteractive(name string, args ...string) error {
 	return m.Called(callArgs...).Error(0)
 }
 
-func TestService_Push_NotRunning(t *testing.T) {
+func TestService_Prepare_NotRunning(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
 	runner := new(mockRunner)
 	svc := NewService(lima, logging.NoopLogger{}, runner)
 
-	_, err := svc.Push("/repo", ".plans/test-plan.md")
+	_, err := svc.Prepare("/repo", ".plans/test-plan.md")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "sandbox not running")
 }
 
-func TestService_Push_Running(t *testing.T) {
+func TestService_Prepare_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -376,11 +376,17 @@ func TestService_Push_Running(t *testing.T) {
 
 	svc := NewService(lima, logging.NoopLogger{}, runner)
 
-	sessionID, err := svc.Push("/repo", ".plans/test-plan.md")
+	result, err := svc.Prepare("/repo", ".plans/test-plan.md")
 
 	require.NoError(t, err)
-	assert.Len(t, sessionID, 8)
-	lima.AssertCalled(t, "Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	assert.Len(t, result.SessionID, 8)
+	assert.Contains(t, result.Command, "limactl")
+	assert.Contains(t, result.Command, "claude")
+	assert.Contains(t, result.Command, result.SessionID)
+	assert.Contains(t, result.Command, "executing-plans-in-sandbox")
+	assert.Equal(t, "main", result.Branch)
+	// Shell should be called exactly once (for git clone), not twice (no Claude launch)
+	lima.AssertNumberOfCalls(t, "Shell", 1)
 }
 
 func TestService_Pull_BundleNotFound_TimesOut(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/lima"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
 )
@@ -198,23 +199,31 @@ func (s *Service) Shell(args ...string) error {
 	return s.lima.Shell(args...)
 }
 
-// Push bundles the current branch, clones it in the VM, and launches Claude.
-func (s *Service) Push(repoRoot, planPath string) (string, error) {
+// PreparedSession contains the information needed to launch Claude in a sandbox session.
+type PreparedSession struct {
+	SessionID string
+	Branch    string
+	Command   string
+}
+
+// Prepare bundles the current branch, clones it in the VM, and returns
+// a PreparedSession with the command to launch Claude (without launching it).
+func (s *Service) Prepare(repoRoot, planPath string) (*PreparedSession, error) {
 	status, err := s.lima.Status()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	switch status {
 	case "":
-		return "", fmt.Errorf("sandbox not created, run `cco box create`")
+		return nil, fmt.Errorf("sandbox not created, run `cco box create`")
 	case "Stopped":
-		return "", fmt.Errorf("sandbox not running, run `cco box start`")
+		return nil, fmt.Errorf("sandbox not running, run `cco box start`")
 	}
 
 	// Get current branch
 	out, err := s.runner.RunDir(repoRoot, "git", "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
-		return "", fmt.Errorf("failed to get current branch: %w", err)
+		return nil, fmt.Errorf("failed to get current branch: %w", err)
 	}
 	branch := strings.TrimSpace(string(out))
 
@@ -222,32 +231,33 @@ func (s *Service) Push(repoRoot, planPath string) (string, error) {
 	sessionID := NewSessionID()
 	exchangeDir := paths.SessionExchangeDir(sessionID)
 	if err := os.MkdirAll(exchangeDir, 0o755); err != nil {
-		return "", fmt.Errorf("failed to create exchange directory: %w", err)
+		return nil, fmt.Errorf("failed to create exchange directory: %w", err)
 	}
 
 	// Create git bundle
 	bundlePath := filepath.Join(exchangeDir, "input.bundle")
 	s.logger.Info("creating bundle for branch %s...", branch)
 	if out, err := s.runner.RunDir(repoRoot, "git", "bundle", "create", bundlePath, branch); err != nil {
-		return "", fmt.Errorf("git bundle create failed: %s", strings.TrimSpace(string(out)))
+		return nil, fmt.Errorf("git bundle create failed: %s", strings.TrimSpace(string(out)))
 	}
 
 	// Clone from bundle inside VM
 	guestWorkspace := "/workspace/" + sessionID
 	s.logger.Info("cloning into sandbox workspace %s...", guestWorkspace)
 	if err := s.lima.Shell("--", "git", "clone", "/exchange/"+sessionID+"/input.bundle", guestWorkspace); err != nil {
-		return "", fmt.Errorf("git clone in sandbox failed: %w", err)
+		return nil, fmt.Errorf("git clone in sandbox failed: %w", err)
 	}
 
-	// Launch Claude interactively
-	s.logger.Info("launching claude in sandbox (session %s)...", sessionID)
+	// Build command string (does not launch Claude)
 	prompt := fmt.Sprintf("/executing-plans-in-sandbox %s", planPath)
-	if err := s.lima.Shell("--", "bash", "-c",
-		fmt.Sprintf("cd %s && claude --dangerously-skip-permissions %q", guestWorkspace, prompt)); err != nil {
-		return sessionID, fmt.Errorf("claude exited with error: %w", err)
-	}
+	command := fmt.Sprintf("limactl shell --workdir / %s -- bash -c 'cd %s && claude --dangerously-skip-permissions %q'",
+		lima.VMName, guestWorkspace, prompt)
 
-	return sessionID, nil
+	return &PreparedSession{
+		SessionID: sessionID,
+		Branch:    branch,
+		Command:   command,
+	}, nil
 }
 
 // Pull polls for an output bundle and fast-forward merges it into the current branch.
