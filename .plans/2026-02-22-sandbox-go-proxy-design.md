@@ -17,7 +17,7 @@ A global cco config file at `$XDG_CONFIG_HOME/cco/config.json` (defaults to `~/.
 ```json
 {
   "go_proxy": {
-    "private_patterns": [
+    "patterns": [
       "github.com/myorg/*",
       "github.com/other-private-org/*"
     ]
@@ -25,7 +25,7 @@ A global cco config file at `$XDG_CONFIG_HOME/cco/config.json` (defaults to `~/.
 }
 ```
 
-Patterns use the same glob format as Go's `GONOSUMCHECK` and `GOPRIVATE` environment variables. For matching against `go.mod` requires, the trailing `/*` is stripped and the remainder is used as a prefix match. For `GONOSUMCHECK`, patterns are passed through as-is. If `go_proxy` is absent or `private_patterns` is empty, the feature is a no-op.
+Patterns use the same glob format as Go's `GONOSUMCHECK` and `GOPRIVATE` environment variables. For matching against `go.mod` requires, the trailing `/*` is stripped and the remainder is used as a prefix match. For `GONOSUMCHECK`, patterns are passed through as-is. If `go_proxy` is absent or `patterns` is empty, the feature is a no-op.
 
 ### Config CLI Commands
 
@@ -39,7 +39,7 @@ These are general-purpose config commands, not Go-proxy-specific.
 
 ## Host-Side Push Flow
 
-When `cco box push` runs and the config has `go_proxy.private_patterns`, a new step happens after the git bundle is created but before the tmux pane is split.
+When `cco box push` runs and the config has `go_proxy.patterns`, a new step happens after the git bundle is created but before the tmux pane is split.
 
 ### Step 1: Find Private Dependencies
 
@@ -113,12 +113,12 @@ Before building the launch command, check if `~/.local/share/cco/exchange/{jobID
 
 ### Package Responsibilities
 
-- **`config`** — Reads `$XDG_CONFIG_HOME/cco/config.json`. Exposes `Load() (*Config, error)` and the struct with `GoProxy.PrivatePatterns []string`.
+- **`config`** — Reads `$XDG_CONFIG_HOME/cco/config.json`. Exposes `Load() (*Config, error)` and the struct with `GoProxy.Patterns []string`.
 - **`goproxy`** — `CachePrivateDeps(worktreeDir, exchangeDir string, patterns []string) error`. Globs for `**/go.mod`, parses requires, filters by patterns, deduplicates, runs `go mod download` with custom `GOMODCACHE`. Returns nil (no-op) if no matches.
 
 ### README Changes
 
 Add a new "Configuration" section to `orchestrator/README.md` documenting:
 - Config file location and format
-- The `go_proxy.private_patterns` option with explanation and example
+- The `go_proxy.patterns` option with explanation and example
 - The `cco config path/show/edit` commands
