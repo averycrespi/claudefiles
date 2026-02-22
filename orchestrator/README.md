@@ -49,6 +49,7 @@ cco rm feature-branch         # removes worktree and window (keeps the branch)
 | `cco rm <branch>`     | Remove a workspace                                                                      |
 | `cco attach [branch]` | Attach to a window or session                                                           |
 | `cco notify`          | Add notification to current workspace (for hooks)                                       |
+| `cco config <cmd>`    | Manage configuration (path, show, edit)                                                 |
 | `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell, push, pull) |
 
 ## Sandbox
@@ -108,6 +109,44 @@ cco box pull a3f7b2
 Push requires a workspace (`cco add <branch>`) for the current branch. It creates a git bundle, clones it inside the VM, and launches Claude in a split tmux pane to execute the plan. Push returns immediately — Claude runs in the background pane. When Claude finishes, it writes an output bundle. Pull polls for that bundle, fast-forward merges the commits back onto your branch, and closes the sandbox pane.
 
 Each push gets a unique job ID so multiple jobs can run in parallel.
+
+## Configuration
+
+cco uses a JSON config file for optional settings. The file location respects `$XDG_CONFIG_HOME`:
+
+```
+~/.config/cco/config.json
+```
+
+**Manage the config file:**
+
+```sh
+cco config path              # print config file location
+cco config show              # print config contents
+cco config edit              # open in $EDITOR (creates file if needed)
+```
+
+### Go Module Proxy
+
+When pushing Go projects to the sandbox, private module dependencies can't be resolved because the sandbox has no access to private repositories. The `go_proxy` setting caches matching dependencies on the host before push, making them available inside the sandbox via a file-system based Go module proxy.
+
+```json
+{
+  "go_proxy": {
+    "patterns": [
+      "github.com/myorg/*"
+    ]
+  }
+}
+```
+
+**How it works:**
+
+1. At push time, cco scans all `go.mod` files in the worktree
+2. Dependencies matching any pattern are downloaded to the job's exchange directory
+3. Inside the sandbox, `GOPROXY` is set to check the local cache first, then fall back to `proxy.golang.org`
+
+Patterns use the same glob format as Go's `GOPRIVATE` environment variable. If `go_proxy` is absent or `patterns` is empty, push behaves as before.
 
 ## Development
 
