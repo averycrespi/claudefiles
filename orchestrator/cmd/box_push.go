@@ -17,16 +17,21 @@ var boxPushCmd = &cobra.Command{
 	Short: "Push a plan into the sandbox for execution",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		planPath := args[0]
 		logger := logging.NewStdLogger(verbose)
-
-		if _, err := os.Stat(planPath); os.IsNotExist(err) {
-			return fmt.Errorf("plan file not found: %s", planPath)
-		}
 
 		cwd, err := os.Getwd()
 		if err != nil {
 			return fmt.Errorf("failed to get working directory: %w", err)
+		}
+
+		// Resolve plan path and verify it exists in the worktree
+		planPath := args[0]
+		if !filepath.IsAbs(planPath) {
+			planPath = filepath.Join(cwd, planPath)
+		}
+		planPath, err = filepath.EvalSymlinks(planPath)
+		if err != nil {
+			return fmt.Errorf("plan file not found: %s", args[0])
 		}
 
 		// Look up workspace tmux session — resolve main repo name from worktrees
