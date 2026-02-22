@@ -28,6 +28,14 @@ provision:
     set -eux -o pipefail
     usermod -aG docker "{{.User}}"
 
+# Create workspace directory
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    mkdir -p /workspace
+    chown "{{.User}}:{{.User}}" /workspace
+
 # Install dev tools, Go, asdf, and Claude Code
 - mode: user
   script: |
