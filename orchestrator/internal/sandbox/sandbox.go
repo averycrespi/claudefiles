@@ -159,9 +159,9 @@ func (s *Service) Provision() error {
 	}
 	defer os.Remove(settingsPath)
 
-	skillPath, err := writeTempFile("cco-executing-plans-in-sandbox-*.md", executingPlansInSandboxSkill)
+	skillPath, err := writeTempFile("cco-executing-plans-*.md", executingPlansSkill)
 	if err != nil {
-		return fmt.Errorf("failed to write executing-plans-in-sandbox.md: %w", err)
+		return fmt.Errorf("failed to write executing-plans.md: %w", err)
 	}
 	defer os.Remove(skillPath)
 
@@ -173,10 +173,10 @@ func (s *Service) Provision() error {
 	}
 
 	// Ensure skill directory exists in VM (skills must be <name>/SKILL.md)
-	if err := s.lima.Shell("--", "bash", "-c", "mkdir -p $HOME/.claude/skills/executing-plans-in-sandbox"); err != nil {
+	if err := s.lima.Shell("--", "bash", "-c", "mkdir -p $HOME/.claude/skills/executing-plans"); err != nil {
 		return fmt.Errorf("failed to create skills directory: %w", err)
 	}
-	if err := s.lima.Copy(skillPath, "~/.claude/skills/executing-plans-in-sandbox/SKILL.md"); err != nil {
+	if err := s.lima.Copy(skillPath, "~/.claude/skills/executing-plans/SKILL.md"); err != nil {
 		return err
 	}
 
@@ -249,7 +249,7 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedSession, error) {
 	}
 
 	// Build command string (does not launch Claude)
-	prompt := fmt.Sprintf("/executing-plans-in-sandbox %s", planPath)
+	prompt := fmt.Sprintf("/executing-plans %s", planPath)
 	command := fmt.Sprintf("limactl shell --workdir / %s -- bash -c 'cd %s && claude --dangerously-skip-permissions %q'",
 		lima.VMName, guestWorkspace, prompt)
 

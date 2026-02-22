@@ -67,10 +67,10 @@ func TestEmbeddedFiles_NotEmpty(t *testing.T) {
 	assert.NotEmpty(t, settingsJSON)
 }
 
-func TestEmbeddedFiles_ExecutingPlansInSandbox(t *testing.T) {
-	assert.NotEmpty(t, executingPlansInSandboxSkill)
-	content := string(executingPlansInSandboxSkill)
-	assert.Contains(t, content, "executing-plans-in-sandbox")
+func TestEmbeddedFiles_ExecutingPlans(t *testing.T) {
+	assert.NotEmpty(t, executingPlansSkill)
+	content := string(executingPlansSkill)
+	assert.Contains(t, content, "executing-plans")
 	assert.Contains(t, content, "git bundle create")
 	assert.Contains(t, content, "/exchange/")
 }
@@ -216,7 +216,7 @@ func TestService_Provision_Running(t *testing.T) {
 
 	require.NoError(t, err)
 	lima.AssertNumberOfCalls(t, "Copy", 3)
-	lima.AssertCalled(t, "Copy", mock.Anything, "~/.claude/skills/executing-plans-in-sandbox/SKILL.md")
+	lima.AssertCalled(t, "Copy", mock.Anything, "~/.claude/skills/executing-plans/SKILL.md")
 }
 
 func TestService_Create_AlreadyRunning(t *testing.T) {
@@ -383,7 +383,7 @@ func TestService_Prepare_Running(t *testing.T) {
 	assert.Contains(t, result.Command, "limactl")
 	assert.Contains(t, result.Command, "claude")
 	assert.Contains(t, result.Command, result.SessionID)
-	assert.Contains(t, result.Command, "executing-plans-in-sandbox")
+	assert.Contains(t, result.Command, "executing-plans")
 	assert.Equal(t, "main", result.Branch)
 	// Shell should be called exactly once (for git clone), not twice (no Claude launch)
 	lima.AssertNumberOfCalls(t, "Shell", 1)

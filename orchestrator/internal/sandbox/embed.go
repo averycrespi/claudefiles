@@ -11,5 +11,5 @@ var claudeMD []byte
 //go:embed files/settings.json
 var settingsJSON []byte
 
-//go:embed files/skills/executing-plans-in-sandbox/SKILL.md
-var executingPlansInSandboxSkill []byte
+//go:embed files/skills/executing-plans/SKILL.md
+var executingPlansSkill []byte
