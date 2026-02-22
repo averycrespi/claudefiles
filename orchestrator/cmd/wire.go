@@ -25,6 +25,18 @@ func newWorkspaceService() *workspace.Service {
 	)
 }
 
+func newTmuxClient() *tmux.Client {
+	runner := ccoexec.NewOSRunner()
+	tc := tmux.NewClient(runner)
+	tc.TmuxEnv = os.Getenv("TMUX")
+	return tc
+}
+
+func newGitClient() *git.Client {
+	runner := ccoexec.NewOSRunner()
+	return git.NewClient(runner)
+}
+
 func newSandboxService() *sandbox.Service {
 	runner := ccoexec.NewOSRunner()
 	logger := logging.NewStdLogger(verbose)
