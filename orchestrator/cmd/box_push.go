@@ -6,9 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/averycrespi/claudefiles/orchestrator/internal/config"
 	ccoexec "github.com/averycrespi/claudefiles/orchestrator/internal/exec"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/goproxy"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/sandbox"
 	"github.com/spf13/cobra"
 )
 
@@ -81,6 +84,27 @@ Use 'cco box pull <job-id>' to pull results back when done.`,
 		prepared, err := svc.Prepare(cwd, planPath)
 		if err != nil {
 			return err
+		}
+
+		// Cache matching Go dependencies for the sandbox
+		cfg, err := config.Load()
+		if err != nil {
+			logger.Warn("failed to load config: %s", err)
+		}
+		if cfg != nil && len(cfg.GoProxy.Patterns) > 0 {
+			deps, err := goproxy.FindMatchingDeps(cwd, cfg.GoProxy.Patterns)
+			if err != nil {
+				logger.Warn("failed to scan Go dependencies: %s", err)
+			} else if len(deps) > 0 {
+				logger.Info("caching %d Go dependencies for sandbox...", len(deps))
+				exchangeDir := paths.JobExchangeDir(prepared.JobID)
+				if _, err := goproxy.DownloadDeps(deps, exchangeDir); err != nil {
+					logger.Warn("failed to cache Go dependencies: %s", err)
+				} else {
+					// Rebuild the command with proxy env vars
+					prepared.Command = sandbox.BuildLaunchCommand(prepared.JobID, planPath, cfg.GoProxy.Patterns)
+				}
+			}
 		}
 
 		// Split the workspace pane and launch Claude
