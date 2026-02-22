@@ -9,17 +9,11 @@ import (
 
 var attachCmd = &cobra.Command{
 	Use:   "attach [branch]",
-	Short: "Attach to a workspace (or the session itself)",
-	Long: `Attach to a workspace's tmux window, or the session itself.
+	Short: "Attach to a window or session",
+	Long: `Attach to a workspace's window (if branch provided), or the session itself (otherwise).
 
-This command has two modes of operation:
-- If a branch is provided -> attach to the workspace's window in the session
-- If no branch is provided -> just attach to the session itself
-
-Notes:
-- If the tmux session does not exist, it will be created
-- Can be run from the main repository or a worktree
-- If we're already in the tmux session, switch instead of attaching`,
+Creates the session if it doesn't already exist.
+Switches windows (instead of attaching) if already inside the session.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()

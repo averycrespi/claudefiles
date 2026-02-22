@@ -10,15 +10,11 @@ import (
 var rmCmd = &cobra.Command{
 	Use:   "rm <branch>",
 	Short: "Remove a workspace",
-	Long: `Remove the git worktree and close the tmux window for the given branch.
+	Long: `Remove the workspace (worktree + window) for a branch.
 
-This command is idempotent, and can safely be run multiple times:
-- If the tmux window exists -> close the window
-- If the worktree exists -> remove the worktree
-
-Notes:
-- The branch itself will NOT be deleted
-- Must be run from the main repository, not a worktree`,
+Skips any steps which have already been completed.
+Does NOT delete the branch itself.
+Must be run from the main repository, not a worktree.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()

@@ -6,7 +6,7 @@ import (
 
 var boxCmd = &cobra.Command{
 	Use:   "box",
-	Short: "Manage the Lima sandbox VM",
+	Short: "Manage the sandbox",
 }
 
 func init() {

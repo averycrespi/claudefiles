@@ -9,16 +9,11 @@ import (
 
 var notifyCmd = &cobra.Command{
 	Use:   "notify",
-	Short: "Add notification bell to current workspace's tmux window",
-	Long: `Add a bell emoji prefix to the tmux window name for the current workspace.
+	Short: "Add notification to current workspace (for hooks)",
+	Long: `Add a notification to the current workspace's window (for usage by hooks).
 
-The bell is skipped when:
-- The window is already the active window in the session
-- The window already has a bell prefix
-- The command is not run from a cco-managed worktree
-
-Notes:
-- Designed for hooks: always exits 0, even when skipping`,
+Skips notifying if window is active, window already notified, or not in worktree.
+Always returns exit code 0 (even on failure) to avoid disrupting hooks.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()
 		if err != nil {
