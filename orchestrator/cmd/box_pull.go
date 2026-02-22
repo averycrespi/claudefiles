@@ -33,7 +33,7 @@ var boxPullCmd = &cobra.Command{
 		gitClient := newGitClient()
 		info, err := gitClient.RepoInfo(cwd)
 		if err != nil {
-			logger.Info("warning: could not look up workspace to clean up pane: %s", err)
+			logger.Warn("could not look up workspace to clean up pane: %s", err)
 			return nil
 		}
 
@@ -41,7 +41,7 @@ var boxPullCmd = &cobra.Command{
 		if info.IsWorktree {
 			commonDir, err := gitClient.CommonDir(cwd)
 			if err != nil {
-				logger.Info("warning: could not determine main repo: %s", err)
+				logger.Warn("could not determine main repo: %s", err)
 				return nil
 			}
 			resolved := filepath.Clean(filepath.Join(cwd, commonDir))
@@ -62,7 +62,7 @@ var boxPullCmd = &cobra.Command{
 		}
 
 		if err := tc.KillPane(paneID); err != nil {
-			logger.Info("warning: could not close sandbox pane: %s", err)
+			logger.Warn("could not close sandbox pane: %s", err)
 		} else {
 			logger.Info("closed sandbox pane")
 		}

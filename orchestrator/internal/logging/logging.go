@@ -5,6 +5,7 @@ import "fmt"
 // Logger abstracts logging for testability.
 type Logger interface {
 	Info(format string, args ...any)
+	Warn(format string, args ...any)
 	Debug(format string, args ...any)
 }
 
@@ -19,12 +20,16 @@ func NewStdLogger(verbose bool) *StdLogger {
 }
 
 func (l *StdLogger) Info(format string, args ...any) {
-	fmt.Printf(format+"\n", args...)
+	fmt.Printf("[cco:info] "+format+"\n", args...)
+}
+
+func (l *StdLogger) Warn(format string, args ...any) {
+	fmt.Printf("[cco:warn] "+format+"\n", args...)
 }
 
 func (l *StdLogger) Debug(format string, args ...any) {
 	if l.verbose {
-		fmt.Printf(format+"\n", args...)
+		fmt.Printf("[cco:debug] "+format+"\n", args...)
 	}
 }
 
@@ -32,4 +37,5 @@ func (l *StdLogger) Debug(format string, args ...any) {
 type NoopLogger struct{}
 
 func (NoopLogger) Info(string, ...any)  {}
+func (NoopLogger) Warn(string, ...any)  {}
 func (NoopLogger) Debug(string, ...any) {}

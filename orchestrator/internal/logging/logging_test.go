@@ -37,7 +37,15 @@ func TestStdLogger_InfoAlwaysPrints(t *testing.T) {
 	out := captureStdout(t, func() {
 		logger.Info("hello %s", "world")
 	})
-	assert.Equal(t, "hello world\n", out)
+	assert.Equal(t, "[cco:info] hello world\n", out)
+}
+
+func TestStdLogger_WarnAlwaysPrints(t *testing.T) {
+	logger := NewStdLogger(false)
+	out := captureStdout(t, func() {
+		logger.Warn("something %s", "wrong")
+	})
+	assert.Equal(t, "[cco:warn] something wrong\n", out)
 }
 
 func TestStdLogger_DebugSilentByDefault(t *testing.T) {
@@ -53,13 +61,14 @@ func TestStdLogger_DebugPrintsWhenVerbose(t *testing.T) {
 	out := captureStdout(t, func() {
 		logger.Debug("verbose %s", "msg")
 	})
-	assert.Equal(t, "verbose msg\n", out)
+	assert.Equal(t, "[cco:debug] verbose msg\n", out)
 }
 
 func TestNoopLogger_DoesNotPrint(t *testing.T) {
 	logger := NoopLogger{}
 	out := captureStdout(t, func() {
 		logger.Info("should not appear")
+		logger.Warn("should not appear")
 		logger.Debug("should not appear")
 	})
 	assert.Empty(t, out)

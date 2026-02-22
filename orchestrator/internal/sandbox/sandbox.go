@@ -295,7 +295,7 @@ func (s *Service) Pull(repoRoot, sessionID string, timeout, interval time.Durati
 
 	// Clean up exchange directory
 	if err := os.RemoveAll(exchangeDir); err != nil {
-		s.logger.Info("warning: failed to clean up exchange directory: %s", err)
+		s.logger.Warn("failed to clean up exchange directory: %s", err)
 	}
 
 	s.logger.Info("pull complete for session %s", sessionID)

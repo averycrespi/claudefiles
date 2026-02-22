@@ -294,7 +294,7 @@ func (s *Service) runSetupScripts(worktreeDir string) {
 		}
 		s.logger.Info("running setup script: %s", scriptPath)
 		if err := s.runner.RunInteractive(scriptPath); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: setup script %s failed: %v\n", name, err)
+			s.logger.Warn("setup script %s failed: %v", name, err)
 		}
 		return
 	}
@@ -320,12 +320,12 @@ func copyLocalSettings(repoRoot, worktreeDir string, logger logging.Logger) {
 
 	logger.Info("copying local Claude settings to: %s", dst)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not create .claude dir: %v\n", err)
+		logger.Warn("could not create .claude dir: %v", err)
 		return
 	}
 	dstFile, err := os.Create(dst)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not create settings file: %v\n", err)
+		logger.Warn("could not create settings file: %v", err)
 		return
 	}
 	defer dstFile.Close()
