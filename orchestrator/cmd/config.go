@@ -5,6 +5,7 @@ import (
 	"os"
 	osexec "os/exec"
 
+	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
 	"github.com/spf13/cobra"
 )
@@ -28,11 +29,12 @@ var configShowCmd = &cobra.Command{
 	Short: "Print config file contents",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		logger := logging.NewStdLogger(verbose)
 		path := paths.ConfigFilePath()
 		data, err := os.ReadFile(path)
 		if err != nil {
 			if os.IsNotExist(err) {
-				fmt.Printf("No config file found at %s\n", path)
+				logger.Info("no config file found at %s", path)
 				return nil
 			}
 			return err
