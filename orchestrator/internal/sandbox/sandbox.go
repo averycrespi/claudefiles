@@ -199,16 +199,16 @@ func (s *Service) Shell(args ...string) error {
 	return s.lima.Shell(args...)
 }
 
-// PreparedSession contains the information needed to launch Claude in a sandbox session.
-type PreparedSession struct {
-	SessionID string
-	Branch    string
-	Command   string
+// PreparedJob contains the information needed to launch Claude in a sandbox job.
+type PreparedJob struct {
+	JobID   string
+	Branch  string
+	Command string
 }
 
 // Prepare bundles the current branch, clones it in the VM, and returns
-// a PreparedSession with the command to launch Claude (without launching it).
-func (s *Service) Prepare(repoRoot, planPath string) (*PreparedSession, error) {
+// a PreparedJob with the command to launch Claude (without launching it).
+func (s *Service) Prepare(repoRoot, planPath string) (*PreparedJob, error) {
 	status, err := s.lima.Status()
 	if err != nil {
 		return nil, err
@@ -227,9 +227,9 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedSession, error) {
 	}
 	branch := strings.TrimSpace(string(out))
 
-	// Generate session ID and create exchange directory
-	sessionID := NewSessionID()
-	exchangeDir := paths.SessionExchangeDir(sessionID)
+	// Generate job ID and create exchange directory
+	jobID := NewJobID()
+	exchangeDir := paths.JobExchangeDir(jobID)
 	if err := os.MkdirAll(exchangeDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create exchange directory: %w", err)
 	}
@@ -242,9 +242,9 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedSession, error) {
 	}
 
 	// Clone from bundle inside VM
-	guestWorkspace := "/workspace/" + sessionID
+	guestWorkspace := "/workspace/" + jobID
 	s.logger.Info("cloning into sandbox workspace %s...", guestWorkspace)
-	if err := s.lima.Shell("--", "git", "clone", "/exchange/"+sessionID+"/input.bundle", guestWorkspace); err != nil {
+	if err := s.lima.Shell("--", "git", "clone", "/exchange/"+jobID+"/input.bundle", guestWorkspace); err != nil {
 		return nil, fmt.Errorf("git clone in sandbox failed: %w", err)
 	}
 
@@ -253,19 +253,19 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedSession, error) {
 	command := fmt.Sprintf("limactl shell --workdir / %s -- bash -c 'cd %s && claude --dangerously-skip-permissions %q'",
 		lima.VMName, guestWorkspace, prompt)
 
-	return &PreparedSession{
-		SessionID: sessionID,
-		Branch:    branch,
-		Command:   command,
+	return &PreparedJob{
+		JobID:   jobID,
+		Branch:  branch,
+		Command: command,
 	}, nil
 }
 
 // Pull polls for an output bundle and fast-forward merges it into the current branch.
-func (s *Service) Pull(repoRoot, sessionID string, timeout, interval time.Duration) error {
-	exchangeDir := paths.SessionExchangeDir(sessionID)
+func (s *Service) Pull(repoRoot, jobID string, timeout, interval time.Duration) error {
+	exchangeDir := paths.JobExchangeDir(jobID)
 	bundlePath := filepath.Join(exchangeDir, "output.bundle")
 
-	s.logger.Info("waiting for output bundle (session %s)...", sessionID)
+	s.logger.Info("waiting for output bundle (job %s)...", jobID)
 
 	deadline := time.Now().Add(timeout)
 	for {
@@ -298,7 +298,7 @@ func (s *Service) Pull(repoRoot, sessionID string, timeout, interval time.Durati
 		s.logger.Warn("failed to clean up exchange directory: %s", err)
 	}
 
-	s.logger.Info("pull complete for session %s", sessionID)
+	s.logger.Info("pull complete for job %s", jobID)
 	return nil
 }
 

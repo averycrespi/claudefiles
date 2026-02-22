@@ -371,7 +371,7 @@ func TestService_Prepare_Running(t *testing.T) {
 	runner := new(mockRunner)
 	// git rev-parse --abbrev-ref HEAD
 	runner.On("RunDir", "/repo", "git", "rev-parse", "--abbrev-ref", "HEAD").Return([]byte("main\n"), nil)
-	// git bundle create (match any args since session ID is random)
+	// git bundle create (match any args since job ID is random)
 	runner.On("RunDir", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]byte(""), nil)
 
 	svc := NewService(lima, logging.NoopLogger{}, runner)
@@ -379,10 +379,10 @@ func TestService_Prepare_Running(t *testing.T) {
 	result, err := svc.Prepare("/repo", ".plans/test-plan.md")
 
 	require.NoError(t, err)
-	assert.Len(t, result.SessionID, 8)
+	assert.Len(t, result.JobID, 8)
 	assert.Contains(t, result.Command, "limactl")
 	assert.Contains(t, result.Command, "claude")
-	assert.Contains(t, result.Command, result.SessionID)
+	assert.Contains(t, result.Command, result.JobID)
 	assert.Contains(t, result.Command, "executing-plans")
 	assert.Equal(t, "main", result.Branch)
 	// Shell should be called exactly once (for git clone), not twice (no Claude launch)
@@ -394,7 +394,7 @@ func TestService_Pull_BundleNotFound_TimesOut(t *testing.T) {
 	runner := new(mockRunner)
 	svc := NewService(lima, logging.NoopLogger{}, runner)
 
-	// Use a nonexistent session ID — bundle will never appear
+	// Use a nonexistent job ID — bundle will never appear
 	err := svc.Pull("/repo", "nonexistent", 100*time.Millisecond, 50*time.Millisecond)
 
 	assert.Error(t, err)
@@ -407,10 +407,10 @@ func TestService_Pull_BundleFound(t *testing.T) {
 	svc := NewService(lima, logging.NoopLogger{}, runner)
 
 	// Create a temporary exchange dir with a fake bundle
-	sessionID := "testpull1"
-	exchangeDir := paths.SessionExchangeDir(sessionID)
+	jobID := "testpull1"
+	exchangeDir := paths.JobExchangeDir(jobID)
 	require.NoError(t, os.MkdirAll(exchangeDir, 0o755))
-	defer os.RemoveAll(paths.SessionExchangeDir(sessionID))
+	defer os.RemoveAll(paths.JobExchangeDir(jobID))
 
 	bundlePath := filepath.Join(exchangeDir, "output.bundle")
 	require.NoError(t, os.WriteFile(bundlePath, []byte("fake"), 0o644))
@@ -422,7 +422,7 @@ func TestService_Pull_BundleFound(t *testing.T) {
 	// git merge --ff-only FETCH_HEAD
 	runner.On("RunDir", "/repo", "git", "merge", "--ff-only", "FETCH_HEAD").Return([]byte(""), nil)
 
-	err := svc.Pull("/repo", sessionID, 5*time.Second, 50*time.Millisecond)
+	err := svc.Pull("/repo", jobID, 5*time.Second, 50*time.Millisecond)
 
 	require.NoError(t, err)
 	runner.AssertCalled(t, "RunDir", "/repo", "git", "bundle", "verify", bundlePath)
