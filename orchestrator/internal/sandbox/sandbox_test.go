@@ -67,6 +67,14 @@ func TestEmbeddedFiles_NotEmpty(t *testing.T) {
 	assert.NotEmpty(t, settingsJSON)
 }
 
+func TestEmbeddedFiles_ExecutingPlansInSandbox(t *testing.T) {
+	assert.NotEmpty(t, executingPlansInSandboxSkill)
+	content := string(executingPlansInSandboxSkill)
+	assert.Contains(t, content, "executing-plans-in-sandbox")
+	assert.Contains(t, content, "git bundle create")
+	assert.Contains(t, content, "/exchange/")
+}
+
 func TestEmbeddedLimaTemplate_ContainsExpectedContent(t *testing.T) {
 	content := string(limaTemplate)
 	assert.Contains(t, content, "minimumLimaVersion")
