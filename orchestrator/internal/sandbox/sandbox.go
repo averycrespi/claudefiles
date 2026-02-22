@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
@@ -233,6 +234,48 @@ func (s *Service) Push(repoRoot, planPath string) (string, error) {
 	}
 
 	return sessionID, nil
+}
+
+// Pull polls for an output bundle and fast-forward merges it into the current branch.
+func (s *Service) Pull(repoRoot, sessionID string, timeout, interval time.Duration) error {
+	exchangeDir := paths.SessionExchangeDir(sessionID)
+	bundlePath := filepath.Join(exchangeDir, "output.bundle")
+
+	s.logger.Info("waiting for output bundle (session %s)...", sessionID)
+
+	deadline := time.Now().Add(timeout)
+	for {
+		if _, err := os.Stat(bundlePath); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timed out waiting for output bundle at %s", bundlePath)
+		}
+		time.Sleep(interval)
+	}
+
+	s.logger.Info("bundle found, verifying...")
+	if out, err := s.runner.RunDir(repoRoot, "git", "bundle", "verify", bundlePath); err != nil {
+		return fmt.Errorf("bundle verification failed: %s", strings.TrimSpace(string(out)))
+	}
+
+	s.logger.Info("fetching from bundle...")
+	if out, err := s.runner.RunDir(repoRoot, "git", "fetch", bundlePath); err != nil {
+		return fmt.Errorf("git fetch from bundle failed: %s", strings.TrimSpace(string(out)))
+	}
+
+	s.logger.Info("fast-forward merging...")
+	if out, err := s.runner.RunDir(repoRoot, "git", "merge", "--ff-only", "FETCH_HEAD"); err != nil {
+		return fmt.Errorf("fast-forward merge failed (branches may have diverged): %s", strings.TrimSpace(string(out)))
+	}
+
+	// Clean up exchange directory
+	if err := os.RemoveAll(exchangeDir); err != nil {
+		s.logger.Info("warning: failed to clean up exchange directory: %s", err)
+	}
+
+	s.logger.Info("pull complete for session %s", sessionID)
+	return nil
 }
 
 func writeTempFile(pattern string, data []byte) (string, error) {

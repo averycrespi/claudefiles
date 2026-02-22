@@ -1,14 +1,18 @@
 package sandbox
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
 )
 
 // mockLimaClient implements limaClient for tests.
@@ -366,4 +370,48 @@ func TestService_Push_Running(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, sessionID, 8)
 	lima.AssertCalled(t, "Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestService_Pull_BundleNotFound_TimesOut(t *testing.T) {
+	lima := new(mockLimaClient)
+	runner := new(mockRunner)
+	svc := NewService(lima, logging.NoopLogger{}, runner)
+
+	// Use a nonexistent session ID — bundle will never appear
+	err := svc.Pull("/repo", "nonexistent", 100*time.Millisecond, 50*time.Millisecond)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "timed out")
+}
+
+func TestService_Pull_BundleFound(t *testing.T) {
+	lima := new(mockLimaClient)
+	runner := new(mockRunner)
+	svc := NewService(lima, logging.NoopLogger{}, runner)
+
+	// Create a temporary exchange dir with a fake bundle
+	sessionID := "testpull1"
+	exchangeDir := paths.SessionExchangeDir(sessionID)
+	require.NoError(t, os.MkdirAll(exchangeDir, 0o755))
+	defer os.RemoveAll(paths.SessionExchangeDir(sessionID))
+
+	bundlePath := filepath.Join(exchangeDir, "output.bundle")
+	require.NoError(t, os.WriteFile(bundlePath, []byte("fake"), 0o644))
+
+	// git bundle verify
+	runner.On("RunDir", "/repo", "git", "bundle", "verify", bundlePath).Return([]byte("ok\n"), nil)
+	// git fetch
+	runner.On("RunDir", "/repo", "git", "fetch", bundlePath).Return([]byte(""), nil)
+	// git merge --ff-only FETCH_HEAD
+	runner.On("RunDir", "/repo", "git", "merge", "--ff-only", "FETCH_HEAD").Return([]byte(""), nil)
+
+	err := svc.Pull("/repo", sessionID, 5*time.Second, 50*time.Millisecond)
+
+	require.NoError(t, err)
+	runner.AssertCalled(t, "RunDir", "/repo", "git", "bundle", "verify", bundlePath)
+	runner.AssertCalled(t, "RunDir", "/repo", "git", "merge", "--ff-only", "FETCH_HEAD")
+
+	// Exchange dir should be cleaned up
+	_, statErr := os.Stat(exchangeDir)
+	assert.True(t, os.IsNotExist(statErr))
 }
