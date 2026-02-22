@@ -250,7 +250,7 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedJob, error) {
 
 	// Build command string (does not launch Claude)
 	prompt := fmt.Sprintf("/executing-plans %s", planPath)
-	command := fmt.Sprintf("limactl shell --workdir / %s -- bash -c 'cd %s && claude --dangerously-skip-permissions %q'",
+	command := fmt.Sprintf("limactl shell --workdir / %s -- bash -l -c 'cd %s && claude --dangerously-skip-permissions %q'",
 		lima.VMName, guestWorkspace, prompt)
 
 	return &PreparedJob{

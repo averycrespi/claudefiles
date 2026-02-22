@@ -67,11 +67,11 @@ provision:
     export ASDF_DATA_DIR="$HOME/.asdf"
     export PATH="$HOME/go/bin:$ASDF_DATA_DIR/shims:$PATH"
 
-    # Add Go and asdf to shell profile
-    if ! grep -q 'ASDF_DATA_DIR' "$HOME/.bashrc"; then
-      echo 'export PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"' >> "$HOME/.bashrc"
-      echo 'export ASDF_DATA_DIR="$HOME/.asdf"' >> "$HOME/.bashrc"
-      echo 'export PATH="$HOME/.local/bin:$ASDF_DATA_DIR/shims:$PATH"' >> "$HOME/.bashrc"
+    # Add Go and asdf to shell profile (.profile for login shells, .bashrc for interactive)
+    if ! grep -q 'ASDF_DATA_DIR' "$HOME/.profile"; then
+      echo 'export PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"' >> "$HOME/.profile"
+      echo 'export ASDF_DATA_DIR="$HOME/.asdf"' >> "$HOME/.profile"
+      echo 'export PATH="$HOME/.local/bin:$ASDF_DATA_DIR/shims:$PATH"' >> "$HOME/.profile"
     fi
 
     # --- gopls (Go language server) ---
