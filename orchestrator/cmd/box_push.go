@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	ccoexec "github.com/averycrespi/claudefiles/orchestrator/internal/exec"
+	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
 	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,7 @@ var boxPushCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		planPath := args[0]
+		logger := logging.NewStdLogger(verbose)
 
 		if _, err := os.Stat(planPath); os.IsNotExist(err) {
 			return fmt.Errorf("plan file not found: %s", planPath)
@@ -98,7 +100,7 @@ var boxPushCmd = &cobra.Command{
 		}
 
 		launched = true
-		fmt.Printf("Session %s started. Pull with: cco box pull %s\n", prepared.SessionID, prepared.SessionID)
+		logger.Info("session %s started — pull with: cco box pull %s", prepared.SessionID, prepared.SessionID)
 		return nil
 	},
 }
