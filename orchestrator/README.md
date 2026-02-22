@@ -10,7 +10,7 @@ A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code)
 | `cco rm <branch>`     | Remove a workspace                                         |
 | `cco attach [branch]` | Attach to a window or session                              |
 | `cco notify`          | Add notification to current workspace (for hooks)          |
-| `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell) |
+| `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell, push, pull) |
 
 ### Usage Examples
 
@@ -114,6 +114,25 @@ cco box provision
 ```sh
 cco box destroy
 ```
+
+**Push a plan into the sandbox:**
+
+```sh
+cco box push .plans/2026-02-21-my-feature-plan.md
+# Session a3f7b2 complete. Pull with: cco box pull a3f7b2
+```
+
+**Pull results back from the sandbox:**
+
+```sh
+cco box pull a3f7b2
+```
+
+Push creates a git bundle of your current branch, clones it inside the VM, and launches Claude interactively to execute the plan. When Claude finishes, it writes an output bundle. Pull polls for that bundle and fast-forward merges the commits back onto your branch.
+
+Each push gets a unique session ID so multiple sessions can run in parallel.
+
+**Note:** Push/pull requires the exchange mount. If you created your sandbox before this feature existed, recreate it: `cco box destroy && cco box create`.
 
 The sandbox is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
 
