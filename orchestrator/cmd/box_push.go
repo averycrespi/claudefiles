@@ -29,14 +29,14 @@ Use 'cco box pull <job-id>' to pull results back when done.`,
 			return fmt.Errorf("failed to get working directory: %w", err)
 		}
 
-		// Resolve plan path and verify it exists in the worktree
+		// Verify plan file exists in the worktree (resolve symlinks for validation only)
 		planPath := args[0]
-		if !filepath.IsAbs(planPath) {
-			planPath = filepath.Join(cwd, planPath)
+		absPath := planPath
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(cwd, absPath)
 		}
-		planPath, err = filepath.EvalSymlinks(planPath)
-		if err != nil {
-			return fmt.Errorf("plan file not found: %s", args[0])
+		if _, err = filepath.EvalSymlinks(absPath); err != nil {
+			return fmt.Errorf("plan file not found: %s", planPath)
 		}
 
 		// Look up workspace tmux session — resolve main repo name from worktrees
