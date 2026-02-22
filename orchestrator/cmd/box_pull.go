@@ -55,7 +55,7 @@ var boxPullCmd = &cobra.Command{
 			return nil
 		}
 
-		paneID, err := tc.FindPaneByTitle(tmuxSession, sessionID)
+		paneID, err := tc.FindPaneByOption(tmuxSession, "cco-session", sessionID)
 		if err != nil {
 			logger.Info("sandbox pane already closed")
 			return nil

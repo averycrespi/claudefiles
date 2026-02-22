@@ -121,10 +121,10 @@ func (c *Client) SelectLayout(session, window, layout string) error {
 	return nil
 }
 
-func (c *Client) SetPaneTitle(paneID, title string) error {
-	out, err := c.run("select-pane", "-t", paneID, "-T", title)
+func (c *Client) SetPaneOption(paneID, key, value string) error {
+	out, err := c.run("set-option", "-p", "-t", paneID, "@"+key, value)
 	if err != nil {
-		return fmt.Errorf("tmux set-pane-title failed: %s", strings.TrimSpace(string(out)))
+		return fmt.Errorf("tmux set-option failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }
@@ -137,18 +137,19 @@ func (c *Client) SendKeysToPane(paneID, command string) error {
 	return nil
 }
 
-func (c *Client) FindPaneByTitle(session, title string) (string, error) {
-	out, err := c.run("list-panes", "-s", "-t", session, "-F", "#{pane_id} #{pane_title}")
+func (c *Client) FindPaneByOption(session, key, value string) (string, error) {
+	format := fmt.Sprintf("#{pane_id} #{@%s}", key)
+	out, err := c.run("list-panes", "-s", "-t", session, "-F", format)
 	if err != nil {
 		return "", fmt.Errorf("tmux list-panes failed: %s", strings.TrimSpace(string(out)))
 	}
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		parts := strings.SplitN(line, " ", 2)
-		if len(parts) == 2 && parts[1] == title {
+		if len(parts) == 2 && parts[1] == value {
 			return parts[0], nil
 		}
 	}
-	return "", fmt.Errorf("pane with title %q not found", title)
+	return "", fmt.Errorf("pane with @%s=%q not found", key, value)
 }
 
 func (c *Client) KillPane(paneID string) error {

@@ -91,8 +91,8 @@ var boxPushCmd = &cobra.Command{
 			return fmt.Errorf("failed to set layout: %w", err)
 		}
 
-		if err := tc.SetPaneTitle(paneID, prepared.SessionID); err != nil {
-			return fmt.Errorf("failed to set pane title: %w", err)
+		if err := tc.SetPaneOption(paneID, "cco-session", prepared.SessionID); err != nil {
+			return fmt.Errorf("failed to set pane option: %w", err)
 		}
 
 		if err := tc.SendKeysToPane(paneID, prepared.Command); err != nil {

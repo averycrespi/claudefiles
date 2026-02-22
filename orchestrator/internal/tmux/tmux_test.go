@@ -232,12 +232,12 @@ func TestClient_SelectLayout(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestClient_SetPaneTitle(t *testing.T) {
+func TestClient_SetPaneOption(t *testing.T) {
 	r := new(mockRunner)
-	r.On("Run", "tmux", []string{"-L", SocketName, "select-pane", "-t", "%42", "-T", "abc123"}).Return([]byte(""), nil)
+	r.On("Run", "tmux", []string{"-L", SocketName, "set-option", "-p", "-t", "%42", "@cco-session", "abc123"}).Return([]byte(""), nil)
 
 	client := NewClient(r)
-	err := client.SetPaneTitle("%42", "abc123")
+	err := client.SetPaneOption("%42", "cco-session", "abc123")
 
 	require.NoError(t, err)
 }
@@ -252,23 +252,23 @@ func TestClient_SendKeysToPane(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestClient_FindPaneByTitle_Found(t *testing.T) {
+func TestClient_FindPaneByOption_Found(t *testing.T) {
 	r := new(mockRunner)
-	r.On("Run", "tmux", []string{"-L", SocketName, "list-panes", "-s", "-t", "sess", "-F", "#{pane_id} #{pane_title}"}).Return([]byte("%10 main\n%42 abc123\n"), nil)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-panes", "-s", "-t", "sess", "-F", "#{pane_id} #{@cco-session}"}).Return([]byte("%10 \n%42 abc123\n"), nil)
 
 	client := NewClient(r)
-	paneID, err := client.FindPaneByTitle("sess", "abc123")
+	paneID, err := client.FindPaneByOption("sess", "cco-session", "abc123")
 
 	require.NoError(t, err)
 	assert.Equal(t, "%42", paneID)
 }
 
-func TestClient_FindPaneByTitle_NotFound(t *testing.T) {
+func TestClient_FindPaneByOption_NotFound(t *testing.T) {
 	r := new(mockRunner)
-	r.On("Run", "tmux", []string{"-L", SocketName, "list-panes", "-s", "-t", "sess", "-F", "#{pane_id} #{pane_title}"}).Return([]byte("%10 main\n"), nil)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-panes", "-s", "-t", "sess", "-F", "#{pane_id} #{@cco-session}"}).Return([]byte("%10 \n"), nil)
 
 	client := NewClient(r)
-	_, err := client.FindPaneByTitle("sess", "abc123")
+	_, err := client.FindPaneByOption("sess", "cco-session", "abc123")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
