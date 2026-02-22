@@ -46,6 +46,15 @@ func (m *mockLimaClient) Copy(src, dst string) error {
 	return args.Error(0)
 }
 
+func (m *mockLimaClient) Shell(args ...string) error {
+	// Convert variadic to interface slice for testify mock
+	callArgs := []interface{}{}
+	for _, a := range args {
+		callArgs = append(callArgs, a)
+	}
+	return m.Called(callArgs...).Error(0)
+}
+
 // --- Embedded file tests (unchanged) ---
 
 func TestEmbeddedFiles_NotEmpty(t *testing.T) {
@@ -240,4 +249,52 @@ func TestService_Status_Running(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "Running", status)
+}
+
+func TestService_Shell_NotCreated(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("", nil)
+	svc := NewService(lima, logging.NoopLogger{})
+
+	err := svc.Shell()
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sandbox not created")
+	lima.AssertNotCalled(t, "Shell")
+}
+
+func TestService_Shell_Stopped(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Stopped", nil)
+	svc := NewService(lima, logging.NoopLogger{})
+
+	err := svc.Shell()
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sandbox not running")
+	lima.AssertNotCalled(t, "Shell")
+}
+
+func TestService_Shell_Running(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Running", nil)
+	lima.On("Shell").Return(nil)
+	svc := NewService(lima, logging.NoopLogger{})
+
+	err := svc.Shell()
+
+	require.NoError(t, err)
+	lima.AssertCalled(t, "Shell")
+}
+
+func TestService_Shell_WithArgs(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Running", nil)
+	lima.On("Shell", "ls", "-la").Return(nil)
+	svc := NewService(lima, logging.NoopLogger{})
+
+	err := svc.Shell("ls", "-la")
+
+	require.NoError(t, err)
+	lima.AssertCalled(t, "Shell", "ls", "-la")
 }

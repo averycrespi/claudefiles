@@ -15,6 +15,7 @@ type limaClient interface {
 	Stop() error
 	Delete() error
 	Copy(src, dst string) error
+	Shell(args ...string) error
 }
 
 // Service manages the sandbox VM lifecycle.
@@ -160,6 +161,21 @@ func (s *Service) Provision() error {
 
 	s.logger.Info("Provisioned Claude config into sandbox")
 	return nil
+}
+
+// Shell opens an interactive shell or runs a command in the sandbox VM.
+func (s *Service) Shell(args ...string) error {
+	status, err := s.lima.Status()
+	if err != nil {
+		return err
+	}
+	switch status {
+	case "":
+		return fmt.Errorf("sandbox not created, run `cco box create`")
+	case "Stopped":
+		return fmt.Errorf("sandbox not running, run `cco box start`")
+	}
+	return s.lima.Shell(args...)
 }
 
 func writeTempFile(pattern string, data []byte) (string, error) {
