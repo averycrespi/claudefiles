@@ -105,6 +105,60 @@ func (c *Client) SendKeys(session, window, command string) error {
 	return nil
 }
 
+func (c *Client) SplitWindow(session, window string) (string, error) {
+	out, err := c.run("split-window", "-h", "-t", session+":"+window, "-d", "-P", "-F", "#{pane_id}")
+	if err != nil {
+		return "", fmt.Errorf("tmux split-window failed: %s", strings.TrimSpace(string(out)))
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func (c *Client) SelectLayout(session, window, layout string) error {
+	out, err := c.run("select-layout", "-t", session+":"+window, layout)
+	if err != nil {
+		return fmt.Errorf("tmux select-layout failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func (c *Client) SetPaneTitle(paneID, title string) error {
+	out, err := c.run("select-pane", "-t", paneID, "-T", title)
+	if err != nil {
+		return fmt.Errorf("tmux set-pane-title failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func (c *Client) SendKeysToPane(paneID, command string) error {
+	out, err := c.run("send-keys", "-t", paneID, command, "C-m")
+	if err != nil {
+		return fmt.Errorf("tmux send-keys failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func (c *Client) FindPaneByTitle(session, title string) (string, error) {
+	out, err := c.run("list-panes", "-s", "-t", session, "-F", "#{pane_id} #{pane_title}")
+	if err != nil {
+		return "", fmt.Errorf("tmux list-panes failed: %s", strings.TrimSpace(string(out)))
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) == 2 && parts[1] == title {
+			return parts[0], nil
+		}
+	}
+	return "", fmt.Errorf("pane with title %q not found", title)
+}
+
+func (c *Client) KillPane(paneID string) error {
+	out, err := c.run("kill-pane", "-t", paneID)
+	if err != nil {
+		return fmt.Errorf("tmux kill-pane failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 func (c *Client) RenameWindow(session, oldName, newName string) error {
 	out, err := c.run("rename-window", "-t", session+":"+oldName, newName)
 	if err != nil {

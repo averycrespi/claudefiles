@@ -200,6 +200,90 @@ func TestClient_AttachToWindow(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestClient_SplitWindow(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "split-window", "-h", "-t", "sess:win", "-d", "-P", "-F", "#{pane_id}"}).Return([]byte("%42\n"), nil)
+
+	client := NewClient(r)
+	paneID, err := client.SplitWindow("sess", "win")
+
+	require.NoError(t, err)
+	assert.Equal(t, "%42", paneID)
+}
+
+func TestClient_SplitWindow_Error(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "split-window", "-h", "-t", "sess:win", "-d", "-P", "-F", "#{pane_id}"}).Return([]byte("error"), assert.AnError)
+
+	client := NewClient(r)
+	_, err := client.SplitWindow("sess", "win")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "split-window failed")
+}
+
+func TestClient_SelectLayout(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "select-layout", "-t", "sess:win", "even-horizontal"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.SelectLayout("sess", "win", "even-horizontal")
+
+	require.NoError(t, err)
+}
+
+func TestClient_SetPaneTitle(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "select-pane", "-t", "%42", "-T", "abc123"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.SetPaneTitle("%42", "abc123")
+
+	require.NoError(t, err)
+}
+
+func TestClient_SendKeysToPane(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "send-keys", "-t", "%42", "echo hi", "C-m"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.SendKeysToPane("%42", "echo hi")
+
+	require.NoError(t, err)
+}
+
+func TestClient_FindPaneByTitle_Found(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-panes", "-s", "-t", "sess", "-F", "#{pane_id} #{pane_title}"}).Return([]byte("%10 main\n%42 abc123\n"), nil)
+
+	client := NewClient(r)
+	paneID, err := client.FindPaneByTitle("sess", "abc123")
+
+	require.NoError(t, err)
+	assert.Equal(t, "%42", paneID)
+}
+
+func TestClient_FindPaneByTitle_NotFound(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "list-panes", "-s", "-t", "sess", "-F", "#{pane_id} #{pane_title}"}).Return([]byte("%10 main\n"), nil)
+
+	client := NewClient(r)
+	_, err := client.FindPaneByTitle("sess", "abc123")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestClient_KillPane(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "tmux", []string{"-L", SocketName, "kill-pane", "-t", "%42"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.KillPane("%42")
+
+	require.NoError(t, err)
+}
+
 func TestInsideCcoSocket(t *testing.T) {
 	tests := []struct {
 		name   string
