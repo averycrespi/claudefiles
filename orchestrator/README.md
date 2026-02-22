@@ -119,7 +119,7 @@ cco box destroy
 
 ```sh
 cco box push .plans/2026-02-21-my-feature-plan.md
-# Session a3f7b2 started. Pull with: cco box pull a3f7b2
+# Job a3f7b2 started. Pull with: cco box pull a3f7b2
 ```
 
 **Pull results back from the sandbox:**
@@ -130,7 +130,7 @@ cco box pull a3f7b2
 
 Push requires a workspace (`cco add <branch>`) for the current branch. It creates a git bundle, clones it inside the VM, and launches Claude in a split tmux pane to execute the plan. Push returns immediately — Claude runs in the background pane. When Claude finishes, it writes an output bundle. Pull polls for that bundle, fast-forward merges the commits back onto your branch, and closes the sandbox pane.
 
-Each push gets a unique session ID so multiple sessions can run in parallel.
+Each push gets a unique job ID so multiple jobs can run in parallel.
 
 **Note:** Push/pull requires the exchange mount. If you created your sandbox before this feature existed, recreate it: `cco box destroy && cco box create`.
 
