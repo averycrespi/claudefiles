@@ -158,10 +158,24 @@ func (s *Service) Provision() error {
 	}
 	defer os.Remove(settingsPath)
 
+	skillPath, err := writeTempFile("cco-executing-plans-in-sandbox-*.md", executingPlansInSandboxSkill)
+	if err != nil {
+		return fmt.Errorf("failed to write executing-plans-in-sandbox.md: %w", err)
+	}
+	defer os.Remove(skillPath)
+
 	if err := s.lima.Copy(claudeMDPath, "~/.claude/CLAUDE.md"); err != nil {
 		return err
 	}
 	if err := s.lima.Copy(settingsPath, "~/.claude/settings.json"); err != nil {
+		return err
+	}
+
+	// Ensure skills directory exists in VM
+	if err := s.lima.Shell("mkdir", "-p", "$HOME/.claude/skills"); err != nil {
+		return fmt.Errorf("failed to create skills directory: %w", err)
+	}
+	if err := s.lima.Copy(skillPath, "~/.claude/skills/executing-plans-in-sandbox.md"); err != nil {
 		return err
 	}
 

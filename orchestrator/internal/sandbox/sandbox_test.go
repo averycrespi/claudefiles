@@ -208,20 +208,22 @@ func TestService_Provision_Stopped(t *testing.T) {
 func TestService_Provision_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	lima.On("Copy", mock.Anything, "~/.claude/CLAUDE.md").Return(nil)
-	lima.On("Copy", mock.Anything, "~/.claude/settings.json").Return(nil)
+	lima.On("Copy", mock.Anything, mock.Anything).Return(nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Provision()
 
 	require.NoError(t, err)
-	lima.AssertNumberOfCalls(t, "Copy", 2)
+	lima.AssertNumberOfCalls(t, "Copy", 3)
+	lima.AssertCalled(t, "Copy", mock.Anything, "~/.claude/skills/executing-plans-in-sandbox.md")
 }
 
 func TestService_Create_AlreadyRunning(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Copy", mock.Anything, mock.Anything).Return(nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Create()
@@ -237,6 +239,7 @@ func TestService_Create_Stopped(t *testing.T) {
 	// After Start, Provision calls Status again
 	lima.On("Status").Return("Running", nil)
 	lima.On("Copy", mock.Anything, mock.Anything).Return(nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Create()
