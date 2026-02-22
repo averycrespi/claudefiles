@@ -366,7 +366,7 @@ func TestService_Prepare_NotRunning(t *testing.T) {
 func TestService_Prepare_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	runner := new(mockRunner)
 	// git rev-parse --abbrev-ref HEAD

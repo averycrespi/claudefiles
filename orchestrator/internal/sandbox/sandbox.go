@@ -244,7 +244,7 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedJob, error) {
 	// Clone from bundle inside VM
 	guestWorkspace := "/workspace/" + jobID
 	s.logger.Info("cloning into sandbox workspace %s...", guestWorkspace)
-	if err := s.lima.Shell("--", "git", "clone", "/exchange/"+jobID+"/input.bundle", guestWorkspace); err != nil {
+	if err := s.lima.Shell("--", "git", "clone", "--branch", branch, "/exchange/"+jobID+"/input.bundle", guestWorkspace); err != nil {
 		return nil, fmt.Errorf("git clone in sandbox failed: %w", err)
 	}
 
