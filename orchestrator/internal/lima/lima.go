@@ -1,6 +1,7 @@
 package lima
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -16,11 +17,12 @@ type instance struct {
 }
 
 func parseStatus(data []byte) (string, error) {
-	var instances []instance
-	if err := json.Unmarshal(data, &instances); err != nil {
-		return "", fmt.Errorf("failed to parse limactl output: %s", err)
-	}
-	for _, inst := range instances {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	for dec.More() {
+		var inst instance
+		if err := dec.Decode(&inst); err != nil {
+			return "", fmt.Errorf("failed to parse limactl output: %s", err)
+		}
 		if inst.Name == VMName {
 			return inst.Status, nil
 		}
