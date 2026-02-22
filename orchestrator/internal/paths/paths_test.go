@@ -74,8 +74,8 @@ func TestExchangeDir(t *testing.T) {
 	assert.True(t, strings.HasSuffix(dir, filepath.Join("cco", "exchange")))
 }
 
-func TestSessionExchangeDir(t *testing.T) {
-	dir := SessionExchangeDir("abc123")
+func TestJobExchangeDir(t *testing.T) {
+	dir := JobExchangeDir("abc123")
 	assert.Contains(t, dir, "abc123")
 	assert.True(t, strings.HasSuffix(dir, filepath.Join("exchange", "abc123")))
 }

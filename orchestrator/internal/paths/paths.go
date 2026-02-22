@@ -44,7 +44,7 @@ func ExchangeDir() string {
 	return filepath.Join(DataDir(), "exchange")
 }
 
-// SessionExchangeDir returns the exchange directory for a specific session.
-func SessionExchangeDir(sessionID string) string {
-	return filepath.Join(ExchangeDir(), sessionID)
+// JobExchangeDir returns the exchange directory for a specific job.
+func JobExchangeDir(jobID string) string {
+	return filepath.Join(ExchangeDir(), jobID)
 }
