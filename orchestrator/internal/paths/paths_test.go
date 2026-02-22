@@ -2,7 +2,11 @@ package paths
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDataDir_Default(t *testing.T) {
@@ -62,4 +66,16 @@ func TestTmuxWindowName(t *testing.T) {
 	if name != "feat-thing" {
 		t.Errorf("TmuxWindowName() = %q, want %q", name, "feat-thing")
 	}
+}
+
+func TestExchangeDir(t *testing.T) {
+	dir := ExchangeDir()
+	assert.Contains(t, dir, "cco")
+	assert.True(t, strings.HasSuffix(dir, filepath.Join("cco", "exchange")))
+}
+
+func TestSessionExchangeDir(t *testing.T) {
+	dir := SessionExchangeDir("abc123")
+	assert.Contains(t, dir, "abc123")
+	assert.True(t, strings.HasSuffix(dir, filepath.Join("exchange", "abc123")))
 }

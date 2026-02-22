@@ -38,3 +38,13 @@ func TmuxSessionName(repo string) string {
 func TmuxWindowName(branch string) string {
 	return SanitizeBranch(branch)
 }
+
+// ExchangeDir returns the directory for sandbox bundle exchange.
+func ExchangeDir() string {
+	return filepath.Join(DataDir(), "exchange")
+}
+
+// SessionExchangeDir returns the exchange directory for a specific session.
+func SessionExchangeDir(sessionID string) string {
+	return filepath.Join(ExchangeDir(), sessionID)
+}
