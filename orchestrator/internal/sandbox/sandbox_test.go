@@ -84,7 +84,7 @@ func TestEmbeddedSettingsJSON_ValidJSON(t *testing.T) {
 func TestService_Start_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Start()
 
@@ -95,7 +95,7 @@ func TestService_Start_NotCreated(t *testing.T) {
 func TestService_Start_AlreadyRunning(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Start()
 
@@ -106,7 +106,7 @@ func TestService_Start_Stopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
 	lima.On("Start").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Start()
 
@@ -117,7 +117,7 @@ func TestService_Start_Stopped(t *testing.T) {
 func TestService_Stop_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Stop()
 
@@ -128,7 +128,7 @@ func TestService_Stop_NotCreated(t *testing.T) {
 func TestService_Stop_AlreadyStopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Stop()
 
@@ -140,7 +140,7 @@ func TestService_Stop_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Stop").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Stop()
 
@@ -151,7 +151,7 @@ func TestService_Stop_Running(t *testing.T) {
 func TestService_Destroy_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Destroy()
 
@@ -163,7 +163,7 @@ func TestService_Destroy_Exists(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Delete").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Destroy()
 
@@ -174,7 +174,7 @@ func TestService_Destroy_Exists(t *testing.T) {
 func TestService_Provision_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Provision()
 
@@ -185,7 +185,7 @@ func TestService_Provision_NotCreated(t *testing.T) {
 func TestService_Provision_Stopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Provision()
 
@@ -198,7 +198,7 @@ func TestService_Provision_Running(t *testing.T) {
 	lima.On("Status").Return("Running", nil)
 	lima.On("Copy", mock.Anything, "~/.claude/CLAUDE.md").Return(nil)
 	lima.On("Copy", mock.Anything, "~/.claude/settings.json").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Provision()
 
@@ -210,7 +210,7 @@ func TestService_Create_AlreadyRunning(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Copy", mock.Anything, mock.Anything).Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Create()
 
@@ -225,7 +225,7 @@ func TestService_Create_Stopped(t *testing.T) {
 	// After Start, Provision calls Status again
 	lima.On("Status").Return("Running", nil)
 	lima.On("Copy", mock.Anything, mock.Anything).Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Create()
 
@@ -237,7 +237,7 @@ func TestService_Status_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
 	var buf strings.Builder
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	status, err := svc.StatusString()
 
@@ -249,7 +249,7 @@ func TestService_Status_NotCreated(t *testing.T) {
 func TestService_Status_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	status, err := svc.StatusString()
 
@@ -260,7 +260,7 @@ func TestService_Status_Running(t *testing.T) {
 func TestService_Shell_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Shell()
 
@@ -272,7 +272,7 @@ func TestService_Shell_NotCreated(t *testing.T) {
 func TestService_Shell_Stopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Shell()
 
@@ -285,7 +285,7 @@ func TestService_Shell_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Shell").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Shell()
 
@@ -297,10 +297,73 @@ func TestService_Shell_WithArgs(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Shell", "ls", "-la").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{})
+	svc := NewService(lima, logging.NoopLogger{}, nil)
 
 	err := svc.Shell("ls", "-la")
 
 	require.NoError(t, err)
 	lima.AssertCalled(t, "Shell", "ls", "-la")
+}
+
+// mockRunner implements exec.Runner for tests.
+type mockRunner struct {
+	mock.Mock
+}
+
+func (m *mockRunner) Run(name string, args ...string) ([]byte, error) {
+	callArgs := []interface{}{name}
+	for _, a := range args {
+		callArgs = append(callArgs, a)
+	}
+	ret := m.Called(callArgs...)
+	return ret.Get(0).([]byte), ret.Error(1)
+}
+
+func (m *mockRunner) RunDir(dir, name string, args ...string) ([]byte, error) {
+	callArgs := []interface{}{dir, name}
+	for _, a := range args {
+		callArgs = append(callArgs, a)
+	}
+	ret := m.Called(callArgs...)
+	return ret.Get(0).([]byte), ret.Error(1)
+}
+
+func (m *mockRunner) RunInteractive(name string, args ...string) error {
+	callArgs := []interface{}{name}
+	for _, a := range args {
+		callArgs = append(callArgs, a)
+	}
+	return m.Called(callArgs...).Error(0)
+}
+
+func TestService_Push_NotRunning(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Stopped", nil)
+	runner := new(mockRunner)
+	svc := NewService(lima, logging.NoopLogger{}, runner)
+
+	_, err := svc.Push("/repo", ".plans/test-plan.md")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sandbox not running")
+}
+
+func TestService_Push_Running(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Running", nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	runner := new(mockRunner)
+	// git rev-parse --abbrev-ref HEAD
+	runner.On("RunDir", "/repo", "git", "rev-parse", "--abbrev-ref", "HEAD").Return([]byte("main\n"), nil)
+	// git bundle create (match any args since session ID is random)
+	runner.On("RunDir", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]byte(""), nil)
+
+	svc := NewService(lima, logging.NoopLogger{}, runner)
+
+	sessionID, err := svc.Push("/repo", ".plans/test-plan.md")
+
+	require.NoError(t, err)
+	assert.Len(t, sessionID, 8)
+	lima.AssertCalled(t, "Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
