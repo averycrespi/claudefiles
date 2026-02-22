@@ -71,7 +71,15 @@ func runCCO(t *testing.T, dir string, xdgDataHome string, args ...string) (strin
 	t.Helper()
 	cmd := exec.Command(ccoBinary, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "XDG_DATA_HOME="+xdgDataHome)
+	// Filter out TMUX to prevent tests from switching the user's real tmux client
+	// via switch-client when running inside a cco tmux session.
+	var env []string
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "TMUX=") {
+			env = append(env, e)
+		}
+	}
+	cmd.Env = append(env, "XDG_DATA_HOME="+xdgDataHome)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
