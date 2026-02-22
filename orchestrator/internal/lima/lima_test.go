@@ -33,7 +33,7 @@ var _ exec.Runner = (*mockRunner)(nil)
 
 func TestClient_Status_Running(t *testing.T) {
 	r := new(mockRunner)
-	r.On("Run", "limactl", []string{"list", "--json", VMName}).Return([]byte(`[{"name":"cco-sandbox","status":"Running"}]`), nil)
+	r.On("Run", "limactl", []string{"list", "--json"}).Return([]byte(`[{"name":"cco-sandbox","status":"Running"}]`), nil)
 
 	client := NewClient(r)
 	status, err := client.Status()
@@ -44,7 +44,18 @@ func TestClient_Status_Running(t *testing.T) {
 
 func TestClient_Status_NotFound(t *testing.T) {
 	r := new(mockRunner)
-	r.On("Run", "limactl", []string{"list", "--json", VMName}).Return([]byte(`[]`), nil)
+	r.On("Run", "limactl", []string{"list", "--json"}).Return([]byte(`[]`), nil)
+
+	client := NewClient(r)
+	status, err := client.Status()
+
+	require.NoError(t, err)
+	assert.Equal(t, "", status)
+}
+
+func TestClient_Status_OtherVMsOnly(t *testing.T) {
+	r := new(mockRunner)
+	r.On("Run", "limactl", []string{"list", "--json"}).Return([]byte(`[{"name":"other-vm","status":"Running"}]`), nil)
 
 	client := NewClient(r)
 	status, err := client.Status()

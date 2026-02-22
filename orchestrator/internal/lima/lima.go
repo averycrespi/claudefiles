@@ -20,10 +20,12 @@ func parseStatus(data []byte) (string, error) {
 	if err := json.Unmarshal(data, &instances); err != nil {
 		return "", fmt.Errorf("failed to parse limactl output: %s", err)
 	}
-	if len(instances) == 0 {
-		return "", nil
+	for _, inst := range instances {
+		if inst.Name == VMName {
+			return inst.Status, nil
+		}
 	}
-	return instances[0].Status, nil
+	return "", nil
 }
 
 // Client wraps limactl operations with an injectable command runner.
@@ -38,7 +40,7 @@ func NewClient(runner exec.Runner) *Client {
 
 // Status returns the VM status: "Running", "Stopped", or "" if not found.
 func (c *Client) Status() (string, error) {
-	out, err := c.runner.Run("limactl", "list", "--json", VMName)
+	out, err := c.runner.Run("limactl", "list", "--json")
 	if err != nil {
 		return "", fmt.Errorf("limactl list failed: %s", strings.TrimSpace(string(out)))
 	}
