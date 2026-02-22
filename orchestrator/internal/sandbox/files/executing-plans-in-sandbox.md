@@ -1,13 +1,13 @@
 ---
 name: executing-plans-in-sandbox
-description: Autonomous plan execution inside the sandbox VM - executes all tasks and writes output bundle
+description: Autonomous plan execution inside the sandbox - executes all tasks and writes output bundle
 ---
 
 # Executing Plans in Sandbox
 
 ## Overview
 
-Execute implementation plans autonomously inside the sandbox VM. This is a variant of the standard executing-plans skill adapted for unattended execution: no user prompts, no confirmation steps, and writes a git bundle as the final output.
+Execute implementation plans autonomously inside a sandbox.
 
 **Announce at start:** "I'm executing this plan autonomously in the sandbox."
 
@@ -35,8 +35,7 @@ After all triplets:
 ### Step 1: Load Plan and Initialize Tasks
 
 1. Read the plan file (path provided as argument)
-2. Review critically - if there are fundamental blockers, stop and report
-3. Initialize task tracking: create all task triplets from the plan
+2. Initialize task tracking: create all task triplets from the plan
 
 **IMPORTANT:** Do NOT ask the user any questions. Do NOT use `AskUserQuestion`. If existing tasks are found, always continue from the first incomplete triplet.
 
@@ -204,14 +203,12 @@ After all tasks complete:
    ls -la "/exchange/${SESSION_ID}/output.bundle"
    ```
 
-**IMPORTANT:** The output bundle MUST be written to `/exchange/<session-id>/output.bundle`. The host `cco box pull` command is polling for this file.
+**IMPORTANT:** The output bundle MUST be written to `/exchange/<session-id>/output.bundle`.
 
 ## Autonomous Operation Rules
 
 - **NEVER** use `AskUserQuestion` — this runs unattended
 - **NEVER** stop to ask for clarification — make reasonable decisions and proceed
-- **NEVER** call `/complete-work` — the bundle is the completion signal
-- If a test failure is not obvious to fix after 2 attempts, skip the task and note it in commit messages
 - If a fundamental blocker prevents all progress, write a file `/exchange/<session-id>/error.txt` with the details and exit
 
 ## Red Flags
