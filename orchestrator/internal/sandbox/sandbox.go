@@ -172,7 +172,7 @@ func (s *Service) Provision() error {
 	}
 
 	// Ensure skills directory exists in VM
-	if err := s.lima.Shell("mkdir", "-p", "$HOME/.claude/skills"); err != nil {
+	if err := s.lima.Shell("--", "bash", "-c", "mkdir -p $HOME/.claude/skills"); err != nil {
 		return fmt.Errorf("failed to create skills directory: %w", err)
 	}
 	if err := s.lima.Copy(skillPath, "~/.claude/skills/executing-plans-in-sandbox.md"); err != nil {
