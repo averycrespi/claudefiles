@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	ccoexec "github.com/averycrespi/claudefiles/orchestrator/internal/exec"
@@ -26,18 +27,28 @@ var boxPushCmd = &cobra.Command{
 			return fmt.Errorf("failed to get working directory: %w", err)
 		}
 
-		// Look up workspace tmux session and window
+		// Look up workspace tmux session — resolve main repo name from worktrees
 		gitClient := newGitClient()
 		info, err := gitClient.RepoInfo(cwd)
 		if err != nil {
 			return err
 		}
 
-		tmuxSession := paths.TmuxSessionName(info.Name)
+		repoName := info.Name
+		if info.IsWorktree {
+			commonDir, err := gitClient.CommonDir(cwd)
+			if err != nil {
+				return fmt.Errorf("could not determine main repo: %w", err)
+			}
+			resolved := filepath.Clean(filepath.Join(cwd, commonDir))
+			repoName = filepath.Base(filepath.Dir(resolved))
+		}
+
+		tmuxSession := paths.TmuxSessionName(repoName)
 		tc := newTmuxClient()
 
 		if !tc.SessionExists(tmuxSession) {
-			return fmt.Errorf("no workspace found for repo %q — run 'cco add <branch>' first", info.Name)
+			return fmt.Errorf("no workspace found for repo %q — run 'cco add <branch>' first", repoName)
 		}
 
 		// Determine current branch and check window exists before expensive Prepare

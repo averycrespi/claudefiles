@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
@@ -36,7 +37,18 @@ var boxPullCmd = &cobra.Command{
 			return nil
 		}
 
-		tmuxSession := paths.TmuxSessionName(info.Name)
+		repoName := info.Name
+		if info.IsWorktree {
+			commonDir, err := gitClient.CommonDir(cwd)
+			if err != nil {
+				logger.Info("warning: could not determine main repo: %s", err)
+				return nil
+			}
+			resolved := filepath.Clean(filepath.Join(cwd, commonDir))
+			repoName = filepath.Base(filepath.Dir(resolved))
+		}
+
+		tmuxSession := paths.TmuxSessionName(repoName)
 		tc := newTmuxClient()
 
 		if !tc.SessionExists(tmuxSession) {
