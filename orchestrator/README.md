@@ -1,4 +1,4 @@
-# Claude Code Orchestrator (cco)
+# Claude Code Orchestrator
 
 Run multiple [Claude Code](https://www.anthropic.com/claude-code) sessions in parallel. Each session gets its own Git worktree and tmux window, so they don't interfere with each other or your main working tree. Optionally, run plans in an isolated sandbox VM.
 
@@ -43,26 +43,19 @@ cco rm feature-branch         # removes worktree and window (keeps the branch)
 
 ## Commands
 
-| Command               | Purpose                                                    |
-| --------------------- | ---------------------------------------------------------- |
-| `cco add <branch>`    | Add a workspace                                            |
-| `cco rm <branch>`     | Remove a workspace                                         |
-| `cco attach [branch]` | Attach to a window or session                              |
-| `cco notify`          | Add notification to current workspace (for hooks)          |
+| Command               | Purpose                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `cco add <branch>`    | Add a workspace                                                                         |
+| `cco rm <branch>`     | Remove a workspace                                                                      |
+| `cco attach [branch]` | Attach to a window or session                                                           |
+| `cco notify`          | Add notification to current workspace (for hooks)                                       |
 | `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell, push, pull) |
-
-## Workspace Setup
-
-When `cco add` creates a new worktree, it:
-
-1. Runs any executable setup script found at `scripts/{init,init.sh,setup,setup.sh}` in the worktree
-2. Copies `.claude/settings.local.json` from the main repo to the worktree
-
-All commands are idempotent. Running `cco add` multiple times for the same branch is safe — it skips steps that are already done.
 
 ## Sandbox
 
 `cco box` manages an isolated [Lima](https://github.com/lima-vm/lima) VM for running Claude Code safely. This is useful for executing plans autonomously without risking your host environment.
+
+The sandbox is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
 
 **Requirements:** Lima (`brew install lima`)
 
@@ -115,10 +108,6 @@ cco box pull a3f7b2
 Push requires a workspace (`cco add <branch>`) for the current branch. It creates a git bundle, clones it inside the VM, and launches Claude in a split tmux pane to execute the plan. Push returns immediately — Claude runs in the background pane. When Claude finishes, it writes an output bundle. Pull polls for that bundle, fast-forward merges the commits back onto your branch, and closes the sandbox pane.
 
 Each push gets a unique job ID so multiple jobs can run in parallel.
-
-**Note:** Push/pull requires the exchange mount. If you created your sandbox before this feature existed, recreate it: `cco box destroy && cco box create`.
-
-The sandbox is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
 
 ## Development
 

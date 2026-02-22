@@ -5,7 +5,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 ## Features
 
 - [Structured Development Workflow](#structured-development-workflow) - Reliably turn ideas into pull requests
-- [Claude Code Orchestrator (cco)](#claude-code-orchestrator) - Develop in parallel using Git worktrees and tmux
+- [Claude Code Orchestrator](#claude-code-orchestrator) - Develop in parallel using Git worktrees and tmux
 - [Integrations](#integrations) - Connect to external resources for seamless context
 
 ## Requirements
@@ -97,17 +97,6 @@ Answer Claude's questions as you proceed through the workflow.
 - The scope is clear and doesn't need exploration
 - You want faster iteration with less ceremony
 
-**Choosing an execution mode:**
-
-When you choose to execute a plan, you'll be offered two modes:
-
-| Mode                       | Best for                           | Trade-off                                   |
-| -------------------------- | ---------------------------------- | ------------------------------------------- |
-| **Execute with subagents** | Complex plans, autonomous work     | Slower but prevents context pollution       |
-| **Execute quickly**        | Simple plans, interactive sessions | Faster but all work happens in main context |
-
-Both modes use the same task triplet structure (Implement → Spec Review → Code Review) and the same review discipline. The difference is whether work happens in subagents or inline.
-
 ---
 
 ## Claude Code Orchestrator
@@ -115,12 +104,14 @@ Both modes use the same task triplet structure (Implement → Spec Review → Co
 `cco` lets you run multiple Claude Code sessions in parallel, each on its own branch. It uses Git worktrees and tmux to keep sessions isolated from each other and from your main working tree.
 
 ```sh
-cco add feature-branch      # create workspace, launch Claude Code
+cco add feature-branch       # create workspace, launch Claude Code
 cco attach feature-branch    # switch to it later
 cco rm feature-branch        # clean up when done (keeps the branch)
 ```
 
-You can also run plans in an isolated sandbox VM with `cco box`. See the [orchestrator README](./orchestrator/README.md) for full documentation.
+The orchestrator also supports advanced features for executing plans inside an isolated sandbox VM.
+
+See the [orchestrator README](./orchestrator/README.md) for full documentation.
 
 ---
 
