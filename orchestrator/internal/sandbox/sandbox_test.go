@@ -69,6 +69,12 @@ func TestEmbeddedLimaTemplate_ContainsExpectedContent(t *testing.T) {
 	assert.Contains(t, content, "ubuntu-24.04")
 }
 
+func TestEmbeddedLimaTemplate_ContainsExchangeMount(t *testing.T) {
+	content := string(limaTemplate)
+	assert.Contains(t, content, "/exchange")
+	assert.Contains(t, content, "mounts:")
+}
+
 func TestEmbeddedSettingsJSON_ValidJSON(t *testing.T) {
 	assert.Contains(t, string(settingsJSON), "permissions")
 }

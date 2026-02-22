@@ -89,6 +89,11 @@ probes:
 hostResolver:
   enabled: false
 
+mounts:
+- location: "~/.local/share/cco/exchange"
+  mountPoint: "/exchange"
+  writable: true
+
 message: |
   Claude Code sandbox VM is ready.
   Run `limactl shell cco-sandbox` to enter the VM.
