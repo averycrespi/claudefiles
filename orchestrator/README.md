@@ -1,77 +1,50 @@
 # Claude Code Orchestrator (cco)
 
-A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code) workspaces using Git worktrees and tmux.
+A CLI for managing parallel [Claude Code](https://www.anthropic.com/claude-code) workspaces.
 
 ## Commands
 
-| Command               | Purpose                                                            |
-| --------------------- | ------------------------------------------------------------------ |
-| `cco add <branch>`    | Create a workspace (worktree + tmux window) and launch Claude Code |
-| `cco rm <branch>`     | Remove a workspace (worktree + tmux window)                        |
-| `cco attach [branch]` | Attach to the tmux session, optionally at a specific branch window |
-| `cco notify`          | Add notification bell to tmux window for the current workspace     |
-| `cco box <cmd>`       | Manage the Lima sandbox VM (create, start, stop, destroy, status, provision) |
+| Command               | Purpose                                                    |
+| --------------------- | ---------------------------------------------------------- |
+| `cco add <branch>`    | Add a workspace                                            |
+| `cco rm <branch>`     | Remove a workspace                                         |
+| `cco attach [branch]` | Attach to a window or session                              |
+| `cco notify`          | Add notification to current workspace (for hooks)          |
+| `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision) |
 
 ### Usage Examples
 
 **Start a new workspace:**
 
 ```sh
-cco add feature-branch        # creates worktree + window, launches Claude Code
+cco add feature-branch        # adds workspace, launches Claude Code
 cco add feature-branch -a     # same, but also attaches to the window
 ```
 
 **Attach to an existing session:**
 
 ```sh
-cco attach                    # attach to the repo's tmux session
-cco attach feature-branch     # attach directly to the feature branch window
+cco attach                    # attach to the session
+cco attach feature-branch     # attach to the feature branch window
 ```
 
 **Clean up:**
 
 ```sh
-cco rm feature-branch         # removes worktree + closes window (keeps the branch)
+cco rm feature-branch         # removes workspace (keeps the branch)
 ```
 
 **Notifications (used by hooks):**
 
 ```sh
-cco notify                    # adds 🔔 prefix to the tmux window name
+cco notify                    # adds notification to the current window
 ```
-
-## Architecture
-
-cco is built in Go with [Cobra](https://github.com/spf13/cobra) for CLI scaffolding and follows a dependency injection pattern for testability.
-
-```
-cmd/                    # CLI commands + service wiring
-├── root.go            # Root command, verbose flag
-├── wire.go            # Service constructors (composition root)
-├── add.go             # cco add
-├── rm.go              # cco rm
-├── attach.go          # cco attach
-├── notify.go          # cco notify
-└── box*.go            # cco box (sandbox management)
-internal/
-├── exec/              # Runner interface: abstracts os/exec for testability
-├── lima/              # Lima Client: wraps limactl with Runner
-├── sandbox/           # Sandbox Service: composes lima Client + embedded files
-│   └── files/         # Embedded VM template and Claude configs
-├── git/               # Git Client: wraps git with Runner
-├── tmux/              # Tmux Client: wraps tmux with Runner
-├── workspace/         # Workspace Service: composes git + tmux Clients
-├── paths/             # Storage paths and naming conventions
-└── logging/           # Logger interface with StdLogger and NoopLogger
-```
-
-Each `cmd/` file creates services via `wire.go`, which wires together Clients and Services using `exec.OSRunner`. The workspace and sandbox services define consumer-side interfaces for their dependencies, enabling unit testing with mocks.
 
 ## How It Works
 
 Each workspace is a combination of:
-1. **Git worktree** — an independent checkout of the repository at a specific branch
-2. **tmux window** — a terminal window inside a tmux session where Claude Code runs
+1. **Worktree** — an independent checkout of the repository at a specific branch
+2. **Window** — a terminal window inside a session where Claude Code runs
 
 cco uses a **dedicated tmux socket** (`cco`) so it doesn't interfere with personal tmux sessions. Use `tmux -L cco ls` to list cco sessions.
 
@@ -93,13 +66,13 @@ When `cco add` creates a new worktree, it:
 
 All commands are idempotent. Running `cco add` multiple times for the same branch is safe — it skips steps that are already done.
 
-## Lima Sandbox
+## Sandbox
 
-`cco box` manages an isolated Linux VM ([Lima](https://github.com/lima-vm/lima)) for running Claude Code safely.
+`cco box` manages an isolated sandbox ([Lima](https://github.com/lima-vm/lima)) for running Claude Code safely.
 
 **Requirements:** Lima (`brew install lima`)
 
-**Create the VM (first time only):**
+**Create the sandbox (first time only):**
 
 ```sh
 cco box create
@@ -111,7 +84,7 @@ cco box create
 cco box status
 ```
 
-**Enter the VM:**
+**Enter the sandbox:**
 
 ```sh
 limactl shell cco-sandbox
@@ -123,26 +96,26 @@ limactl shell cco-sandbox
 claude --dangerously-skip-permissions
 ```
 
-**Stop / start the VM:**
+**Stop / start the sandbox:**
 
 ```sh
 cco box stop
 cco box start
 ```
 
-**Re-provision configs after updating:**
+**Re-provision after updating configs:**
 
 ```sh
 cco box provision
 ```
 
-**Delete the VM:**
+**Destroy the sandbox:**
 
 ```sh
 cco box destroy
 ```
 
-The VM is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
+The sandbox is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
 
 ## Development
 
