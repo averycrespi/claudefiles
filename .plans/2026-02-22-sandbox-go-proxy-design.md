@@ -18,14 +18,14 @@ A global cco config file at `$XDG_CONFIG_HOME/cco/config.json` (defaults to `~/.
 {
   "go_proxy": {
     "private_patterns": [
-      "github.com/myorg/",
-      "github.com/other-private-org/"
+      "github.com/myorg/*",
+      "github.com/other-private-org/*"
     ]
   }
 }
 ```
 
-A module path from `go.mod` is considered private if it starts with any configured pattern. If `go_proxy` is absent or `private_patterns` is empty, the feature is a no-op.
+Patterns use the same glob format as Go's `GONOSUMCHECK` and `GOPRIVATE` environment variables. For matching against `go.mod` requires, the trailing `/*` is stripped and the remainder is used as a prefix match. For `GONOSUMCHECK`, patterns are passed through as-is. If `go_proxy` is absent or `private_patterns` is empty, the feature is a no-op.
 
 ### Config CLI Commands
 
@@ -73,6 +73,7 @@ When building the launch command in `Service.Prepare()`, if a gomodcache directo
 ```bash
 GOPROXY=file:///exchange/{jobID}/gomodcache/cache/download,https://proxy.golang.org,direct \
 GONOSUMCHECK=github.com/myorg/*,github.com/other-private-org/* \
+# ^ patterns passed through directly from config
 cd /workspace/{jobID} && claude --dangerously-skip-permissions "/executing-plans .plans/plan.md"
 ```
 
