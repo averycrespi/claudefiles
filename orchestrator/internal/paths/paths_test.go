@@ -68,6 +68,26 @@ func TestTmuxWindowName(t *testing.T) {
 	}
 }
 
+func TestConfigDir_Default(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+	dir := ConfigDir()
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".config", "cco")
+	assert.Equal(t, expected, dir)
+}
+
+func TestConfigDir_XDG(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/custom/config")
+	dir := ConfigDir()
+	assert.Equal(t, "/custom/config/cco", dir)
+}
+
+func TestConfigFilePath(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/custom/config")
+	path := ConfigFilePath()
+	assert.Equal(t, "/custom/config/cco/config.json", path)
+}
+
 func TestExchangeDir(t *testing.T) {
 	dir := ExchangeDir()
 	assert.Contains(t, dir, "cco")

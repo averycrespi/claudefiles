@@ -39,6 +39,22 @@ func TmuxWindowName(branch string) string {
 	return SanitizeBranch(branch)
 }
 
+// ConfigDir returns the cco config directory.
+// Uses $XDG_CONFIG_HOME/cco or defaults to ~/.config/cco.
+func ConfigDir() string {
+	base := os.Getenv("XDG_CONFIG_HOME")
+	if base == "" {
+		home, _ := os.UserHomeDir()
+		base = filepath.Join(home, ".config")
+	}
+	return filepath.Join(base, "cco")
+}
+
+// ConfigFilePath returns the path to the cco config file.
+func ConfigFilePath() string {
+	return filepath.Join(ConfigDir(), "config.json")
+}
+
 // ExchangeDir returns the directory for sandbox bundle exchange.
 func ExchangeDir() string {
 	return filepath.Join(DataDir(), "exchange")
