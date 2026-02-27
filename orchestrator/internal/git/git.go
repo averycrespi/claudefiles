@@ -57,6 +57,19 @@ func (c *Client) BranchExists(repoRoot, branch string) bool {
 	return err == nil
 }
 
+// ListBranches returns the names of all local branches.
+func (c *Client) ListBranches(repoRoot string) ([]string, error) {
+	out, err := c.runner.RunDir(repoRoot, "git", "branch", "--list", "--format=%(refname:short)")
+	if err != nil {
+		return nil, fmt.Errorf("git branch list failed: %s", strings.TrimSpace(string(out)))
+	}
+	raw := strings.TrimSpace(string(out))
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\n"), nil
+}
+
 // AddWorktree creates a git worktree at the given path.
 // If the branch exists locally, it checks it out. Otherwise, it creates a new branch.
 func (c *Client) AddWorktree(repoRoot, path, branch string) error {
