@@ -33,5 +33,6 @@ Must be run from the main repository, not a worktree.`,
 func init() {
 	rmCmd.Flags().BoolP("delete", "d", false, "Delete the branch (git branch -d)")
 	rmCmd.Flags().BoolP("force-delete", "D", false, "Force delete the branch (git branch -D)")
+	rmCmd.ValidArgsFunction = completeBranches
 	rootCmd.AddCommand(rmCmd)
 }
