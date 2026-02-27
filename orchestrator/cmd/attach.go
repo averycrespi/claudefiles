@@ -29,5 +29,6 @@ Switches windows (instead of attaching) if already inside the session.`,
 }
 
 func init() {
+	attachCmd.ValidArgsFunction = completeBranches
 	rootCmd.AddCommand(attachCmd)
 }

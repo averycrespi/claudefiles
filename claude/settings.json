@@ -87,9 +87,7 @@
       "Skill(test-driven-development)",
       "Skill(searching-datadog-logs)",
       "Skill(writing-plans)",
-      "WebFetch(domain:code.claude.com)",
-      "WebFetch(domain:docs.anthropic.com)",
-      "WebFetch(domain:github.com)",
+      "WebFetch",
       "WebSearch",
       "mcp__atlassian__atlassianUserInfo",
       "mcp__atlassian__getAccessibleAtlassianResources",
@@ -175,7 +173,8 @@
       "docker-compose:*",
       "gh:*",
       "git:*",
-      "go build:*"
+      "go build:*",
+      "go test:*"
     ]
   },
   "effortLevel": "medium"

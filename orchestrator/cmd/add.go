@@ -35,5 +35,6 @@ Must be run from the main repository, not a worktree.
 
 func init() {
 	addCmd.Flags().BoolP("attach", "a", false, "Attach to the workspace after creation")
+	addCmd.ValidArgsFunction = completeBranches
 	rootCmd.AddCommand(addCmd)
 }

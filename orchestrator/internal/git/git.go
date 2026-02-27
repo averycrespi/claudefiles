@@ -57,6 +57,19 @@ func (c *Client) BranchExists(repoRoot, branch string) bool {
 	return err == nil
 }
 
+// ListBranches returns the names of all local branches.
+func (c *Client) ListBranches(repoRoot string) ([]string, error) {
+	out, err := c.runner.RunDir(repoRoot, "git", "branch", "--list", "--format=%(refname:short)")
+	if err != nil {
+		return nil, fmt.Errorf("git branch list failed: %s", strings.TrimSpace(string(out)))
+	}
+	raw := strings.TrimSpace(string(out))
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\n"), nil
+}
+
 // AddWorktree creates a git worktree at the given path.
 // If the branch exists locally, it checks it out. Otherwise, it creates a new branch.
 func (c *Client) AddWorktree(repoRoot, path, branch string) error {
@@ -79,6 +92,20 @@ func (c *Client) RemoveWorktree(repoRoot, path string) error {
 	out, err := c.runner.RunDir(repoRoot, "git", "worktree", "remove", path)
 	if err != nil {
 		return fmt.Errorf("git worktree remove failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// DeleteBranch deletes a local git branch.
+// If force is true, uses -D (force delete). Otherwise uses -d (safe delete).
+func (c *Client) DeleteBranch(repoRoot, branch string, force bool) error {
+	flag := "-d"
+	if force {
+		flag = "-D"
+	}
+	out, err := c.runner.RunDir(repoRoot, "git", "branch", flag, branch)
+	if err != nil {
+		return fmt.Errorf("git branch delete failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
 }

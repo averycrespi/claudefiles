@@ -18,6 +18,7 @@ type gitClient interface {
 	RepoInfo(path string) (git.Info, error)
 	AddWorktree(repoRoot, worktreeDir, branch string) error
 	RemoveWorktree(repoRoot, worktreeDir string) error
+	DeleteBranch(repoRoot, branch string, force bool) error
 	CommonDir(path string) (string, error)
 }
 
@@ -121,8 +122,8 @@ func (s *Service) Add(repoRoot, branch string) error {
 	return nil
 }
 
-// Remove removes a workspace: worktree and tmux window.
-func (s *Service) Remove(repoRoot, branch string) error {
+// Remove removes a workspace: worktree, tmux window, and optionally the branch.
+func (s *Service) Remove(repoRoot, branch string, deleteBranch, forceDelete bool) error {
 	info, err := s.git.RepoInfo(repoRoot)
 	if err != nil {
 		return err
@@ -148,15 +149,26 @@ func (s *Service) Remove(repoRoot, branch string) error {
 	// Close tmux window if it exists
 	if !s.tmux.SessionExists(tmuxSession) {
 		s.logger.Debug("tmux session does not exist: %s", tmuxSession)
-		return nil
+	} else {
+		actualName := s.tmux.ActualWindowName(tmuxSession, windowName)
+		if actualName != "" {
+			s.logger.Info("closing tmux window: %s", windowName)
+			if err := s.tmux.KillWindow(tmuxSession, actualName); err != nil {
+				return err
+			}
+		} else {
+			s.logger.Debug("tmux window does not exist: %s", windowName)
+		}
 	}
 
-	actualName := s.tmux.ActualWindowName(tmuxSession, windowName)
-	if actualName != "" {
-		s.logger.Info("closing tmux window: %s", windowName)
-		return s.tmux.KillWindow(tmuxSession, actualName)
+	// Delete branch if requested
+	if deleteBranch || forceDelete {
+		s.logger.Info("deleting branch: %s (force=%v)", branch, forceDelete)
+		if err := s.git.DeleteBranch(info.Root, branch, forceDelete); err != nil {
+			return err
+		}
 	}
-	s.logger.Debug("tmux window does not exist: %s", windowName)
+
 	return nil
 }
 

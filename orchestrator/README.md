@@ -21,6 +21,21 @@ The storage path respects `$XDG_DATA_HOME` if set.
 
 ## Getting Started
 
+**Enable tab completion (optional):**
+
+```sh
+# Bash
+source <(cco completion bash)
+
+# Zsh
+source <(cco completion zsh)
+
+# Fish
+cco completion fish | source
+```
+
+Add the appropriate line to your shell's rc file to enable it permanently.
+
 **Create a workspace and launch Claude Code:**
 
 ```sh
@@ -39,6 +54,8 @@ cco attach feature-branch     # attach to a specific window
 
 ```sh
 cco rm feature-branch         # removes worktree and window (keeps the branch)
+cco rm -d feature-branch      # also deletes the branch
+cco rm -D feature-branch      # also force-deletes the branch
 ```
 
 ## Commands
@@ -46,7 +63,7 @@ cco rm feature-branch         # removes worktree and window (keeps the branch)
 | Command               | Purpose                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------- |
 | `cco add <branch>`    | Add a workspace                                                                         |
-| `cco rm <branch>`     | Remove a workspace                                                                      |
+| `cco rm <branch>`     | Remove a workspace (keeps branch; `-d` deletes branch, `-D` force-deletes)              |
 | `cco attach [branch]` | Attach to a window or session                                                           |
 | `cco notify`          | Add notification to current workspace (for hooks)                                       |
 | `cco config <cmd>`    | Manage configuration (path, show, edit)                                                 |

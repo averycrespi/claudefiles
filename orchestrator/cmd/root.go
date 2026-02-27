@@ -9,8 +9,9 @@ import (
 var verbose bool
 
 var rootCmd = &cobra.Command{
-	Use:   "cco",
-	Short: "Orchestrate Claude Code workspaces",
+	Use:          "cco",
+	Short:        "Orchestrate Claude Code workspaces",
+	SilenceUsage: true,
 }
 
 func init() {
