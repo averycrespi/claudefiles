@@ -21,7 +21,7 @@ Must be run from the main repository, not a worktree.`,
 		if err != nil {
 			return fmt.Errorf("could not get working directory: %w", err)
 		}
-		return newWorkspaceService().Remove(cwd, args[0])
+		return newWorkspaceService().Remove(cwd, args[0], false, false)
 	},
 }
 

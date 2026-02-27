@@ -34,6 +34,11 @@ func (m *mockGitClient) RemoveWorktree(repoRoot, worktreeDir string) error {
 	return args.Error(0)
 }
 
+func (m *mockGitClient) DeleteBranch(repoRoot, branch string, force bool) error {
+	args := m.Called(repoRoot, branch, force)
+	return args.Error(0)
+}
+
 func (m *mockGitClient) CommonDir(path string) (string, error) {
 	args := m.Called(path)
 	return args.String(0), args.Error(1)
@@ -212,11 +217,70 @@ func TestService_Remove_RemovesWorktreeAndWindow(t *testing.T) {
 	tm.On("KillWindow", "cco-myrepo", "feat").Return(nil)
 
 	svc := NewService(g, tm, logging.NoopLogger{}, nil)
-	err := svc.Remove("/repo", "feat")
+	err := svc.Remove("/repo", "feat", false, false)
 
 	require.NoError(t, err)
 	g.AssertCalled(t, "RemoveWorktree", "/repo", worktreeDir)
 	tm.AssertCalled(t, "KillWindow", "cco-myrepo", "feat")
+}
+
+func TestService_Remove_DeletesBranch(t *testing.T) {
+	g := new(mockGitClient)
+	g.On("RepoInfo", "/repo").Return(git.Info{Name: "myrepo", Root: "/repo"}, nil)
+	g.On("DeleteBranch", "/repo", "feat", false).Return(nil)
+
+	origDataDir := os.Getenv("XDG_DATA_HOME")
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer os.Setenv("XDG_DATA_HOME", origDataDir)
+
+	tm := new(mockTmuxClient)
+	tm.On("SessionExists", "cco-myrepo").Return(false)
+
+	svc := NewService(g, tm, logging.NoopLogger{}, nil)
+	err := svc.Remove("/repo", "feat", true, false)
+
+	require.NoError(t, err)
+	g.AssertCalled(t, "DeleteBranch", "/repo", "feat", false)
+}
+
+func TestService_Remove_ForceDeletesBranch(t *testing.T) {
+	g := new(mockGitClient)
+	g.On("RepoInfo", "/repo").Return(git.Info{Name: "myrepo", Root: "/repo"}, nil)
+	g.On("DeleteBranch", "/repo", "feat", true).Return(nil)
+
+	origDataDir := os.Getenv("XDG_DATA_HOME")
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer os.Setenv("XDG_DATA_HOME", origDataDir)
+
+	tm := new(mockTmuxClient)
+	tm.On("SessionExists", "cco-myrepo").Return(false)
+
+	svc := NewService(g, tm, logging.NoopLogger{}, nil)
+	err := svc.Remove("/repo", "feat", false, true)
+
+	require.NoError(t, err)
+	g.AssertCalled(t, "DeleteBranch", "/repo", "feat", true)
+}
+
+func TestService_Remove_SkipsBranchDeleteByDefault(t *testing.T) {
+	g := new(mockGitClient)
+	g.On("RepoInfo", "/repo").Return(git.Info{Name: "myrepo", Root: "/repo"}, nil)
+
+	origDataDir := os.Getenv("XDG_DATA_HOME")
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer os.Setenv("XDG_DATA_HOME", origDataDir)
+
+	tm := new(mockTmuxClient)
+	tm.On("SessionExists", "cco-myrepo").Return(false)
+
+	svc := NewService(g, tm, logging.NoopLogger{}, nil)
+	err := svc.Remove("/repo", "feat", false, false)
+
+	require.NoError(t, err)
+	g.AssertNotCalled(t, "DeleteBranch", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestService_Attach_Session(t *testing.T) {
