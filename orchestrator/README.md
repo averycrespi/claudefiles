@@ -39,6 +39,8 @@ cco attach feature-branch     # attach to a specific window
 
 ```sh
 cco rm feature-branch         # removes worktree and window (keeps the branch)
+cco rm -d feature-branch      # also deletes the branch
+cco rm -D feature-branch      # also force-deletes the branch
 ```
 
 ## Commands
@@ -46,7 +48,7 @@ cco rm feature-branch         # removes worktree and window (keeps the branch)
 | Command               | Purpose                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------- |
 | `cco add <branch>`    | Add a workspace                                                                         |
-| `cco rm <branch>`     | Remove a workspace                                                                      |
+| `cco rm <branch>`     | Remove a workspace (keeps branch; `-d` deletes branch, `-D` force-deletes)              |
 | `cco attach [branch]` | Attach to a window or session                                                           |
 | `cco notify`          | Add notification to current workspace (for hooks)                                       |
 | `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell, push, pull) |
