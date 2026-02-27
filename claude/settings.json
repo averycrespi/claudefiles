@@ -173,7 +173,8 @@
       "docker-compose:*",
       "gh:*",
       "git:*",
-      "go build:*"
+      "go build:*",
+      "go test:*"
     ]
   },
   "effortLevel": "medium"
