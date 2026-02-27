@@ -125,6 +125,39 @@ func TestClient_RemoveWorktree(t *testing.T) {
 	r.AssertExpectations(t)
 }
 
+func TestClient_DeleteBranch_Safe(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/repo", "git", []string{"branch", "-d", "feat"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.DeleteBranch("/repo", "feat", false)
+
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+}
+
+func TestClient_DeleteBranch_Force(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/repo", "git", []string{"branch", "-D", "feat"}).Return([]byte(""), nil)
+
+	client := NewClient(r)
+	err := client.DeleteBranch("/repo", "feat", true)
+
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+}
+
+func TestClient_DeleteBranch_Error(t *testing.T) {
+	r := new(mockRunner)
+	r.On("RunDir", "/repo", "git", []string{"branch", "-d", "feat"}).Return([]byte("error: branch 'feat' is not fully merged"), assert.AnError)
+
+	client := NewClient(r)
+	err := client.DeleteBranch("/repo", "feat", false)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not fully merged")
+}
+
 func TestClient_CommonDir(t *testing.T) {
 	r := new(mockRunner)
 	r.On("RunDir", "/wt", "git", []string{"rev-parse", "--git-common-dir"}).Return([]byte("/repo/.git\n"), nil)

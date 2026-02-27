@@ -83,6 +83,20 @@ func (c *Client) RemoveWorktree(repoRoot, path string) error {
 	return nil
 }
 
+// DeleteBranch deletes a local git branch.
+// If force is true, uses -D (force delete). Otherwise uses -d (safe delete).
+func (c *Client) DeleteBranch(repoRoot, branch string, force bool) error {
+	flag := "-d"
+	if force {
+		flag = "-D"
+	}
+	out, err := c.runner.RunDir(repoRoot, "git", "branch", flag, branch)
+	if err != nil {
+		return fmt.Errorf("git branch delete failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 // CommonDir returns the git common directory for the repo at path.
 // For worktrees this points back to the main repo's .git directory.
 func (c *Client) CommonDir(path string) (string, error) {
