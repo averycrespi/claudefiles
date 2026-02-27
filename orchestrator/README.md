@@ -21,6 +21,21 @@ The storage path respects `$XDG_DATA_HOME` if set.
 
 ## Getting Started
 
+**Enable tab completion (optional):**
+
+```sh
+# Bash
+source <(cco completion bash)
+
+# Zsh
+source <(cco completion zsh)
+
+# Fish
+cco completion fish | source
+```
+
+Add the appropriate line to your shell's rc file to enable it permanently.
+
 **Create a workspace and launch Claude Code:**
 
 ```sh
