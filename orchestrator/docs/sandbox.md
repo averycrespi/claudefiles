@@ -37,11 +37,12 @@ Push a plan into the sandbox for autonomous execution, then pull the results bac
 
 ```sh
 cco box push .plans/2026-02-21-my-feature-plan.md
+cco box push --depth 50 .plans/2026-02-21-my-feature-plan.md  # fewer commits = faster bundle
 # Job a3f7b2 started. Pull with: cco box pull a3f7b2
 
 cco box pull a3f7b2
 ```
 
-Push requires a workspace (`cco add <branch>`) for the current branch. It creates a git bundle, clones it inside the VM, and launches Claude in a split tmux pane to execute the plan. Push returns immediately — Claude runs in the background pane. When Claude finishes, it writes an output bundle. Pull polls for that bundle, fast-forward merges the commits back onto your branch, and closes the sandbox pane.
+Push requires a workspace (`cco add <branch>`) for the current branch. It creates a git bundle (shallow by default, last 100 commits), clones it inside the VM, and launches Claude in a split tmux pane to execute the plan. Use `--depth` to control how many commits are included (0 for full history). Push returns immediately — Claude runs in the background pane. When Claude finishes, it writes an output bundle. Pull polls for that bundle, fast-forward merges the commits back onto your branch, and closes the sandbox pane.
 
 Each push gets a unique job ID so multiple jobs can run in parallel.
