@@ -66,7 +66,7 @@ cco rm -D feature-branch      # also force-deletes the branch
 | `cco rm <branch>`     | Remove a workspace (keeps branch; `-d` deletes branch, `-D` force-deletes)              |
 | `cco attach [branch]` | Attach to a window or session                                                           |
 | `cco notify`          | Add notification to current workspace (for hooks)                                       |
-| `cco config <cmd>`    | Manage configuration (path, show, edit)                                                 |
+| `cco config <cmd>`    | Manage configuration (path, show, init, edit)                                           |
 | `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell, push, pull) |
 
 ## Sandbox
@@ -140,7 +140,8 @@ cco uses a JSON config file for optional settings. The file location respects `$
 ```sh
 cco config path              # print config file location
 cco config show              # print config contents
-cco config edit              # open in $EDITOR (creates file if needed)
+cco config init              # create config with defaults (if not exists)
+cco config edit              # open in $EDITOR (runs init first)
 ```
 
 ### Go Module Proxy
