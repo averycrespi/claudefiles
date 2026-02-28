@@ -15,6 +15,30 @@ Execute implementation plans by dispatching subagents for each phase: implementa
 
 ## The Process
 
+### Step 0: Environment Setup
+
+Before executing the plan, ensure the project builds and all tests pass. You are running in a disposable sandbox VM with full root access — install anything you need without hesitation.
+
+1. **Inspect the project** for dependency manifests and tooling config:
+   - Language runtimes: `.tool-versions`, `.node-version`, `.python-version`, `.go-version`
+   - Dependencies: `go.mod`, `package.json`, `pyproject.toml`, `Gemfile`, `Cargo.toml`
+   - Build config: `Makefile`, `justfile`, `Taskfile.yml`, `setup.sh`
+
+2. **Install missing runtimes and tools:**
+   - Use `asdf` (pre-installed) for `.tool-versions` entries: `asdf plugin add <name> && asdf install`
+   - Use `sudo apt-get install` for system packages
+   - Download binaries directly if needed — this VM is disposable
+
+3. **Install project dependencies:**
+   - Run the appropriate install command (`go mod download`, `npm install`, `pip install`, etc.)
+
+4. **Run the full test suite** and confirm all tests pass:
+   - If tests fail due to missing dependencies or environment issues, fix the environment and retry
+   - Do NOT proceed to Step 1 until all tests are green
+   - If tests cannot be made to pass after reasonable effort, write `/exchange/<session-id>/error.txt` with details and exit
+
+**Remember:** This is an isolated sandbox. You have full root access. Use `sudo` freely, install packages, modify system config, and change environment variables. Fix problems rather than working around them.
+
 For each task triplet (Implement → Spec Review → Code Review):
 
 1. Mark "Implement" in_progress
