@@ -1,25 +1,40 @@
 # Claude Code Orchestrator
 
-Run multiple [Claude Code](https://www.anthropic.com/claude-code) sessions in parallel. Each session gets its own Git worktree and tmux window, so they don't interfere with each other or your main working tree. Optionally, run plans in an isolated sandbox VM.
-
-## How It Works
-
-Each workspace is a combination of:
-
-1. **Worktree** — an independent checkout of the repository at a specific branch
-2. **Window** — a tmux window where Claude Code runs
-
-cco uses a **dedicated tmux socket** (`cco`) so it doesn't interfere with personal tmux sessions. Use `tmux -L cco ls` to inspect sessions directly.
-
-**Storage layout:**
+Run multiple [Claude Code](https://www.anthropic.com/claude-code) sessions in parallel. Each session gets its own Git worktree and tmux window, so they don't interfere with each other or your main working tree.
 
 ```
-~/.local/share/cco/worktrees/{repo}/{repo}-{branch}/
+┌─────────────────────────────────────────────────┐
+│ tmux session (cco)                              │
+│                                                 │
+│  ┌─────────────┐ ┌─────────────┐ ┌───────────┐ │
+│  │ feature-a   │ │ feature-b   │ │ bugfix-c  │ │
+│  │             │ │             │ │           │ │
+│  │ claude code │ │ claude code │ │ claude .. │ │
+│  │ running ... │ │ running ... │ │ running . │ │
+│  │             │ │             │ │           │ │
+│  └──────┬──────┘ └──────┬──────┘ └─────┬─────┘ │
+│         │               │              │        │
+└─────────┼───────────────┼──────────────┼────────┘
+          │               │              │
+          ▼               ▼              ▼
+     worktree/       worktree/      worktree/
+     feature-a       feature-b      bugfix-c
 ```
 
-The storage path respects `$XDG_DATA_HOME` if set.
+## Why cco?
 
-## Getting Started
+- **Parallel sessions** — run multiple Claude Code instances without conflicts
+- **Isolated worktrees** — each session gets its own checkout, so no merge conflicts or dirty state
+- **Dedicated tmux socket** — cco uses its own socket (`cco`) and never touches your personal tmux sessions
+- **Sandbox mode** — optionally run plans in an isolated VM for autonomous execution
+
+## Quick Start
+
+**Install:**
+
+```sh
+cd orchestrator && go install ./cmd/cco
+```
 
 **Enable tab completion (optional):**
 
@@ -36,135 +51,49 @@ cco completion fish | source
 
 Add the appropriate line to your shell's rc file to enable it permanently.
 
-**Create a workspace and launch Claude Code:**
+**Create a workspace and start working:**
 
 ```sh
-cco add feature-branch        # creates worktree + tmux window, launches Claude Code
-cco add feature-branch -a     # same, but also attaches to the window
+cco add feature-branch        # create worktree + tmux window, launch Claude Code
+cco attach feature-branch     # switch to the window
+cco rm feature-branch         # clean up when done (keeps the branch)
 ```
 
-**Switch to an existing workspace:**
-
-```sh
-cco attach                    # attach to the cco session
-cco attach feature-branch     # attach to a specific window
-```
-
-**Clean up when done:**
-
-```sh
-cco rm feature-branch         # removes worktree and window (keeps the branch)
-cco rm -d feature-branch      # also deletes the branch
-cco rm -D feature-branch      # also force-deletes the branch
-```
+Each workspace is a worktree at `~/.local/share/cco/worktrees/` and a tmux window in the `cco` session. Use `tmux -L cco ls` to inspect directly.
 
 ## Commands
 
-| Command               | Purpose                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------- |
-| `cco add <branch>`    | Add a workspace                                                                         |
-| `cco rm <branch>`     | Remove a workspace (keeps branch; `-d` deletes branch, `-D` force-deletes)              |
-| `cco attach [branch]` | Attach to a window or session                                                           |
-| `cco notify`          | Add notification to current workspace (for hooks)                                       |
-| `cco config <cmd>`    | Manage configuration (path, show, init, edit)                                           |
-| `cco box <cmd>`       | Manage the sandbox (create, start, stop, destroy, status, provision, shell, push, pull) |
+| Command               | Purpose                                                                    |
+| --------------------- | -------------------------------------------------------------------------- |
+| `cco add <branch>`    | Add a workspace (worktree + tmux window)                                   |
+| `cco rm <branch>`     | Remove a workspace (`-d` deletes branch, `-D` force-deletes)              |
+| `cco attach [branch]` | Attach to a window or session                                             |
+| `cco notify`          | Add notification to current workspace (for hooks)                          |
+| `cco config <cmd>`    | Manage configuration (`path`, `show`, `init`, `edit`)                     |
+| `cco box <cmd>`       | Manage the [sandbox](docs/sandbox.md) VM                                  |
 
 ## Sandbox
 
-`cco box` manages an isolated [Lima](https://github.com/lima-vm/lima) VM for running Claude Code safely. This is useful for executing plans autonomously without risking your host environment.
-
-The sandbox is persistent — data and installed packages survive restarts. The first boot takes several minutes to install Docker, language runtimes, and dev tools. Subsequent starts are fast.
-
-**Requirements:** Lima (`brew install lima`)
-
-### Lifecycle
-
-**Create the sandbox (first time only):**
+cco can run plans in an isolated [Lima](https://github.com/lima-vm/lima) VM for autonomous execution without risking your host environment. Push a plan in, let Claude work, pull the results back.
 
 ```sh
-cco box create
+cco box create                                    # one-time setup
+cco box push .plans/2026-02-21-my-feature-plan.md  # run a plan
+cco box pull a3f7b2                                # pull results back
 ```
 
-**Authenticate Claude Code (first time only):**
-
-```sh
-cco box shell
-claude --dangerously-skip-permissions
-```
-
-**Start / stop / destroy:**
-
-```sh
-cco box start
-cco box stop
-cco box destroy
-```
-
-**Re-provision after updating configs:**
-
-```sh
-cco box provision
-```
-
-**Check status:**
-
-```sh
-cco box status
-```
-
-### Push / Pull
-
-Push a plan into the sandbox for autonomous execution, then pull the results back:
-
-```sh
-cco box push .plans/2026-02-21-my-feature-plan.md
-# Job a3f7b2 started. Pull with: cco box pull a3f7b2
-
-cco box pull a3f7b2
-```
-
-Push requires a workspace (`cco add <branch>`) for the current branch. It creates a git bundle, clones it inside the VM, and launches Claude in a split tmux pane to execute the plan. Push returns immediately — Claude runs in the background pane. When Claude finishes, it writes an output bundle. Pull polls for that bundle, fast-forward merges the commits back onto your branch, and closes the sandbox pane.
-
-Each push gets a unique job ID so multiple jobs can run in parallel.
+See [docs/sandbox.md](docs/sandbox.md) for setup, lifecycle management, and push/pull details.
 
 ## Configuration
 
-cco uses a JSON config file for optional settings. The file location respects `$XDG_CONFIG_HOME`:
-
-```
-~/.config/cco/config.json
-```
-
-**Manage the config file:**
+cco uses a JSON config file at `~/.config/cco/config.json` (respects `$XDG_CONFIG_HOME`).
 
 ```sh
-cco config path              # print config file location
-cco config show              # print config contents
-cco config init              # create config with defaults (if not exists)
-cco config edit              # open in $EDITOR (runs init first)
+cco config show     # print current config
+cco config edit     # open in $EDITOR (creates defaults if needed)
 ```
 
-### Go Module Proxy
-
-When pushing Go projects to the sandbox, private module dependencies can't be resolved because the sandbox has no access to private repositories. The `go_proxy` setting caches matching dependencies on the host before push, making them available inside the sandbox via a file-system based Go module proxy.
-
-```json
-{
-  "go_proxy": {
-    "patterns": [
-      "github.com/myorg/*"
-    ]
-  }
-}
-```
-
-**How it works:**
-
-1. At push time, cco scans all `go.mod` files in the worktree
-2. Dependencies matching any pattern are downloaded to the job's exchange directory
-3. Inside the sandbox, `GOPROXY` is set to check the local cache first, then fall back to `proxy.golang.org`
-
-Patterns use the same glob format as Go's `GOPRIVATE` environment variable. If `go_proxy` is absent or `patterns` is empty, push behaves as before.
+See [docs/configuration.md](docs/configuration.md) for available settings.
 
 ## Development
 
@@ -174,13 +103,13 @@ Patterns use the same glob format as Go's `GOPRIVATE` environment variable. If `
 go build -o cco ./cmd/cco
 ```
 
-**Run unit tests:**
+**Unit tests:**
 
 ```sh
 go test ./... -count=1
 ```
 
-**Run integration tests** (requires tmux):
+**Integration tests** (requires tmux):
 
 ```sh
 go test -v -count=1 -timeout 60s
