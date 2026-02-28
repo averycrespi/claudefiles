@@ -81,7 +81,7 @@ Use 'cco box pull <job-id>' to pull results back when done.`,
 
 		// Prepare sandbox job (bundle, clone, build command)
 		svc := newSandboxService()
-		prepared, err := svc.Prepare(cwd, planPath)
+		prepared, err := svc.Prepare(cwd, planPath, 100)
 		if err != nil {
 			return err
 		}

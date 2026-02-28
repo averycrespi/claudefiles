@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -208,7 +209,7 @@ type PreparedJob struct {
 
 // Prepare bundles the current branch, clones it in the VM, and returns
 // a PreparedJob with the command to launch Claude (without launching it).
-func (s *Service) Prepare(repoRoot, planPath string) (*PreparedJob, error) {
+func (s *Service) Prepare(repoRoot, planPath string, depth int) (*PreparedJob, error) {
 	status, err := s.lima.Status()
 	if err != nil {
 		return nil, err
@@ -237,8 +238,28 @@ func (s *Service) Prepare(repoRoot, planPath string) (*PreparedJob, error) {
 	// Create git bundle
 	bundlePath := filepath.Join(exchangeDir, "input.bundle")
 	s.logger.Info("creating bundle for branch %s...", branch)
-	if out, err := s.runner.RunDir(repoRoot, "git", "bundle", "create", bundlePath, branch); err != nil {
-		return nil, fmt.Errorf("git bundle create failed: %s", strings.TrimSpace(string(out)))
+
+	if depth > 0 {
+		// Create shallow clone, then bundle from it for faster transfer
+		tmpClone := filepath.Join(os.TempDir(), "cco-shallow-"+jobID)
+		defer os.RemoveAll(tmpClone)
+
+		depthStr := strconv.Itoa(depth)
+		if out, err := s.runner.Run("git", "clone",
+			"--depth", depthStr,
+			"--single-branch", "--branch", branch,
+			repoRoot, tmpClone); err != nil {
+			return nil, fmt.Errorf("shallow clone failed: %s", strings.TrimSpace(string(out)))
+		}
+
+		if out, err := s.runner.RunDir(tmpClone, "git", "bundle", "create", bundlePath, branch); err != nil {
+			return nil, fmt.Errorf("git bundle create failed: %s", strings.TrimSpace(string(out)))
+		}
+	} else {
+		// Full history (depth=0)
+		if out, err := s.runner.RunDir(repoRoot, "git", "bundle", "create", bundlePath, branch); err != nil {
+			return nil, fmt.Errorf("git bundle create failed: %s", strings.TrimSpace(string(out)))
+		}
 	}
 
 	// Clone from bundle inside VM

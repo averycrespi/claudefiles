@@ -357,7 +357,7 @@ func TestService_Prepare_NotRunning(t *testing.T) {
 	runner := new(mockRunner)
 	svc := NewService(lima, logging.NoopLogger{}, runner)
 
-	_, err := svc.Prepare("/repo", ".plans/test-plan.md")
+	_, err := svc.Prepare("/repo", ".plans/test-plan.md", 0)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "sandbox not running")
@@ -376,7 +376,7 @@ func TestService_Prepare_Running(t *testing.T) {
 
 	svc := NewService(lima, logging.NoopLogger{}, runner)
 
-	result, err := svc.Prepare("/repo", ".plans/test-plan.md")
+	result, err := svc.Prepare("/repo", ".plans/test-plan.md", 0)
 
 	require.NoError(t, err)
 	assert.Len(t, result.JobID, 8)
@@ -400,7 +400,7 @@ func TestService_Prepare_WithGoProxyPatterns(t *testing.T) {
 
 	svc := NewService(lima, logging.NoopLogger{}, runner)
 
-	result, err := svc.Prepare("/repo", ".plans/test-plan.md")
+	result, err := svc.Prepare("/repo", ".plans/test-plan.md", 0)
 	require.NoError(t, err)
 
 	exchangeDir := paths.JobExchangeDir(result.JobID)
@@ -413,6 +413,51 @@ func TestService_Prepare_WithGoProxyPatterns(t *testing.T) {
 	assert.Contains(t, cmd, "GOPROXY=file:///exchange/"+result.JobID+"/gomodcache/cache/download")
 	assert.Contains(t, cmd, "GONOSUMCHECK=github.com/myorg/*,github.com/other/*")
 	assert.Contains(t, cmd, "claude")
+}
+
+func TestService_Prepare_ShallowBundle(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Running", nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	runner := new(mockRunner)
+	// git rev-parse --abbrev-ref HEAD
+	runner.On("RunDir", "/repo", "git", "rev-parse", "--abbrev-ref", "HEAD").Return([]byte("feature\n"), nil)
+	// git clone --depth 50 --single-branch --branch feature /repo <tmpdir>
+	runner.On("Run", "git", "clone", "--depth", "50", "--single-branch", "--branch", "feature", "/repo", mock.Anything).Return([]byte(""), nil)
+	// git bundle create from shallow clone dir
+	runner.On("RunDir", mock.Anything, "git", "bundle", "create", mock.Anything, "feature").Return([]byte(""), nil)
+	// git clone in VM
+	runner.On("RunDir", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]byte(""), nil)
+
+	svc := NewService(lima, logging.NoopLogger{}, runner)
+
+	result, err := svc.Prepare("/repo", ".plans/test-plan.md", 50)
+
+	require.NoError(t, err)
+	assert.Equal(t, "feature", result.Branch)
+	// Verify shallow clone was called (Run, not RunDir)
+	runner.AssertCalled(t, "Run", "git", "clone", "--depth", "50", "--single-branch", "--branch", "feature", "/repo", mock.Anything)
+}
+
+func TestService_Prepare_FullHistory(t *testing.T) {
+	lima := new(mockLimaClient)
+	lima.On("Status").Return("Running", nil)
+	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	runner := new(mockRunner)
+	runner.On("RunDir", "/repo", "git", "rev-parse", "--abbrev-ref", "HEAD").Return([]byte("main\n"), nil)
+	// git bundle create directly from repo (depth=0 means full history)
+	runner.On("RunDir", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]byte(""), nil)
+
+	svc := NewService(lima, logging.NoopLogger{}, runner)
+
+	result, err := svc.Prepare("/repo", ".plans/test-plan.md", 0)
+
+	require.NoError(t, err)
+	assert.Equal(t, "main", result.Branch)
+	// Verify NO shallow clone was called
+	runner.AssertNotCalled(t, "Run", "git", "clone", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestBuildLaunchCommand_NoPatterns(t *testing.T) {
