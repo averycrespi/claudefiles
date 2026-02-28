@@ -58,6 +58,7 @@ var configInitCmd = &cobra.Command{
 var configEditCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "Open config file in $EDITOR",
+	Long:  "Open the config file in $EDITOR, creating default config if missing",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := logging.NewStdLogger(verbose)

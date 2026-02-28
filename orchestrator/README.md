@@ -3,22 +3,22 @@
 Run multiple [Claude Code](https://www.anthropic.com/claude-code) sessions in parallel. Each session gets its own Git worktree and tmux window, so they don't interfere with each other or your main working tree.
 
 ```
-┌─────────────────────────────────────────────────┐
-│ tmux session (cco)                              │
-│                                                 │
-│  ┌─────────────┐ ┌─────────────┐ ┌───────────┐ │
-│  │ feature-a   │ │ feature-b   │ │ bugfix-c  │ │
-│  │             │ │             │ │           │ │
-│  │ claude code │ │ claude code │ │ claude .. │ │
-│  │ running ... │ │ running ... │ │ running . │ │
-│  │             │ │             │ │           │ │
-│  └──────┬──────┘ └──────┬──────┘ └─────┬─────┘ │
-│         │               │              │        │
-└─────────┼───────────────┼──────────────┼────────┘
-          │               │              │
-          ▼               ▼              ▼
-     worktree/       worktree/      worktree/
-     feature-a       feature-b      bugfix-c
+┌───────────────────────────────────────────────────────┐
+│ tmux session (cco-$repo)                              │
+│                                                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
+│  │ feature-a   │  │ feature-b   │  │ bugfix-c    │    │
+│  │             │  │             │  │             │    │
+│  │ claude code │  │ claude code │  │ claude code │    │
+│  │ running ... │  │ running ... │  │ running ... │    │
+│  │             │  │             │  │             │    │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘    │
+│         │                │                │           │
+└─────────┼────────────────┼────────────────┼───────────┘
+          │                │                │
+          ▼                ▼                ▼
+     worktree/        worktree/        worktree/
+     feature-a        feature-b        bugfix-c
 ```
 
 ## Why cco?
@@ -63,18 +63,18 @@ Each workspace is a worktree at `~/.local/share/cco/worktrees/` and a tmux windo
 
 ## Commands
 
-| Command               | Purpose                                                                    |
-| --------------------- | -------------------------------------------------------------------------- |
-| `cco add <branch>`    | Add a workspace (worktree + tmux window)                                   |
-| `cco rm <branch>`     | Remove a workspace (`-d` deletes branch, `-D` force-deletes)              |
-| `cco attach [branch]` | Attach to a window or session                                             |
-| `cco notify`          | Add notification to current workspace (for hooks)                          |
-| `cco config <cmd>`    | Manage configuration (`path`, `show`, `init`, `edit`)                     |
-| `cco box <cmd>`       | Manage the [sandbox](docs/sandbox.md) VM                                  |
+| Command               | Purpose                                           |
+| --------------------- | ------------------------------------------------- |
+| `cco add <branch>`    | Add a workspace                                   |
+| `cco rm <branch>`     | Remove a workspace                                |
+| `cco attach [branch]` | Attach to a window or session                     |
+| `cco notify`          | Add notification to current workspace (for hooks) |
+| `cco config <cmd>`    | Manage cco [configuration](docs/configuration.md) |
+| `cco box <cmd>`       | Manage the [sandbox](docs/sandbox.md)             |
 
 ## Sandbox
 
-cco can run plans in an isolated [Lima](https://github.com/lima-vm/lima) VM for autonomous execution without risking your host environment. Push a plan in, let Claude work, pull the results back.
+cco can execute plans in an isolated sandbox for autonomous execution without risking your host environment. Push a plan in, let Claude work, pull the results back.
 
 ```sh
 cco box create                                    # one-time setup
@@ -89,8 +89,7 @@ See [docs/sandbox.md](docs/sandbox.md) for setup, lifecycle management, and push
 cco uses a JSON config file at `~/.config/cco/config.json` (respects `$XDG_CONFIG_HOME`).
 
 ```sh
-cco config show     # print current config
-cco config edit     # open in $EDITOR (creates defaults if needed)
+cco config edit     # open in $EDITOR (creates default config if missing)
 ```
 
 See [docs/configuration.md](docs/configuration.md) for available settings.
