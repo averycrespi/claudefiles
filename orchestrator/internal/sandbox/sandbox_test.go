@@ -424,7 +424,7 @@ func TestBuildLaunchCommand_NoPatterns(t *testing.T) {
 
 func TestBuildLaunchCommand_WithPatterns(t *testing.T) {
 	cmd := BuildLaunchCommand("abc123", ".plans/test.md", []string{"github.com/myorg/*"})
-	assert.Contains(t, cmd, "GOPROXY=file:///exchange/abc123/gomodcache/cache/download,https://proxy.golang.org,direct")
+	assert.Contains(t, cmd, "export GOPROXY=file:///exchange/abc123/gomodcache/cache/download,https://proxy.golang.org,direct")
 	assert.Contains(t, cmd, "GONOSUMCHECK=github.com/myorg/*")
 }
 

@@ -263,15 +263,15 @@ func BuildLaunchCommand(jobID, planPath string, patterns []string) string {
 	guestWorkspace := "/workspace/" + jobID
 	prompt := fmt.Sprintf("/executing-plans %s", planPath)
 
-	var envPrefix string
+	var envExport string
 	if len(patterns) > 0 {
 		proxyPath := fmt.Sprintf("file:///exchange/%s/gomodcache/cache/download,https://proxy.golang.org,direct", jobID)
 		nosumcheck := strings.Join(patterns, ",")
-		envPrefix = fmt.Sprintf("GOPROXY=%s GONOSUMCHECK=%s ", proxyPath, nosumcheck)
+		envExport = fmt.Sprintf("export GOPROXY=%s GONOSUMCHECK=%s && ", proxyPath, nosumcheck)
 	}
 
 	return fmt.Sprintf("limactl shell --workdir / %s -- bash -l -c '%scd %s && claude --dangerously-skip-permissions %q'",
-		lima.VMName, envPrefix, guestWorkspace, prompt)
+		lima.VMName, envExport, guestWorkspace, prompt)
 }
 
 // Pull polls for an output bundle and fast-forward merges it into the current branch.
