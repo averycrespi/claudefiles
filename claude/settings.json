@@ -169,6 +169,8 @@
     "allowUnsandboxedCommands": true,
     "excludedCommands": [
       "aws:*",
+      "cco box pull:*",
+      "cco box push:*",
       "docker:*",
       "docker-compose:*",
       "gh:*",
