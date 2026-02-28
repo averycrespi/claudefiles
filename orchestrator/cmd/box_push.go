@@ -81,7 +81,7 @@ Use 'cco box pull <job-id>' to pull results back when done.`,
 
 		// Prepare sandbox job (bundle, clone, build command)
 		svc := newSandboxService()
-		prepared, err := svc.Prepare(cwd, planPath, 100)
+		prepared, err := svc.Prepare(cwd, planPath, boxPushDepth)
 		if err != nil {
 			return err
 		}
@@ -139,4 +139,9 @@ Use 'cco box pull <job-id>' to pull results back when done.`,
 	},
 }
 
-func init() { boxCmd.AddCommand(boxPushCmd) }
+func init() {
+	boxPushCmd.Flags().IntVar(&boxPushDepth, "depth", 100, "number of commits to include in bundle (0 for full history)")
+	boxCmd.AddCommand(boxPushCmd)
+}
+
+var boxPushDepth int
