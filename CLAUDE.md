@@ -107,6 +107,7 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
 orchestrator/            # cco - Claude Code orchestrator (Go)
+├── docs/               # Detailed documentation
 scripts/                 # Worktree and utility scripts
 ```
 
