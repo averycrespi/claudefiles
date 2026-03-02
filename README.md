@@ -13,6 +13,7 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
 - [Go](https://go.dev/) 1.23 for building `cco`
+- [Node.js](https://nodejs.org/) 18+ for `playwright-cli`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -137,6 +138,20 @@ Read and write access to Jira issues, Confluence pages, and Compass via the offi
 - Atlassian Cloud account (Server/Data Center not supported)
 - Internet connection for remote MCP server
 
+### Browser Automation (playwright-cli)
+
+Automate browser interactions for web testing, form filling, screenshots, and data extraction using [playwright-cli](https://github.com/microsoft/playwright-cli).
+
+**Setup:** Installed automatically by `setup.sh` via `npm install -g @playwright/cli@latest`.
+
+**Capabilities:**
+- Navigate websites and interact with page elements
+- Fill forms, click buttons, take screenshots
+- Manage browser sessions, tabs, cookies, and storage
+- Network request mocking and DevTools integration
+
+**Usage:** Ask Claude to browse a website or interact with a web page, and it will use the `playwright-cli` skill automatically.
+
 ### Datadog Logs
 
 Search Datadog logs directly from Claude using the `searching-datadog-logs` skill.
@@ -161,6 +176,8 @@ security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_A
 The workflow skills in this repository are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.
 
 The `creating-skills` skill is adapted from [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skill-creator), licensed under Apache 2.0.
+
+The `playwright-cli` skill is derived from [playwright-cli](https://github.com/microsoft/playwright-cli) by Microsoft, licensed under Apache 2.0.
 
 The status line script is adapted from [claude-code-tools](https://github.com/pchalasani/claude-code-tools) by Prasad Chalasani, licensed under MIT.
 

@@ -79,12 +79,14 @@
       "Bash(go vet:*)",
       "Bash(terraform fmt:*)",
       "Bash(terraform validate:*)",
+      "Bash(playwright-cli:*)",
       "Bash(~/.claude/skills/searching-datadog-logs/scripts/search_logs:*)",
       "Skill(brainstorming)",
       "Skill(completing-work)",
       "Skill(executing-plans)",
       "Skill(creating-skills)",
       "Skill(test-driven-development)",
+      "Skill(playwright-cli)",
       "Skill(searching-datadog-logs)",
       "Skill(writing-plans)",
       "WebFetch",
@@ -161,8 +163,7 @@
     "command": "bash ~/.claude/scripts/statusline.sh"
   },
   "enabledPlugins": {
-    "gopls-lsp@claude-plugins-official": true,
-    "playwright@claude-plugins-official": true
+    "gopls-lsp@claude-plugins-official": true
   },
   "sandbox": {
     "enabled": true,
@@ -178,7 +179,8 @@
       "git:*",
       "go build:*",
       "go install:*",
-      "go test:*"
+      "go test:*",
+      "playwright-cli:*"
     ]
   },
   "effortLevel": "medium"
