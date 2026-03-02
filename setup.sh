@@ -12,6 +12,10 @@ brew bundle
 echo 'Installing playwright-cli ...'
 npm install -g @playwright/cli@latest
 
+echo 'Installing Playwright and browsers ...'
+npm install -g playwright@latest
+playwright install
+
 echo 'Installing cco (Claude Code orchestrator) ...'
 REPO_DIR=$(git rev-parse --show-toplevel)
 (cd "$REPO_DIR/orchestrator" && go install ./cmd/cco)
