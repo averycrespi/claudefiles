@@ -161,7 +161,8 @@
     "command": "bash ~/.claude/scripts/statusline.sh"
   },
   "enabledPlugins": {
-    "gopls-lsp@claude-plugins-official": true
+    "gopls-lsp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true
   },
   "sandbox": {
     "enabled": true,
