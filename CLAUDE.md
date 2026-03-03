@@ -58,6 +58,7 @@ This repository includes a structured development workflow:
 | `executing-plans-quickly`    | Execute plans inline without subagents for simple tasks                  |
 | `executing-plans-in-sandbox` | Execute plans autonomously in a sandbox VM                               |
 | `completing-work`            | Verify tests, present options, create or update PR                       |
+| `reviewing-prs`              | Holistic PR review across 6 parallel dimensions                          |
 
 ### Integrations
 
