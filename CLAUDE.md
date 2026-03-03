@@ -65,7 +65,7 @@ This repository includes a structured development workflow:
 | Integration              | Purpose                                            |
 | ------------------------ | -------------------------------------------------- |
 | Atlassian MCP            | Read/write access to Jira, Confluence, and Compass |
-| `playwright-cli`         | Browser automation for testing and data extraction |
+| `automating-browsers`    | Browser automation for testing and data extraction |
 | `searching-datadog-logs` | Search Datadog logs via the API                    |
 | `creating-jira-tickets`  | Draft and create well-structured Jira tickets      |
 
