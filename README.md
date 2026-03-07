@@ -7,13 +7,14 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - [Structured Development Workflow](#structured-development-workflow) - Reliably turn ideas into pull requests
 - [Claude Code Orchestrator](#claude-code-orchestrator) - Develop in parallel using Git worktrees and tmux
 - [Integrations](#integrations) - Connect to external resources for seamless context
+- [Steven](#steven-personal-work-assistant) - Persistent work assistant with long-term memory
 
 ## Requirements
 
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
 - [Go](https://go.dev/) 1.23 for building `cco`
-- [Node.js](https://nodejs.org/) 18+ for `automating-browsers`
+- [Node.js](https://nodejs.org/) 18+ for `automating-browsers` and `steven`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -170,6 +171,12 @@ security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_A
 - Fetch full log details by ID
 - Error-driven investigation from stack traces
 - Exploratory search with query refinement
+
+### Steven (Personal Work Assistant)
+
+A persistent work assistant accessible from any Claude Code session via `/steven`. Steven maintains long-term memory across sessions using an Obsidian vault and [QMD](https://github.com/tobi/qmd) semantic search — saving decisions, surfacing context, and pulling data from Jira and Confluence on a schedule.
+
+See the [Steven README](./steven/README.md) for setup, usage, and architecture details.
 
 ## Attribution
 

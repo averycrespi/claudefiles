@@ -68,6 +68,7 @@ This repository includes a structured development workflow:
 | `automating-browsers`    | Browser automation for testing and data extraction |
 | `searching-datadog-logs` | Search Datadog logs via the API                    |
 | `creating-jira-tickets`  | Draft and create well-structured Jira tickets      |
+| `steven`                 | Persistent work assistant with long-term memory    |
 
 ### Reference Skills
 
@@ -111,6 +112,11 @@ claude/                  # Symlinked to ~/.claude/ via stow
 orchestrator/            # cco - Claude Code orchestrator (Go)
 ├── docs/               # Detailed documentation
 scripts/                 # Worktree and utility scripts
+steven/                  # Steven — persistent work assistant
+├── README.md           # Setup, usage, and cron configuration
+└── scripts/            # Automation scripts
+    ├── ingest.sh       # Wrapper for headless cron ingestion
+    └── log-rotate.sh   # Clean up old ingestion logs
 ```
 
 ## Modifying This Repository

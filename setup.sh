@@ -16,6 +16,9 @@ echo 'Installing Playwright and browsers ...'
 npm install -g playwright@latest
 playwright install
 
+echo 'Installing QMD (semantic search for Steven) ...'
+npm install -g @tobilu/qmd
+
 echo 'Installing cco (Claude Code orchestrator) ...'
 REPO_DIR=$(git rev-parse --show-toplevel)
 (cd "$REPO_DIR/orchestrator" && go install ./cmd/cco)
