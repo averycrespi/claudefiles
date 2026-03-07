@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/paths"
 )
 
 // mockLimaClient implements limaClient for tests.

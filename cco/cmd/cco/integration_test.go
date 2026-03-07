@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/tmux"
+	"github.com/averycrespi/claudefiles/cco/internal/tmux"
 )
 
 var ccoBinary string

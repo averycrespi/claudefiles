@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/exec"
 )
 
 // Info contains information about a git repository.

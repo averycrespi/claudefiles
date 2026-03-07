@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/lima"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
+	"github.com/averycrespi/claudefiles/cco/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/lima"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/paths"
 )
 
 // limaClient defines the lima operations needed by the sandbox service.

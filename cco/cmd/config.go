@@ -5,9 +5,9 @@ import (
 	"os"
 	osexec "os/exec"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/config"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
+	"github.com/averycrespi/claudefiles/cco/internal/config"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/paths"
 	"github.com/spf13/cobra"
 )
 

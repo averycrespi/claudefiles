@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/exec"
 )
 
 // mockRunner implements exec.Runner for unit tests.

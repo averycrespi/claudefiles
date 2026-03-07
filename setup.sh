@@ -21,7 +21,7 @@ npm install -g @tobilu/qmd
 
 echo 'Installing cco (Claude Code orchestrator) ...'
 REPO_DIR=$(git rev-parse --show-toplevel)
-(cd "$REPO_DIR/orchestrator" && go install ./cmd/cco)
+(cd "$REPO_DIR/cco" && go install ./cmd/cco)
 
 CLAUDE_DIR="$HOME/.claude"
 echo "Stowing Claude Code configuration to $CLAUDE_DIR ..."

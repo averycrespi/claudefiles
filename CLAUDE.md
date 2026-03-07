@@ -93,7 +93,7 @@ This repository includes a structured development workflow:
 Run cco tests:
 
 ```bash
-cd orchestrator && go test ./... -count=1
+cd cco && go test ./... -count=1
 ```
 
 **Note:** tmux integration tests require sandbox to be disabled (`dangerouslyDisableSandbox`) due to Unix socket access at `/private/tmp/tmux-*/`. On macOS, use `filepath.EvalSymlinks` on temp dirs in Go tests to handle the `/var` → `/private/var` symlink.
@@ -109,7 +109,7 @@ claude/                  # Symlinked to ~/.claude/ via stow
 ├── hooks/              # PreToolUse hooks (e.g., gitleaks)
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
-orchestrator/            # cco - Claude Code orchestrator (Go)
+cco/                     # cco - Claude Code orchestrator (Go)
 ├── docs/               # Detailed documentation
 scripts/                 # Worktree and utility scripts
 steven/                  # Steven — persistent work assistant

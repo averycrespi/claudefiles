@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/exec"
 )
 
 const VMName = "cco-sandbox"

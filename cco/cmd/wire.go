@@ -3,13 +3,13 @@ package cmd
 import (
 	"os"
 
-	ccoexec "github.com/averycrespi/claudefiles/orchestrator/internal/exec"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/git"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/lima"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/sandbox"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/tmux"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/workspace"
+	ccoexec "github.com/averycrespi/claudefiles/cco/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/git"
+	"github.com/averycrespi/claudefiles/cco/internal/lima"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/sandbox"
+	"github.com/averycrespi/claudefiles/cco/internal/tmux"
+	"github.com/averycrespi/claudefiles/cco/internal/workspace"
 )
 
 func newWorkspaceService() *workspace.Service {

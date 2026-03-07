@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/git"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
+	"github.com/averycrespi/claudefiles/cco/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/git"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/paths"
 )
 
 // gitClient defines the git operations needed by the workspace service.

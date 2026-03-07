@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

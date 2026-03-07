@@ -7,8 +7,8 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/paths"
 )
 
 // Config represents the cco configuration file.

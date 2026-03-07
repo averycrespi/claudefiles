@@ -111,9 +111,9 @@ cco attach feature-branch    # switch to it later
 cco rm feature-branch        # clean up when done (keeps the branch)
 ```
 
-The orchestrator also supports advanced features for executing plans inside an isolated sandbox VM.
+`cco` also supports advanced features for executing plans inside an isolated sandbox VM.
 
-See the [orchestrator README](./orchestrator/README.md) for full documentation.
+See the [cco README](./cco/README.md) for full documentation.
 
 ---
 

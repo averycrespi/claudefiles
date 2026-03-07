@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/config"
-	ccoexec "github.com/averycrespi/claudefiles/orchestrator/internal/exec"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/goproxy"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/paths"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/sandbox"
+	"github.com/averycrespi/claudefiles/cco/internal/config"
+	ccoexec "github.com/averycrespi/claudefiles/cco/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/goproxy"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/paths"
+	"github.com/averycrespi/claudefiles/cco/internal/sandbox"
 	"github.com/spf13/cobra"
 )
 

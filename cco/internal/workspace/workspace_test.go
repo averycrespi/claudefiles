@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/averycrespi/claudefiles/orchestrator/internal/exec"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/git"
-	"github.com/averycrespi/claudefiles/orchestrator/internal/logging"
+	"github.com/averycrespi/claudefiles/cco/internal/exec"
+	"github.com/averycrespi/claudefiles/cco/internal/git"
+	"github.com/averycrespi/claudefiles/cco/internal/logging"
 )
 
 // mockGitClient implements gitClient for tests.

@@ -1,4 +1,4 @@
-module github.com/averycrespi/claudefiles/orchestrator
+module github.com/averycrespi/claudefiles/cco
 
 go 1.24.0
 

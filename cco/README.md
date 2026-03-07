@@ -33,7 +33,7 @@ Run multiple [Claude Code](https://www.anthropic.com/claude-code) sessions in pa
 **Install:**
 
 ```sh
-cd orchestrator && go install ./cmd/cco
+cd cco && go install ./cmd/cco
 ```
 
 **Enable tab completion (optional):**
