@@ -21,19 +21,20 @@ mkdir -p "$LOG_DIR"
 # Ensure claude is on PATH (cron has minimal environment)
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
 
-echo "=== Steven Ingestion ===" >> "$LOG_FILE"
-echo "Time: $(date)" >> "$LOG_FILE"
-echo "Prompt: $PROMPT" >> "$LOG_FILE"
-echo "---" >> "$LOG_FILE"
+echo "=== Steven Ingestion ===" >>"$LOG_FILE"
+echo "Time: $(date)" >>"$LOG_FILE"
+echo "Prompt: $PROMPT" >>"$LOG_FILE"
+echo "---" >>"$LOG_FILE"
 
 claude -p "$PROMPT" \
-  --permission-mode acceptEdits \
-  >> "$LOG_FILE" 2>&1
+	--permission-mode dontAsk \
+	--verbose \
+	>>"$LOG_FILE" 2>&1
 
 EXIT_CODE=$?
 
-echo "---" >> "$LOG_FILE"
-echo "Exit code: $EXIT_CODE" >> "$LOG_FILE"
-echo "Finished: $(date)" >> "$LOG_FILE"
+echo "---" >>"$LOG_FILE"
+echo "Exit code: $EXIT_CODE" >>"$LOG_FILE"
+echo "Finished: $(date)" >>"$LOG_FILE"
 
 exit $EXIT_CODE
