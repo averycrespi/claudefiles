@@ -33,7 +33,7 @@ Run multiple [Claude Code](https://www.anthropic.com/claude-code) sessions in pa
 **Install:**
 
 ```sh
-cd cco && go install ./cmd/cco
+cd cco && go install .
 ```
 
 **Enable tab completion (optional):**
@@ -99,7 +99,7 @@ See [docs/configuration.md](docs/configuration.md) for available settings.
 **Build:**
 
 ```sh
-go build -o cco ./cmd/cco
+go build -o cco .
 ```
 
 **Unit tests:**
