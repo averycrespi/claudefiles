@@ -8,7 +8,7 @@ All knowledge lives at `~/steven-vault/`. The vault has three directories:
 
 ```
 ~/steven-vault/
-├── system/       # Identity, rules, dashboard (Steven's operating files)
+├── system/       # Identity and rules (Steven's operating files)
 ├── daily/        # Daily notes (YYYY-MM-DD.md)
 └── knowledge/    # Flat tagged markdown files (everything else)
 ```
@@ -33,11 +33,11 @@ Invoke Steven from any Claude Code session with `/steven`:
 /steven remember that we decided to use PostgreSQL for the new service
 /steven what do we know about the auth redesign?
 /steven write a session digest for today
-/steven what am I working on right now?
+/steven what's on my plate?
 /steven refresh current sprint tickets from Jira
 ```
 
-The skill routes your intent to the appropriate workflow (remember, search, daily notes, dashboard, or ingest) and reads the vault for context before responding.
+The skill routes your intent to the appropriate workflow (remember, search, daily notes, or ingest) and reads the vault for context before responding.
 
 Skill definition: `claude/skills/steven/SKILL.md`
 
