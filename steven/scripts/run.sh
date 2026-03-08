@@ -13,19 +13,15 @@ LOG_FILE="$LOG_DIR/$TIMESTAMP.log"
 mkdir -p "$LOG_DIR"
 
 # Ensure claude is on PATH (cron has minimal environment)
-export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 echo "Time: $(date)" >>"$LOG_FILE"
 echo "Prompt: $PROMPT" >>"$LOG_FILE"
 echo "---" >>"$LOG_FILE"
 
-cd ~/steven-vault && claude -p "$PROMPT" \
-	--permission-mode acceptEdits \
-	--output-mode json \
-	--verbose \
-	>>"$LOG_FILE" 2>&1
+cd ~/steven-vault && claude -p "$PROMPT" --permission-mode acceptEdits 2>&1 | tee -a "$LOG_FILE"
 
-EXIT_CODE=$?
+EXIT_CODE=${PIPESTATUS[0]}
 
 echo "---" >>"$LOG_FILE"
 echo "Exit code: $EXIT_CODE" >>"$LOG_FILE"
