@@ -93,6 +93,7 @@
       "Skill(completing-work)",
       "Skill(creating-skills)",
       "Skill(executing-plans)",
+      "Skill(managing-launchd)",
       "Skill(reviewing-prs)",
       "Skill(searching-datadog-logs)",
       "Skill(test-driven-development)",
