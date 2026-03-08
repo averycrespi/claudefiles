@@ -41,15 +41,15 @@ The skill routes your intent to the appropriate workflow (remember, search, dail
 
 Skill definition: `claude/skills/steven/SKILL.md`
 
-## Cron Ingestion
+## Scheduled Ingestion
 
-Steven can run headlessly via cron to pull external data (Jira tickets, Confluence pages) into the vault on a schedule.
+Steven can run headlessly via launchd to pull external data (Jira tickets, Confluence pages) into the vault on a schedule. Using launchd instead of cron ensures missed jobs (e.g., laptop was asleep) run once on wake.
 
 ### How It Works
 
-The wrapper script `steven/scripts/run.sh` handles the cron environment:
+The wrapper script `steven/scripts/run.sh` handles the headless environment:
 
-1. Sets up `PATH` so cron can find the `claude` CLI
+1. Sets up `PATH` so launchd can find the `claude` CLI
 2. Logs all output to `~/steven-vault/logs/<name>/` with a timestamped filename
 3. Propagates the exit code
 
@@ -61,20 +61,75 @@ Usage:
 
 The `name` argument organizes logs into subdirectories (e.g., `jira-refresh`, `confluence-sync`).
 
-### Example Cron Entries
+### Example Launch Agents
 
-```crontab
-# Refresh Jira tickets every 2 hours during work hours
-0 */2 * * 1-5  /path/to/steven/scripts/run.sh jira-refresh "/steven refresh current sprint tickets from Jira"
+Save plist files to `~/Library/LaunchAgents/`, then bootstrap with `launchctl bootstrap gui/$(id -u) <plist-path>`.
 
-# Check Confluence daily at 8am
-0 8 * * 1-5    /path/to/steven/scripts/run.sh confluence-sync "/steven check Confluence for pages updated in the last 24 hours"
+**Refresh Jira tickets daily at 9am:**
 
-# Clean up old logs weekly on Sunday
-0 0 * * 0      /path/to/steven/scripts/log-rotate.sh
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.steven-jira-refresh</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/steven/scripts/run.sh</string>
+        <string>jira-refresh</string>
+        <string>/steven refresh current sprint tickets from Jira</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/steven-jira-refresh-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/steven-jira-refresh-stderr.log</string>
+</dict>
+</plist>
+```
+
+**Check Confluence daily at 9am:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.steven-confluence-sync</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/steven/scripts/run.sh</string>
+        <string>confluence-sync</string>
+        <string>/steven check Confluence for pages updated in the last 24 hours</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/steven-confluence-sync-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/steven-confluence-sync-stderr.log</string>
+</dict>
+</plist>
 ```
 
 Replace `/path/to/` with the absolute path to this repository.
+
+Use `/managing-launchd-agents` to create, list, edit, and manage these agents.
 
 ### Logs
 
@@ -82,7 +137,7 @@ Ingestion logs are written to `~/steven-vault/logs/<name>/` with the format `YYY
 
 ### Log Rotation
 
-The `steven/scripts/log-rotate.sh` script deletes logs older than 14 days. Schedule it via cron (see example above) or run manually.
+The `steven/scripts/log-rotate.sh` script deletes logs older than 14 days. Schedule it as a launch agent or run manually.
 
 ## Architecture
 
