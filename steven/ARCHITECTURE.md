@@ -10,13 +10,13 @@ Steven is a single Claude Code skill backed by four components:
 │  Vault   │  QMD     │  Ingestion    │  System Files │
 │  ~/      │  Search  │  Layer        │  identity.md  │
 │  steven- │  Layer   │  (cron +      │  rules.md     │
-│  vault/  │          │  claude -p)   │  dashboard.md │
+│  vault/  │          │  claude -p)   │               │
 └──────────┴──────────┴───────────────┴───────────────┘
 ```
 
 ## Components
 
-**The `/steven` skill** — Single entry point for all interactions. Handles intent routing via natural language — determines whether the user wants to save, recall, search, write daily notes, check the dashboard, or trigger ingestion. Defined at `claude/skills/steven/SKILL.md` with five reference files for detailed workflows.
+**The `/steven` skill** — Single entry point for all interactions. Handles intent routing via natural language — determines whether the user wants to save, recall, search, write daily notes, or trigger ingestion. Defined at `claude/skills/steven/SKILL.md` with four reference files for detailed workflows.
 
 **Obsidian vault** — Durable, human-readable storage at `~/steven-vault/`. Every piece of knowledge is a markdown file with YAML frontmatter tags. Organized for search (via QMD), not for browsing — the folder structure is intentionally minimal.
 
@@ -24,7 +24,7 @@ Steven is a single Claude Code skill backed by four components:
 
 **Ingestion layer** — Cron jobs that run `claude -p` headlessly to pull data from external sources. The same `/steven` skill handles both interactive and scheduled use, so summarization, tagging, and deduplication logic stays consistent. See the [README](./README.md#cron-ingestion) for operational details.
 
-**System files** — Steven's self-knowledge: `identity.md` (name, operating style), `rules.md` (behavioral guardrails, memory hygiene), and `dashboard.md` (active projects, priorities, to-dos). Read on every invocation for orientation.
+**System files** — Steven's self-knowledge: `identity.md` (name, operating style) and `rules.md` (behavioral guardrails, memory hygiene). Read on every invocation for orientation. Active items and priorities live in daily notes.
 
 ## Key Design Decisions
 
