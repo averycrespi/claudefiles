@@ -115,7 +115,7 @@ scripts/                 # Worktree and utility scripts
 steven/                  # Steven — persistent work assistant
 ├── README.md           # Setup, usage, and cron configuration
 └── scripts/            # Automation scripts
-    ├── ingest.sh       # Wrapper for headless cron ingestion
+    ├── run.sh          # Wrapper for headless cron execution
     └── log-rotate.sh   # Clean up old ingestion logs
 ```
 

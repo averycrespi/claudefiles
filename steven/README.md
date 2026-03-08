@@ -47,26 +47,28 @@ Steven can run headlessly via cron to pull external data (Jira tickets, Confluen
 
 ### How It Works
 
-The wrapper script `steven/scripts/ingest.sh` handles the cron environment:
+The wrapper script `steven/scripts/run.sh` handles the cron environment:
 
 1. Sets up `PATH` so cron can find the `claude` CLI
-2. Logs all output to `~/steven-vault/logs/` with a timestamped filename
+2. Logs all output to `~/steven-vault/logs/<name>/` with a timestamped filename
 3. Propagates the exit code
 
 Usage:
 
 ```bash
-./steven/scripts/ingest.sh "/steven refresh current sprint tickets from Jira"
+./steven/scripts/run.sh <name> "<prompt>"
 ```
+
+The `name` argument organizes logs into subdirectories (e.g., `jira-refresh`, `confluence-sync`).
 
 ### Example Cron Entries
 
 ```crontab
 # Refresh Jira tickets every 2 hours during work hours
-0 */2 * * 1-5  /path/to/steven/scripts/ingest.sh "/steven refresh current sprint tickets from Jira"
+0 */2 * * 1-5  /path/to/steven/scripts/run.sh jira-refresh "/steven refresh current sprint tickets from Jira"
 
 # Check Confluence daily at 8am
-0 8 * * 1-5    /path/to/steven/scripts/ingest.sh "/steven check Confluence for pages updated in the last 24 hours"
+0 8 * * 1-5    /path/to/steven/scripts/run.sh confluence-sync "/steven check Confluence for pages updated in the last 24 hours"
 
 # Clean up old logs weekly on Sunday
 0 0 * * 0      /path/to/steven/scripts/log-rotate.sh
@@ -76,7 +78,7 @@ Replace `/path/to/` with the absolute path to this repository.
 
 ### Logs
 
-Ingestion logs are written to `~/steven-vault/logs/` with the format `YYYY-MM-DD_HH-MM-SS.log`. Each log includes the prompt, full Claude output, and exit code.
+Ingestion logs are written to `~/steven-vault/logs/<name>/` with the format `YYYY-MM-DD_HH-MM-SS.log`. Each log includes the prompt, full Claude output, and exit code.
 
 ### Log Rotation
 
