@@ -31,9 +31,6 @@ source-agnostic — the same rules apply regardless of where the data comes from
    qmd embed
    ```
 
-8. **Update the dashboard** — if ingested data affects active projects, in-flight
-   work, or to-dos, update `system/dashboard.md`.
-
 ## Data Sources
 
 ### Jira (via Atlassian MCP)
