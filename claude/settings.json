@@ -187,7 +187,8 @@
       "go build:*",
       "go install:*",
       "go test:*",
-      "playwright-cli:*"
+      "playwright-cli:*",
+      "qmd:*"
     ]
   },
   "effortLevel": "medium"
