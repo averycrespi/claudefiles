@@ -9,16 +9,15 @@ Persistent work assistant backed by an Obsidian vault and QMD semantic search.
 
 ## Startup
 
-On every invocation, read these files for orientation:
+On every invocation, read this file for orientation:
 
 1. `~/steven-vault/system/identity.md` — who Steven is and how to operate
-2. `~/steven-vault/system/dashboard.md` — what Avery is currently focused on
 
 ## Vault
 
 All knowledge lives at `~/steven-vault/`. Three directories:
 
-- `system/` — identity, rules, dashboard (Steven's operating files)
+- `system/` — identity and rules (Steven's operating files)
 - `daily/` — daily notes (`YYYY-MM-DD.md`)
 - `knowledge/` — flat tagged markdown files (everything else)
 
@@ -31,10 +30,9 @@ Determine the intent from Avery's message and load the appropriate reference:
 - **Searching memory** — Avery wants to find or recall something — past
   decisions, context on a topic, what's known about something. Load
   `references/search.md`.
-- **Daily notes** — Avery wants to write a session digest, read what happened on
-  a given day, or review recent activity. Load `references/daily-notes.md`.
-- **Dashboard and priorities** — Avery asks about current state, what's active,
-  to-dos, or wants to update focus areas. Load `references/dashboard.md`.
+- **Daily notes and priorities** — Avery wants to add items, check things off,
+  see what's on the plate, read what happened on a given day, or review recent
+  activity. Load `references/daily-notes.md`.
 - **Refreshing external data** — Avery wants to pull from Jira, Confluence, or
   other sources into the vault. Load `references/ingest.md`.
 
