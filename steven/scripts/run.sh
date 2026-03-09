@@ -15,6 +15,11 @@ mkdir -p "$LOG_DIR"
 # Ensure claude is on PATH (cron has minimal environment)
 export PATH="$HOME/.local/bin:$PATH"
 
+# Random sleep to stagger scheduled runs (disable with STEVEN_NO_SLEEP=1)
+if [[ -z "${STEVEN_NO_SLEEP:-}" ]]; then
+  sleep $((RANDOM % 91))
+fi
+
 echo "Time: $(date)" >>"$LOG_FILE"
 echo "Prompt: $PROMPT" >>"$LOG_FILE"
 echo "---" >>"$LOG_FILE"
