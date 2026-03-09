@@ -40,13 +40,10 @@ The setup script will install dependencies, symlink configuration files to `~/.c
 
 ## Attribution
 
-The workflow skills are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.
-
-The `creating-skills` skill is adapted from [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skill-creator), licensed under Apache 2.0.
-
-The `automating-browsers` skill is derived from [playwright-cli](https://github.com/microsoft/playwright-cli) by Microsoft, licensed under Apache 2.0.
-
-The status line script is adapted from [claude-code-tools](https://github.com/pchalasani/claude-code-tools) by Prasad Chalasani, licensed under MIT.
+- Workflow skills adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent (MIT)
+- `creating-skills` adapted from [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skill-creator) (Apache 2.0)
+- `automating-browsers` derived from [playwright-cli](https://github.com/microsoft/playwright-cli) by Microsoft (Apache 2.0)
+- Status line script adapted from [claude-code-tools](https://github.com/pchalasani/claude-code-tools) by Prasad Chalasani (MIT)
 
 ## License
 
