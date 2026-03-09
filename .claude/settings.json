@@ -1,8 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(./tests/test_cwm.py:*)"
-    ],
+    "allow": [],
     "deny": [
       "Write(~/.claude/**)",
       "Edit(~/.claude/**)"
