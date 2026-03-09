@@ -4,10 +4,10 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 
 ## Features
 
-- [Structured Development Workflow](#structured-development-workflow) - Reliably turn ideas into pull requests
-- [Claude Code Orchestrator](#claude-code-orchestrator) - Develop in parallel using Git worktrees and tmux
-- [Integrations](#integrations) - Connect to external resources for seamless context
-- [Steven](#steven-personal-work-assistant) - Persistent work assistant with long-term memory
+- **[Structured Development Workflow](docs/workflow.md)** — Reliably turn ideas into pull requests
+- **[Claude Code Orchestrator](cco/README.md)** — Develop in parallel using Git worktrees and tmux
+- **[Integrations](docs/integrations.md)** — Connect to Jira, Confluence, Datadog, and browsers
+- **[Steven](steven/README.md)** — Persistent work assistant with long-term memory
 
 ## Requirements
 
@@ -27,160 +27,20 @@ cd claudefiles
 
 The setup script will install dependencies, symlink configuration files to `~/.claude/`, and install `cco`.
 
----
+## Documentation
 
-## Structured Development Workflow
-
-A workflow for reliably turning ideas into pull requests, adapted from [superpowers](https://github.com/obra/superpowers).
-
-### Overview
-
-```mermaid
-flowchart TD
-    subgraph Architecting["Skill(architecting)"]
-        A1[Survey existing system] --> A2[Ask clarifying questions]
-        A2 --> A3[Explore system shapes]
-        A3 --> A4[Write architecture document]
-    end
-
-    subgraph Brainstorming["Skill(brainstorming)"]
-        B1[Ask clarifying questions] --> B2[Explore 2-3 approaches]
-        B2 --> B3[Present design for validation]
-        B3 --> B4[Write design document]
-    end
-
-    subgraph Planning["Skill(writing-plans)"]
-        P1[Break work into tasks] --> P2[Specify detailed instructions for each task]
-        P2 --> P3[Write implementation plan]
-    end
-
-    subgraph Executing["Skill(executing-plans)"]
-        E1[Pick next task] --> E2[Implement with TDD]
-        E2 --> E3[Commit changes]
-        E3 --> E4[Spec + code review]
-        E4 -->|fail| E2
-        E4 -->|pass| E5{More tasks?}
-        E5 -->|yes| E1
-        E5 -->|no| E6[Done]
-    end
-
-    subgraph Completing["Skill(completing-work)"]
-        C1[Verify tests pass] --> C2[Reflect on learnings]
-        C2 --> C3[Create draft PR]
-    end
-
-    Architecting --> Brainstorming --> Planning --> Executing --> Completing
-```
-
-### How to Use This Workflow
-
-Ask Claude to architect or brainstorm your idea:
-
-```
-> You: Architect how we should restructure the notification system.
-> Claude: Using Skill(architecting) ...
-
-> You: Brainstorm how we can implement ticket ABC-123.
-> Claude: Using Skill(brainstorming) ...
-```
-
-Answer Claude's questions as you proceed through the workflow.
-
-### When to Use This Workflow
-
-**Use the structured workflow** when:
-- Building a significant feature that spans multiple files
-- You want independent code reviews after each task
-- The implementation would benefit from upfront design discussion
-- You want a written plan you can review before execution
-
-**Use Claude Code's built-in planning mode** when:
-- Making smaller, well-defined changes
-- The scope is clear and doesn't need exploration
-- You want faster iteration with less ceremony
-
----
-
-## Claude Code Orchestrator
-
-`cco` lets you run multiple Claude Code sessions in parallel, each on its own branch. It uses Git worktrees and tmux to keep sessions isolated from each other and from your main working tree.
-
-```sh
-cco add feature-branch       # create workspace, launch Claude Code
-cco attach feature-branch    # switch to it later
-cco rm feature-branch        # clean up when done (keeps the branch)
-```
-
-`cco` also supports advanced features for executing plans inside an isolated sandbox VM.
-
-See the [cco README](./cco/README.md) for full documentation.
-
----
-
-## Integrations
-
-### Atlassian (Jira + Confluence)
-
-Read and write access to Jira issues, Confluence pages, and Compass via the official Atlassian MCP server.
-
-**Setup:**
-
-1. Start Claude Code in any project
-2. Run `/mcp` and select "Authenticate" for Atlassian
-3. Complete OAuth flow in browser
-4. Done - Jira and Confluence tools now available
-
-**Capabilities:**
-- **Jira:** Search, create, and update issues
-- **Confluence:** Search, create, and update pages
-- **Compass:** Query and create service components
-
-**Requirements:**
-- Atlassian Cloud account (Server/Data Center not supported)
-- Internet connection for remote MCP server
-
-### Browser Automation (automating-browsers)
-
-Automate browser interactions for web testing, form filling, screenshots, and data extraction using [playwright-cli](https://github.com/microsoft/playwright-cli).
-
-**Setup:** Installed automatically by `setup.sh` via `npm install -g @playwright/cli@latest`.
-
-**Capabilities:**
-- Navigate websites and interact with page elements
-- Fill forms, click buttons, take screenshots
-- Manage browser sessions, tabs, cookies, and storage
-- Network request mocking and DevTools integration
-
-**Usage:** Ask Claude to browse a website or interact with a web page, and it will use the `automating-browsers` skill automatically.
-
-### Datadog Logs
-
-Search Datadog logs directly from Claude using the `searching-datadog-logs` skill.
-
-**Setup:**
-
-Store your Datadog API credentials in macOS Keychain:
-
-```bash
-security add-generic-password -s searching-datadog-logs -a api-key -w <YOUR_DD_API_KEY>
-security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_APP_KEY>
-```
-
-**Capabilities:**
-- Search logs by query, service, status, time range
-- Fetch full log details by ID
-- Error-driven investigation from stack traces
-- Exploratory search with query refinement
-
-### Steven (Personal Work Assistant)
-
-A persistent work assistant accessible from any Claude Code session via `/asking-steven`. Steven maintains long-term memory across sessions using an Obsidian vault and [QMD](https://github.com/tobi/qmd) semantic search — saving decisions, surfacing context, and pulling data from Jira and Confluence on a schedule.
-
-See the [Steven README](./steven/README.md) for setup, usage, and architecture details.
+| Doc | Purpose |
+|-----|---------|
+| [Workflow](docs/workflow.md) | How the structured development workflow works |
+| [Skills Catalog](docs/skills.md) | All available skills and agents |
+| [Integrations](docs/integrations.md) | Setup guides for external services |
+| [Claude Code Config](docs/claude-code-config.md) | How the `~/.claude/` symlinks work |
+| [Design Decisions](docs/design-decisions.md) | Why things are built this way |
+| [Future](docs/future.md) | Planned improvements and explorations |
 
 ## Attribution
 
-The workflow skills in this repository are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.
+The workflow skills are adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent, licensed under MIT.
 
 The `creating-skills` skill is adapted from [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skill-creator), licensed under Apache 2.0.
 
