@@ -188,6 +188,7 @@
       "go build:*",
       "go install:*",
       "go test:*",
+      "launchctl:*",
       "playwright-cli:*",
       "qmd:*"
     ]
