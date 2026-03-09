@@ -17,7 +17,7 @@ This is a public repository. When creating or modifying content:
 ./setup.sh
 ```
 
-See the README for detailed setup instructions.
+See the [README](README.md) for requirements and quick start.
 
 ## Development Workflow
 
@@ -27,67 +27,7 @@ This repository includes a structured development workflow:
 /architecting → /brainstorming → /writing-plans → /executing-plans → /completing-work
 ```
 
-1. **Architecting** - Describe the shape of a system: components, responsibilities, boundaries
-2. **Brainstorming** - Design a specific feature through collaborative dialogue
-3. **Writing Plans** - Create detailed implementation plans with bite-sized tasks
-4. **Executing Plans** - Implement tasks inline with subagent spec and code quality reviews
-5. **Completing Work** - Verify tests pass and create PR or keep branch
-
-### When to Use This Workflow
-
-**Use the structured workflow** when:
-- Building a significant feature that spans multiple files
-- You want independent code reviews after each task
-- The implementation would benefit from upfront design discussion
-
-**Use Claude Code's built-in planning mode** when:
-- Making smaller, well-defined changes
-- The scope is clear and doesn't need exploration
-- You want faster iteration with less ceremony
-
-## Skills
-
-### Workflow Skills
-
-| Skill                        | Purpose                                                                  |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| `architecting`               | Describe the shape of a system: components, responsibilities, boundaries |
-| `brainstorming`              | Turn ideas into designs through collaborative dialogue                   |
-| `writing-plans`              | Create detailed implementation plans with TDD steps                      |
-| `executing-plans`            | Execute plans with subagent implementation + reviews                     |
-| `executing-plans-quickly`    | Execute plans inline without subagents for simple tasks                  |
-| `executing-plans-in-sandbox` | Execute plans autonomously in a sandbox VM                               |
-| `completing-work`            | Verify tests, present options, create or update PR                       |
-| `reviewing-prs`              | Holistic PR review across 6 parallel dimensions                          |
-
-### Integrations
-
-| Integration              | Purpose                                            |
-| ------------------------ | -------------------------------------------------- |
-| Atlassian MCP            | Read/write access to Jira, Confluence, and Compass |
-| `automating-browsers`    | Browser automation for testing and data extraction |
-| `managing-launchd-agents` | Manage macOS launchd user agents                  |
-| `searching-datadog-logs` | Search Datadog logs via the API                    |
-| `creating-jira-tickets`  | Draft and create well-structured Jira tickets      |
-| `asking-steven`          | Persistent work assistant with long-term memory    |
-
-### Reference Skills
-
-| Skill                     | Purpose                                  |
-| ------------------------- | ---------------------------------------- |
-| `test-driven-development` | TDD discipline: red-green-refactor cycle |
-
-### Meta Skills
-
-| Skill             | Purpose                       |
-| ----------------- | ----------------------------- |
-| `creating-skills` | Guide for creating new skills |
-
-## Agents
-
-| Agent           | Purpose                                         |
-| --------------- | ----------------------------------------------- |
-| `code-reviewer` | Review code changes against plans and standards |
+See [docs/workflow.md](docs/workflow.md) for details. See [docs/skills.md](docs/skills.md) for the full skills and agents catalog.
 
 ## Testing
 
@@ -99,27 +39,6 @@ cd cco && go test ./... -count=1
 
 **Note:** tmux integration tests require sandbox to be disabled (`dangerouslyDisableSandbox`) due to Unix socket access at `/private/tmp/tmux-*/`. On macOS, use `filepath.EvalSymlinks` on temp dirs in Go tests to handle the `/var` → `/private/var` symlink.
 
-## Repository Structure
-
-```
-claude/                  # Symlinked to ~/.claude/ via stow
-├── CLAUDE.md           # Global instructions for all projects
-├── settings.json       # Permissions and hooks
-├── agents/             # Custom agent definitions
-├── commands/           # Slash command definitions
-├── hooks/              # PreToolUse hooks (e.g., gitleaks)
-├── scripts/            # Status line and other scripts
-└── skills/             # Custom skill definitions
-cco/                     # cco - Claude Code orchestrator (Go)
-├── docs/               # Detailed documentation
-scripts/                 # Worktree and utility scripts
-steven/                  # Steven — persistent work assistant
-├── README.md           # Setup, usage, and cron configuration
-└── scripts/            # Automation scripts
-    ├── run.sh          # Wrapper for headless cron execution
-    └── log-rotate.sh   # Clean up old ingestion logs
-```
-
 ## Modifying This Repository
 
 - Edit files in `claude/` directory
@@ -128,3 +47,5 @@ steven/                  # Steven — persistent work assistant
 **IMPORTANT:** Never edit files directly in `~/.claude/`. Those are symlinks managed by stow. Always edit the source files in this repository's `claude/` directory. For example:
 - Edit `./claude/skills/foo.md`, NOT `~/.claude/skills/foo.md`
 - Edit `./claude/settings.json`, NOT `~/.claude/settings.json`
+
+See [docs/claude-code-config.md](docs/claude-code-config.md) for full details on the configuration structure.
