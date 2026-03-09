@@ -1,5 +1,5 @@
 ---
-name: steven
+name: asking-steven
 description: Use when Avery wants to interact with Steven, the persistent work assistant — saving knowledge, searching memory, writing daily notes, checking priorities, or refreshing external data
 ---
 

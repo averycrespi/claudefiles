@@ -69,7 +69,7 @@ This repository includes a structured development workflow:
 | `managing-launchd-agents` | Manage macOS launchd user agents                  |
 | `searching-datadog-logs` | Search Datadog logs via the API                    |
 | `creating-jira-tickets`  | Draft and create well-structured Jira tickets      |
-| `steven`                 | Persistent work assistant with long-term memory    |
+| `asking-steven`          | Persistent work assistant with long-term memory    |
 
 ### Reference Skills
 

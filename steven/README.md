@@ -25,21 +25,21 @@ date: YYYY-MM-DD
 ---
 ```
 
-## The `/steven` Skill
+## The `/asking-steven` Skill
 
-Invoke Steven from any Claude Code session with `/steven`:
+Invoke Steven from any Claude Code session with `/asking-steven`:
 
 ```
-/steven remember that we decided to use PostgreSQL for the new service
-/steven what do we know about the auth redesign?
-/steven write a session digest for today
-/steven what's on my plate?
-/steven refresh current sprint tickets from Jira
+/asking-steven remember that we decided to use PostgreSQL for the new service
+/asking-steven what do we know about the auth redesign?
+/asking-steven write a session digest for today
+/asking-steven what's on my plate?
+/asking-steven refresh current sprint tickets from Jira
 ```
 
 The skill routes your intent to the appropriate workflow (remember, search, daily notes, or ingest) and reads the vault for context before responding.
 
-Skill definition: `claude/skills/steven/SKILL.md`
+Skill definition: `claude/skills/asking-steven/SKILL.md`
 
 ## Scheduled Ingestion
 
@@ -79,7 +79,7 @@ Save plist files to `~/Library/LaunchAgents/`, then bootstrap with `launchctl bo
     <array>
         <string>/path/to/steven/scripts/run.sh</string>
         <string>jira-refresh</string>
-        <string>/steven refresh current sprint tickets from Jira</string>
+        <string>/asking-steven refresh current sprint tickets from Jira</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -110,7 +110,7 @@ Save plist files to `~/Library/LaunchAgents/`, then bootstrap with `launchctl bo
     <array>
         <string>/path/to/steven/scripts/run.sh</string>
         <string>confluence-sync</string>
-        <string>/steven check Confluence for pages updated in the last 24 hours</string>
+        <string>/asking-steven check Confluence for pages updated in the last 24 hours</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
