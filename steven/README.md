@@ -135,10 +135,6 @@ Use `/managing-launchd-agents` to create, list, edit, and manage these agents.
 
 Ingestion logs are written to `~/steven-vault/logs/<name>/` with the format `YYYY-MM-DD_HH-MM-SS.log`. Each log includes the prompt, full Claude output, and exit code.
 
-### Log Rotation
-
-The `steven/scripts/log-rotate.sh` script deletes logs older than 14 days. Schedule it as a launch agent or run manually.
-
 ## Architecture
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for system components, design decisions, and constraints.
