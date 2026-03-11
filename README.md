@@ -7,14 +7,13 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 - **[Structured Development Workflow](docs/workflow.md)** — Reliably turn ideas into pull requests
 - **[Claude Code Orchestrator](cco/README.md)** — Develop in parallel using Git worktrees and tmux
 - **[Integrations](docs/integrations.md)** — Connect to Jira, Confluence, Datadog, and browsers
-- **[Steven](steven/README.md)** — Persistent work assistant with long-term memory
 
 ## Requirements
 
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
 - [Go](https://go.dev/) 1.23 for building `cco`
-- [Node.js](https://nodejs.org/) 18+ for `automating-browsers` and `steven`
+- [Node.js](https://nodejs.org/) 18+ for `automating-browsers`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
