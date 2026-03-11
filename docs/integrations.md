@@ -66,9 +66,3 @@ security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_A
 - Fetch full log details by ID
 - Error-driven investigation from stack traces
 - Exploratory search with query refinement
-
-## Steven (Personal Work Assistant)
-
-A persistent work assistant accessible from any Claude Code session via `/asking-steven`. Steven maintains long-term memory across sessions using an Obsidian vault and [QMD](https://github.com/tobi/qmd) semantic search — saving decisions, surfacing context, and pulling data from Jira and Confluence on a schedule.
-
-See the [Steven README](../steven/README.md) for setup, usage, and architecture details.
