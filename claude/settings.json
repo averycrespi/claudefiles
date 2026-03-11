@@ -4,10 +4,8 @@
       "WebFetch",
       "WebSearch",
       "Read(~/.claude/skills/**)",
-      "Read(~/steven-vault/**)",
       "Write(/private/tmp/**)",
       "Write(/tmp/**)",
-      "Write(~/steven-vault/**)",
       "Bash(cd:*)",
       "Bash(cut:*)",
       "Bash(diff:*)",
@@ -89,9 +87,7 @@
       "Bash(playwright-cli:*)",
       "Bash(terraform fmt:*)",
       "Bash(terraform validate:*)",
-      "Bash(qmd:*)",
       "Bash(~/.claude/skills/searching-datadog-logs/scripts/search_logs:*)",
-      "Skill(asking-steven)",
       "Skill(automating-browsers)",
       "Skill(brainstorming)",
       "Skill(completing-work)",
@@ -192,8 +188,7 @@
       "go install:*",
       "go test:*",
       "launchctl:*",
-      "playwright-cli:*",
-      "qmd:*"
+      "playwright-cli:*"
     ]
   },
   "effortLevel": "medium"
