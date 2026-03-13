@@ -113,28 +113,6 @@ MSG
 	exit 2
 fi
 
-# Output redirection to files (but allow 2>&1, >/dev/null, etc)
-if echo "$COMMAND" | grep -qE '>[^>&/]|>\s+[^/&]'; then
-	# Check if ALL redirections are safe (to /dev/null, /dev/stderr, or fd redirects)
-	UNSAFE_REDIRECTS=$(echo "$COMMAND" | grep -oE '>[^|]*' | grep -vE '>/dev/|>&|>>[[:space:]]*/dev/' || true)
-	if [ -n "$UNSAFE_REDIRECTS" ]; then
-		cat >&2 <<'MSG'
-BLOCKED: Command contains output redirection (>) which triggers a
-non-suppressible safety prompt in Claude Code.
-
-Instead of:
-  command > output.txt
-
-Do this:
-  Run the command without redirection, then use the Write tool to save output.
-
-Safe redirections that won't trigger this (2>&1, >/dev/null) should work,
-but if they're combined with other patterns they may still be flagged.
-MSG
-		exit 2
-	fi
-fi
-
 # Quoted strings that look like flag names ("--something" or "-x")
 # This catches: echo "---", --flag "value" where the quoted value starts with -
 if echo "$COMMAND" | grep -qE '"--?[a-zA-Z-]*"'; then
