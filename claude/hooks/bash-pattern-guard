@@ -2,9 +2,6 @@
 # bash-pattern-guard: Rejects Bash commands containing patterns that trigger
 # Claude Code's built-in safety heuristics, which cannot be suppressed via
 # allow rules and require manual user intervention.
-#
-# Uses exit 0 + JSON permissionDecision:"deny" to block (same as pre-commit-gitleaks).
-# Uses exit 1 when no pattern detected (fall through to normal permission checking).
 
 set -uo pipefail
 
@@ -12,7 +9,7 @@ INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
 if [ -z "$COMMAND" ]; then
-	exit 1
+	exit 0
 fi
 
 deny() {
@@ -134,4 +131,4 @@ REASON_EOF
 fi
 
 # No patterns detected — fall through to normal permission checking
-exit 1
+exit 0
