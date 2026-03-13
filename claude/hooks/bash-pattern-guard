@@ -3,8 +3,8 @@
 # Claude Code's built-in safety heuristics, which cannot be suppressed via
 # allow rules and require manual user intervention.
 #
-# Exit 2 + stderr = block the command and tell Claude why
-# Exit 1 = no pattern detected, fall through to normal permission checking
+# Uses exit 0 + JSON permissionDecision:"deny" to block (same as pre-commit-gitleaks).
+# Uses exit 1 when no pattern detected (fall through to normal permission checking).
 
 set -uo pipefail
 
@@ -15,14 +15,24 @@ if [ -z "$COMMAND" ]; then
 	exit 1
 fi
 
+deny() {
+	jq -n '{
+		hookSpecificOutput: {
+			hookEventName: "PreToolUse",
+			permissionDecision: "deny",
+			permissionDecisionReason: $reason
+		}
+	}' --arg reason "$1"
+	exit 0
+}
+
 # --- Pattern checks ---
-# Each check prints guidance to stderr and exits 2 if triggered.
+# Each check calls deny() with guidance for Claude.
 
 # $() command substitution
 if echo "$COMMAND" | grep -qF '$('; then
-	cat >&2 <<'MSG'
-BLOCKED: Command contains $() command substitution, which triggers a
-non-suppressible safety prompt in Claude Code.
+	read -r -d '' REASON <<'REASON_EOF'
+Command contains $() command substitution, which triggers a non-suppressible safety prompt in Claude Code.
 
 Instead of using $() for multi-line content, write to a temp file first:
 
@@ -37,17 +47,16 @@ For gh pr create / gh issue create:
 
 For any command needing inline output:
   Run the inner command separately and capture its output first.
-MSG
-	exit 2
+REASON_EOF
+	deny "$REASON"
 fi
 
 # Backtick command substitution
 # Allow backticks inside single-quoted strings (common in markdown/jq)
 OUTSIDE_SINGLE_QUOTES=$(echo "$COMMAND" | sed "s/'[^']*'//g")
 if echo "$OUTSIDE_SINGLE_QUOTES" | grep -q '`'; then
-	cat >&2 <<'MSG'
-BLOCKED: Command contains backticks (`) for command substitution, which
-triggers a non-suppressible safety prompt in Claude Code.
+	read -r -d '' REASON <<'REASON_EOF'
+Command contains backticks (`) for command substitution, which triggers a non-suppressible safety prompt in Claude Code.
 
 Instead of:
   echo `some_command`
@@ -56,50 +65,44 @@ Do this:
   some_command
 
 If you need the output in a variable, write a script file instead.
-MSG
-	exit 2
+REASON_EOF
+	deny "$REASON"
 fi
 
 # Newlines in command
 LINE_COUNT=$(echo "$COMMAND" | wc -l | tr -d ' ')
 if [ "$LINE_COUNT" -gt 1 ]; then
-	cat >&2 <<'MSG'
-BLOCKED: Command contains newlines, which triggers a non-suppressible
-safety prompt in Claude Code ("Command contains newlines that could
-separate multiple commands").
+	read -r -d '' REASON <<'REASON_EOF'
+Command contains newlines, which triggers a non-suppressible safety prompt in Claude Code ("Command contains newlines that could separate multiple commands").
 
 Instead of multi-line commands:
 - Chain with && on a single line
 - Write a script file with the Write tool, then run it with Bash
 - Use separate sequential Bash tool calls for each command
-MSG
-	exit 2
+REASON_EOF
+	deny "$REASON"
 fi
 
 # Heredoc delimiters (<<'EOF', <<"EOF", <<EOF)
-if echo "$COMMAND" | grep -qE '<<-?\s*'\''?[A-Za-z_]+'\''?'; then
-	cat >&2 <<'MSG'
-BLOCKED: Command contains a heredoc (<<EOF or <<'EOF'), which triggers
-non-suppressible safety prompts in Claude Code for both "consecutive
-quote characters at word start" and "newlines" patterns.
+if echo "$COMMAND" | grep -qE "<<-?\s*'?[A-Za-z_]+'?"; then
+	read -r -d '' REASON <<'REASON_EOF'
+Command contains a heredoc (<<EOF or <<'EOF'), which triggers non-suppressible safety prompts in Claude Code for both "consecutive quote characters at word start" and "newlines" patterns.
 
 Instead of heredocs:
 - Use the Write tool to create a file, then read/execute it
 - For git commits, use -m "subject" -m "body" flags
 - For gh commands, use --body-file with a file created via Write tool
-MSG
-	exit 2
+REASON_EOF
+	deny "$REASON"
 fi
 
 # ANSI-C quoting ($'...')
 # Also catches false positives like: grep '\.json$' (where $' spans tokens)
 if echo "$COMMAND" | grep -qE "\\\$'"; then
-	cat >&2 <<'MSG'
-BLOCKED: Command contains what looks like ANSI-C quoting ($'...'),
-which triggers a non-suppressible safety prompt in Claude Code.
+	read -r -d '' REASON <<'REASON_EOF'
+Command contains what looks like ANSI-C quoting ($'...'), which triggers a non-suppressible safety prompt in Claude Code.
 
-This also fires on false positives like: grep '\.json$' followed by
-another single quote.
+This also fires on false positives like: grep '\.json$' followed by another single quote.
 
 Instead of:
   echo $'\t'
@@ -109,17 +112,15 @@ Do this:
 
 If this is a regex ending in $, restructure the quoting:
   grep -E "\.json$"   (use double quotes instead)
-MSG
-	exit 2
+REASON_EOF
+	deny "$REASON"
 fi
 
 # Quoted strings that look like flag names ("--something" or "-x")
 # This catches: echo "---", --flag "value" where the quoted value starts with -
 if echo "$COMMAND" | grep -qE '"--?[a-zA-Z-]*"'; then
-	cat >&2 <<'MSG'
-BLOCKED: Command contains quoted characters that look like flag names
-(e.g., "---" or "--flag"), which triggers a non-suppressible safety
-prompt in Claude Code.
+	read -r -d '' REASON <<'REASON_EOF'
+Command contains quoted characters that look like flag names (e.g., "---" or "--flag"), which triggers a non-suppressible safety prompt in Claude Code.
 
 Instead of:
   echo "---"
@@ -128,8 +129,8 @@ Do this:
   printf '%s\n' '---'
 
 Or avoid quoting strings that start with dashes.
-MSG
-	exit 2
+REASON_EOF
+	deny "$REASON"
 fi
 
 # No patterns detected — fall through to normal permission checking
