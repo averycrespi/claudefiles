@@ -27,12 +27,18 @@ flowchart TD
         E5 -->|no| E6[Done]
     end
 
-    subgraph Completing["Skill(completing-work)"]
-        C1[Verify tests pass] --> C2[Reflect on learnings]
-        C2 --> C3[Create draft PR]
+    subgraph Verifying["Skill(verifying-work)"]
+        V1[Verify task completion] --> V2[Run automated checks]
+        V2 --> V3[Dispatch 5 parallel reviewers]
+        V3 --> V4[Synthesize & fix loop]
+        V4 --> V5[Present results]
     end
 
-    Brainstorming --> Planning --> Executing --> Completing
+    subgraph Completing["Skill(completing-work)"]
+        C1[Reflect on learnings] --> C2[Create draft PR]
+    end
+
+    Brainstorming --> Planning --> Executing --> Verifying --> Completing
 ```
 
 ## How to Use

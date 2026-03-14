@@ -9,7 +9,8 @@
 | `executing-plans` | Execute plans with subagent implementation + reviews |
 | `executing-plans-quickly` | Execute plans inline without subagents for simple tasks |
 | `executing-plans-in-sandbox` | Execute plans autonomously in a sandbox VM |
-| `completing-work` | Verify tests, present options, create or update PR |
+| `verifying-work` | Holistic review with parallel reviewers, auto-fix loop, and user escalation |
+| `completing-work` | Clean up plans, reflect on learnings, create or update PR |
 | `reviewing-prs` | Holistic PR review across 6 parallel dimensions |
 
 ## Integrations
