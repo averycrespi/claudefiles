@@ -137,10 +137,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/bash-pattern-guard"
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/pre-commit-gitleaks"
           }
         ]
