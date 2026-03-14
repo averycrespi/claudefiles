@@ -171,9 +171,9 @@ Instructions:
 
 ## Integration Changes
 
-### executing-plans
+### executing-plans (SKILL.md)
 
-Currently Step 3 says:
+Step 3 currently says:
 ```
 After all tasks complete:
 1. Run full test suite
@@ -188,13 +188,66 @@ After all tasks complete:
 
 The test suite run moves into verifying-work's Phase 1. executing-plans no longer references completing-work.
 
-### completing-work
+Integration section: change required skill from `completing-work` to `verifying-work`.
+
+### executing-plans-quickly (SKILL.md)
+
+Step 3 currently says:
+```
+After all tasks complete:
+1. Run full test suite
+2. Use Skill(completing-work)
+```
+
+Same change: replace with `Skill(verifying-work)`, drop test suite run.
+
+Integration section: change required skill from `completing-work` to `verifying-work`.
+
+### executing-plans-in-sandbox (SKILL.md)
+
+Step 3 currently says:
+```
+Use Skill(completing-work)
+```
+
+Change to: `Use Skill(verifying-work)`.
+
+### completing-work (SKILL.md)
 
 Two responsibilities move to verifying-work:
 - **Task completion check** (Step 0) — moves to verifying-work Phase 0
 - **Test verification** (Step 1) — moves to verifying-work Phase 1
 
-Completing-work simplifies to: clean up plan files → reflect on learnings → present PR options. Its step numbering updates accordingly.
+Remove Step 0 and Step 1. Renumber remaining steps:
+- Step 0: Clean up plan files (was Step 2)
+- Step 1: Reflect on learnings (was Step 3)
+- Step 2: Detect existing PR and present options (was Step 4)
+- Step 3: Execute choice (was Step 5)
+
+Update Integration section: add `verifying-work` to "Used by".
+
+### workflow.md
+
+Add a Verifying subgraph between Executing and Completing in the flowchart:
+
+```mermaid
+subgraph Verifying["Skill(verifying-work)"]
+    V1[Verify task completion] --> V2[Run automated checks]
+    V2 --> V3[Dispatch 5 parallel reviewers]
+    V3 --> V4[Synthesize & fix loop]
+    V4 --> V5[Present results]
+end
+```
+
+Update the flow: `Executing --> Verifying --> Completing`
+
+### docs/skills.md
+
+Add row to Workflow Skills table:
+
+```
+| `verifying-work` | Holistic review with parallel reviewers, auto-fix loop, and user escalation |
+```
 
 ## Edge Cases
 
