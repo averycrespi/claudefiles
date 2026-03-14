@@ -34,6 +34,18 @@ This keeps the "call next skill" instruction fresh in context rather than pushin
 
 ## Process
 
+### Phase 0: Verify Task Completion
+
+Before any checks, verify all tasks from the plan are complete:
+
+```
+TaskList
+```
+
+If any tasks remain `in_progress` or `pending`, warn the user and use `AskUserQuestion` to let them decide: continue anyway, or return to complete tasks.
+
+If all tasks are `completed` (or no tasks exist), proceed silently.
+
 ### Phase 1: Automated Checks
 
 Run hard gates before any AI review:
@@ -178,7 +190,11 @@ The test suite run moves into verifying-work's Phase 1. executing-plans no longe
 
 ### completing-work
 
-No changes needed. Its Step 1 still verifies tests as a final safety net — cheap and catches anything the fixer might have broken.
+Two responsibilities move to verifying-work:
+- **Task completion check** (Step 0) — moves to verifying-work Phase 0
+- **Test verification** (Step 1) — moves to verifying-work Phase 1
+
+Completing-work simplifies to: clean up plan files → reflect on learnings → present PR options. Its step numbering updates accordingly.
 
 ## Edge Cases
 
