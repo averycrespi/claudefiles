@@ -5,5 +5,10 @@
       "Write(~/.claude/**)",
       "Edit(~/.claude/**)"
     ]
+  },
+  "sandbox": {
+    "excludedCommands": [
+      "./setup.sh:*"
+    ]
   }
 }
