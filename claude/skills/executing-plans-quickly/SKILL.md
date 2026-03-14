@@ -253,7 +253,7 @@ After all tasks complete:
 ## Integration
 
 **Required skills:**
-- **test-driven-development** - Implementation discipline
+- **following-tdd** - Implementation discipline
 - **completing-work** - Complete development after all tasks
 
 **Used by:**

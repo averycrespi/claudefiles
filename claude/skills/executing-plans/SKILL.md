@@ -315,7 +315,7 @@ Implementation → Spec Review → Code Quality Review
 ## Integration
 
 **Required skills:**
-- **test-driven-development** - Implementation discipline
+- **following-tdd** - Implementation discipline
 - **completing-work** - Complete development after all tasks
 
 **Used by:**

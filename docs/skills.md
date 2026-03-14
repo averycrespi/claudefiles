@@ -26,7 +26,7 @@
 
 | Skill | Purpose |
 |---|---|
-| `test-driven-development` | TDD discipline: red-green-refactor cycle |
+| `following-tdd` | TDD discipline: red-green-refactor cycle |
 
 ## Meta Skills
 
