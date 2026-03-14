@@ -4,6 +4,7 @@
       "WebFetch",
       "WebSearch",
       "Read(~/.claude/skills/**)",
+      "Read(/private/tmp/**)",
       "Write(/private/tmp/**)",
       "Write(/tmp/**)",
       "Bash(cd:*)",
