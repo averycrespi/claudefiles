@@ -26,28 +26,6 @@ deny() {
 # --- Pattern checks ---
 # Each check calls deny() with guidance for Claude.
 
-# $() command substitution
-if echo "$COMMAND" | grep -qF '$('; then
-	read -r -d '' REASON <<'REASON_EOF'
-Command contains $() command substitution, which triggers a non-suppressible safety prompt in Claude Code.
-
-Instead of using $() for multi-line content, write to a temp file first:
-
-For git commits:
-  git commit -m "subject" -m "body paragraph"
-  Or: use the Write tool to create $TMPDIR/msg.txt, then:
-  git commit -F $TMPDIR/msg.txt
-
-For gh pr create / gh issue create:
-  Use the Write tool to create $TMPDIR/body.md, then:
-  gh pr create --title "title" --body-file $TMPDIR/body.md
-
-For any command needing inline output:
-  Run the inner command separately and capture its output first.
-REASON_EOF
-	deny "$REASON"
-fi
-
 # Backtick command substitution
 # Allow backticks inside single-quoted strings (common in markdown/jq)
 OUTSIDE_SINGLE_QUOTES=$(echo "$COMMAND" | sed "s/'[^']*'//g")
@@ -76,19 +54,6 @@ Instead of multi-line commands:
 - Chain with && on a single line
 - Write a script file with the Write tool, then run it with Bash
 - Use separate sequential Bash tool calls for each command
-REASON_EOF
-	deny "$REASON"
-fi
-
-# Heredoc delimiters (<<'EOF', <<"EOF", <<EOF)
-if echo "$COMMAND" | grep -qE "<<-?\s*'?[A-Za-z_]+'?"; then
-	read -r -d '' REASON <<'REASON_EOF'
-Command contains a heredoc (<<EOF or <<'EOF'), which triggers non-suppressible safety prompts in Claude Code for both "consecutive quote characters at word start" and "newlines" patterns.
-
-Instead of heredocs:
-- Use the Write tool to create a file, then read/execute it
-- For git commits, use -m "subject" -m "body" flags
-- For gh commands, use --body-file with a file created via Write tool
 REASON_EOF
 	deny "$REASON"
 fi
