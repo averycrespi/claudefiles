@@ -195,6 +195,5 @@
       "launchctl:*",
       "playwright-cli:*"
     ]
-  },
-  "effortLevel": "medium"
+  }
 }
