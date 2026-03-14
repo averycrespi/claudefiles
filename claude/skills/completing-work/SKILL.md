@@ -1,6 +1,6 @@
 ---
 name: completing-work
-description: Use when finishing the structured development workflow after executing a plan - verifies task completion, reflects on learnings, and presents PR options
+description: Use when finishing the structured development workflow after verifying work - cleans up plan files, reflects on learnings, and presents PR options
 ---
 
 # Completing Work
@@ -9,58 +9,13 @@ description: Use when finishing the structured development workflow after execut
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify task completion → Verify tests → Clean up plan files → Reflect on learnings → Present options → Execute choice.
+**Core principle:** Clean up plan files → Reflect on learnings → Present options → Execute choice.
 
 **Announce at start:** "I'm using the completing-work skill to complete this work."
 
 ## The Process
 
-### Step 0: Verify Task Completion
-
-**Before verifying tests, check that all tasks are complete:**
-
-```
-TaskList
-```
-
-**If any tasks remain `in_progress` or `pending`:**
-```
-Warning: [N] tasks not marked complete:
-- Task 2: [subject] (in_progress)
-- Task 5: [subject] (pending)
-
-Continue anyway, or return to complete tasks?
-```
-
-Use `AskUserQuestion` to let user decide.
-
-**If all tasks `completed`:** Proceed silently to Step 1.
-
-**If no tasks exist:** Proceed silently to Step 1 (plan may have been executed without native task tracking).
-
-### Step 1: Verify Tests
-
-**Before presenting options, verify tests pass:**
-
-```bash
-# Run project's test suite
-npm test / cargo test / pytest / go test ./...
-```
-
-**If tests fail:**
-```
-Tests failing (<N> failures). Must fix before completing:
-
-[Show failures]
-
-Cannot proceed with merge/PR until tests pass.
-```
-
-Stop. Don't proceed to Step 2.
-
-**If tests pass:** Continue to Step 2.
-
-### Step 2: Clean Up Plan Files
+### Step 0: Clean Up Plan Files
 
 **If a plan file path is known from conversation context** (e.g. `.plans/2026-02-20-cco-attach-plan.md`):
 
@@ -71,7 +26,7 @@ Stop. Don't proceed to Step 2.
 
 **If no plan file is found in context or `.plans/` doesn't exist:** Skip silently.
 
-### Step 3: Reflect on Learnings
+### Step 1: Reflect on Learnings
 
 **If you have project-specific learnings from this session, present them for user approval.**
 
@@ -123,11 +78,11 @@ options: [
 **After user selects:**
 - If user selects any options → Update project CLAUDE.md, placing learnings in proposed sections
 - Commit: `docs(CLAUDE.md): <summarize selected learnings>`
-- If user selects nothing → Skip, continue to Step 4
+- If user selects nothing → Skip, continue to Step 2
 
-**If no learnings to propose:** Skip silently, continue to Step 4.
+**If no learnings to propose:** Skip silently, continue to Step 2.
 
-### Step 4: Detect Existing PR and Present Options
+### Step 2: Detect Existing PR and Present Options
 
 **Before presenting options, check if a PR already exists for this branch:**
 
@@ -167,7 +122,7 @@ AskUserQuestion(
 )
 ```
 
-### Step 5: Execute Choice
+### Step 3: Execute Choice
 
 #### Option: Push and Create PR
 
@@ -197,10 +152,6 @@ Report: "Keeping branch <name>."
 
 ## Common Mistakes
 
-**Skipping test verification**
-- **Problem:** Merge broken code, create failing PR
-- **Fix:** Always verify tests before offering options
-
 **Open-ended questions**
 - **Problem:** "What should I do next?" → ambiguous
 - **Fix:** Present exactly 2 structured options
@@ -212,14 +163,10 @@ Report: "Keeping branch <name>."
 ## Red Flags
 
 **Never:**
-- Proceed with failing tests
-- Merge without verifying tests on result
 - Delete work without confirmation
 - Force-push without explicit request
 
 **Always:**
-- Verify task completion before verifying tests
-- Verify tests before offering options
-- Clean up plan files after tests pass
+- Clean up plan files before reflecting
 - Skip reflection silently if no learnings to propose
 - Present exactly 2 options (create PR, update PR, or keep branch — depending on whether a PR exists)
