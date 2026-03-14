@@ -84,3 +84,15 @@ test: add integration tests for checkout flow
 - Write for future readers, not just the current reviewer
 - Be specific ("handles expired sessions mid-request") not vague ("fixes edge case")
 - Don't substitute a ticket link for actual motivation
+
+## Atlassian MCP Usage
+
+To preserve context, **always delegate these Atlassian MCP operations to a subagent**:
+
+- **Confluence page reads** (`getConfluencePage`, `searchConfluenceUsingCql`) — pages are verbose
+- **Jira searches** (`searchJiraIssuesUsingJql`) — result sets contain full field metadata
+- **Multi-step lookups** — any task requiring 2+ Atlassian MCP calls
+
+Use the Agent tool with a clear prompt describing what to retrieve and how to summarize it. The subagent should return only the relevant details, not raw API output.
+
+**OK to call directly** (without subagent): single-issue lookups (`getJiraIssue`) when you only need one field like status or assignee.
