@@ -6,12 +6,6 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 
 ```mermaid
 flowchart TD
-    subgraph Architecting["Skill(architecting)"]
-        A1[Survey existing system] --> A2[Ask clarifying questions]
-        A2 --> A3[Explore system shapes]
-        A3 --> A4[Write architecture document]
-    end
-
     subgraph Brainstorming["Skill(brainstorming)"]
         B1[Ask clarifying questions] --> B2[Explore 2-3 approaches]
         B2 --> B3[Present design for validation]
@@ -38,17 +32,14 @@ flowchart TD
         C2 --> C3[Create draft PR]
     end
 
-    Architecting --> Brainstorming --> Planning --> Executing --> Completing
+    Brainstorming --> Planning --> Executing --> Completing
 ```
 
 ## How to Use
 
-Ask Claude to architect or brainstorm your idea:
+Ask Claude to brainstorm your idea:
 
 ```
-> You: Architect how we should restructure the notification system.
-> Claude: Using Skill(architecting) ...
-
 > You: Brainstorm how we can implement ticket ABC-123.
 > Claude: Using Skill(brainstorming) ...
 ```

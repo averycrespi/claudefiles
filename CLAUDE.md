@@ -24,7 +24,7 @@ See the [README](README.md) for requirements and quick start.
 This repository includes a structured development workflow:
 
 ```
-/architecting → /brainstorming → /writing-plans → /executing-plans → /completing-work
+/brainstorming → /writing-plans → /executing-plans → /completing-work
 ```
 
 See [docs/workflow.md](docs/workflow.md) for details. See [docs/skills.md](docs/skills.md) for the full skills and agents catalog.

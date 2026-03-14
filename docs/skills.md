@@ -4,7 +4,6 @@
 
 | Skill | Purpose |
 |---|---|
-| `architecting` | Describe the shape of a system: components, responsibilities, boundaries |
 | `brainstorming` | Turn ideas into designs through collaborative dialogue |
 | `writing-plans` | Create detailed implementation plans with TDD steps |
 | `executing-plans` | Execute plans with subagent implementation + reviews |
