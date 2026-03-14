@@ -9,7 +9,7 @@ description: Use when finishing the structured development workflow after execut
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify task completion → Verify tests → Reflect on learnings → Present options → Execute choice.
+**Core principle:** Verify task completion → Verify tests → Clean up plan files → Reflect on learnings → Present options → Execute choice.
 
 **Announce at start:** "I'm using the completing-work skill to complete this work."
 
@@ -60,7 +60,18 @@ Stop. Don't proceed to Step 2.
 
 **If tests pass:** Continue to Step 2.
 
-### Step 2: Reflect on Learnings
+### Step 2: Clean Up Plan Files
+
+**If a plan file path is known from conversation context** (e.g. `.plans/2026-02-20-cco-attach-plan.md`):
+
+1. Strip the suffix (`-plan.md`) to get the stem (e.g. `2026-02-20-cco-attach`)
+2. Glob for `.plans/<stem>-*.md` to find related files (design, architecture, plan)
+3. `git rm` the matched files
+4. Commit: `chore: remove completed plan files`
+
+**If no plan file is found in context or `.plans/` doesn't exist:** Skip silently.
+
+### Step 3: Reflect on Learnings
 
 **If you have project-specific learnings from this session, present them for user approval.**
 
@@ -112,11 +123,11 @@ options: [
 **After user selects:**
 - If user selects any options → Update project CLAUDE.md, placing learnings in proposed sections
 - Commit: `docs(CLAUDE.md): <summarize selected learnings>`
-- If user selects nothing → Skip, continue to Step 3
+- If user selects nothing → Skip, continue to Step 4
 
-**If no learnings to propose:** Skip silently, continue to Step 3.
+**If no learnings to propose:** Skip silently, continue to Step 4.
 
-### Step 3: Detect Existing PR and Present Options
+### Step 4: Detect Existing PR and Present Options
 
 **Before presenting options, check if a PR already exists for this branch:**
 
@@ -156,7 +167,7 @@ AskUserQuestion(
 )
 ```
 
-### Step 4: Execute Choice
+### Step 5: Execute Choice
 
 #### Option: Push and Create PR
 
@@ -209,5 +220,6 @@ Report: "Keeping branch <name>."
 **Always:**
 - Verify task completion before verifying tests
 - Verify tests before offering options
+- Clean up plan files after tests pass
 - Skip reflection silently if no learnings to propose
 - Present exactly 2 options (create PR, update PR, or keep branch — depending on whether a PR exists)
