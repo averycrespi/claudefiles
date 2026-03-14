@@ -27,6 +27,6 @@ Execute implementation plans autonomously in a sandbox VM. Pushes the plan and c
 2. This blocks up to 30 minutes, polling for the output bundle
 3. On success, results are fast-forward merged into the current branch
 
-### Step 3: Complete Development
+### Step 3: Verify and Complete
 
-**REQUIRED SUB-SKILL:** Use Skill(completing-work)
+**REQUIRED SUB-SKILL:** Use Skill(verifying-work)

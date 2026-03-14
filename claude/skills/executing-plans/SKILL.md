@@ -33,7 +33,7 @@ For each task triplet (Implement → Spec Review → Code Review):
   12. Proceed to next triplet (now unblocked)
 
 After all triplets:
-  Use completing-work
+  Use verifying-work
 ```
 
 ### Step 1: Load Plan and Initialize Tasks
@@ -259,13 +259,11 @@ TaskUpdate:
 
 Proceed to next triplet.
 
-### Step 3: Complete Development
+### Step 3: Verify and Complete
 
 After all tasks complete:
 
-1. Run full test suite to verify everything works together
-2. **REQUIRED SUB-SKILL:** Use Skill(completing-work)
-3. Follow that skill to verify tests, present options, execute choice
+**REQUIRED SUB-SKILL:** Use Skill(verifying-work)
 
 ## When to Stop and Ask
 
@@ -316,7 +314,7 @@ Implementation → Spec Review → Code Quality Review
 
 **Required skills:**
 - **following-tdd** - Implementation discipline
-- **completing-work** - Complete development after all tasks
+- **verifying-work** - Holistic review after all tasks complete
 
 **Used by:**
 - **writing-plans** - Creates plans this skill executes
