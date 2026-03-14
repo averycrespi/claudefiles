@@ -58,6 +58,18 @@ Neither is acceptable. The simpler solution is a clean separation of concerns:
 
 This means you can spin up multiple worktrees in separate tmux windows, each with its own Claude Code session working in parallel on different branches.
 
+## Delegating Heavy MCP Calls to Subagents
+
+Verbose MCP responses (Confluence pages, Jira search results, Atlassian field metadata) are delegated to subagents rather than called directly from the main context. This is a context hygiene decision.
+
+A single Confluence page fetch can return thousands of tokens of HTML-converted content, nested macros, and layout metadata. Jira search results include every field on every matching issue. If these responses land in the main conversation context, they permanently consume space that could be used for reasoning about the actual task. The content is almost entirely noise — you need a ticket title and status, not the full field schema.
+
+Subagents solve this by acting as a compression layer: the raw response fills the subagent's context, the subagent extracts what matters, and only the summary returns to the main context. The raw payload is discarded when the subagent completes.
+
+This mirrors how Claude Code itself handles tool definitions through progressive loading. Rather than injecting every tool's full JSON schema into the system prompt upfront, Claude Code lists available tools by name only (via `available-deferred-tools`). Full parameter schemas are fetched on demand through `ToolSearch` only when the model actually needs to call a specific tool. This keeps the baseline context lean — dozens of tool names cost a fraction of what their full schemas would.
+
+The principle is the same in both cases: **load the minimum into context, fetch details only when needed, and discard bulk data as early as possible.** For tool schemas, Claude Code does this automatically. For MCP responses, we do it explicitly by routing calls through subagents.
+
 ## Asking Questions: Global CLAUDE.md vs Inline Examples
 
 Question-asking patterns (use `AskUserQuestion` for decisions, conversational text for open-ended, lead with recommendation, one question at a time) live in the global `CLAUDE.md` where they're always in context without sub-skill invocation overhead.
