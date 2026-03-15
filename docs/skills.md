@@ -12,6 +12,7 @@
 | `verifying-work` | Holistic review with parallel reviewers, auto-fix loop, and user escalation |
 | `completing-work` | Clean up plans, reflect on learnings, create or update PR |
 | `reviewing-prs` | Holistic PR review across 6 parallel dimensions |
+| `troubleshooting` | Battle buddy for incident response and system troubleshooting |
 
 ## Integrations
 
