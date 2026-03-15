@@ -1,85 +1,103 @@
 ---
 name: troubleshooting
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: Use when troubleshooting a system issue, investigating an outage, debugging a production problem, or responding to an incident
 ---
 
-# Troubleshooting
+# Battle Buddy for Incident Response
 
-## Overview
+Serve as a collaborative partner during incident response and troubleshooting. Engage in fluid dialogue with the user while dispatching parallel investigation subagents to gather evidence across multiple systems simultaneously. Maintain a hypothesis board throughout the session to track what has been investigated, what evidence supports or eliminates each theory, and what remains to be explored.
 
-[TODO: 1-2 sentences explaining what this skill enables]
+## Phase 1: Problem Intake
 
-## Structuring This Skill
+Accept whatever the user provides — an error message, an alert, a vague description, a screenshot. Work with what is available.
 
-[TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+Ask 1-2 clarifying questions maximum to form initial hypotheses. Consider:
+- When did the problem start? Was there a specific trigger?
+- What changed recently? (deploys, config changes, dependency updates)
+- What is the blast radius? (one user, one service, everything)
 
-**1. Workflow-Based** (best for sequential processes)
-- Works well when there are clear step-by-step procedures
-- Example: DOCX skill with "Workflow Decision Tree" → "Reading" → "Creating" → "Editing"
-- Structure: ## Overview → ## Workflow Decision Tree → ## Step 1 → ## Step 2...
+Use `AskUserQuestion` for structured questions when the answer is one of a few known options. Use conversational text for open-ended questions. Ask only one question per message — do not overwhelm during an incident.
 
-**2. Task-Based** (best for tool collections)
-- Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" → "Merge PDFs" → "Split PDFs" → "Extract Text"
-- Structure: ## Overview → ## Quick Start → ## Task Category 1 → ## Task Category 2...
+## Phase 2: Hypothesis Generation
 
-**3. Reference/Guidelines** (best for standards or specifications)
-- Works well for brand guidelines, coding standards, or requirements
-- Example: Brand styling with "Brand Guidelines" → "Colors" → "Typography" → "Features"
-- Structure: ## Overview → ## Guidelines → ## Specifications → ## Usage...
+Generate 3-5 initial hypotheses from the available context. Present them as a hypothesis board:
 
-**4. Capabilities-Based** (best for integrated systems)
-- Works well when the skill provides multiple interrelated features
-- Example: Product Management with "Core Capabilities" → numbered capability list
-- Structure: ## Overview → ## Core Capabilities → ### 1. Feature → ### 2. Feature...
+```
+## Hypothesis Board
+1. 🔍 [hypothesis]  [Investigating]  confidence: medium
+2. 🔍 [hypothesis]  [Investigating]  confidence: medium
+3. ⏳ [hypothesis]  [Queued]
+```
 
-Patterns can be mixed and matched as needed. Most skills combine patterns (e.g., start with task-based, add workflow for complex operations).
+Status icons:
+- 🔍 Investigating — subagent actively looking into this
+- ⏳ Queued — waiting to be investigated
+- ✅ Supported — evidence supports this hypothesis
+- ❌ Eliminated — evidence rules this out
+- ❓ Inconclusive — checked but evidence is ambiguous
 
-Delete this entire "Structuring This Skill" section when done - it's just guidance.]
+## Phase 3: Parallel Investigation
 
-## [TODO: Replace with the first main section based on chosen structure]
+Dispatch 2-4 subagents in a SINGLE message using the Agent tool. Each subagent receives:
+- The investigator prompt template from `./references/investigator-prompt.md` with placeholders filled in
+- A specific hypothesis to investigate
+- Specific investigation instructions (what tools to use, what to look for)
 
-[TODO: Add content here. See examples in existing skills:
-- Code samples for technical skills
-- Decision trees for complex workflows
-- Concrete examples with realistic user requests
-- References to scripts/templates/references as needed]
+Subagent dispatch pattern:
+```
+Agent tool (general-purpose):
+  description: "Investigate: [hypothesis summary]"
+  prompt: [filled investigator-prompt.md template with {{HYPOTHESIS}}, {{PROBLEM_CONTEXT}}, and {{INVESTIGATION_INSTRUCTIONS}} replaced]
+```
 
-## Resources
+Available investigation tools for subagents:
+- **Code & git:** git log, git diff, grep, Read files
+- **Datadog:** `~/.claude/skills/searching-datadog-logs/scripts/search_logs`
+- **Jira/Confluence:** Atlassian MCP calls
+- **Web:** WebFetch for status pages, documentation, runbooks
 
-This skill includes example resource directories that demonstrate how to organize different types of bundled resources:
+Note: subagents CANNOT use `AskUserQuestion` — only the main agent asks the user.
 
-### scripts/
-Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
+## Phase 4: Synthesize & Iterate
 
-**Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
+After subagents return:
 
-**Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
+1. **Parse results** — extract each subagent's VERDICT, CONFIDENCE, EVIDENCE, and NEXT_STEPS from the structured output.
 
-**Note:** Scripts may be executed without loading into context, but can still be read by Claude for patching or environment adjustments.
+2. **Update the hypothesis board** — mark hypotheses as ✅ Supported, ❌ Eliminated, or ❓ Inconclusive based on the evidence. Adjust confidence levels.
 
-### references/
-Documentation and reference material intended to be loaded into context to inform Claude's process and thinking.
+3. **Present findings conversationally** — summarize what was found, what was eliminated, and what remains unclear. Lead with the most significant finding.
 
-**Examples from other skills:**
-- Product management: `communication.md`, `context_building.md` - detailed workflow guides
-- BigQuery: API reference documentation and query examples
-- Finance: Schema documentation, company policies
+4. **Check in with the user** — ask if they have additional context, whether they are seeing anything on their end, or if a finding triggers a new theory.
 
-**Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Claude should reference while working.
+5. **Decide next action** based on findings and user input:
+   - Dispatch new subagents for follow-up investigation on promising leads
+   - Refine or add hypotheses based on new evidence
+   - Move to resolution if root cause is identified
 
-### assets/
-Files not intended to be loaded into context, but rather used within the output Claude produces.
+Repeat this cycle as needed until root cause is found or the user decides to stop.
 
-**Examples from other skills:**
-- Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
-- Typography: Font files (.ttf, .woff2)
+## Phase 5: Resolution
 
-**Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
+When root cause is identified:
 
----
+1. **Propose mitigation** — explain the fix, its rationale, and any risks.
+2. **For code fixes** — write the fix and present it for user approval before applying.
+3. **For operational actions** (rollback, restart, config change) — provide exact commands but let the user execute them.
+4. **Verify the fix** — re-check the signals that originally showed the problem to confirm resolution.
 
-**Any unneeded directories can be deleted.** Not every skill requires all three types of resources.
+The session can end at any point — partial progress is fine. Do not force closure or insist on completing all phases.
+
+## Safety Rules
+
+- Subagents are read-only — never mutate code, configuration, or system state from a subagent.
+- Mutating actions (rollback, restart, deploy, config change) require explicit user approval before execution.
+- Always ask: "is this action safe in THIS context?" before proposing destructive or irreversible operations.
+
+## Key Principles
+
+- **One question at a time** — do not overwhelm during an incident
+- **Pursue multiple hypotheses in parallel** — do not go sequential when subagents can investigate simultaneously
+- **Evidence over intuition** — check before concluding, show the evidence
+- **Stay focused** — investigate the incident, do not refactor or clean up unrelated code
+- **Adapt to the user** — they may have context you do not, listen for it and incorporate new information
