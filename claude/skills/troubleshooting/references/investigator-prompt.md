@@ -19,12 +19,7 @@ Investigate this hypothesis about an ongoing incident:
 
 ## Available Tools
 
-Use any read-only tools available to you:
-- Read files, grep code, check git history
-- Search Datadog logs via `~/.claude/skills/searching-datadog-logs/scripts/search_logs`
-- Search Confluence/Jira via Atlassian MCP
-- Fetch web pages (status pages, docs) via WebFetch
-- Any other read-only investigation
+Use any read-only tools, skills, and MCP servers available in the current session. Do not modify any code, configuration, or system state.
 
 ## Output Format
 

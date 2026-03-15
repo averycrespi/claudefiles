@@ -50,13 +50,7 @@ Agent tool (general-purpose):
   prompt: [filled investigator-prompt.md template with {{HYPOTHESIS}}, {{PROBLEM_CONTEXT}}, and {{INVESTIGATION_INSTRUCTIONS}} replaced]
 ```
 
-Available investigation tools for subagents:
-- **Code & git:** git log, git diff, grep, Read files
-- **Datadog:** `~/.claude/skills/searching-datadog-logs/scripts/search_logs`
-- **Jira/Confluence:** Atlassian MCP calls
-- **Web:** WebFetch for status pages, documentation, runbooks
-
-Note: subagents CANNOT use `AskUserQuestion` — only the main agent asks the user.
+Subagents have access to all read-only tools, skills, and MCP servers available in the current session. They CANNOT use `AskUserQuestion` — only the main agent asks the user.
 
 ## Phase 4: Synthesize & Iterate
 
