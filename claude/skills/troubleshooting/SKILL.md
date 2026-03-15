@@ -39,7 +39,7 @@ Status icons:
 ## Phase 3: Parallel Investigation
 
 Dispatch 2-4 subagents in a SINGLE message using the Agent tool. Each subagent receives:
-- The investigator prompt template from `./references/investigator-prompt.md` with placeholders filled in
+- The investigator prompt template from `./investigator-prompt.md` with placeholders filled in
 - A specific hypothesis to investigate
 - Specific investigation instructions (what tools to use, what to look for)
 
