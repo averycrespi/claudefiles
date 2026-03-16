@@ -32,8 +32,19 @@ else
 	echo 'Atlassian MCP server added'
 fi
 
+echo 'Adding Datadog MCP server ...'
+if claude mcp get datadog &>/dev/null; then
+	echo 'Datadog MCP server already configured'
+else
+	claude mcp add --transport http datadog https://mcp.datadoghq.com/api/unstable/mcp-server/mcp --scope user
+	echo 'Datadog MCP server added'
+fi
+
 echo 'Done!'
 echo ''
 echo 'Optional: Atlassian authentication'
 echo '  Run /mcp in Claude Code and authenticate with your Atlassian account.'
+echo ''
+echo 'Optional: Datadog authentication'
+echo '  Run /mcp in Claude Code and authenticate with your Datadog account.'
 exit 0
