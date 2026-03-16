@@ -1,6 +1,6 @@
-# Skills and Agents
+# Skills
 
-## Workflow Skills
+## Workflow
 
 | Skill | Purpose |
 |---|---|
@@ -16,28 +16,20 @@
 
 ## Integrations
 
-| Integration | Purpose |
+| Skill | Purpose |
 |---|---|
-| Atlassian MCP | Read/write access to Jira, Confluence, and Compass |
-| Datadog MCP | Observability: logs, metrics, traces, monitors, incidents |
 | `automating-browsers` | Browser automation for testing and data extraction |
 | `managing-launchd-agents` | Manage macOS launchd user agents |
 | `creating-jira-tickets` | Draft and create well-structured Jira tickets |
 
-## Reference Skills
+## Reference
 
 | Skill | Purpose |
 |---|---|
 | `following-tdd` | TDD discipline: red-green-refactor cycle |
 
-## Meta Skills
+## Meta
 
 | Skill | Purpose |
 |---|---|
 | `creating-skills` | Guide for creating new skills |
-
-## Agents
-
-| Agent | Purpose |
-|---|---|
-| `code-reviewer` | Review code changes against plans and standards |
