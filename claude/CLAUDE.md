@@ -96,3 +96,16 @@ To preserve context, **always delegate these Atlassian MCP operations to a subag
 Use the Agent tool with a clear prompt describing what to retrieve and how to summarize it. The subagent should return only the relevant details, not raw API output.
 
 **OK to call directly** (without subagent): single-issue lookups (`getJiraIssue`) when you only need one field like status or assignee.
+
+## Datadog MCP Usage
+
+To preserve context, **always delegate these Datadog MCP operations to a subagent**:
+
+- **Log searches and analysis** (`search_datadog_logs`, `analyze_datadog_logs`) — log results are verbose with many fields per entry
+- **Span and trace searches** (`search_datadog_spans`, `get_datadog_trace`) — trace data includes full request waterfalls
+- **Broad searches** (`search_datadog_hosts`, `search_datadog_services`, `search_datadog_events`, `search_datadog_rum_events`) — result sets can be large
+- **Multi-step investigations** — any task requiring 2+ Datadog MCP calls (e.g. find a service, then search its logs, then pull a trace)
+
+Use the Agent tool with a clear prompt describing what to investigate and what to summarize. The subagent should return only the relevant findings, not raw API output.
+
+**OK to call directly** (without subagent): single-resource lookups (`get_datadog_metric`, `get_datadog_metric_context`, `get_datadog_incident`) when you need a specific, known item.
