@@ -48,21 +48,23 @@ Automate browser interactions for web testing, form filling, screenshots, and da
 
 **Usage:** Ask Claude to browse a website or interact with a web page, and it will use the `automating-browsers` skill automatically.
 
-## Datadog Logs
+## Datadog
 
-Search Datadog logs directly from Claude using the `searching-datadog-logs` skill.
+Full observability access via the official Datadog MCP server — logs, metrics, traces, monitors, incidents, dashboards, and more.
 
 **Setup:**
 
-Store your Datadog API credentials in macOS Keychain:
-
-```bash
-security add-generic-password -s searching-datadog-logs -a api-key -w <YOUR_DD_API_KEY>
-security add-generic-password -s searching-datadog-logs -a app-key -w <YOUR_DD_APP_KEY>
-```
+1. Start Claude Code in any project
+2. Run `/mcp` and select "Authenticate" for Datadog
+3. Complete OAuth flow in browser
+4. Done - Datadog tools now available
 
 **Capabilities:**
-- Search logs by query, service, status, time range
-- Fetch full log details by ID
-- Error-driven investigation from stack traces
-- Exploratory search with query refinement
+- Search and analyze logs, spans, and traces
+- Query metrics and metric metadata
+- Search monitors, incidents, hosts, and services
+- Browse dashboards and notebooks
+
+**Requirements:**
+- Datadog account with appropriate permissions
+- Internet connection for remote MCP server
