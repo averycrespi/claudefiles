@@ -27,6 +27,12 @@
 | `managing-launchd-agents` | Manage macOS launchd user agents                   |
 | `creating-jira-tickets`   | Draft and create well-structured Jira tickets      |
 
+## Design
+
+| Skill                 | Purpose                                                    |
+| --------------------- | ---------------------------------------------------------- |
+| `designing-frontends` | Distinctive, production-grade frontend design and building |
+
 ## Reference
 
 | Skill           | Purpose                                  |
