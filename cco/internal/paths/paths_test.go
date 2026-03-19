@@ -88,14 +88,8 @@ func TestConfigFilePath(t *testing.T) {
 	assert.Equal(t, "/custom/config/cco/config.json", path)
 }
 
-func TestExchangeDir(t *testing.T) {
-	dir := ExchangeDir()
+func TestWorktreeBaseDir(t *testing.T) {
+	dir := WorktreeBaseDir()
 	assert.Contains(t, dir, "cco")
-	assert.True(t, strings.HasSuffix(dir, filepath.Join("cco", "exchange")))
-}
-
-func TestJobExchangeDir(t *testing.T) {
-	dir := JobExchangeDir("abc123")
-	assert.Contains(t, dir, "abc123")
-	assert.True(t, strings.HasSuffix(dir, filepath.Join("exchange", "abc123")))
+	assert.True(t, strings.HasSuffix(dir, filepath.Join("cco", "worktrees")))
 }

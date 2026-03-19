@@ -55,12 +55,7 @@ func ConfigFilePath() string {
 	return filepath.Join(ConfigDir(), "config.json")
 }
 
-// ExchangeDir returns the directory for sandbox bundle exchange.
-func ExchangeDir() string {
-	return filepath.Join(DataDir(), "exchange")
-}
-
-// JobExchangeDir returns the exchange directory for a specific job.
-func JobExchangeDir(jobID string) string {
-	return filepath.Join(ExchangeDir(), jobID)
+// WorktreeBaseDir returns the base directory for all worktrees.
+func WorktreeBaseDir() string {
+	return filepath.Join(DataDir(), "worktrees")
 }
