@@ -74,15 +74,14 @@ Each workspace is a worktree at `~/.local/share/cco/worktrees/` and a tmux windo
 
 ## Sandbox
 
-cco can execute plans in an isolated sandbox for autonomous execution without risking your host environment. Push a plan in, let Claude work, pull the results back.
+cco can run Claude Code in an isolated Lima VM for autonomous execution without risking your host environment.
 
 ```sh
-cco box create                                    # one-time setup
-cco box push .plans/2026-02-21-my-feature-plan.md  # run a plan
-cco box pull a3f7b2                                # pull results back
+cco box create    # one-time setup
+cco box shell     # open an interactive session
 ```
 
-See [docs/sandbox.md](docs/sandbox.md) for setup, lifecycle management, and push/pull details.
+See [docs/sandbox.md](docs/sandbox.md) for setup and lifecycle management.
 
 ## Configuration
 
