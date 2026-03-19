@@ -29,5 +29,6 @@ cco box stop        # stop the VM
 cco box destroy     # remove the VM entirely
 cco box status      # check VM status
 cco box provision   # re-provision after updating configs
+cco box template    # print the rendered lima.yaml template
 ```
 
