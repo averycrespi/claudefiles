@@ -227,7 +227,6 @@ AskUserQuestion(
 **Used by:**
 - **executing-plans** — Calls this skill after all task triplets complete
 - **executing-plans-quickly** — Calls this skill after all task triplets complete
-- **executing-plans-in-sandbox** — Calls this skill after sandbox results are pulled
 
 ## Prompt Templates
 

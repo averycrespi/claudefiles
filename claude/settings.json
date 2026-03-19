@@ -97,7 +97,6 @@
       "Skill(creating-skills)",
       "Skill(designing-frontends)",
       "Skill(executing-plans)",
-      "Skill(executing-plans-in-sandbox)",
       "Skill(executing-plans-quickly)",
       "Skill(following-tdd)",
       "Skill(managing-launchd-agents)",
@@ -203,8 +202,6 @@
     "allowUnsandboxedCommands": true,
     "excludedCommands": [
       "aws:*",
-      "cco box pull:*",
-      "cco box push:*",
       "docker:*",
       "docker-compose:*",
       "gh:*",
