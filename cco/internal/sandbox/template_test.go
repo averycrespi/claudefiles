@@ -60,7 +60,7 @@ func TestRenderTemplate_UserConfig(t *testing.T) {
 	result, err := RenderTemplate(params)
 
 	require.NoError(t, err)
-	assert.Contains(t, result, "user: myuser")
+	assert.Contains(t, result, "name: myuser")
 	// UID and GID should be in the user section
 	assert.Contains(t, result, "uid: 501")
 	assert.Contains(t, result, "gid: 20")
