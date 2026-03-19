@@ -81,7 +81,7 @@ func TestEmbeddedLimaTemplate_ContainsTemplateVars(t *testing.T) {
 func TestService_Start_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Start()
 
@@ -92,7 +92,7 @@ func TestService_Start_NotCreated(t *testing.T) {
 func TestService_Start_AlreadyRunning(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Start()
 
@@ -103,7 +103,7 @@ func TestService_Start_Stopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
 	lima.On("Start").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Start()
 
@@ -114,7 +114,7 @@ func TestService_Start_Stopped(t *testing.T) {
 func TestService_Stop_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Stop()
 
@@ -125,7 +125,7 @@ func TestService_Stop_NotCreated(t *testing.T) {
 func TestService_Stop_AlreadyStopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Stop()
 
@@ -137,7 +137,7 @@ func TestService_Stop_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Stop").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Stop()
 
@@ -148,7 +148,7 @@ func TestService_Stop_Running(t *testing.T) {
 func TestService_Destroy_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Destroy()
 
@@ -160,7 +160,7 @@ func TestService_Destroy_Exists(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Delete").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Destroy()
 
@@ -171,7 +171,7 @@ func TestService_Destroy_Exists(t *testing.T) {
 func TestService_Status_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	status, err := svc.StatusString()
 
@@ -182,7 +182,7 @@ func TestService_Status_NotCreated(t *testing.T) {
 func TestService_Status_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	status, err := svc.StatusString()
 
@@ -193,7 +193,7 @@ func TestService_Status_Running(t *testing.T) {
 func TestService_Shell_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Shell()
 
@@ -204,7 +204,7 @@ func TestService_Shell_NotCreated(t *testing.T) {
 func TestService_Shell_Stopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Shell()
 
@@ -216,7 +216,7 @@ func TestService_Shell_Running(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Shell").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Shell()
 
@@ -228,7 +228,7 @@ func TestService_Shell_WithArgs(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
 	lima.On("Shell", "ls", "-la").Return(nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Shell("ls", "-la")
 
@@ -241,7 +241,7 @@ func TestService_Shell_WithArgs(t *testing.T) {
 func TestService_Provision_NotCreated(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Provision(config.SandboxConfig{})
 
@@ -252,7 +252,7 @@ func TestService_Provision_NotCreated(t *testing.T) {
 func TestService_Provision_Stopped(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Stopped", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Provision(config.SandboxConfig{})
 
@@ -263,7 +263,7 @@ func TestService_Provision_Stopped(t *testing.T) {
 func TestService_Provision_Running_NoPaths(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Provision(config.SandboxConfig{})
 
@@ -276,7 +276,7 @@ func TestService_Provision_Running_WithPaths(t *testing.T) {
 	lima.On("Status").Return("Running", nil)
 	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	lima.On("Copy", mock.Anything, mock.Anything).Return(nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	cfg := config.SandboxConfig{
 		ProvisionPaths: []string{
@@ -297,7 +297,7 @@ func TestService_Provision_Running_WithMappedPaths(t *testing.T) {
 	lima.On("Status").Return("Running", nil)
 	lima.On("Shell", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	lima.On("Copy", mock.Anything, mock.Anything).Return(nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	cfg := config.SandboxConfig{
 		ProvisionPaths: []string{
@@ -315,7 +315,7 @@ func TestService_Provision_Running_WithMappedPaths(t *testing.T) {
 func TestService_Create_AlreadyRunning(t *testing.T) {
 	lima := new(mockLimaClient)
 	lima.On("Status").Return("Running", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Create(TemplateParams{Username: "test", UID: 1000, GID: 1000, HomeDir: "/home/test"}, config.SandboxConfig{})
 
@@ -328,7 +328,7 @@ func TestService_Create_Stopped(t *testing.T) {
 	lima.On("Status").Return("Stopped", nil).Once()
 	lima.On("Start").Return(nil)
 	lima.On("Status").Return("Running", nil)
-	svc := NewService(lima, logging.NoopLogger{}, nil)
+	svc := NewService(lima, logging.NoopLogger{})
 
 	err := svc.Create(TemplateParams{Username: "test", UID: 1000, GID: 1000, HomeDir: "/home/test"}, config.SandboxConfig{})
 
@@ -339,7 +339,7 @@ func TestService_Create_Stopped(t *testing.T) {
 // --- Template rendering test ---
 
 func TestService_Template_RendersWithParams(t *testing.T) {
-	svc := NewService(nil, logging.NoopLogger{}, nil)
+	svc := NewService(nil, logging.NoopLogger{})
 
 	result, err := svc.Template(TemplateParams{
 		Username: "myuser",

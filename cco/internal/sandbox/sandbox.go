@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/averycrespi/claudefiles/cco/internal/config"
-	"github.com/averycrespi/claudefiles/cco/internal/exec"
 	"github.com/averycrespi/claudefiles/cco/internal/logging"
 )
 
@@ -25,12 +24,11 @@ type limaClient interface {
 type Service struct {
 	lima   limaClient
 	logger logging.Logger
-	runner exec.Runner
 }
 
 // NewService returns a sandbox Service.
-func NewService(lima limaClient, logger logging.Logger, runner exec.Runner) *Service {
-	return &Service{lima: lima, logger: logger, runner: runner}
+func NewService(lima limaClient, logger logging.Logger) *Service {
+	return &Service{lima: lima, logger: logger}
 }
 
 // Create creates, starts, and provisions the sandbox VM.
