@@ -95,7 +95,9 @@ Before writing tasks, scan the project's documentation files (README.md, CLAUDE.
 - **If no docs need updating** (e.g., pure internal refactor): Add a comment at the end of the plan: `<!-- No documentation updates needed -->` so it's a conscious decision, not an oversight.
 
 ## Remember
-- Exact file paths always
+- Exact file paths always — but **always relative to the repo root**, never absolute paths
+- **Never hardcode the repository's absolute path** (e.g., `/Users/alice/project`) anywhere in the plan — plans may be executed in worktrees at different paths
+- Never include `cd /absolute/path` commands — use relative paths or assume the working directory is the repo root
 - Complete code in plan (not "add validation")
 - Exact commands with expected output
 - Reference relevant skills with @ syntax

@@ -30,8 +30,6 @@ Task tool (general-purpose):
     5. Self-review (see below)
     6. Report back
 
-    Working directory: [directory path]
-
     ## Self-Review Checklist
 
     Before reporting, review your own work:
