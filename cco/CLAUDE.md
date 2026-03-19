@@ -22,13 +22,12 @@ Dependency injection via interfaces. Services receive abstractions (exec.Runner,
 | `internal/workspace` | Workspace lifecycle (add, remove, attach) |
 | `internal/git` | Git operations (worktrees, branches, repo info) |
 | `internal/tmux` | Tmux session/window management |
-| `internal/sandbox` | Lima VM lifecycle and push/pull |
+| `internal/sandbox` | Lima VM lifecycle and provisioning |
 | `internal/lima` | limactl wrapper |
 | `internal/config` | JSON config loading from `~/.config/cco/config.json` |
 | `internal/logging` | Logger interface with stdout + noop implementations |
 | `internal/paths` | XDG path utilities |
 | `internal/exec` | Command runner interface |
-| `internal/goproxy` | Go module caching for sandbox |
 
 ## Conventions
 

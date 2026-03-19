@@ -8,7 +8,6 @@
 | `writing-plans`              | Create detailed implementation plans with TDD steps                         |
 | `executing-plans`            | Execute plans with subagent implementation + reviews                        |
 | `executing-plans-quickly`    | Execute plans inline without subagents for simple tasks                     |
-| `executing-plans-in-sandbox` | Execute plans autonomously in a sandbox VM                                  |
 | `verifying-work`             | Holistic review with parallel reviewers, auto-fix loop, and user escalation |
 | `completing-work`            | Clean up plans, reflect on learnings, create or update PR                   |
 

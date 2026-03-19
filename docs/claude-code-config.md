@@ -11,6 +11,7 @@ claude/
 ├── agents/             # Custom agent definitions
 ├── commands/           # Slash command definitions
 ├── hooks/              # PreToolUse hooks (e.g., gitleaks)
+├── sandbox/            # Sandbox VM overrides (settings, CLAUDE.md, scripts)
 ├── scripts/            # Status line and other scripts
 └── skills/             # Custom skill definitions
 ```
