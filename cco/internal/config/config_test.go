@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,92 +12,103 @@ import (
 
 func TestLoad_FileNotFound(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
 	cfg, err := Load()
+
 	require.NoError(t, err)
-	assert.Empty(t, cfg.GoProxy.Patterns)
+	assert.Empty(t, cfg.Sandbox.Mounts)
+	assert.Empty(t, cfg.Sandbox.ProvisionPaths)
 }
 
 func TestLoad_EmptyJSON(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "cco"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "cco", "config.json"), []byte("{}"), 0o644))
+	ccoDir := filepath.Join(dir, "cco")
+	require.NoError(t, os.MkdirAll(ccoDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(ccoDir, "config.json"), []byte("{}"), 0o644))
 
 	cfg, err := Load()
+
 	require.NoError(t, err)
-	assert.Empty(t, cfg.GoProxy.Patterns)
+	assert.Empty(t, cfg.Sandbox.Mounts)
+	assert.Empty(t, cfg.Sandbox.ProvisionPaths)
 }
 
-func TestLoad_WithPatterns(t *testing.T) {
+func TestLoad_WithSandboxConfig(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "cco"), 0o755))
-	data := []byte(`{"go_proxy": {"patterns": ["github.com/myorg/*", "github.com/other/*"]}}`)
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "cco", "config.json"), data, 0o644))
+	ccoDir := filepath.Join(dir, "cco")
+	require.NoError(t, os.MkdirAll(ccoDir, 0o755))
+	data := []byte(`{
+		"sandbox": {
+			"mounts": ["/Users/me/src/work"],
+			"provision_paths": ["/Users/me/.claude", "/Users/me/.claude/sandbox/settings.json:/Users/me/.claude/settings.json"]
+		}
+	}`)
+	require.NoError(t, os.WriteFile(filepath.Join(ccoDir, "config.json"), data, 0o644))
 
 	cfg, err := Load()
+
 	require.NoError(t, err)
-	assert.Equal(t, []string{"github.com/myorg/*", "github.com/other/*"}, cfg.GoProxy.Patterns)
+	assert.Equal(t, []string{"/Users/me/src/work"}, cfg.Sandbox.Mounts)
+	assert.Equal(t, []string{
+		"/Users/me/.claude",
+		"/Users/me/.claude/sandbox/settings.json:/Users/me/.claude/settings.json",
+	}, cfg.Sandbox.ProvisionPaths)
 }
 
 func TestLoad_InvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "cco"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "cco", "config.json"), []byte("not json"), 0o644))
+	ccoDir := filepath.Join(dir, "cco")
+	require.NoError(t, os.MkdirAll(ccoDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(ccoDir, "config.json"), []byte("not json"), 0o644))
 
 	_, err := Load()
+
 	assert.Error(t, err)
 }
 
 func TestDefault(t *testing.T) {
 	cfg := Default()
-	assert.NotNil(t, cfg)
-	assert.Empty(t, cfg.GoProxy.Patterns)
+
+	assert.Empty(t, cfg.Sandbox.Mounts)
+	assert.Empty(t, cfg.Sandbox.ProvisionPaths)
 }
 
-func TestInit_CreatesFileWhenMissing(t *testing.T) {
+func TestInit_CreatesFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 
-	logger := logging.NoopLogger{}
-	err := Init(logger)
-	require.NoError(t, err)
+	err := Init(logging.NoopLogger{})
 
-	data, err := os.ReadFile(filepath.Join(dir, "cco", "config.json"))
 	require.NoError(t, err)
+	path := filepath.Join(dir, "cco", "config.json")
+	assert.FileExists(t, path)
 
-	var cfg Config
-	require.NoError(t, json.Unmarshal(data, &cfg))
-	assert.Empty(t, cfg.GoProxy.Patterns)
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Empty(t, cfg.Sandbox.Mounts)
 }
 
-func TestInit_NoopWhenFileExists(t *testing.T) {
+func TestInit_NoopWhenExists(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "cco"), 0o755))
 
-	existing := []byte(`{"go_proxy": {"patterns": ["github.com/myorg/*"]}}`)
-	configPath := filepath.Join(dir, "cco", "config.json")
-	require.NoError(t, os.WriteFile(configPath, existing, 0o644))
-
-	logger := logging.NoopLogger{}
-	err := Init(logger)
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(configPath)
-	require.NoError(t, err)
-	assert.Equal(t, existing, data)
+	require.NoError(t, Init(logging.NoopLogger{}))
+	require.NoError(t, Init(logging.NoopLogger{}))
 }
 
-func TestInit_CreatesDirectory(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "nested", "path"))
+func TestParseProvisionPath_Plain(t *testing.T) {
+	src, dst := ParseProvisionPath("/Users/me/.claude")
 
-	logger := logging.NoopLogger{}
-	err := Init(logger)
-	require.NoError(t, err)
+	assert.Equal(t, "/Users/me/.claude", src)
+	assert.Equal(t, "/Users/me/.claude", dst)
+}
 
-	_, err = os.Stat(filepath.Join(dir, "nested", "path", "cco", "config.json"))
-	assert.NoError(t, err)
+func TestParseProvisionPath_Mapped(t *testing.T) {
+	src, dst := ParseProvisionPath("/Users/me/.claude/sandbox/settings.json:/Users/me/.claude/settings.json")
+
+	assert.Equal(t, "/Users/me/.claude/sandbox/settings.json", src)
+	assert.Equal(t, "/Users/me/.claude/settings.json", dst)
 }
