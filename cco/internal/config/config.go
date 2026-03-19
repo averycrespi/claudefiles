@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/averycrespi/claudefiles/cco/internal/logging"
 	"github.com/averycrespi/claudefiles/cco/internal/paths"
@@ -13,19 +14,21 @@ import (
 
 // Config represents the cco configuration file.
 type Config struct {
-	GoProxy GoProxyConfig `json:"go_proxy"`
+	Sandbox SandboxConfig `json:"sandbox"`
 }
 
-// GoProxyConfig configures the file-system Go module proxy for sandbox jobs.
-type GoProxyConfig struct {
-	Patterns []string `json:"patterns"`
+// SandboxConfig configures the sandbox VM.
+type SandboxConfig struct {
+	Mounts         []string `json:"mounts"`
+	ProvisionPaths []string `json:"provision_paths"`
 }
 
 // Default returns a Config populated with default values.
 func Default() *Config {
 	return &Config{
-		GoProxy: GoProxyConfig{
-			Patterns: []string{},
+		Sandbox: SandboxConfig{
+			Mounts:         []string{},
+			ProvisionPaths: []string{},
 		},
 	}
 }
@@ -72,4 +75,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 	return &cfg, nil
+}
+
+// ParseProvisionPath parses a provision path entry.
+// Plain paths return (path, path). Mapped paths "src:dst" return (src, dst).
+func ParseProvisionPath(entry string) (src, dst string) {
+	parts := strings.SplitN(entry, ":", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return entry, entry
 }

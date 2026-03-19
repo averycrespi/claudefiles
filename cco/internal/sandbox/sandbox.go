@@ -4,14 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
 
-	"github.com/averycrespi/claudefiles/cco/internal/exec"
-	"github.com/averycrespi/claudefiles/cco/internal/lima"
+	"github.com/averycrespi/claudefiles/cco/internal/config"
 	"github.com/averycrespi/claudefiles/cco/internal/logging"
-	"github.com/averycrespi/claudefiles/cco/internal/paths"
 )
 
 // limaClient defines the lima operations needed by the sandbox service.
@@ -29,16 +24,15 @@ type limaClient interface {
 type Service struct {
 	lima   limaClient
 	logger logging.Logger
-	runner exec.Runner
 }
 
 // NewService returns a sandbox Service.
-func NewService(lima limaClient, logger logging.Logger, runner exec.Runner) *Service {
-	return &Service{lima: lima, logger: logger, runner: runner}
+func NewService(lima limaClient, logger logging.Logger) *Service {
+	return &Service{lima: lima, logger: logger}
 }
 
 // Create creates, starts, and provisions the sandbox VM.
-func (s *Service) Create() error {
+func (s *Service) Create(params TemplateParams, cfg config.SandboxConfig) error {
 	status, err := s.lima.Status()
 	if err != nil {
 		return err
@@ -46,16 +40,21 @@ func (s *Service) Create() error {
 	switch status {
 	case "Running":
 		s.logger.Info("sandbox is already created and running")
-		return s.Provision()
+		return s.Provision(cfg)
 	case "Stopped":
 		s.logger.Info("sandbox exists but is stopped, starting...")
 		if err := s.lima.Start(); err != nil {
 			return err
 		}
-		return s.Provision()
+		return s.Provision(cfg)
 	}
 
-	templatePath, err := writeTempFile("cco-lima-*.yaml", limaTemplate)
+	rendered, err := RenderTemplate(params)
+	if err != nil {
+		return fmt.Errorf("failed to render lima template: %w", err)
+	}
+
+	templatePath, err := writeTempFile("cco-lima-*.yaml", []byte(rendered))
 	if err != nil {
 		return fmt.Errorf("failed to write lima template: %w", err)
 	}
@@ -64,7 +63,7 @@ func (s *Service) Create() error {
 	if err := s.lima.Create(templatePath); err != nil {
 		return err
 	}
-	return s.Provision()
+	return s.Provision(cfg)
 }
 
 // Start starts a stopped sandbox VM.
@@ -135,8 +134,8 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// Provision copies Claude config files into the sandbox VM.
-func (s *Service) Provision() error {
+// Provision copies config files into the sandbox VM based on provision paths.
+func (s *Service) Provision(cfg config.SandboxConfig) error {
 	status, err := s.lima.Status()
 	if err != nil {
 		return err
@@ -148,40 +147,22 @@ func (s *Service) Provision() error {
 		return fmt.Errorf("sandbox not running, run `cco box start`")
 	}
 
-	claudeMDPath, err := writeTempFile("cco-claude-md-*", claudeMD)
-	if err != nil {
-		return fmt.Errorf("failed to write CLAUDE.md: %w", err)
-	}
-	defer os.Remove(claudeMDPath)
+	for _, entry := range cfg.ProvisionPaths {
+		src, dst := config.ParseProvisionPath(entry)
 
-	settingsPath, err := writeTempFile("cco-settings-*.json", settingsJSON)
-	if err != nil {
-		return fmt.Errorf("failed to write settings.json: %w", err)
-	}
-	defer os.Remove(settingsPath)
+		// Ensure parent directory exists in VM
+		dstDir := filepath.Dir(dst)
+		if err := s.lima.Shell("--", "bash", "-c", fmt.Sprintf("mkdir -p %s", dstDir)); err != nil {
+			return fmt.Errorf("failed to create directory %s in VM: %w", dstDir, err)
+		}
 
-	skillPath, err := writeTempFile("cco-executing-plans-*.md", executingPlansSkill)
-	if err != nil {
-		return fmt.Errorf("failed to write executing-plans.md: %w", err)
-	}
-	defer os.Remove(skillPath)
-
-	if err := s.lima.Copy(claudeMDPath, "~/.claude/CLAUDE.md"); err != nil {
-		return err
-	}
-	if err := s.lima.Copy(settingsPath, "~/.claude/settings.json"); err != nil {
-		return err
+		if err := s.lima.Copy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy %s to %s: %w", src, dst, err)
+		}
+		s.logger.Info("provisioned %s → %s", src, dst)
 	}
 
-	// Ensure skill directory exists in VM (skills must be <name>/SKILL.md)
-	if err := s.lima.Shell("--", "bash", "-c", "mkdir -p $HOME/.claude/skills/executing-plans"); err != nil {
-		return fmt.Errorf("failed to create skills directory: %w", err)
-	}
-	if err := s.lima.Copy(skillPath, "~/.claude/skills/executing-plans/SKILL.md"); err != nil {
-		return err
-	}
-
-	s.logger.Info("provisioned config into sandbox")
+	s.logger.Info("provisioning complete")
 	return nil
 }
 
@@ -200,141 +181,9 @@ func (s *Service) Shell(args ...string) error {
 	return s.lima.Shell(args...)
 }
 
-// PreparedJob contains the information needed to launch Claude in a sandbox job.
-type PreparedJob struct {
-	JobID   string
-	Branch  string
-	Command string
-}
-
-// Prepare bundles the current branch, clones it in the VM, and returns
-// a PreparedJob with the command to launch Claude (without launching it).
-func (s *Service) Prepare(repoRoot, planPath string, depth int) (*PreparedJob, error) {
-	status, err := s.lima.Status()
-	if err != nil {
-		return nil, err
-	}
-	switch status {
-	case "":
-		return nil, fmt.Errorf("sandbox not created, run `cco box create`")
-	case "Stopped":
-		return nil, fmt.Errorf("sandbox not running, run `cco box start`")
-	}
-
-	// Get current branch
-	out, err := s.runner.RunDir(repoRoot, "git", "rev-parse", "--abbrev-ref", "HEAD")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current branch: %w", err)
-	}
-	branch := strings.TrimSpace(string(out))
-
-	// Generate job ID and create exchange directory
-	jobID := NewJobID()
-	exchangeDir := paths.JobExchangeDir(jobID)
-	if err := os.MkdirAll(exchangeDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create exchange directory: %w", err)
-	}
-
-	// Create git bundle
-	bundlePath := filepath.Join(exchangeDir, "input.bundle")
-	s.logger.Info("creating bundle for branch %s...", branch)
-
-	if depth > 0 {
-		// Create shallow clone, then bundle from it for faster transfer
-		tmpClone := filepath.Join(os.TempDir(), "cco-shallow-"+jobID)
-		defer os.RemoveAll(tmpClone)
-
-		depthStr := strconv.Itoa(depth)
-		if out, err := s.runner.Run("git", "clone",
-			"--depth", depthStr,
-			"--single-branch", "--branch", branch,
-			repoRoot, tmpClone); err != nil {
-			return nil, fmt.Errorf("shallow clone failed: %s", strings.TrimSpace(string(out)))
-		}
-
-		if out, err := s.runner.RunDir(tmpClone, "git", "bundle", "create", bundlePath, branch); err != nil {
-			return nil, fmt.Errorf("git bundle create failed: %s", strings.TrimSpace(string(out)))
-		}
-	} else {
-		// Full history (depth=0)
-		if out, err := s.runner.RunDir(repoRoot, "git", "bundle", "create", bundlePath, branch); err != nil {
-			return nil, fmt.Errorf("git bundle create failed: %s", strings.TrimSpace(string(out)))
-		}
-	}
-
-	// Clone from bundle inside VM
-	guestWorkspace := "/workspace/" + jobID
-	s.logger.Info("cloning into sandbox workspace %s...", guestWorkspace)
-	if err := s.lima.Shell("--", "git", "clone", "--branch", branch, "/exchange/"+jobID+"/input.bundle", guestWorkspace); err != nil {
-		return nil, fmt.Errorf("git clone in sandbox failed: %w", err)
-	}
-
-	command := BuildLaunchCommand(jobID, planPath, nil)
-
-	return &PreparedJob{
-		JobID:   jobID,
-		Branch:  branch,
-		Command: command,
-	}, nil
-}
-
-// BuildLaunchCommand constructs the limactl command to launch Claude in the sandbox.
-// If patterns are provided, GOPROXY and GONOSUMCHECK env vars are injected.
-func BuildLaunchCommand(jobID, planPath string, patterns []string) string {
-	guestWorkspace := "/workspace/" + jobID
-	prompt := fmt.Sprintf("/executing-plans %s", planPath)
-
-	var envExport string
-	if len(patterns) > 0 {
-		proxyPath := fmt.Sprintf("file:///exchange/%s/gomodcache/cache/download,https://proxy.golang.org,direct", jobID)
-		nosumcheck := strings.Join(patterns, ",")
-		envExport = fmt.Sprintf("export GOPROXY=%s GONOSUMCHECK=%s && ", proxyPath, nosumcheck)
-	}
-
-	return fmt.Sprintf("limactl shell --workdir / %s -- bash -l -c '%scd %s && claude --dangerously-skip-permissions %q'",
-		lima.VMName, envExport, guestWorkspace, prompt)
-}
-
-// Pull polls for an output bundle and fast-forward merges it into the current branch.
-func (s *Service) Pull(repoRoot, jobID string, timeout, interval time.Duration) error {
-	exchangeDir := paths.JobExchangeDir(jobID)
-	bundlePath := filepath.Join(exchangeDir, "output.bundle")
-
-	s.logger.Info("waiting for output bundle (job %s)...", jobID)
-
-	deadline := time.Now().Add(timeout)
-	for {
-		if _, err := os.Stat(bundlePath); err == nil {
-			break
-		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("timed out waiting for output bundle at %s", bundlePath)
-		}
-		time.Sleep(interval)
-	}
-
-	s.logger.Info("bundle found, verifying...")
-	if out, err := s.runner.RunDir(repoRoot, "git", "bundle", "verify", bundlePath); err != nil {
-		return fmt.Errorf("bundle verification failed: %s", strings.TrimSpace(string(out)))
-	}
-
-	s.logger.Info("fetching from bundle...")
-	if out, err := s.runner.RunDir(repoRoot, "git", "fetch", bundlePath); err != nil {
-		return fmt.Errorf("git fetch from bundle failed: %s", strings.TrimSpace(string(out)))
-	}
-
-	s.logger.Info("fast-forward merging...")
-	if out, err := s.runner.RunDir(repoRoot, "git", "merge", "--ff-only", "FETCH_HEAD"); err != nil {
-		return fmt.Errorf("fast-forward merge failed (branches may have diverged): %s", strings.TrimSpace(string(out)))
-	}
-
-	// Clean up exchange directory
-	if err := os.RemoveAll(exchangeDir); err != nil {
-		s.logger.Warn("failed to clean up exchange directory: %s", err)
-	}
-
-	s.logger.Info("pull complete for job %s", jobID)
-	return nil
+// Template renders the lima.yaml template with the given parameters and returns it.
+func (s *Service) Template(params TemplateParams) (string, error) {
+	return RenderTemplate(params)
 }
 
 func writeTempFile(pattern string, data []byte) (string, error) {

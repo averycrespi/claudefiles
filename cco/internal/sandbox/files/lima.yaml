@@ -7,6 +7,12 @@ cpus: 4
 memory: "4GiB"
 disk: "100GiB"
 
+user:
+  name: {{.Username}}
+  uid: {{.UID}}
+  gid: {{.GID}}
+  home: {{.HomeDir}}
+
 containerd:
   system: false
   user: false
@@ -26,15 +32,7 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    usermod -aG docker "{{.User}}"
-
-# Create workspace directory
-- mode: system
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    mkdir -p /workspace
-    chown "{{.User}}:{{.User}}" /workspace
+    usermod -aG docker "{{.Username}}"
 
 # Install dev tools, Go, asdf, and Claude Code
 - mode: user
@@ -98,9 +96,11 @@ hostResolver:
   enabled: false
 
 mounts:
-- location: "~/.local/share/cco/exchange"
-  mountPoint: "/exchange"
+{{- range .Mounts}}
+- location: "{{.}}"
+  mountPoint: "{{.}}"
   writable: true
+{{- end}}
 
 message: |
   Claude Code sandbox VM is ready.

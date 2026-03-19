@@ -1,0 +1,15 @@
+{
+  "skipDangerousModePermissionPrompt": true,
+  "permissions": {
+    "allow": [],
+    "deny": []
+  },
+  "hooks": {},
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/scripts/statusline.sh"
+  },
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
+  }
+}

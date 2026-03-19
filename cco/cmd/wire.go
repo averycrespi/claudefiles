@@ -43,6 +43,5 @@ func newSandboxService() *sandbox.Service {
 	return sandbox.NewService(
 		lima.NewClient(runner),
 		logger,
-		runner,
 	)
 }

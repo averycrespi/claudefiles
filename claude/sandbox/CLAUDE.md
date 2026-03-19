@@ -8,10 +8,6 @@ You are running inside an isolated Linux VM (Ubuntu 24.04). You have full
 permissions — install packages, run any commands, use Docker freely. There
 are no permission prompts or hooks.
 
-This VM has no access to host services, secrets, or API keys beyond what
-is needed to run Claude Code itself. Do not attempt to access external
-services that require authentication.
-
 ## Conventional Commits
 
 Always use conventional commits when writing commit messages:
