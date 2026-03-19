@@ -45,13 +45,13 @@ var configShowCmd = &cobra.Command{
 	},
 }
 
-var configInitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialize config file with defaults",
+var configRefreshCmd = &cobra.Command{
+	Use:   "refresh",
+	Short: "Create or refresh config file with latest defaults",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := logging.NewStdLogger(verbose)
-		return config.Init(logger)
+		return config.Refresh(logger)
 	},
 }
 
@@ -62,7 +62,7 @@ var configEditCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := logging.NewStdLogger(verbose)
-		if err := config.Init(logger); err != nil {
+		if err := config.Refresh(logger); err != nil {
 			return err
 		}
 
@@ -80,6 +80,6 @@ var configEditCmd = &cobra.Command{
 }
 
 func init() {
-	configCmd.AddCommand(configPathCmd, configShowCmd, configInitCmd, configEditCmd)
+	configCmd.AddCommand(configPathCmd, configShowCmd, configRefreshCmd, configEditCmd)
 	rootCmd.AddCommand(configCmd)
 }

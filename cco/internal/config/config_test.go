@@ -76,11 +76,11 @@ func TestDefault(t *testing.T) {
 	assert.Empty(t, cfg.Sandbox.ProvisionPaths)
 }
 
-func TestInit_CreatesFile(t *testing.T) {
+func TestRefresh_CreatesFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 
-	err := Init(logging.NoopLogger{})
+	err := Refresh(logging.NoopLogger{})
 
 	require.NoError(t, err)
 	path := filepath.Join(dir, "cco", "config.json")
@@ -91,12 +91,35 @@ func TestInit_CreatesFile(t *testing.T) {
 	assert.Empty(t, cfg.Sandbox.Mounts)
 }
 
-func TestInit_NoopWhenExists(t *testing.T) {
+func TestRefresh_PreservesExistingValues(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
+	ccoDir := filepath.Join(dir, "cco")
+	require.NoError(t, os.MkdirAll(ccoDir, 0o755))
+	data := []byte(`{"sandbox":{"mounts":["/Users/me/src"],"provision_paths":["/Users/me/.claude"]}}`)
+	require.NoError(t, os.WriteFile(filepath.Join(ccoDir, "config.json"), data, 0o644))
 
-	require.NoError(t, Init(logging.NoopLogger{}))
-	require.NoError(t, Init(logging.NoopLogger{}))
+	require.NoError(t, Refresh(logging.NoopLogger{}))
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"/Users/me/src"}, cfg.Sandbox.Mounts)
+	assert.Equal(t, []string{"/Users/me/.claude"}, cfg.Sandbox.ProvisionPaths)
+}
+
+func TestRefresh_PopulatesNilFields(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	ccoDir := filepath.Join(dir, "cco")
+	require.NoError(t, os.MkdirAll(ccoDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(ccoDir, "config.json"), []byte("{}"), 0o644))
+
+	require.NoError(t, Refresh(logging.NoopLogger{}))
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg.Sandbox.Mounts)
+	assert.NotNil(t, cfg.Sandbox.ProvisionPaths)
 }
 
 func TestParseProvisionPath_Plain(t *testing.T) {

@@ -33,23 +33,33 @@ func Default() *Config {
 	}
 }
 
-// Init creates the config file with defaults if it doesn't exist.
-// If the file already exists, it does nothing.
-func Init(logger logging.Logger) error {
+// Refresh loads the config file (creating it with defaults if missing),
+// then writes it back. This ensures new fields added to the schema
+// appear in existing config files with their default values.
+func Refresh(logger logging.Logger) error {
 	path := paths.ConfigFilePath()
-
-	if _, err := os.Stat(path); err == nil {
-		logger.Info("config file already exists at %s", path)
-		return nil
-	}
 
 	if err := os.MkdirAll(paths.ConfigDir(), 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	data, err := json.MarshalIndent(Default(), "", "  ")
+	cfg, err := Load()
 	if err != nil {
-		return fmt.Errorf("failed to marshal default config: %w", err)
+		return err
+	}
+
+	// Apply defaults for zero-value fields.
+	defaults := Default()
+	if cfg.Sandbox.Mounts == nil {
+		cfg.Sandbox.Mounts = defaults.Sandbox.Mounts
+	}
+	if cfg.Sandbox.ProvisionPaths == nil {
+		cfg.Sandbox.ProvisionPaths = defaults.Sandbox.ProvisionPaths
+	}
+
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 	data = append(data, '\n')
 
@@ -57,7 +67,7 @@ func Init(logger logging.Logger) error {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	logger.Info("created config file at %s", path)
+	logger.Info("refreshed config file at %s", path)
 	return nil
 }
 
