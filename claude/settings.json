@@ -170,7 +170,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "terminal-notifier -title 'Claude needs your attention' -message \"$PWD\" && afplay /System/Library/Sounds/Ping.aiff && cco notify",
+            "command": "terminal-notifier -title 'Claude needs your attention' -message \"$PWD\" && afplay /System/Library/Sounds/Ping.aiff",
             "async": true
           }
         ]
@@ -182,7 +182,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "terminal-notifier -title 'Claude is done' -message \"$PWD\" && afplay /System/Library/Sounds/Glass.aiff && cco notify",
+            "command": "terminal-notifier -title 'Claude is done' -message \"$PWD\" && afplay /System/Library/Sounds/Glass.aiff",
             "async": true
           }
         ]

@@ -29,16 +29,6 @@ This repository includes a structured development workflow:
 
 See [docs/workflow.md](docs/workflow.md) for details. See [docs/skills.md](docs/skills.md) for the full skills and agents catalog.
 
-## Testing
-
-Run cco tests:
-
-```bash
-cd cco && go test ./... -count=1
-```
-
-**Note:** tmux integration tests require sandbox to be disabled (`dangerouslyDisableSandbox`) due to Unix socket access at `/private/tmp/tmux-*/`. On macOS, use `filepath.EvalSymlinks` on temp dirs in Go tests to handle the `/var` → `/private/var` symlink.
-
 ## Modifying This Repository
 
 - Edit files in `claude/` directory

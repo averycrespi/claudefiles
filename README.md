@@ -5,14 +5,12 @@ My opinionated resources for working with [Claude Code](https://www.anthropic.co
 ## Features
 
 - **[Structured Development Workflow](docs/workflow.md)** — Reliably turn ideas into pull requests
-- **[Claude Code Orchestrator](cco/README.md)** — Develop in parallel using Git worktrees and tmux
 - **[Integrations](docs/integrations.md)** — Connect to Jira, Confluence, Datadog, and browsers
 
 ## Requirements
 
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Homebrew](https://brew.sh/) for macOS dependency management
-- [Go](https://go.dev/) 1.23 for building `cco`
 - [Node.js](https://nodejs.org/) 18+ for `automating-browsers`
 - macOS is assumed, but can be adapted for Linux
 
@@ -24,18 +22,18 @@ cd claudefiles
 ./setup.sh
 ```
 
-The setup script will install dependencies, symlink configuration files to `~/.claude/`, and install `cco`.
+The setup script will install dependencies and symlink configuration files to `~/.claude/`.
 
 ## Documentation
 
-| Doc | Purpose |
-|-----|---------|
-| [Workflow](docs/workflow.md) | How the structured development workflow works |
-| [Skills Catalog](docs/skills.md) | All available skills and agents |
-| [Integrations](docs/integrations.md) | Setup guides for external services |
-| [Claude Code Config](docs/claude-code-config.md) | How the `~/.claude/` symlinks work |
-| [Design Decisions](docs/design-decisions.md) | Why things are built this way |
-| [Future](docs/future.md) | Planned improvements and explorations |
+| Doc                                              | Purpose                                       |
+| ------------------------------------------------ | --------------------------------------------- |
+| [Workflow](docs/workflow.md)                     | How the structured development workflow works |
+| [Skills Catalog](docs/skills.md)                 | All available skills and agents               |
+| [Integrations](docs/integrations.md)             | Setup guides for external services            |
+| [Claude Code Config](docs/claude-code-config.md) | How the `~/.claude/` symlinks work            |
+| [Design Decisions](docs/design-decisions.md)     | Why things are built this way                 |
+| [Future](docs/future.md)                         | Planned improvements and explorations         |
 
 ## Attribution
 

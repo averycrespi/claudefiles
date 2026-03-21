@@ -1,19 +1,5 @@
 # Integrations
 
-## Claude Code Orchestrator
-
-`cco` lets you run multiple Claude Code sessions in parallel, each on its own branch. It uses Git worktrees and tmux to keep sessions isolated from each other and from your main working tree.
-
-```sh
-cco add feature-branch       # create workspace, launch Claude Code
-cco attach feature-branch    # switch to it later
-cco rm feature-branch        # clean up when done (keeps the branch)
-```
-
-`cco` also supports advanced features for executing plans inside an isolated sandbox VM.
-
-See the [cco README](../cco/README.md) for full documentation.
-
 ## Atlassian (Jira + Confluence)
 
 Read and write access to Jira issues, Confluence pages, and Compass via the official Atlassian MCP server.
