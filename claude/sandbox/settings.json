@@ -4,7 +4,19 @@
     "allow": [],
     "deny": []
   },
-  "hooks": {},
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-commit-gitleaks"
+          }
+        ]
+      }
+    ]
+  },
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/scripts/statusline.sh"
