@@ -12,6 +12,14 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/pre-commit-gitleaks"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-gh-redirect"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pre-git-remote-redirect"
           }
         ]
       }

@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+INPUT=$(cat)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command')
+
+# Only intercept git remote operations
+if ! echo "$COMMAND" | grep -qE '(^|\s|;|&&|\|\|)git\s+(push|pull|fetch|ls-remote|remote)\b'; then
+	exit 0
+fi
+
+jq -n '{
+  hookSpecificOutput: {
+    hookEventName: "PreToolUse",
+    permissionDecision: "deny",
+    permissionDecisionReason: "Git remote operations are not available in this environment. Instead, use MCP tools to interact with Git remotes."
+  }
+}'
