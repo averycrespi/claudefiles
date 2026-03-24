@@ -16,7 +16,8 @@
 | Skill             | Purpose                                                       |
 | ----------------- | ------------------------------------------------------------- |
 | `reviewing-prs`   | Holistic PR review across 6 parallel dimensions               |
-| `troubleshooting` | Battle buddy for incident response and system troubleshooting |
+| `researching`     | Structured multi-session research with experiments and HTML reports |
+| `troubleshooting` | Battle buddy for incident response and system troubleshooting      |
 
 ## Integrations
 
