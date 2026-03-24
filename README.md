@@ -35,6 +35,10 @@ The setup script will install dependencies and symlink configuration files to `~
 | [Design Decisions](docs/design-decisions.md)     | Why things are built this way                 |
 | [Future](docs/future.md)                         | Planned improvements and explorations         |
 
+## Related
+
+- [agent-tools](https://github.com/averycrespi/agent-tools) — A collection of tools that reduce the friction of working with AI coding agents
+
 ## Attribution
 
 - Workflow skills adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent (MIT)
