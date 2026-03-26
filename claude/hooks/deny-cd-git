@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+INPUT=$(cat)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command')
+
+# Deny commands that cd into a directory then run git
+if echo "$COMMAND" | grep -qE 'cd\s+.+&&\s*git\b'; then
+  jq -n '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: "Do not combine cd and git in one command. Run them as separate tool calls, or use absolute paths."
+    }
+  }'
+else
+  exit 0
+fi

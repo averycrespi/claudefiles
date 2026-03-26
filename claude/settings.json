@@ -163,6 +163,15 @@
             "command": "~/.claude/hooks/pre-commit-gitleaks"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/deny-cd-git"
+          }
+        ]
       }
     ],
     "Notification": [
