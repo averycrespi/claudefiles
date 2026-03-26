@@ -160,7 +160,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/pre-commit-gitleaks"
+            "command": "~/.claude/hooks/scan-secrets-before-commit"
           }
         ]
       },
