@@ -15,11 +15,11 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/pre-gh-redirect"
+            "command": "~/.claude/hooks/deny-gh-cli-in-sandbox"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/pre-git-remote-redirect"
+            "command": "~/.claude/hooks/deny-git-remote-in-sandbox"
           }
         ]
       }
