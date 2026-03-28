@@ -222,6 +222,21 @@
       "go test:*",
       "launchctl:*",
       "playwright-cli:*"
-    ]
+    ],
+    "network": {
+      "allowedDomains": [
+        "bitbucket.org",
+        "files.pythonhosted.org",
+        "github.com",
+        "gitlab.com",
+        "golang.org",
+        "gopkg.in",
+        "index.golang.org",
+        "proxy.golang.org",
+        "pypi.org",
+        "storage.googleapis.com",
+        "sum.golang.org"
+      ]
+    }
   }
 }
