@@ -77,6 +77,17 @@
       "Bash(git rm:*)",
       "Bash(git show:*)",
       "Bash(git status:*)",
+      "Bash(git -C * add:*)",
+      "Bash(git -C * blame:*)",
+      "Bash(git -C * commit:*)",
+      "Bash(git -C * diff:*)",
+      "Bash(git -C * log:*)",
+      "Bash(git -C * mv:*)",
+      "Bash(git -C * remote get-url:*)",
+      "Bash(git -C * rev-parse:*)",
+      "Bash(git -C * rm:*)",
+      "Bash(git -C * show:*)",
+      "Bash(git -C * status:*)",
       "Bash(go doc:*)",
       "Bash(go env:*)",
       "Bash(go list:*)",
@@ -149,8 +160,7 @@
       "Read(~/.config/gh/**)",
       "Read(~/.docker/**)",
       "Read(~/.gnupg/**)",
-      "Read(~/.ssh/**)",
-      "Bash(git -C:*)"
+      "Read(~/.ssh/**)"
     ]
   },
   "hooks": {
@@ -161,15 +171,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/scan-secrets-before-commit"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/deny-cd-git"
           }
         ]
       }

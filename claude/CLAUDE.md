@@ -85,6 +85,17 @@ test: add integration tests for checkout flow
 - Be specific ("handles expired sessions mid-request") not vague ("fixes edge case")
 - Don't substitute a ticket link for actual motivation
 
+## Git Worktree Rules
+
+When working inside a git worktree, **all git operations must target the worktree, not the main repository**:
+
+- **Stay in the worktree.** Run git commands from the worktree directory. Do not `cd` to the main repo or use `git -C` pointing at the main repo.
+- **Use `git -C <worktree-path>`** if you need to run git from a different working directory — always point it at the worktree, never at the original repo.
+- **Commits, branches, and staging** all happen in the worktree. The main repo's working tree must not be modified.
+- **Do not use `cd <main-repo> && git ...`** — this bypasses the worktree isolation and modifies the wrong working tree.
+
+If you're unsure which directory is the worktree, check `git rev-parse --show-toplevel` from your current directory.
+
 ## Atlassian MCP Usage
 
 To preserve context, **always delegate these Atlassian MCP operations to a subagent**:
