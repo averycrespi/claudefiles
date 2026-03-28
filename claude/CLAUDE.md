@@ -18,6 +18,10 @@ Title under 70 chars: `TICKET-123: description` or conventional commit format. B
 
 In a worktree, **all git operations target the worktree, never the main repo**. Use `git -C <worktree-path>` if needed — never point it at the main repo. Do not `cd` to the main repo to run git. Verify with `git rev-parse --show-toplevel`.
 
+## Sorting
+
+When sorting items alphabetically or numerically, always use `sort` (or equivalent shell command) — never sort by hand or from memory.
+
 ## MCP Usage
 
 **Delegate to a subagent** any MCP call that returns verbose output: searches, log/span queries, multi-step lookups (2+ calls). The subagent should return a concise summary, not raw output.
