@@ -101,51 +101,44 @@ else
     next_bg=$BG_CYAN
 fi
 
-# Context progress bar (uses built-in used_percentage from Claude Code 2.1.6+)
+# Context usage
 context_segment=""
+BG_DARK=$'\033[48;5;236m'
+FG_DARK=$'\033[38;5;236m'
 pct=$(echo "$input" | jq '.context_window.used_percentage // empty' 2>/dev/null)
 if [ -n "$pct" ] && [ "$pct" != "null" ] && [ "$pct" -ge 0 ] 2>/dev/null; then
-    # Build progress bar (10 chars wide)
-    bar_width=10
-    filled=$((pct * bar_width / 100))
-    [ "$filled" -gt "$bar_width" ] && filled=$bar_width
-    empty=$((bar_width - filled))
-
-    # Colors for filled portion based on level
+    # Color based on level
     if [ "$pct" -gt 95 ]; then
-        fill_color=$'\033[38;5;196m'  # bright red
-        bar_blink=$BLINK
+        pct_color=$'\033[38;5;196m'  # bright red
     elif [ "$pct" -gt 85 ]; then
-        fill_color=$'\033[38;5;208m'  # orange
-        bar_blink=""
+        pct_color=$'\033[38;5;208m'  # orange
     elif [ "$pct" -gt 70 ]; then
-        fill_color=$'\033[38;5;220m'  # yellow
-        bar_blink=""
+        pct_color=$'\033[38;5;220m'  # yellow
     else
-        fill_color=$'\033[38;5;29m'   # forest green
-        bar_blink=""
+        pct_color=$FG_WHITE
     fi
-    empty_color=$'\033[38;5;240m'     # dark gray
-
-    # Build the bar string
-    filled_bar=""
-    empty_bar=""
-    for ((i=0; i<filled; i++)); do filled_bar+="█"; done
-    for ((i=0; i<empty; i++)); do empty_bar+="░"; done
-
-    # Segment with dark background
-    BG_DARK=$'\033[48;5;236m'
-    FG_DARK=$'\033[38;5;236m'
-    context_segment="${next_fg}${BG_DARK}${SEP}${bar_blink}${fill_color}${filled_bar}${RESET}${BG_DARK}${empty_color}${empty_bar}${FG_WHITE} ${pct}%${RESET}"
+    context_segment="${next_fg}${BG_DARK}${SEP}${FG_WHITE} ctx: ${pct_color}${pct}%${RESET}"
+    next_fg=$FG_DARK
+else
+    context_segment="${next_fg}${BG_DARK}${SEP}${FG_WHITE} ctx: --%${RESET}"
     next_fg=$FG_DARK
 fi
 
-# Fallback if no context data
-if [ -z "$context_segment" ]; then
-    BG_DARK=$'\033[48;5;236m'
-    FG_DARK=$'\033[38;5;236m'
-    context_segment="${next_fg}${BG_DARK}${SEP}${FG_WHITE} --%${RESET}"
-    next_fg=$FG_DARK
+# Session usage (5-hour rolling window)
+session_segment=""
+session_pct=$(echo "$input" | jq '.rate_limits.five_hour.used_percentage // empty' 2>/dev/null)
+if [ -n "$session_pct" ] && [ "$session_pct" != "null" ] && [ "$session_pct" -ge 0 ] 2>/dev/null; then
+    if [ "$session_pct" -gt 95 ]; then
+        s_pct_color=$'\033[38;5;196m'
+    elif [ "$session_pct" -gt 85 ]; then
+        s_pct_color=$'\033[38;5;208m'
+    elif [ "$session_pct" -gt 70 ]; then
+        s_pct_color=$'\033[38;5;220m'
+    else
+        s_pct_color=$FG_WHITE
+    fi
+    session_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} session: ${s_pct_color}${session_pct}%${RESET}"
+    session_next_fg=$FG_DARK
 fi
 
 # Build output with powerline style
@@ -154,4 +147,9 @@ echo -n "${model_bg}${FG_BLACK}${BOLD} $model ${RESET}"
 echo -n "${model_fg}${BG_BLUE}${SEP}${FG_BLACK}  $dir_name ${RESET}"
 echo -n "$git_segment"
 echo -n "$context_segment"
-echo -n "${next_fg}${RESET}${SEP}"
+if [ -n "$session_segment" ]; then
+    echo -n "$session_segment"
+    echo -n "${session_next_fg}${RESET}${SEP}"
+else
+    echo -n "${next_fg}${RESET}${SEP}"
+fi
