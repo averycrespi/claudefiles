@@ -241,8 +241,5 @@
         "sum.golang.org"
       ]
     }
-  },
-  "env": {
-    "DISABLE_AUTOUPDATER": "1"
   }
 }
