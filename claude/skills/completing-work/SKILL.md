@@ -17,11 +17,11 @@ Guide completion of development work by presenting clear options and handling ch
 
 ### Step 0: Clean Up Plan Files
 
-**If a plan file path is known from conversation context** (e.g. `.plans/2026-02-20-cco-attach-plan.md`):
+**If a plan file path is known from conversation context** (e.g. `.plans/2026-02-20-cco-attach.md`):
 
-1. Strip the suffix (`-plan.md`) to get the stem (e.g. `2026-02-20-cco-attach`)
-2. Glob for `.plans/<stem>-*.md` to find related files (design, architecture, plan)
-3. `git rm` the matched files
+1. Strip the `.md` extension to get the stem (e.g. `2026-02-20-cco-attach`)
+2. `git rm` the plan file: `.plans/<stem>.md`
+3. Also `git rm` the design file if it exists: `.designs/<stem>.md`
 4. Commit: `chore: remove completed plan files`
 
 **If no plan file is found in context or `.plans/` doesn't exist:** Skip silently.

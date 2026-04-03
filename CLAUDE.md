@@ -9,7 +9,7 @@ This is a public repository. When creating or modifying content:
 - **No internal details** - Don't reference specific companies, projects, team names, or internal URLs
 - **No private data** - Don't include API keys, tokens, credentials, or sensitive configuration
 - **Generic examples** - Use placeholders like `ABC-123` for tickets, `example.com` for domains
-- **Sanitize plans** - Review `.plans/` files before committing to ensure they contain no proprietary information
+- **Sanitize plans** - Review `.plans/` and `.designs/` files before committing to ensure they contain no proprietary information
 
 ## Setup
 

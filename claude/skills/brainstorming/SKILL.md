@@ -37,7 +37,7 @@ Start by understanding the current project context, then ask questions one at a 
 ## After the Design
 
 **Documentation:**
-- Write the validated design to `.plans/YYYY-MM-DD-<topic>-design.md` in the project root
+- Write the validated design to `.designs/YYYY-MM-DD-<topic>.md` in the project root
 - Commit the design document to git
 
 **Implementation (if continuing):**

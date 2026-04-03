@@ -92,7 +92,7 @@ Cannot proceed with verification until checks pass.
 
 4. Read the full contents of each changed/added file using the Read tool
 
-5. Look for plan files in `.plans/` directory — find the design document and implementation plan from conversation context or by globbing `.plans/*.md`
+5. Look for plan and design files — find the plan from `.plans/` and the design from `.designs/` using conversation context or by globbing those directories
 
 6. Read the project's CLAUDE.md if it exists
 
