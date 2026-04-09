@@ -15,17 +15,17 @@ My opinionated resources for working with AI coding agents — currently [Claude
 ```sh
 git clone git@github.com:averycrespi/claudefiles.git
 cd claudefiles
+brew bundle # to install system dependencies
 make install-playwright # for /automating-browsers skill
 make stow
 ```
 
 ## Structure
 
-| Directory                     | Purpose                                       | Stow target    |
-| ----------------------------- | --------------------------------------------- | -------------- |
-| [`claude/`](claude/README.md) | Claude Code skills, hooks, settings, agents   | `~/.claude/`   |
-| [`pi/agent`](pi/agent/README.md) | Pi agent extensions, agents, skills, settings | `~/.pi/agent/` |
-
+| Directory                         | Purpose                                       | Stow target    |
+| --------------------------------- | --------------------------------------------- | -------------- |
+| [`claude/`](claude/README.md)     | Claude Code skills, hooks, settings, agents   | `~/.claude/`   |
+| [`pi/agent/`](pi/agent/README.md) | Pi agent extensions, agents, skills, settings | `~/.pi/agent/` |
 
 ## Development
 
