@@ -147,7 +147,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/format-markdown"
+            "command": "~/.claude/hooks/format-markdown-on-write"
           }
         ]
       },
@@ -156,7 +156,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/format-markdown"
+            "command": "~/.claude/hooks/format-markdown-on-write"
           }
         ]
       }
