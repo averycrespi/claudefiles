@@ -75,3 +75,11 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 | `playwright-cli`          | Browser automation for testing and data extraction         |
 | `skill-creator`           | Guide for creating new skills                              |
 | `test-driven-development` | TDD discipline: red-green-refactor cycle                   |
+
+## Attribution
+
+- Workflow skills adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent (MIT)
+- `skill-creator` adapted from [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skill-creator) (Apache 2.0)
+- `frontend-design` adapted from [Anthropic's frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design) (Apache 2.0)
+- `playwright-cli` derived from [playwright-cli](https://github.com/microsoft/playwright-cli) by Microsoft (Apache 2.0)
+- Status line script adapted from [claude-code-tools](https://github.com/pchalasani/claude-code-tools) by Prasad Chalasani (MIT)
