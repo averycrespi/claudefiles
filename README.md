@@ -24,7 +24,7 @@ make stow
 | Directory                     | Purpose                                       | Stow target    |
 | ----------------------------- | --------------------------------------------- | -------------- |
 | [`claude/`](claude/README.md) | Claude Code skills, hooks, settings, agents   | `~/.claude/`   |
-| `pi/agent`                    | Pi agent extensions, agents, skills, settings | `~/.pi/agent/` |
+| [`pi/agent`](pi/agent/README.md) | Pi agent extensions, agents, skills, settings | `~/.pi/agent/` |
 
 
 ## Development
