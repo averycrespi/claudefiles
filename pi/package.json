@@ -1,0 +1,14 @@
+{
+  "name": "agent-config",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.65.0",
+    "@sinclair/typebox": "^0.34.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}
