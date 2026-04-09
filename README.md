@@ -15,7 +15,7 @@ My opinionated resources for working with AI coding agents — currently [Claude
 ```sh
 git clone git@github.com:averycrespi/claudefiles.git
 cd claudefiles
-brew bundle # to install system dependencies
+brew bundle # to install system dependencies on macOS
 make install-playwright # for /automating-browsers skill
 make stow
 ```
