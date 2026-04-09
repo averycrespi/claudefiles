@@ -1,16 +1,11 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(npx tsc:*)"
-    ],
+    "allow": [],
     "deny": [
       "Write(~/.claude/**)",
-      "Edit(~/.claude/**)"
-    ]
-  },
-  "sandbox": {
-    "excludedCommands": [
-      "make:*"
+      "Edit(~/.claude/**)",
+      "Write(~/.pi/**)",
+      "Edit(~/.pi/**)"
     ]
   }
 }

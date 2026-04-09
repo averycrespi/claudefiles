@@ -6,8 +6,8 @@ My opinionated resources for working with AI coding agents — currently [Claude
 
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Pi agent](https://pi.dev/)
-- [Homebrew](https://brew.sh/) for macOS dependency management
-- [Node.js](https://nodejs.org/) 24+ for Pi extensions and `automating-browsers`
+- [Homebrew](https://brew.sh/)
+- [Node.js](https://nodejs.org/) 24+
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -15,22 +15,22 @@ My opinionated resources for working with AI coding agents — currently [Claude
 ```sh
 git clone git@github.com:averycrespi/claudefiles.git
 cd claudefiles
-make install-dev
-make install-playwright
+make install-playwright # for /automating-browsers skill
 make stow
 ```
 
 ## Structure
 
-| Directory | Purpose | Stow target |
-| --------- | ------- | ----------- |
-| [`claude/`](claude/README.md) | Claude Code skills, hooks, settings, agents | `~/.claude/` |
-| `pi/` | Pi agent extensions, agents, skills, settings | `~/.pi/` |
+| Directory                     | Purpose                                       | Stow target    |
+| ----------------------------- | --------------------------------------------- | -------------- |
+| [`claude/`](claude/README.md) | Claude Code skills, hooks, settings, agents   | `~/.claude/`   |
+| `pi/agent`                    | Pi agent extensions, agents, skills, settings | `~/.pi/agent/` |
 
 
 ## Development
 
 ```sh
+make install-dev # install Pi dev dependencies
 make typecheck   # type-check Pi extension TypeScript files
 ```
 
@@ -49,4 +49,4 @@ make typecheck   # type-check Pi extension TypeScript files
 ## License
 
 - Repository licensed under [MIT](./LICENSE)
-- Individual skills and agents may have their own licenses
+- Individual components may have their own licenses
