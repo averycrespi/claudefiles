@@ -1,7 +1,7 @@
 ---
 name: frontend-design
 description: Use when the user asks to build web components, pages, or applications that need distinctive, production-grade frontend interfaces with high design quality
-license: Complete terms in LICENSE.txt
+license: Complete terms in LICENSE
 ---
 
 This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.

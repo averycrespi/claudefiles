@@ -1,7 +1,7 @@
 ---
 name: skill-creator
 description: Use when creating a new skill or updating an existing skill
-license: Complete terms in LICENSE.txt
+license: Complete terms in LICENSE
 ---
 
 # Creating Skills
