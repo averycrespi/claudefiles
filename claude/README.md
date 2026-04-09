@@ -1,6 +1,6 @@
 # Claude Code Configuration
 
-This directory manages Claude Code configuration files. `make stow-claude` uses [GNU Stow](https://www.gnu.org/software/stow/) to symlink `claude/` into `~/.claude/`, so changes made here are immediately reflected in your Claude Code environment.
+This directory manages Claude Code configuration files.
 
 ## Directory Structure
 
@@ -23,8 +23,6 @@ Running `make stow-claude` creates symlinks from `claude/` into `~/.claude/`. Fo
 - `claude/skills/brainstorming/SKILL.md` → `~/.claude/skills/brainstorming/SKILL.md`
 
 This means every Claude Code session on your machine picks up these settings, skills, and agents automatically.
-
-**Always edit files in the `claude/` directory**, never in `~/.claude/` directly. The files in `~/.claude/` are symlinks — editing them in place can break the stow linkage.
 
 ## Structured Development Workflow
 
@@ -58,19 +56,19 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 
 ### Other Workflows
 
-| Skill             | Purpose                                                            |
-| ----------------- | ------------------------------------------------------------------ |
-| `reviewing-prs`   | Holistic PR review across 6 parallel dimensions                    |
+| Skill             | Purpose                                                             |
+| ----------------- | ------------------------------------------------------------------- |
+| `reviewing-prs`   | Holistic PR review across 6 parallel dimensions                     |
 | `researching`     | Structured multi-session research with experiments and HTML reports |
-| `troubleshooting` | Battle buddy for incident response and system troubleshooting      |
+| `troubleshooting` | Battle buddy for incident response and system troubleshooting       |
 
 ### Integrations
 
 | Skill                     | Purpose                                            |
 | ------------------------- | -------------------------------------------------- |
-| `automating-browsers`     | Browser automation for testing and data extraction  |
-| `managing-launchd-agents` | Manage macOS launchd user agents                    |
-| `creating-jira-tickets`   | Draft and create well-structured Jira tickets       |
+| `automating-browsers`     | Browser automation for testing and data extraction |
+| `managing-launchd-agents` | Manage macOS launchd user agents                   |
+| `creating-jira-tickets`   | Draft and create well-structured Jira tickets      |
 
 ### Design
 
