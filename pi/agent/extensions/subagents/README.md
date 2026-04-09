@@ -10,23 +10,23 @@ Launch a subagent to handle a task autonomously. The subagent runs in its own co
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `agent` | string | yes | Agent type: `explore`, `review`, `research`, or `code` |
-| `intent` | string | yes | Short label shown in activity titles (3–6 words) |
-| `prompt` | string | yes | Full task — brief the agent like a colleague who just walked in |
-| `show_activity` | boolean | no | Show live progress updates (default: true) |
+| Parameter       | Type    | Required | Description                                                     |
+| --------------- | ------- | -------- | --------------------------------------------------------------- |
+| `agent`         | string  | yes      | Agent type: `explore`, `review`, `research`, or `code`          |
+| `intent`        | string  | yes      | Short label shown in activity titles (3–6 words)                |
+| `prompt`        | string  | yes      | Full task — brief the agent like a colleague who just walked in |
+| `show_activity` | boolean | no       | Show live progress updates (default: true)                      |
 
 Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. The built-in types are defined in `pi/agent/agents/` in this repo and symlinked via `make stow`. Custom agents can be added by dropping additional `.md` files in that directory — no code changes required.
 
 The built-in types:
 
-| Type | Tools | Extensions | Model | Thinking |
-|------|-------|------------|-------|----------|
-| `explore` | read | — | gpt-5.4-mini | medium |
-| `review` | read | — | gpt-5.4 | high |
-| `research` | read | web | gpt-5.4 | high |
-| `code` | read, bash, edit, write | autoformat | gpt-5.4 | medium |
+| Type       | Tools                   | Extensions | Model        | Thinking |
+| ---------- | ----------------------- | ---------- | ------------ | -------- |
+| `explore`  | read                    | —          | gpt-5.4-mini | medium   |
+| `review`   | read                    | —          | gpt-5.4      | high     |
+| `research` | read                    | web        | gpt-5.4      | high     |
+| `code`     | read, bash, edit, write | autoformat | gpt-5.4      | medium   |
 
 `explore` and `review` are read-only. `research` adds web search and fetch via the `web` extension. `code` has full write access including shell.
 
@@ -40,31 +40,35 @@ Launch multiple subagents in parallel. Each runs independently in its own contex
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `agents` | array | yes | List of agents to run concurrently (minimum 1) |
-| `agents[].agent` | string | yes | Agent type (same options as `spawn_agent`) |
-| `agents[].intent` | string | yes | Short label for this agent |
-| `agents[].prompt` | string | yes | Task for this agent |
+| Parameter         | Type   | Required | Description                                    |
+| ----------------- | ------ | -------- | ---------------------------------------------- |
+| `agents`          | array  | yes      | List of agents to run concurrently (minimum 1) |
+| `agents[].agent`  | string | yes      | Agent type (same options as `spawn_agent`)     |
+| `agents[].intent` | string | yes      | Short label for this agent                     |
+| `agents[].prompt` | string | yes      | Task for this agent                            |
 
 **Returns** a single document with each agent's result under a `## <type> · <intent>` heading, separated by `---`.
 
 ## UI behavior
 
 **`spawn_agent`** — while running, shows:
+
 ```
 command: <current-tool-call>
 running: <elapsed>
 ```
+
 Clears to `✓ Done in <duration>` on success or an error message on failure. Pass `show_activity: false` to suppress live updates.
 
 **`spawn_agents`** — shows a status line per agent while running:
+
 ```
 Running 3 agents...
   · explore: grep "auth" (15s)
   · code: bash: npm test (8s)
   ✓ review: done (1m 23s)
 ```
+
 Clears to `✓ N agents done in <duration>` or `✗ N of N failed` on completion.
 
 Activity widgets are removed when all subagents finish, error, or are aborted.
@@ -108,10 +112,17 @@ thinking: medium
 disable_skills: true
 disable_prompt_templates: true
 ---
+
 System prompt body...
 ```
 
 Fields: `name` (defaults to filename without extension), `description` (shown in the tool's agent list), `tools` (comma-separated), `extensions` (comma-separated, empty means none), `model` (inherits parent model if omitted), `thinking` (inherits parent thinking level if omitted), `disable_skills`, `disable_prompt_templates`.
+
+## Inspiration
+
+- [nicobailon/pi-subagents](https://github.com/nicobailon/pi-subagents) — slash commands (`/run`, `/chain`, `/parallel`), an interactive Agents Manager overlay, reusable chain files (`.chain.md`), and background/foreground execution modes
+- [tintinweb/pi-subagents](https://github.com/tintinweb/pi-subagents) — parallel execution with configurable concurrency limits, a persistent live widget, mid-run steering, custom agent definitions via markdown, and cross-extension communication through event-based RPC
+- Claude Code subagents — the `Agent` tool in the Claude Code CLI, supporting specialized agent types, worktree isolation, and background execution
 
 ## File layout
 

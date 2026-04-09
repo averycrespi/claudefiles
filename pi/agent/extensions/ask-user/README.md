@@ -10,16 +10,17 @@ Ask the user a multiple-choice question and return their answer. Use when multip
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `question` | string | yes | The question to ask |
-| `context` | string | no | Additional framing shown above the options |
-| `options` | array | yes | 2–5 choices, each with a `label` (required) and `description` (optional) |
-| `recommended` | integer | no | 0-indexed option to mark as "(Recommended)" |
+| Parameter     | Type    | Required | Description                                                              |
+| ------------- | ------- | -------- | ------------------------------------------------------------------------ |
+| `question`    | string  | yes      | The question to ask                                                      |
+| `context`     | string  | no       | Additional framing shown above the options                               |
+| `options`     | array   | yes      | 2–5 choices, each with a `label` (required) and `description` (optional) |
+| `recommended` | integer | no       | 0-indexed option to mark as "(Recommended)"                              |
 
 An "Other (type your own)" option is always appended automatically — do not include one in `options`.
 
 **Returns** one of:
+
 - `"User selected: 2. Option Name"` — chosen option with its 1-based index
 - `"User wrote: <text>"` — free-text answer via the Other path
 - `"User cancelled — no option selected."` — user pressed Escape
@@ -39,3 +40,10 @@ Renders a custom TUI widget at the bottom of the terminal:
 - Context (if provided) appears between the question and the options
 
 In non-interactive mode (`!ctx.hasUI`) the tool returns an error immediately.
+
+## Inspiration
+
+- [edlsh/pi-ask-user](https://github.com/edlsh/pi-ask-user) — searchable single/multi-select options, freeform responses, and a bundled skill that prompts agents to seek input on architectural trade-offs
+- [mitsuhiko/agent-stuff answer.ts](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/answer.ts) — extracts embedded questions from assistant responses using an LLM, then presents a sequential multi-line editor UI for answering each one
+- [jayshah5696/pi-agent-extensions ask-user](https://github.com/jayshah5696/pi-agent-extensions/tree/main/extensions/ask-user) — supports free-form text, single-select, and multi-select question formats, plus a non-interactive print mode for asynchronous answering
+- Claude Code's `AskUserQuestion` tool — built-in interactive question tool in the Claude Code CLI
