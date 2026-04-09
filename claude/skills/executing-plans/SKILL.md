@@ -65,8 +65,8 @@ AskUserQuestion(
 )
 ```
 
-  - **Continue:** Use existing tasks, resume from first non-completed triplet
-  - **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
+- **Continue:** Use existing tasks, resume from first non-completed triplet
+- **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
 - **If no tasks exist:** Create all task triplets from the plan (see "Creating Tasks from Plan" below)
 
 ### Creating Tasks from Plan
@@ -76,6 +76,7 @@ Parse the plan document and create a **task triplet** for each task:
 **For each Task N in the plan:**
 
 1. **Create Implementation task:**
+
    ```
    TaskCreate:
      subject: "Task N: Implement [Component Name]"
@@ -85,6 +86,7 @@ Parse the plan document and create a **task triplet** for each task:
    ```
 
 2. **Create Spec Review task:**
+
    ```
    TaskCreate:
      subject: "Task N: Spec Review"
@@ -125,6 +127,7 @@ TaskUpdate:
 ```
 
 This creates the execution chain:
+
 ```
 Implement 1 → Spec Review 1 → Code Review 1 → Implement 2 → Spec Review 2 → ...
 ```
@@ -136,6 +139,7 @@ For each task triplet in order:
 #### 2a. Implementation Phase
 
 **Mark in progress:**
+
 ```
 TaskUpdate:
   taskId: [implement-task-id]
@@ -147,6 +151,7 @@ This triggers the CLI spinner showing the task's `activeForm`.
 **Dispatch implementer subagent:**
 
 Use prompt template at `./implementer-prompt.md`. Fill in:
+
 - Task description (full text from plan)
 - Context (where task fits, dependencies, architectural notes)
 - Working directory
@@ -160,11 +165,13 @@ Task tool (general-purpose):
 **Parse implementer report:**
 
 Extract from subagent output:
+
 - `implementer_agent_id`: The agent ID returned by Task tool (for resumption)
 - `commit_sha`: The commit SHA from the report
 - `base_sha`: Commit before this task (HEAD~1 at dispatch time)
 
 **Mark complete:**
+
 ```
 TaskUpdate:
   taskId: [implement-task-id]
@@ -174,6 +181,7 @@ TaskUpdate:
 #### 2b. Spec Review Phase
 
 **Mark in progress:**
+
 ```
 TaskUpdate:
   taskId: [spec-review-task-id]
@@ -185,11 +193,14 @@ TaskUpdate:
 Use prompt template at `./spec-reviewer-prompt.md`. Fill in task requirements and implementation summary.
 
 **Parse subagent output:**
+
 - If output starts with `APPROVED:` → mark spec review complete
 - If output starts with `ISSUES:` → resume implementer to fix, re-dispatch spec reviewer
 
 **Fix/re-review loop:**
+
 1. Resume implementer subagent with fix instructions:
+
    ```
    Task tool (general-purpose):
      resume: [implementer_agent_id]
@@ -199,11 +210,13 @@ Use prompt template at `./spec-reviewer-prompt.md`. Fill in task requirements an
 
        Fix these issues, run tests, amend commit, report back.
    ```
+
 2. Parse response for new commit SHA
 3. Re-dispatch spec reviewer
 4. Repeat until `APPROVED`
 
 **Mark complete (only after APPROVED):**
+
 ```
 TaskUpdate:
   taskId: [spec-review-task-id]
@@ -213,6 +226,7 @@ TaskUpdate:
 #### 2c. Code Quality Review Phase
 
 **Mark in progress:**
+
 ```
 TaskUpdate:
   taskId: [code-review-task-id]
@@ -224,6 +238,7 @@ TaskUpdate:
 Use prompt template at `./code-quality-reviewer-prompt.md`. The code-reviewer subagent uses the template at `./code-reviewer-template.md`.
 
 Fill in:
+
 - WHAT_WAS_IMPLEMENTED: Task summary
 - PLAN_OR_REQUIREMENTS: Task text from plan
 - BASE_SHA: Commit before this task
@@ -231,12 +246,15 @@ Fill in:
 - DESCRIPTION: Brief description
 
 **Parse subagent output:**
+
 - If output starts with `APPROVED:` → mark code review complete
 - If output starts with `APPROVED_WITH_MINOR:` → mark complete, note minor issues
 - If output starts with `ISSUES:` → resume implementer to fix, re-dispatch code reviewer
 
 **Fix/re-review loop (for critical/important issues):**
+
 1. Resume implementer subagent with fix instructions:
+
    ```
    Task tool (general-purpose):
      resume: [implementer_agent_id]
@@ -246,11 +264,13 @@ Fill in:
 
        Fix these issues, run tests, amend commit, report back.
    ```
+
 2. Parse response for new commit SHA
 3. Re-dispatch code reviewer
 4. Repeat until `APPROVED` or `APPROVED_WITH_MINOR`
 
 **Mark complete:**
+
 ```
 TaskUpdate:
   taskId: [code-review-task-id]
@@ -268,6 +288,7 @@ After all tasks complete:
 ## When to Stop and Ask
 
 **STOP executing immediately when:**
+
 - Hit a blocker (missing dependency, unclear instruction)
 - Test fails and fix is not obvious
 - Spec reviewer identifies fundamental misunderstanding
@@ -299,12 +320,14 @@ Implementation → Spec Review → Code Quality Review
 ## Red Flags
 
 **Never:**
+
 - Skip either review stage
 - Proceed to code quality before spec compliance passes
 - Ignore Critical or Important issues
 - Guess when blocked
 
 **Always:**
+
 - Follow plan steps exactly
 - Use TDD for implementation
 - Fix issues before proceeding to next task
@@ -313,10 +336,12 @@ Implementation → Spec Review → Code Quality Review
 ## Integration
 
 **Required skills:**
-- **following-tdd** - Implementation discipline
+
+- **test-driven-development** - Implementation discipline
 - **verifying-work** - Holistic review after all tasks complete
 
 **Used by:**
+
 - **writing-plans** - Creates plans this skill executes
 
 ---
@@ -326,7 +351,7 @@ Implementation → Spec Review → Code Quality Review
 - Tasks are created by this skill at the start of execution, not during planning
 - Task triplets: Implement, Spec Review, Code Review for each plan task
 - Blocking chain: Implement N → Spec Review N → Code Review N → Implement N+1
-- Plan document is the source of truth for *what* to do
-- Native tasks track *progress* and *enforce review gates*
+- Plan document is the source of truth for _what_ to do
+- Native tasks track _progress_ and _enforce review gates_
 - The `activeForm` field shows in the CLI spinner during `in_progress` status
 - If resuming execution, existing tasks are reused; otherwise created fresh

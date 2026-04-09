@@ -1,5 +1,5 @@
 ---
-name: managing-launchd-agents
+name: launchd-agents
 description: Use when managing macOS launchd user agents — creating, listing, editing, deleting, reloading, or running scheduled jobs
 ---
 

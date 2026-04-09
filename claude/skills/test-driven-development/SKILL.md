@@ -1,5 +1,5 @@
 ---
-name: following-tdd
+name: test-driven-development
 description: Use when implementing a feature or bugfix that involves writing meaningful application logic
 ---
 

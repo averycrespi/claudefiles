@@ -16,11 +16,13 @@ Execute implementation plans inline in the main context. Same task triplet struc
 ## When to Use This Skill
 
 **Use this skill when:**
+
 - Simple plans with 1-3 tasks
 - Well-understood changes where context pollution isn't a concern
 - Interactive sessions where speed matters more than isolation
 
 **Use full executing-plans when:**
+
 - Complex plans with many tasks
 - Long-running autonomous work
 - When you want independent review perspectives
@@ -75,8 +77,8 @@ AskUserQuestion(
 )
 ```
 
-  - **Continue:** Use existing tasks, resume from first non-completed triplet
-  - **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
+- **Continue:** Use existing tasks, resume from first non-completed triplet
+- **Start fresh:** Advise user to start a new session for clean execution (tasks are session-scoped and cannot be deleted)
 - **If no tasks exist:** Create all task triplets from the plan (see "Creating Tasks from Plan" below)
 
 ### Creating Tasks from Plan
@@ -86,6 +88,7 @@ Parse the plan document and create a **task triplet** for each task:
 **For each Task N in the plan:**
 
 1. **Create Implementation task:**
+
    ```
    TaskCreate:
      subject: "Task N: Implement [Component Name]"
@@ -95,6 +98,7 @@ Parse the plan document and create a **task triplet** for each task:
    ```
 
 2. **Create Spec Review task:**
+
    ```
    TaskCreate:
      subject: "Task N: Spec Review"
@@ -139,6 +143,7 @@ For each task triplet in order:
 #### 2a. Implementation Phase
 
 **Mark in progress:**
+
 ```
 TaskUpdate:
   taskId: [implement-task-id]
@@ -146,11 +151,13 @@ TaskUpdate:
 ```
 
 **Implement inline:**
+
 1. Follow the task steps exactly as written in the plan
 2. Use TDD: write failing test, make it pass, refactor
 3. Commit when complete
 
 **Mark complete:**
+
 ```
 TaskUpdate:
   taskId: [implement-task-id]
@@ -160,6 +167,7 @@ TaskUpdate:
 #### 2b. Spec Review Phase
 
 **Mark in progress:**
+
 ```
 TaskUpdate:
   taskId: [spec-review-task-id]
@@ -176,11 +184,13 @@ TaskUpdate:
 ```
 
 **If issues found:**
+
 1. Fix the issues inline
 2. Amend the commit: `git add -A && git commit --amend --no-edit`
 3. Re-check the checklist
 
 **Mark complete (only after all checks pass):**
+
 ```
 TaskUpdate:
   taskId: [spec-review-task-id]
@@ -190,6 +200,7 @@ TaskUpdate:
 #### 2c. Code Quality Review Phase
 
 **Mark in progress:**
+
 ```
 TaskUpdate:
   taskId: [code-review-task-id]
@@ -206,11 +217,13 @@ TaskUpdate:
 ```
 
 **If issues found:**
+
 1. Fix the issues inline
 2. Amend the commit: `git add -A && git commit --amend --no-edit`
 3. Re-check the checklist
 
 **Mark complete:**
+
 ```
 TaskUpdate:
   taskId: [code-review-task-id]
@@ -228,6 +241,7 @@ After all tasks complete:
 ## When to Stop and Ask
 
 **STOP executing immediately when:**
+
 - Hit a blocker (missing dependency, unclear instruction)
 - Test fails and fix is not obvious
 - Discover fundamental misunderstanding of requirements
@@ -237,12 +251,14 @@ After all tasks complete:
 ## Red Flags
 
 **Never:**
+
 - Skip either review phase
 - Proceed to code quality before spec compliance passes
 - Ignore issues found in review
 - Guess when blocked
 
 **Always:**
+
 - Follow plan steps exactly
 - Use TDD for implementation
 - Fix issues before proceeding to next task
@@ -251,8 +267,10 @@ After all tasks complete:
 ## Integration
 
 **Required skills:**
-- **following-tdd** - Implementation discipline
+
+- **test-driven-development** - Implementation discipline
 - **verifying-work** - Holistic review after all tasks complete
 
 **Used by:**
+
 - **writing-plans** - Creates plans this skill executes

@@ -1,5 +1,5 @@
 ---
-name: writing-pi-extensions
+name: pi-extensions
 description: Use when writing, editing, or debugging Pi coding agent extensions
 ---
 
@@ -26,6 +26,7 @@ export default function (pi: ExtensionAPI) {
 ```
 
 **Imports available:**
+
 - `@mariozechner/pi-coding-agent` — core types and helpers (`ExtensionAPI`, etc.)
 - `@sinclair/typebox` — JSON Schema for tool parameters (`Type`, `Static`)
 - `@mariozechner/pi-tui` — TUI rendering components (`Text`, etc.)
@@ -35,11 +36,13 @@ export default function (pi: ExtensionAPI) {
 ## File structure
 
 **Single-file extension:**
+
 ```
 pi/agent/extensions/my-extension.ts
 ```
 
 **Multi-file extension** (when you need helpers or npm deps):
+
 ```
 pi/agent/extensions/my-extension/
 ├── index.ts          ← required entry point, exports default function
@@ -123,7 +126,12 @@ pi.registerCommand("my-command", {
 
 ```typescript
 pi.sendMessage(
-  { customType: "my-extension", content: "Retry using the correct tool.", display: false, details: {} },
+  {
+    customType: "my-extension",
+    content: "Retry using the correct tool.",
+    display: false,
+    details: {},
+  },
   { deliverAs: "steer" },
 );
 ```

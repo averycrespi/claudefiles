@@ -19,6 +19,7 @@ claude/
 ## How It Works
 
 Running `make stow-claude` creates symlinks from `claude/` into `~/.claude/`. For example:
+
 - `claude/settings.json` → `~/.claude/settings.json`
 - `claude/skills/brainstorming/SKILL.md` → `~/.claude/skills/brainstorming/SKILL.md`
 
@@ -33,11 +34,13 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 ```
 
 **Use the structured workflow** when:
+
 - Building a significant feature that spans multiple files
 - You want independent code reviews after each task
 - The implementation would benefit from upfront design discussion
 
 **Use Claude Code's built-in planning mode** when:
+
 - Making smaller, well-defined changes
 - The scope is clear and doesn't need exploration
 
@@ -56,34 +59,19 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 
 ### Other Workflows
 
-| Skill             | Purpose                                                             |
-| ----------------- | ------------------------------------------------------------------- |
-| `reviewing-prs`   | Holistic PR review across 6 parallel dimensions                     |
-| `researching`     | Structured multi-session research with experiments and HTML reports |
-| `troubleshooting` | Battle buddy for incident response and system troubleshooting       |
+| Skill                   | Purpose                                                             |
+| ----------------------- | ------------------------------------------------------------------- |
+| `assisting-research`    | Structured multi-session research with experiments and HTML reports |
+| `creating-jira-tickets` | Draft and create well-structured Jira tickets                       |
+| `reviewing-prs`         | Holistic PR review across 6 parallel dimensions                     |
+| `troubleshooting`       | Battle buddy for incident response and system troubleshooting       |
 
-### Integrations
+### Reference Skills
 
-| Skill                     | Purpose                                            |
-| ------------------------- | -------------------------------------------------- |
-| `automating-browsers`     | Browser automation for testing and data extraction |
-| `managing-launchd-agents` | Manage macOS launchd user agents                   |
-| `creating-jira-tickets`   | Draft and create well-structured Jira tickets      |
-
-### Design
-
-| Skill                 | Purpose                                                    |
-| --------------------- | ---------------------------------------------------------- |
-| `designing-frontends` | Distinctive, production-grade frontend design and building |
-
-### Reference
-
-| Skill           | Purpose                                  |
-| --------------- | ---------------------------------------- |
-| `following-tdd` | TDD discipline: red-green-refactor cycle |
-
-### Meta
-
-| Skill             | Purpose                       |
-| ----------------- | ----------------------------- |
-| `creating-skills` | Guide for creating new skills |
+| Skill                     | Purpose                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `frontend-design`         | Distinctive, production-grade frontend design and building |
+| `launchd-agents`          | Manage macOS launchd user agents                           |
+| `playwright-cli`          | Browser automation for testing and data extraction         |
+| `skill-creator`           | Guide for creating new skills                              |
+| `test-driven-development` | TDD discipline: red-green-refactor cycle                   |

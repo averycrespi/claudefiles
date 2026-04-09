@@ -22,15 +22,15 @@ Running `make stow-pi` creates symlinks from `pi/agent/` into `~/.pi/agent/`. Ed
 
 TypeScript modules that customize the Pi agent. Type-check with `make typecheck`.
 
-| Extension               | Purpose                                              |
-| ----------------------- | ---------------------------------------------------- |
-| `ask-user`              | Improved TUI for user questions                      |
-| `autoformat`            | Auto-run gofmt and prettier on edited files          |
-| `broker-guard`          | Block broker-backed commands without skill invocation |
-| `compact-read`          | Compress verbose read output                         |
-| `context-files-reminder`| Inject context file contents into LLM calls          |
-| `subagents`             | Dynamic subagent loading and dispatch                |
-| `usage`                 | Session usage tracking                               |
-| `web`                   | Web search and fetch tools                           |
+| Extension                | Purpose                                               |
+| ------------------------ | ----------------------------------------------------- |
+| `ask-user`               | Improved TUI for user questions                       |
+| `autoformat`             | Auto-run gofmt and prettier on edited files           |
+| `broker-guard`           | Block broker-backed commands without skill invocation |
+| `compact-read`           | Compress verbose read output                          |
+| `context-files-reminder` | Inject context file contents into LLM calls           |
+| `subagents`              | Dynamic subagent loading and dispatch                 |
+| `usage`                  | Session usage tracking                                |
+| `web`                    | Web search and fetch tools                            |
 
-See the [writing-pi-extensions](../../claude/skills/writing-pi-extensions/SKILL.md) skill for authoring guidance.
+See the [pi-extensions](../../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.

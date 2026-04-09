@@ -28,6 +28,11 @@ make stow-pi            # symlink pi/agent/ into ~/.pi/agent/
 make typecheck          # type-check Pi extension TypeScript files
 ```
 
+## Skill Naming Convention
+
+- **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)
+- **Reference skills** (provide information/context): use nouns (e.g., `playwright-cli`, `tdd`)
+
 ## Modifying This Repository
 
 - Edit Claude Code files in `claude/` directory

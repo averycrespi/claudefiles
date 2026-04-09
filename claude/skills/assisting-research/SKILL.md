@@ -1,5 +1,5 @@
 ---
-name: researching
+name: assisting-research
 description: Use when running open-ended, multi-session technical research that requires experiments, evidence gathering, and an accumulating HTML report
 ---
 
@@ -61,6 +61,7 @@ The running HTML report accumulates evidence into a narrative. Add sections incr
 Initialize the report using the HTML template in `references/report-skeleton.html`. The template includes a CSS design system with callouts, tables, code blocks, stat cards, tags, and section navigation.
 
 The report should:
+
 - Start with a problem statement and what is known
 - Add sections as experiments produce findings
 - Reference evidence files and raw data rather than duplicating them
@@ -72,6 +73,7 @@ The report should:
 ### 1. Initialize
 
 Create the directory structure. Write the initial report from the skeleton template with:
+
 - Problem statement
 - What is currently known
 - Constraints and requirements
@@ -80,6 +82,7 @@ Create the directory structure. Write the initial report from the skeleton templ
 ### 2. Design Experiment
 
 Based on current open questions, design the next experiment:
+
 - What hypothesis is being tested?
 - What will be measured?
 - What does success/failure look like?
@@ -89,6 +92,7 @@ Write a self-contained experiment script with a comment block explaining the hyp
 ### 3. User Runs, Claude Processes
 
 The user executes the experiment and provides the raw output. Then:
+
 - Store raw output in `experiments/results/` with timestamps
 - Distill findings into one or more evidence files in `evidence/`
 - Update the report with a new findings section referencing the evidence
