@@ -31,17 +31,20 @@ Guide completion of development work by presenting clear options and handling ch
 **If you have project-specific learnings from this session, present them for user approval.**
 
 **What to look for:**
+
 - Explicit corrections or guidance from the user during the session
 - Findings from spec-reviewer and code-quality-reviewer subagents
 - Friction points you figured out (build commands, test setup, file locations, naming conventions)
 - Patterns discovered in existing code that weren't documented
 
 **What makes a good reflection:**
+
 - Actionable for future sessions (not one-off fixes)
 - Project-specific (not general programming knowledge)
 - Concise enough to fit naturally in CLAUDE.md
 
 **What to exclude:**
+
 - User preferences (belong in user's global CLAUDE.md, not project CLAUDE.md)
 - Temporary workarounds or environment-specific quirks
 - Things already documented in the project
@@ -68,6 +71,7 @@ AskUserQuestion(
 ```
 
 **Example:**
+
 ```
 options: [
   { label: "Build prereq", description: "Run `npm run build` before tests → ## Development" },
@@ -76,6 +80,7 @@ options: [
 ```
 
 **After user selects:**
+
 - If user selects any options → Update project CLAUDE.md, placing learnings in proposed sections
 - Commit: `docs(CLAUDE.md): <summarize selected learnings>`
 - If user selects nothing → Skip, continue to Step 2
@@ -153,20 +158,24 @@ Report: "Keeping branch <name>."
 ## Common Mistakes
 
 **Open-ended questions**
+
 - **Problem:** "What should I do next?" → ambiguous
 - **Fix:** Present exactly 2 structured options
 
 **Noisy reflections**
+
 - **Problem:** Proposing too many trivial or already-documented learnings
 - **Fix:** Only propose actionable, project-specific patterns not already in CLAUDE.md
 
 ## Red Flags
 
 **Never:**
+
 - Delete work without confirmation
 - Force-push without explicit request
 
 **Always:**
+
 - Clean up plan files before reflecting
 - Skip reflection silently if no learnings to propose
 - Present exactly 2 options (create PR, update PR, or keep branch — depending on whether a PR exists)

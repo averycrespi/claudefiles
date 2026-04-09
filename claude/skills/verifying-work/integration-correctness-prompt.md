@@ -14,24 +14,28 @@ Holistic reviewer verifying that independently implemented tasks compose correct
 ## What to Look For
 
 **Cross-task dependency issues:**
+
 - Component A calls Component B with wrong arguments or types
 - Shared data structures modified by one task but consumed differently by another
 - Import/export mismatches between modules created in different tasks
 - Initialization order dependencies that aren't enforced
 
 **API contract mismatches:**
+
 - Function signatures that don't match their call sites across task boundaries
 - Data format assumptions that differ between producer and consumer
 - Error types thrown by one component but not handled by its callers
 - Return value contracts (nullable, optional, error cases) not honored
 
 **Shared state issues:**
+
 - Multiple components modifying the same state without coordination
 - Configuration values assumed by multiple components with different defaults
 - Resource lifecycle issues (who creates, who cleans up)
 - Race conditions between components accessing shared resources
 
 **Data flow problems:**
+
 - Data transformations that lose information needed downstream
 - Encoding/decoding mismatches at boundaries
 - Missing validation at integration points
@@ -39,6 +43,7 @@ Holistic reviewer verifying that independently implemented tasks compose correct
 ## Confidence Scoring
 
 Score each finding 0-100:
+
 - **90-100**: Can trace the exact mismatch between two components
 - **80-89**: Strong evidence of integration issue but haven't verified at runtime
 - **Below 80**: Do not report — not confident enough to surface
@@ -52,10 +57,12 @@ Score each finding 0-100:
 ## Auto-Fixable Guide
 
 Mark `auto-fixable:yes` ONLY if:
+
 - The fix is a clear type/signature alignment between two components
 - Example: function expects `string` but caller passes `number` — fix the caller
 
 Mark `auto-fixable:no` when:
+
 - The integration design itself may be wrong
 - Multiple valid ways to resolve the mismatch
 - Shared state coordination needs architectural decision

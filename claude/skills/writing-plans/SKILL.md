@@ -18,6 +18,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 ## Bite-Sized Task Granularity
 
 **Each step is one action (2-5 minutes):**
+
 - "Write the failing test" - step
 - "Run it to make sure it fails" - step
 - "Implement the minimal code to make the test pass" - step
@@ -40,6 +41,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 **Tech Stack:** [Key technologies/libraries]
 
 ---
+
 </header>
 
 ## Task Structure
@@ -50,6 +52,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 ### Task N: [Component Name]
 
 **Files:**
+
 - Create: `exact/path/to/file.py`
 - Modify: `exact/path/to/existing.py:123-145`
 - Test: `tests/exact/path/to/test.py`
@@ -85,6 +88,7 @@ Expected: PASS
 git add tests/path/test.py src/path/file.py
 git commit -m "feat: add specific feature"
 ```
+
 </task>
 
 ## Documentation Task
@@ -95,6 +99,7 @@ Before writing tasks, scan the project's documentation files (README.md, CLAUDE.
 - **If no docs need updating** (e.g., pure internal refactor): Add a comment at the end of the plan: `<!-- No documentation updates needed -->` so it's a conscious decision, not an oversight.
 
 ## Remember
+
 - Exact file paths always — but **always relative to the repo root**, never absolute paths
 - **Never hardcode the repository's absolute path** (e.g., `/Users/alice/project`) anywhere in the plan — plans may be executed in worktrees at different paths
 - Never include `cd /absolute/path` commands — use relative paths or assume the working directory is the repo root
@@ -106,6 +111,7 @@ Before writing tasks, scan the project's documentation files (README.md, CLAUDE.
 ## Execution Handoff
 
 After saving the plan:
+
 - Commit the plan document to git
 
 Then ask the user if they want to execute using `AskUserQuestion`:
@@ -128,15 +134,18 @@ AskUserQuestion(
 **Based on selection:**
 
 **Execute with subagents:**
+
 - **REQUIRED SUB-SKILL:** Use Skill(executing-plans)
 - Dispatches subagents for implementation and reviews
 - Best for complex plans or autonomous work
 
 **Execute quickly:**
+
 - **REQUIRED SUB-SKILL:** Use Skill(executing-plans-quickly)
 - Does implementation and reviews inline in main context
 - Best for simple plans or interactive sessions
 
 **Don't execute:**
+
 - Plan is saved for later execution
 - User can invoke execution skills in any session

@@ -24,6 +24,7 @@ TaskList
 ```
 
 **If any tasks remain `in_progress` or `pending`:**
+
 ```
 Warning: [N] tasks not marked complete:
 - Task 2: [subject] (in_progress)
@@ -78,12 +79,15 @@ Cannot proceed with verification until checks pass.
 **Gather context:**
 
 1. Determine the base branch:
+
    ```
    git rev-parse --abbrev-ref origin/HEAD
    ```
+
    Fall back to `main` if the command fails.
 
 2. Get the full diff:
+
    ```
    git diff <base-branch>...HEAD
    ```
@@ -104,13 +108,13 @@ Launch all 5 in a SINGLE message with 5 Agent tool calls. Use `Agent tool (gener
 
 Read each prompt file from the skill directory at dispatch time. Each agent's prompt is the prompt file content with the full context package appended.
 
-| # | Reviewer | Prompt File |
-|---|----------|-------------|
-| 1 | Plan Completeness | `plan-completeness-prompt.md` |
-| 2 | Integration Correctness | `integration-correctness-prompt.md` |
-| 3 | Consistency | `consistency-prompt.md` |
-| 4 | Security | `security-prompt.md` |
-| 5 | Test Coverage | `test-coverage-prompt.md` |
+| #   | Reviewer                | Prompt File                         |
+| --- | ----------------------- | ----------------------------------- |
+| 1   | Plan Completeness       | `plan-completeness-prompt.md`       |
+| 2   | Integration Correctness | `integration-correctness-prompt.md` |
+| 3   | Consistency             | `consistency-prompt.md`             |
+| 4   | Security                | `security-prompt.md`                |
+| 5   | Test Coverage           | `test-coverage-prompt.md`           |
 
 **If no design document or plan file exists:** Skip the Plan Completeness reviewer. Dispatch the other 4.
 
@@ -144,6 +148,7 @@ After all reviewers return:
 **If auto-fixable issues exist:**
 
 1. Dispatch single fixer agent (general-purpose, default model) with all auto-fixable findings:
+
    ```
    Agent tool (general-purpose):
      description: "Fix verification findings"
@@ -201,6 +206,7 @@ AskUserQuestion(
 ## When to Stop and Ask
 
 **STOP immediately when:**
+
 - Automated checks fail after 3 fix rounds
 - A reviewer finds a blocker that's not auto-fixable
 - Fixer agent introduces new test failures that persist
@@ -208,12 +214,14 @@ AskUserQuestion(
 ## Red Flags
 
 **Never:**
+
 - Skip automated checks
 - Dispatch reviewers against code that doesn't compile/pass tests
 - Auto-fix ambiguous findings without user input
 - Proceed past blockers without user acknowledgment
 
 **Always:**
+
 - Verify task completion before automated checks
 - Run automated checks before AI reviewers
 - Present all ambiguous findings to user
@@ -222,9 +230,11 @@ AskUserQuestion(
 ## Integration
 
 **Required skills:**
+
 - **completing-work** — Called after verification passes
 
 **Used by:**
+
 - **executing-plans** — Calls this skill after all task triplets complete
 - **executing-plans-quickly** — Calls this skill after all task triplets complete
 

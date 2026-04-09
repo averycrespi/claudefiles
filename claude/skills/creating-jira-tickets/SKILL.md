@@ -24,12 +24,12 @@ Before drafting, collect the information needed:
 
 Select the appropriate type based on the work described:
 
-| Type    | When to use                                              |
-| ------- | -------------------------------------------------------- |
-| Epic    | High-level goal grouping multiple related stories/tasks  |
-| Story   | User-facing functionality with clear "who/what/why"      |
-| Task    | Technical work, infrastructure, or internal improvements |
-| Bug     | Something is broken and needs fixing                     |
+| Type  | When to use                                              |
+| ----- | -------------------------------------------------------- |
+| Epic  | High-level goal grouping multiple related stories/tasks  |
+| Story | User-facing functionality with clear "who/what/why"      |
+| Task  | Technical work, infrastructure, or internal improvements |
+| Bug   | Something is broken and needs fixing                     |
 
 ### 3. Draft the Ticket
 

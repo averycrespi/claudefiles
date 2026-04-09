@@ -6,7 +6,14 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Editor, type EditorTheme, Key, matchesKey, Text, truncateToWidth } from "@mariozechner/pi-tui";
+import {
+  Editor,
+  type EditorTheme,
+  Key,
+  matchesKey,
+  Text,
+  truncateToWidth,
+} from "@mariozechner/pi-tui";
 import { Type, type Static } from "@sinclair/typebox";
 
 const OTHER_LABEL = "Type something.";
@@ -124,8 +131,13 @@ export default function (pi: ExtensionAPI) {
         labels.add(normalized);
       }
 
-      if (params.recommended != null && params.recommended >= params.options.length) {
-        return validationError("recommended must point to a valid option index.");
+      if (
+        params.recommended != null &&
+        params.recommended >= params.options.length
+      ) {
+        return validationError(
+          "recommended must point to a valid option index.",
+        );
       }
 
       const allOptions: DisplayOption[] = [
@@ -199,7 +211,11 @@ export default function (pi: ExtensionAPI) {
               editMode = true;
               refresh();
             } else {
-              done({ answer: selected.label, index: optionIndex + 1, isCustom: false });
+              done({
+                answer: selected.label,
+                index: optionIndex + 1,
+                isCustom: false,
+              });
             }
             return;
           }
@@ -257,7 +273,9 @@ export default function (pi: ExtensionAPI) {
           if (editMode) {
             add(theme.fg("dim", " Enter to submit • Esc to go back"));
           } else {
-            add(theme.fg("dim", " ↑↓ navigate • Enter to select • Esc to cancel"));
+            add(
+              theme.fg("dim", " ↑↓ navigate • Enter to select • Esc to cancel"),
+            );
           }
           add(theme.fg("accent", "─".repeat(width)));
 
@@ -276,14 +294,21 @@ export default function (pi: ExtensionAPI) {
 
       if (!result) {
         return {
-          content: [{ type: "text" as const, text: "User cancelled — no option selected." }],
+          content: [
+            {
+              type: "text" as const,
+              text: "User cancelled — no option selected.",
+            },
+          ],
           details: { cancelled: true } as AskDetails,
         };
       }
 
       if (result.isCustom) {
         return {
-          content: [{ type: "text" as const, text: `User wrote: ${result.answer}` }],
+          content: [
+            { type: "text" as const, text: `User wrote: ${result.answer}` },
+          ],
           details: {
             cancelled: false,
             answerLabel: result.answer,
@@ -311,9 +336,10 @@ export default function (pi: ExtensionAPI) {
 
     renderCall(args, theme, _context) {
       const opts = Array.isArray(args.options) ? args.options : [];
-      const numbered = [...opts.map((o: { label: string }) => o.label), OTHER_LABEL].map(
-        (label, i) => `${i + 1}. ${label}`,
-      );
+      const numbered = [
+        ...opts.map((o: { label: string }) => o.label),
+        OTHER_LABEL,
+      ].map((label, i) => `${i + 1}. ${label}`);
       const text =
         theme.fg("toolTitle", theme.bold("ask_user ")) +
         theme.fg("muted", args.question) +
@@ -342,7 +368,11 @@ export default function (pi: ExtensionAPI) {
         details.answerIndex != null
           ? `${details.answerIndex}. ${details.answerLabel}`
           : (details.answerLabel ?? "");
-      return new Text(theme.fg("success", "✓ ") + theme.fg("accent", display), 0, 0);
+      return new Text(
+        theme.fg("success", "✓ ") + theme.fg("accent", display),
+        0,
+        0,
+      );
     },
   });
 }

@@ -64,14 +64,14 @@ Launch 6 Task subagents in parallel — all 6 in a SINGLE message with 6 Task to
 
 Read each prompt file from the skill directory at dispatch time. Each agent's prompt is the prompt file content with the full context package appended.
 
-| # | Reviewer            | Prompt File                      |
-|---|---------------------|----------------------------------|
-| 1 | Bug Hunter          | `bug-hunter-prompt.md`           |
-| 2 | Security Reviewer   | `security-reviewer-prompt.md`    |
-| 3 | Codebase Alignment  | `codebase-alignment-prompt.md`   |
-| 4 | Code Quality        | `code-quality-prompt.md`         |
-| 5 | Test Quality        | `test-quality-prompt.md`         |
-| 6 | Performance         | `performance-reviewer-prompt.md` |
+| #   | Reviewer           | Prompt File                      |
+| --- | ------------------ | -------------------------------- |
+| 1   | Bug Hunter         | `bug-hunter-prompt.md`           |
+| 2   | Security Reviewer  | `security-reviewer-prompt.md`    |
+| 3   | Codebase Alignment | `codebase-alignment-prompt.md`   |
+| 4   | Code Quality       | `code-quality-prompt.md`         |
+| 5   | Test Quality       | `test-quality-prompt.md`         |
+| 6   | Performance        | `performance-reviewer-prompt.md` |
 
 Each agent MUST return findings in this format:
 

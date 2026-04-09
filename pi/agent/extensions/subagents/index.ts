@@ -82,7 +82,7 @@ function clearRenderTimer(state: Record<string, unknown>): void {
 
 function buildAgentDescription(agents: AgentDefinition[]): string {
   if (agents.length === 0) {
-    return 'Agent type. No agents are currently loaded — check that agent markdown files exist in ~/.pi/agent/agents/.';
+    return "Agent type. No agents are currently loaded — check that agent markdown files exist in ~/.pi/agent/agents/.";
   }
   const list = agents.map((a) => `- ${a.name}: ${a.description}`).join("\n");
   return `Agent type. Choose based on the task:\n\n${list}`;
@@ -96,8 +96,7 @@ function renderAgentCall(
   theme: any,
   context: any,
 ) {
-  const t =
-    (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+  const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
   const intent =
     typeof args.intent === "string" ? normalizeIntent(args.intent) : "";
   t.setText(
@@ -112,8 +111,7 @@ function renderAgentResult(
   theme: any,
   context: any,
 ) {
-  const t =
-    (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+  const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
   const activity = getActivity(result.details);
   const state = context.state as Record<string, unknown>;
   const showActivity = context.args?.show_activity ?? true;
@@ -177,8 +175,7 @@ function renderAgentsCall(
   theme: any,
   context: any,
 ) {
-  const t =
-    (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+  const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
   const agents = Array.isArray(args.agents) ? args.agents : [];
   const intents = agents
     .map((a: any) => (typeof a?.intent === "string" ? a.intent.trim() : ""))
@@ -201,8 +198,7 @@ function renderAgentsResult(
   theme: any,
   context: any,
 ) {
-  const t =
-    (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+  const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
   const state = context.state as Record<string, unknown>;
   const d = (result.details ?? {}) as {
     agents?: SubagentRunState[];
@@ -214,15 +210,12 @@ function renderAgentsResult(
     if (!state.renderTimer) {
       state.renderTimer = setInterval(() => context.invalidate(), 1_000);
     }
-    const lines = [
-      theme.fg("warning", `Running ${d.total ?? "?"} agents...`),
-    ];
+    const lines = [theme.fg("warning", `Running ${d.total ?? "?"} agents...`)];
     for (const agent of d.agents ?? []) {
       const cmd = agent.currentCommand ?? agent.lastCommand ?? agent.phase;
       const elapsed = formatDuration(Date.now() - agent.startedAt);
       const isDone = agent.phase === "done";
-      const isError =
-        agent.phase === "error" || agent.phase === "aborted";
+      const isError = agent.phase === "error" || agent.phase === "aborted";
       const bullet = isDone ? "✓" : isError ? "✗" : "·";
       const color = isDone ? "success" : isError ? "error" : "warning";
       lines.push(
@@ -290,7 +283,8 @@ async function runSpawn(
 }> {
   const tracker: SubagentActivityTracker = createSubagentActivityTracker({
     toolCallId,
-    roleLabel: agent.name.charAt(0).toUpperCase() + agent.name.slice(1) + " agent",
+    roleLabel:
+      agent.name.charAt(0).toUpperCase() + agent.name.slice(1) + " agent",
     intent,
     showActivity,
     hasUI: ctx.hasUI,
@@ -425,7 +419,9 @@ export default function (pi: ExtensionAPI) {
   const agentDescription = buildAgentDescription(agents);
 
   pi.on("before_agent_start", async (event: { systemPrompt: string }) => {
-    const agentList = agents.map((a) => `${a.name}: ${a.description}`).join("; ");
+    const agentList = agents
+      .map((a) => `${a.name}: ${a.description}`)
+      .join("; ");
     const guidance = `\n\n## Subagent delegation\nUse spawn_agent to delegate tasks to a focused subagent when a task would generate large output, require iterative searching, or benefit from isolation. Use spawn_agents when multiple independent tasks can run concurrently — pass all agents in one call rather than sequential calls. Brief each agent thoroughly — subagents have no access to the current conversation. Available agent types: ${agentList}.`;
     return { systemPrompt: event.systemPrompt + guidance };
   });
@@ -436,13 +432,7 @@ export default function (pi: ExtensionAPI) {
     description:
       "Launch a subagent to handle a task autonomously in its own context window. Brief the agent like a colleague who just walked in — provide all necessary context in the prompt.",
     parameters: buildSpawnAgentParams(agentDescription),
-    async execute(
-      toolCallId,
-      params: SpawnAgentParams,
-      signal,
-      onUpdate,
-      ctx,
-    ) {
+    async execute(toolCallId, params: SpawnAgentParams, signal, onUpdate, ctx) {
       const agent = agentMap.get(params.agent);
       if (!agent) {
         return {
@@ -471,8 +461,7 @@ export default function (pi: ExtensionAPI) {
       );
     },
     renderCall(args, theme, context) {
-      const agentName =
-        typeof args.agent === "string" ? args.agent : undefined;
+      const agentName = typeof args.agent === "string" ? args.agent : undefined;
       const label = agentName
         ? agentName.charAt(0).toUpperCase() + agentName.slice(1) + " agent"
         : "Subagent";
@@ -513,11 +502,7 @@ export default function (pi: ExtensionAPI) {
       );
     },
     renderCall(args, theme, context) {
-      return renderAgentsCall(
-        args as { agents?: unknown[] },
-        theme,
-        context,
-      );
+      return renderAgentsCall(args as { agents?: unknown[] }, theme, context);
     },
     renderResult(result, options, theme, context) {
       return renderAgentsResult(result, options, theme, context);

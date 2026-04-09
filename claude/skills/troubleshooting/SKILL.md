@@ -12,6 +12,7 @@ Serve as a collaborative partner during incident response and troubleshooting. E
 Accept whatever the user provides — an error message, an alert, a vague description, a screenshot. Work with what is available.
 
 Ask 1-2 clarifying questions maximum to form initial hypotheses. Consider:
+
 - When did the problem start? Was there a specific trigger?
 - What changed recently? (deploys, config changes, dependency updates)
 - What is the blast radius? (one user, one service, everything)
@@ -30,6 +31,7 @@ Generate 3-5 initial hypotheses from the available context. Present them as a hy
 ```
 
 Status icons:
+
 - 🔍 Investigating — subagent actively looking into this
 - ⏳ Queued — waiting to be investigated
 - ✅ Supported — evidence supports this hypothesis
@@ -39,11 +41,13 @@ Status icons:
 ## Phase 3: Parallel Investigation
 
 Dispatch 2-4 subagents in a SINGLE message using the Agent tool. Each subagent receives:
+
 - The investigator prompt template from `./investigator-prompt.md` with placeholders filled in
 - A specific hypothesis to investigate
 - Specific investigation instructions (what tools to use, what to look for)
 
 Subagent dispatch pattern:
+
 ```
 Agent tool (general-purpose):
   description: "Investigate: [hypothesis summary]"

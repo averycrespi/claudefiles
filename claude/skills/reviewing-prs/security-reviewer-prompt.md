@@ -28,6 +28,7 @@ Security reviewer specializing in vulnerability detection.
 ## Confidence Scoring
 
 Score each finding 0-100:
+
 - **90-100**: Concrete evidence — can point to the exact problem with certainty
 - **80-89**: Strong suspicion with partial evidence — likely issue but not 100% certain
 - **Below 80**: Do not report — not confident enough to surface
@@ -35,6 +36,7 @@ Score each finding 0-100:
 ## Severity
 
 Categorize each finding:
+
 - **blocker**: Must fix before merge. Bugs, security vulnerabilities, data loss risks.
 - **important**: Should fix. Code quality issues, missing tests, pattern violations.
 - **suggestion**: Optional improvement. Performance hints, style preferences, minor enhancements.

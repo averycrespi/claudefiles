@@ -12,7 +12,7 @@ Use conventional commits: `<type>(<optional scope>): <description>`. Types: feat
 
 ## Pull Request Descriptions
 
-Title under 70 chars: `TICKET-123: description` or conventional commit format. Body sections: Context (why), Changes (by concept, not file), Review Notes (if non-obvious), Test Plan (checklist). Explain *why* not *how*. Be specific, not vague.
+Title under 70 chars: `TICKET-123: description` or conventional commit format. Body sections: Context (why), Changes (by concept, not file), Review Notes (if non-obvious), Test Plan (checklist). Explain _why_ not _how_. Be specific, not vague.
 
 ## Git Worktree Rules
 

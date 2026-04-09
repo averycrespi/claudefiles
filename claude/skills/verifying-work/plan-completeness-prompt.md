@@ -14,17 +14,20 @@ Holistic reviewer verifying that every item in the design and implementation pla
 ## What to Look For
 
 **Missing implementations:**
+
 - Plan tasks that have no corresponding code changes
 - Requirements mentioned in design but not addressed in any task
 - Partial implementations (feature started but not completed)
 - Acceptance criteria from the plan that aren't met
 
 **Scope creep:**
+
 - Features or capabilities not described in the design or plan
 - Over-engineering beyond what was specified
 - "Nice to have" additions that weren't planned
 
 **Deviations:**
+
 - Implementation approaches that differ significantly from the plan's specified approach
 - File paths or component names that don't match the plan
 - Architectural decisions that diverge from the design document
@@ -32,6 +35,7 @@ Holistic reviewer verifying that every item in the design and implementation pla
 ## Confidence Scoring
 
 Score each finding 0-100:
+
 - **90-100**: Can point to the specific plan item and confirm it's missing/extra/wrong
 - **80-89**: Strong evidence of a gap but some ambiguity in plan interpretation
 - **Below 80**: Do not report — not confident enough to surface
@@ -45,10 +49,12 @@ Score each finding 0-100:
 ## Auto-Fixable Guide
 
 Mark `auto-fixable:yes` ONLY if:
+
 - A clearly specified, small piece is missing and the fix is unambiguous
 - Example: plan says "add error message X" and it's missing — the fix is clear
 
 Mark `auto-fixable:no` when:
+
 - Missing feature requires design decisions
 - Scope creep that needs user judgment on whether to keep or remove
 - Architectural deviation that may be intentional
