@@ -2,12 +2,6 @@
 
 My opinionated resources for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/).
 
-## Features
-
-- **[Structured Development Workflow](docs/workflow.md)** — Reliably turn ideas into pull requests
-- **[Integrations](docs/integrations.md)** — Browser automation and other external tools
-- **Pi Extensions** — TypeScript extensions for the Pi coding agent (autoformat, subagents, usage tracking, etc.)
-
 ## Requirements
 
 - [Claude Code](https://github.com/anthropics/claude-code)
@@ -24,18 +18,15 @@ cd claudefiles
 ./setup.sh
 ```
 
-The setup script will install dependencies and symlink configuration files to `~/.claude/` and `~/.pi/`.
+The setup script will install dependencies and symlink configuration into `~/.claude/` and `~/.pi/`.
 
-## Documentation
+## Structure
 
-| Doc                                              | Purpose                                       |
-| ------------------------------------------------ | --------------------------------------------- |
-| [Workflow](docs/workflow.md)                     | How the structured development workflow works |
-| [Skills Catalog](docs/skills.md)                 | All available skills and agents               |
-| [Integrations](docs/integrations.md)             | Setup guides for external services            |
-| [Claude Code Config](docs/claude-code-config.md) | How the `~/.claude/` symlinks work            |
-| [Design Decisions](docs/design-decisions.md)     | Why things are built this way                 |
-| [Future](docs/future.md)                         | Planned improvements and explorations         |
+| Directory | Purpose | Stow target |
+| --------- | ------- | ----------- |
+| [`claude/`](claude/README.md) | Claude Code skills, hooks, settings, agents | `~/.claude/` |
+| `pi/` | Pi agent extensions, agents, skills, settings | `~/.pi/` |
+
 
 ## Development
 

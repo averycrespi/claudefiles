@@ -27,7 +27,7 @@ This repository includes a structured development workflow:
 /brainstorming → /writing-plans → /executing-plans → /completing-work
 ```
 
-See [docs/workflow.md](docs/workflow.md) for details. See [docs/skills.md](docs/skills.md) for the full skills and agents catalog.
+See [claude/README.md](claude/README.md) for the full skills catalog and workflow details.
 
 ## Modifying This Repository
 
@@ -38,5 +38,3 @@ See [docs/workflow.md](docs/workflow.md) for details. See [docs/skills.md](docs/
 **IMPORTANT:** Never edit files directly in `~/.claude/` or `~/.pi/`. Those are symlinks managed by stow. Always edit the source files in this repository. For example:
 - Edit `./claude/skills/foo.md`, NOT `~/.claude/skills/foo.md`
 - Edit `./pi/agent/extensions/foo.ts`, NOT `~/.pi/agent/extensions/foo.ts`
-
-See [docs/claude-code-config.md](docs/claude-code-config.md) for full details on the configuration structure.
