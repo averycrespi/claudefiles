@@ -85,6 +85,29 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 | Notification sound           | Notification | all         | Sends a macOS notification and plays a sound when Claude needs attention                    |
 | Stop sound                   | Stop         | all         | Sends a macOS notification and plays a sound when Claude finishes                           |
 
+## Sandbox
+
+The `sandbox/` directory provides overrides for Claude Code's [sandbox mode](https://docs.anthropic.com/en/docs/claude-code/security#sandbox-mode) (remote/headless environments). When running in a sandbox, these files replace the default configuration.
+
+### Overrides
+
+| File                            | Purpose                                                                          |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `sandbox/settings.json`         | Sandbox-specific settings; skips dangerous-mode prompt, removes allow/deny lists |
+| `sandbox/CLAUDE.md`             | Simplified instructions for the sandbox environment                              |
+| `sandbox/scripts/statusline.sh` | Status line variant with a "sandbox" prefix badge                                |
+
+### Additional Hooks
+
+These hooks are only active in the sandbox (configured in `sandbox/settings.json`):
+
+| Hook                         | Event      | Matcher | Description                                                       |
+| ---------------------------- | ---------- | ------- | ----------------------------------------------------------------- |
+| `deny-gh-cli-in-sandbox`     | PreToolUse | Bash    | Blocks `gh` CLI commands; directs to MCP tools instead            |
+| `deny-git-remote-in-sandbox` | PreToolUse | Bash    | Blocks `git push/pull/fetch/remote`; directs to MCP tools instead |
+
+The sandbox also inherits `scan-secrets-before-commit` and `format-on-write` from the main hooks.
+
 ## Attribution
 
 - Workflow skills adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent (MIT)
