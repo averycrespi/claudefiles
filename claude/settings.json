@@ -257,6 +257,7 @@
         "index.golang.org",
         "proxy.golang.org",
         "pypi.org",
+        "registry.npmjs.org",
         "storage.googleapis.com",
         "sum.golang.org"
       ]
