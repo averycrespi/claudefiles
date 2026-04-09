@@ -24,6 +24,4 @@ When sorting items alphabetically or numerically, always use `sort` (or equivale
 
 ## MCP Usage
 
-**Delegate to a subagent** any MCP call that returns verbose output: searches, log/span queries, multi-step lookups (2+ calls). The subagent should return a concise summary, not raw output.
-
-**OK to call directly:** single-resource lookups (`getJiraIssue`, `get_datadog_metric`, `get_datadog_incident`) when you need one field.
+**Delegate to a subagent** any MCP call that returns verbose output: searches, multi-step lookups (2+ calls). The subagent should return a concise summary, not raw output.

@@ -5,7 +5,7 @@ My opinionated resources for working with AI coding agents — currently [Claude
 ## Features
 
 - **[Structured Development Workflow](docs/workflow.md)** — Reliably turn ideas into pull requests
-- **[Integrations](docs/integrations.md)** — Connect to Jira, Confluence, Datadog, and browsers
+- **[Integrations](docs/integrations.md)** — Browser automation and other external tools
 - **Pi Extensions** — TypeScript extensions for the Pi coding agent (autoformat, subagents, usage tracking, etc.)
 
 ## Requirements
