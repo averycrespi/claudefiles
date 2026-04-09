@@ -10,7 +10,7 @@
   },
   "sandbox": {
     "excludedCommands": [
-      "./setup.sh:*"
+      "make:*"
     ]
   }
 }

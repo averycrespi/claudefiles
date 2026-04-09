@@ -1,6 +1,6 @@
 # Claude Code Configuration
 
-This directory manages Claude Code configuration files. The `setup.sh` script uses [GNU Stow](https://www.gnu.org/software/stow/) to symlink `claude/` into `~/.claude/`, so changes made here are immediately reflected in your Claude Code environment.
+This directory manages Claude Code configuration files. `make stow-claude` uses [GNU Stow](https://www.gnu.org/software/stow/) to symlink `claude/` into `~/.claude/`, so changes made here are immediately reflected in your Claude Code environment.
 
 ## Directory Structure
 
@@ -18,7 +18,7 @@ claude/
 
 ## How It Works
 
-Running `./setup.sh` creates symlinks from `claude/` into `~/.claude/`. For example:
+Running `make stow-claude` creates symlinks from `claude/` into `~/.claude/`. For example:
 - `claude/settings.json` → `~/.claude/settings.json`
 - `claude/skills/brainstorming/SKILL.md` → `~/.claude/skills/brainstorming/SKILL.md`
 

@@ -14,7 +14,7 @@ This is a public repository. When creating or modifying content:
 ## Setup
 
 ```bash
-./setup.sh
+make install-dev && make stow
 ```
 
 See the [README](README.md) for requirements and quick start.
@@ -33,7 +33,7 @@ See [claude/README.md](claude/README.md) for the full skills catalog and workflo
 
 - Edit Claude Code files in `claude/` directory
 - Edit Pi agent files in `pi/` directory
-- Run `./setup.sh` to apply changes via stow
+- Run `make stow` to apply changes via stow
 
 **IMPORTANT:** Never edit files directly in `~/.claude/` or `~/.pi/`. Those are symlinks managed by stow. Always edit the source files in this repository. For example:
 - Edit `./claude/skills/foo.md`, NOT `~/.claude/skills/foo.md`

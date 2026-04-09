@@ -15,10 +15,10 @@ My opinionated resources for working with AI coding agents — currently [Claude
 ```sh
 git clone git@github.com:averycrespi/claudefiles.git
 cd claudefiles
-./setup.sh
+make install-dev
+make install-playwright
+make stow
 ```
-
-The setup script will install dependencies and symlink configuration into `~/.claude/` and `~/.pi/`.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The setup script will install dependencies and symlink configuration into `~/.cl
 ## Development
 
 ```sh
-npx tsc          # type-check Pi extension TypeScript files
+make typecheck   # type-check Pi extension TypeScript files
 ```
 
 ## Related
