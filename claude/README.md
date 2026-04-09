@@ -85,6 +85,20 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 | Notification sound           | Notification | all         | Sends a macOS notification and plays a sound when Claude needs attention                    |
 | Stop sound                   | Stop         | all         | Sends a macOS notification and plays a sound when Claude finishes                           |
 
+## Status Line
+
+A custom powerline-style status line (`scripts/statusline.sh`) configured via `settings.json`. Displays:
+
+| Segment    | Description                                                                                    |
+| ---------- | ---------------------------------------------------------------------------------------------- |
+| Model      | Current model name; green background when git is clean, yellow when dirty                      |
+| Directory  | Working directory name                                                                         |
+| Git branch | Branch name with compact status (ahead/behind, staged, modified counts)                        |
+| Context    | Context window usage percentage; color shifts white → yellow → orange → red as usage increases |
+| Session    | 5-hour rolling rate limit usage; same color scale as context                                   |
+
+The sandbox variant (`sandbox/scripts/statusline.sh`) adds a purple "sandbox" badge prefix.
+
 ## Sandbox
 
 The `sandbox/` directory provides overrides for Claude Code's [sandbox mode](https://docs.anthropic.com/en/docs/claude-code/security#sandbox-mode) (remote/headless environments). When running in a sandbox, these files replace the default configuration.
