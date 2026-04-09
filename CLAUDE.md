@@ -2,6 +2,13 @@
 
 Project-specific instructions for this repository.
 
+## Overview
+
+This repo manages configuration for two AI coding agents via [GNU Stow](https://www.gnu.org/software/stow/):
+
+- `claude/` → symlinked to `~/.claude/` (Claude Code settings, skills, hooks, agents)
+- `pi/agent/` → symlinked to `~/.pi/agent/` (Pi agent extensions, agents, skills)
+
 ## Public Repository Guidelines
 
 This is a public repository. When creating or modifying content:
@@ -11,23 +18,14 @@ This is a public repository. When creating or modifying content:
 - **Generic examples** - Use placeholders like `ABC-123` for tickets, `example.com` for domains
 - **Sanitize plans** - Review `.plans/` and `.designs/` files before committing to ensure they contain no proprietary information
 
-## Setup
+## Commands
 
 ```bash
-make install-dev && make stow
+make install-dev        # install Node dependencies for Pi extensions
+make install-playwright # install Playwright for browser automation
+make stow               # symlink claude/ and pi/agent/ into home directory
+make typecheck          # type-check Pi extension TypeScript files
 ```
-
-See the [README](README.md) for requirements and quick start.
-
-## Development Workflow
-
-This repository includes a structured development workflow:
-
-```
-/brainstorming → /writing-plans → /executing-plans → /completing-work
-```
-
-See [claude/README.md](claude/README.md) for the full skills catalog and workflow details.
 
 ## Modifying This Repository
 
