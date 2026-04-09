@@ -24,10 +24,10 @@ Each stage is a skill that can be used independently. Plans are executed via sub
 
 ## Structure
 
-| Directory                         | Purpose                                      | Stow target    |
-| --------------------------------- | -------------------------------------------- | -------------- |
-| [`claude/`](claude/README.md)     | Skills, hooks, settings, agents, status line | `~/.claude/`   |
-| [`pi/agent/`](pi/agent/README.md) | Extensions, agents, skills, settings         | `~/.pi/agent/` |
+| Directory                     | Purpose                                      | Stow target    |
+| ----------------------------- | -------------------------------------------- | -------------- |
+| [`claude/`](claude/README.md) | Skills, hooks, settings, agents, status line | `~/.claude/`   |
+| [`pi/agent/`](pi/README.md)   | Extensions, agents, skills, settings         | `~/.pi/agent/` |
 
 See each directory's README for the full list of skills, hooks, and extensions.
 

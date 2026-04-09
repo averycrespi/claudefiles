@@ -33,4 +33,4 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | `usage`                  | Session usage tracking                                |
 | `web`                    | Web search and fetch tools                            |
 
-See the [pi-extensions](../../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
+See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
