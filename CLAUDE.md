@@ -23,7 +23,8 @@ This is a public repository. When creating or modifying content:
 ```bash
 make install-dev        # install Node dependencies for Pi extensions
 make install-playwright # install Playwright for browser automation
-make stow               # symlink claude/ and pi/agent/ into home directory
+make stow-claude        # symlink claude/ into ~/.claude/
+make stow-pi            # symlink pi/agent/ into ~/.pi/agent/
 make typecheck          # type-check Pi extension TypeScript files
 ```
 
@@ -31,8 +32,9 @@ make typecheck          # type-check Pi extension TypeScript files
 
 - Edit Claude Code files in `claude/` directory
 - Edit Pi agent files in `pi/` directory
-- Run `make stow` to apply changes via stow
+- Only run `make stow-claude` or `make stow-pi` when the user explicitly asks you to
 
 **IMPORTANT:** Never edit files directly in `~/.claude/` or `~/.pi/`. Those are symlinks managed by stow. Always edit the source files in this repository. For example:
+
 - Edit `./claude/skills/foo.md`, NOT `~/.claude/skills/foo.md`
 - Edit `./pi/agent/extensions/foo.ts`, NOT `~/.pi/agent/extensions/foo.ts`

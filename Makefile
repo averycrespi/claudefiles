@@ -1,4 +1,4 @@
-.PHONY: install-dev install-playwright stow unstow stow-claude unstow-claude stow-pi unstow-pi typecheck
+.PHONY: install-dev install-playwright stow-claude unstow-claude stow-pi unstow-pi typecheck
 
 install-dev:
 	npm install
@@ -7,10 +7,6 @@ install-playwright:
 	npm install -g @playwright/cli@latest
 	npm install -g playwright@latest
 	playwright install
-
-stow: stow-claude stow-pi
-
-unstow: unstow-claude unstow-pi
 
 stow-claude:
 	mkdir -p ~/.claude

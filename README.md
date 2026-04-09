@@ -15,9 +15,10 @@ My configuration for working with AI coding agents — currently [Claude Code](h
 ```sh
 git clone git@github.com:averycrespi/agent-config.git
 cd agent-config
-brew bundle # to install system dependencies on macOS
+brew bundle             # install system dependencies on macOS
 make install-playwright # for /automating-browsers skill
-make stow
+make stow-claude        # symlink claude/ into ~/.claude/
+make stow-pi            # symlink pi/agent/ into ~/.pi/agent/
 ```
 
 ## Structure
