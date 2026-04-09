@@ -76,6 +76,15 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 | `skill-creator`           | Guide for creating new skills                              |
 | `test-driven-development` | TDD discipline: red-green-refactor cycle                   |
 
+## Hooks
+
+| Hook                         | Event        | Matcher     | Description                                                                                 |
+| ---------------------------- | ------------ | ----------- | ------------------------------------------------------------------------------------------- |
+| `scan-secrets-before-commit` | PreToolUse   | Bash        | Runs gitleaks on staged changes before `git commit`; blocks the commit if secrets are found |
+| `format-on-write`            | PostToolUse  | Edit, Write | Auto-formats files after edits using Prettier, gofmt, rustfmt, or shfmt based on extension  |
+| Notification sound           | Notification | all         | Sends a macOS notification and plays a sound when Claude needs attention                    |
+| Stop sound                   | Stop         | all         | Sends a macOS notification and plays a sound when Claude finishes                           |
+
 ## Attribution
 
 - Workflow skills adapted from [superpowers](https://github.com/obra/superpowers) by Jesse Vincent (MIT)
