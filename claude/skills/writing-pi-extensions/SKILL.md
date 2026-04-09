@@ -1,6 +1,6 @@
 ---
 name: writing-pi-extensions
-description: Use when writing, editing, or debugging pi coding agent extensions in this repo
+description: Use when writing, editing, or debugging Pi coding agent extensions
 ---
 
 # Writing Pi Extensions
@@ -147,5 +147,5 @@ ctx.ui.setStatus("my-extension", "status text"); // footer widget, always safe
 1. Fetch the relevant upstream docs/examples for the pattern you need.
 2. Decide: single file (`extensions/name.ts`) or subdirectory (`extensions/name/index.ts`)?
 3. Write the extension.
-4. Run `make typecheck` from the repo root to verify types.
+4. Run `npx tsc` from the repo root to verify types.
 5. Test by running pi in the target working directory — the extension loads automatically.

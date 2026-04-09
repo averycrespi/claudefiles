@@ -1,6 +1,8 @@
 {
   "permissions": {
-    "allow": [],
+    "allow": [
+      "Bash(npx tsc:*)"
+    ],
     "deny": [
       "Write(~/.claude/**)",
       "Edit(~/.claude/**)"

@@ -31,11 +31,12 @@ See [docs/workflow.md](docs/workflow.md) for details. See [docs/skills.md](docs/
 
 ## Modifying This Repository
 
-- Edit files in `claude/` directory
+- Edit Claude Code files in `claude/` directory
+- Edit Pi agent files in `pi/` directory
 - Run `./setup.sh` to apply changes via stow
 
-**IMPORTANT:** Never edit files directly in `~/.claude/`. Those are symlinks managed by stow. Always edit the source files in this repository's `claude/` directory. For example:
+**IMPORTANT:** Never edit files directly in `~/.claude/` or `~/.pi/`. Those are symlinks managed by stow. Always edit the source files in this repository. For example:
 - Edit `./claude/skills/foo.md`, NOT `~/.claude/skills/foo.md`
-- Edit `./claude/settings.json`, NOT `~/.claude/settings.json`
+- Edit `./pi/agent/extensions/foo.ts`, NOT `~/.pi/agent/extensions/foo.ts`
 
 See [docs/claude-code-config.md](docs/claude-code-config.md) for full details on the configuration structure.

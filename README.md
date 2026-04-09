@@ -1,17 +1,19 @@
 # claudefiles
 
-My opinionated resources for working with [Claude Code](https://www.anthropic.com/claude-code).
+My opinionated resources for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/).
 
 ## Features
 
 - **[Structured Development Workflow](docs/workflow.md)** — Reliably turn ideas into pull requests
 - **[Integrations](docs/integrations.md)** — Connect to Jira, Confluence, Datadog, and browsers
+- **Pi Extensions** — TypeScript extensions for the Pi coding agent (autoformat, subagents, usage tracking, etc.)
 
 ## Requirements
 
 - [Claude Code](https://github.com/anthropics/claude-code)
+- [Pi agent](https://pi.dev/)
 - [Homebrew](https://brew.sh/) for macOS dependency management
-- [Node.js](https://nodejs.org/) 18+ for `automating-browsers`
+- [Node.js](https://nodejs.org/) 24+ for Pi extensions and `automating-browsers`
 - macOS is assumed, but can be adapted for Linux
 
 ## Quick Start
@@ -22,7 +24,7 @@ cd claudefiles
 ./setup.sh
 ```
 
-The setup script will install dependencies and symlink configuration files to `~/.claude/`.
+The setup script will install dependencies and symlink configuration files to `~/.claude/` and `~/.pi/`.
 
 ## Documentation
 
@@ -34,6 +36,12 @@ The setup script will install dependencies and symlink configuration files to `~
 | [Claude Code Config](docs/claude-code-config.md) | How the `~/.claude/` symlinks work            |
 | [Design Decisions](docs/design-decisions.md)     | Why things are built this way                 |
 | [Future](docs/future.md)                         | Planned improvements and explorations         |
+
+## Development
+
+```sh
+npx tsc          # type-check Pi extension TypeScript files
+```
 
 ## Related
 
