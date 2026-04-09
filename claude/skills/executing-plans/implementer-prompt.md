@@ -8,6 +8,7 @@ Use this template when dispatching an implementer subagent.
 
 ```
 Task tool (general-purpose):
+  model: sonnet
   description: "Implement Task N: [task name]"
   prompt: |
     You are implementing Task N: [task name]
@@ -65,6 +66,7 @@ When resuming an implementer to fix issues found by a reviewer:
 
 ```
 Task tool (general-purpose):
+  model: sonnet
   resume: [implementer-agent-id]
   prompt: |
     The [spec/code quality] reviewer found issues with your implementation:

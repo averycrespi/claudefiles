@@ -158,6 +158,7 @@ Use prompt template at `./implementer-prompt.md`. Fill in:
 
 ```
 Task tool (general-purpose):
+  model: sonnet
   description: "Implement Task N: [task name]"
   prompt: [filled template from implementer-prompt.md]
 ```
