@@ -1,6 +1,6 @@
-# claudefiles
+# Agent Config
 
-My opinionated resources for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/).
+My configuration for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/).
 
 ## Requirements
 
@@ -13,8 +13,8 @@ My opinionated resources for working with AI coding agents — currently [Claude
 ## Quick Start
 
 ```sh
-git clone git@github.com:averycrespi/claudefiles.git
-cd claudefiles
+git clone git@github.com:averycrespi/agent-config.git
+cd agent-config
 brew bundle # to install system dependencies on macOS
 make install-playwright # for /automating-browsers skill
 make stow
