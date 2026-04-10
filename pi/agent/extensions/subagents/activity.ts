@@ -123,6 +123,8 @@ export function createSubagentActivityTracker(
   const state: SubagentRunState = {
     intent: options.intent,
     phase: "starting",
+    toolUseCount: 0,
+    totalTokens: 0,
     startedAt: Date.now(),
     lastUpdateAt: Date.now(),
   };
@@ -229,6 +231,8 @@ export function createSubagentActivityTracker(
         const isError = Boolean(record.isError);
         const resultText = stringifyArgs(record.result);
         if (resultText) setLastOutput(resultText);
+        state.toolUseCount += 1;
+        state.lastToolInfo = state.currentCommand ?? toolName;
         if (isError) {
           setPhase("error");
           emitProgress(`${state.intent}: ${toolName} failed`);
@@ -240,10 +244,21 @@ export function createSubagentActivityTracker(
         break;
       }
       case "message_end": {
-        const message = record.message as { role?: unknown } | undefined;
+        const message = record.message as
+          | {
+              role?: unknown;
+              usage?: { totalTokens?: number };
+            }
+          | undefined;
         if (message?.role === "assistant") {
           const text = textFromMessage(message);
           if (text) setLastOutput(text);
+          if (
+            typeof message.usage?.totalTokens === "number" &&
+            message.usage.totalTokens > 0
+          ) {
+            state.totalTokens += message.usage.totalTokens;
+          }
         }
         break;
       }

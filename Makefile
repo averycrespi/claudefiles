@@ -23,4 +23,4 @@ unstow-pi:
 	stow -D -d pi -t ~/.pi/agent agent
 
 typecheck:
-	npx tsc
+	npx -p typescript tsc

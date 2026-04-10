@@ -46,6 +46,12 @@ function truncate(str: string, max = 120): string {
   return `…${trimmed.slice(-max)}`;
 }
 
+function formatTokens(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`;
+  return String(count);
+}
+
 function formatDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -105,6 +111,22 @@ function renderAgentCall(
   return t;
 }
 
+function statsLine(
+  toolUseCount: number,
+  totalTokens: number,
+  durationMs: number,
+): string {
+  const parts: string[] = [];
+  if (toolUseCount > 0) {
+    parts.push(`${toolUseCount} tool ${toolUseCount === 1 ? "use" : "uses"}`);
+  }
+  if (totalTokens > 0) {
+    parts.push(`${formatTokens(totalTokens)} tokens`);
+  }
+  parts.push(formatDuration(durationMs));
+  return parts.join(" · ");
+}
+
 function renderAgentResult(
   result: { content: { type: string; text?: string }[]; details?: unknown },
   options: { isPartial: boolean },
@@ -124,25 +146,27 @@ function renderAgentResult(
     clearRenderTimer(state);
   }
 
+  const sp = theme.fg("muted", "⎿  ");
+
   if (options.isPartial) {
-    const command = activity?.currentCommand ?? activity?.lastCommand;
+    const toolInfo =
+      activity?.currentCommand ?? activity?.lastCommand ?? "initializing";
     const elapsed = activity
       ? formatDuration(Date.now() - activity.startedAt)
-      : undefined;
-    const lines = [theme.fg("warning", "Running...")];
-    if (command) {
-      lines.push(
-        theme.fg("muted", "command:") +
-          " " +
-          theme.fg("toolOutput", truncate(command)),
-      );
-    }
-    if (elapsed) {
-      lines.push(
-        theme.fg("muted", "running:") + " " + theme.fg("toolOutput", elapsed),
-      );
-    }
-    t.setText(lines.join("\n"));
+      : "";
+    const toolUses = activity?.toolUseCount ?? 0;
+    const runParts = [
+      toolUses > 0 ? `${toolUses} tool ${toolUses === 1 ? "use" : "uses"}` : "",
+      elapsed,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    t.setText(
+      [
+        `${sp}${theme.fg("muted", toolInfo)}`,
+        `${sp}${theme.fg("muted", `running: ${runParts}`)}`,
+      ].join("\n"),
+    );
     return t;
   }
 
@@ -153,18 +177,19 @@ function renderAgentResult(
   const summary = firstText?.text?.trim();
 
   if (context.isError || summary?.startsWith("Error:")) {
-    t.setText(theme.fg("error", summary || "Error: subagent failed"));
+    t.setText(`${sp}${theme.fg("error", summary || "Error: subagent failed")}`);
     return t;
   }
 
-  const elapsed = activity
-    ? formatDuration(Math.max(0, activity.lastUpdateAt - activity.startedAt))
-    : undefined;
-  t.setText(
-    elapsed
-      ? theme.fg("success", `✓ Done in ${elapsed}`)
-      : theme.fg("success", "✓ Done"),
-  );
+  const doneStats = activity
+    ? statsLine(
+        activity.toolUseCount,
+        activity.totalTokens,
+        Math.max(0, activity.lastUpdateAt - activity.startedAt),
+      )
+    : "";
+  const doneLine = doneStats ? `done: ${doneStats}` : "done";
+  t.setText(`${sp}${theme.fg("muted", doneLine)}`);
   return t;
 }
 
@@ -192,6 +217,44 @@ function renderAgentsCall(
   return t;
 }
 
+function agentProgressLine(
+  agent: SubagentRunState,
+  isLast: boolean,
+  theme: any,
+): string {
+  const isResolved = agent.resolved === true;
+  const treeChar = isLast ? "└─" : "├─";
+  const sp = isLast ? "   ⎿  " : "│  ⎿  ";
+  const typeName = agent.agentType ?? "agent";
+  const typeLabel = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+  const nameLine = `${theme.fg("muted", treeChar)} ${theme.bold(typeLabel)}${theme.fg("muted", `: ${agent.intent}`)}`;
+
+  if (isResolved) {
+    const doneInfo = statsLine(
+      agent.toolUseCount,
+      agent.totalTokens,
+      Math.max(0, agent.lastUpdateAt - agent.startedAt),
+    );
+    const doneLine = doneInfo ? `done: ${doneInfo}` : "done";
+    return `${nameLine}\n${theme.fg("muted", sp)}${theme.fg("muted", doneLine)}`;
+  }
+
+  const toolInfo = agent.currentCommand ?? agent.lastCommand ?? "initializing";
+  const elapsed = formatDuration(Date.now() - agent.startedAt);
+  const toolUses = agent.toolUseCount;
+  const runParts = [
+    toolUses > 0 ? `${toolUses} tool ${toolUses === 1 ? "use" : "uses"}` : "",
+    elapsed,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return [
+    nameLine,
+    `${theme.fg("muted", sp)}${theme.fg("muted", toolInfo)}`,
+    `${theme.fg("muted", sp)}${theme.fg("muted", `running: ${runParts}`)}`,
+  ].join("\n");
+}
+
 function renderAgentsResult(
   result: { content: { type: string; text?: string }[]; details?: unknown },
   options: { isPartial: boolean },
@@ -210,17 +273,10 @@ function renderAgentsResult(
     if (!state.renderTimer) {
       state.renderTimer = setInterval(() => context.invalidate(), 1_000);
     }
-    const lines = [theme.fg("warning", `Running ${d.total ?? "?"} agents...`)];
-    for (const agent of d.agents ?? []) {
-      const cmd = agent.currentCommand ?? agent.lastCommand ?? agent.phase;
-      const elapsed = formatDuration(Date.now() - agent.startedAt);
-      const isDone = agent.phase === "done";
-      const isError = agent.phase === "error" || agent.phase === "aborted";
-      const bullet = isDone ? "✓" : isError ? "✗" : "·";
-      const color = isDone ? "success" : isError ? "error" : "warning";
-      lines.push(
-        `  ${theme.fg(color, bullet)} ${theme.fg("muted", agent.intent + ":")} ${theme.fg("toolOutput", truncate(cmd, 60))} ${theme.fg("muted", `(${elapsed})`)}`,
-      );
+    const agents = d.agents ?? [];
+    const lines: string[] = [];
+    for (let i = 0; i < agents.length; i++) {
+      lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
     }
     t.setText(lines.join("\n"));
     return t;
@@ -228,24 +284,25 @@ function renderAgentsResult(
 
   clearRenderTimer(state);
 
-  const total = d.total ?? 1;
+  const agents = d.agents ?? [];
   const failed = d.failed ?? 0;
 
   if (context.isError || failed > 0) {
-    t.setText(theme.fg("error", `✗ ${failed} of ${total} agents failed`));
+    const total = d.total ?? 1;
+    const header = theme.fg("error", `${failed} of ${total} agents failed`);
+    const lines = [header];
+    for (let i = 0; i < agents.length; i++) {
+      lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
+    }
+    t.setText(lines.join("\n"));
     return t;
   }
 
-  const maxElapsed = (d.agents ?? []).reduce(
-    (max, a) => Math.max(max, a.lastUpdateAt - a.startedAt),
-    0,
-  );
-  t.setText(
-    theme.fg(
-      "success",
-      `✓ ${total} agent${total === 1 ? "" : "s"} done in ${formatDuration(maxElapsed)}`,
-    ),
-  );
+  const lines: string[] = [];
+  for (let i = 0; i < agents.length; i++) {
+    lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
+  }
+  t.setText(lines.join("\n"));
   return t;
 }
 
@@ -351,7 +408,10 @@ async function runParallelSpawn(
 }> {
   const states: SubagentRunState[] = specs.map((s) => ({
     intent: s.intent,
+    agentType: s.agent,
     phase: "starting",
+    toolUseCount: 0,
+    totalTokens: 0,
     startedAt: Date.now(),
     lastUpdateAt: Date.now(),
   }));
@@ -364,15 +424,17 @@ async function runParallelSpawn(
   }
 
   const results = await Promise.all(
-    specs.map((spec, i) => {
+    specs.map(async (spec, i) => {
       const agent = agentMap.get(spec.agent);
       if (!agent) {
-        return Promise.resolve({
+        states[i].resolved = true;
+        emitCombined();
+        return {
           content: text(`Error: unknown agent type "${spec.agent}"`),
           details: { exitCode: 1, aborted: false },
-        });
+        };
       }
-      return runSpawn(
+      const result = await runSpawn(
         pi,
         agent,
         normalizeIntent(spec.intent),
@@ -382,10 +444,16 @@ async function runParallelSpawn(
         `${toolCallId}:${i}`,
         (event) => {
           const activity = getActivity(event.details);
-          if (activity) states[i] = activity;
+          if (activity) {
+            activity.agentType = spec.agent;
+            states[i] = activity;
+          }
           emitCombined();
         },
       );
+      states[i].resolved = true;
+      emitCombined();
+      return result;
     }),
   );
 

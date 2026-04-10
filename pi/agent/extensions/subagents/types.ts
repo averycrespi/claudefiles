@@ -39,11 +39,16 @@ export interface SpawnAgentsParams {
 
 export interface SubagentRunState {
   intent: string;
+  agentType?: string;
   phase: SubagentPhase;
   activeTool?: string;
   currentCommand?: string;
   lastCommand?: string;
   lastOutput?: string;
+  lastToolInfo?: string;
+  toolUseCount: number;
+  totalTokens: number;
+  resolved?: boolean;
   startedAt: number;
   lastUpdateAt: number;
 }

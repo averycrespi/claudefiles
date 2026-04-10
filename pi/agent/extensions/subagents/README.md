@@ -51,25 +51,30 @@ Launch multiple subagents in parallel. Each runs independently in its own contex
 
 ## UI behavior
 
-**`spawn_agent`** — while running, shows:
+**`spawn_agent`** — while running, shows the current tool call and a running status line:
 
 ```
-command: <current-tool-call>
-running: <elapsed>
+Explore agent find auth flows
+⎿  read: src/auth/middleware.ts
+⎿  running: 4 tool uses · 14s
 ```
 
-Clears to `✓ Done in <duration>` on success or an error message on failure. Pass `show_activity: false` to suppress live updates.
+On completion: `⎿  done: 5 tool uses · 20.3k tokens · 20s`. On error, the error message is shown. Pass `show_activity: false` to suppress live updates.
 
-**`spawn_agents`** — shows a status line per agent while running:
+**`spawn_agents`** — shows a tree per agent:
 
 ```
-Running 3 agents...
-  · explore: grep "auth" (15s)
-  · code: bash: npm test (8s)
-  ✓ review: done (1m 23s)
+├─ Explore: find auth flows
+│  ⎿  read: src/auth.ts
+│  ⎿  running: 4 tool uses · 14s
+├─ Code: run tests
+│  ⎿  done: 5 tool uses · 20.3k tokens · 20s
+└─ Review: check config
+   ⎿  bash: npm test
+   ⎿  running: 1 tool use · 3s
 ```
 
-Clears to `✓ N agents done in <duration>` or `✗ N of N failed` on completion.
+Each agent shows its type, intent, current tool call, and a `running:` or `done:` status line with tool use count, token count, and elapsed time. On failure, a header `N of M agents failed` is shown above the tree.
 
 Activity widgets are removed when all subagents finish, error, or are aborted.
 
