@@ -23,8 +23,9 @@ This is a public repository. When creating or modifying content:
 ```bash
 make install-dev        # install Node dependencies for Pi extensions
 make install-playwright # install Playwright for browser automation
-make stow-claude        # symlink claude/ into ~/.claude/
-make stow-pi            # symlink pi/agent/ into ~/.pi/agent/
+make stow-claude         # symlink claude/ into ~/.claude/
+make stow-claude-sandbox # stow-claude + patch sandbox overrides
+make stow-pi             # symlink pi/agent/ into ~/.pi/agent/
 make typecheck          # type-check Pi extension TypeScript files
 ```
 
