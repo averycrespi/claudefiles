@@ -12,7 +12,9 @@ stow-claude:
 	mkdir -p ~/.claude
 	stow claude -t ~/.claude
 
-stow-claude-sandbox: stow-claude
+stow-claude-sandbox:
+	mkdir -p ~/.claude
+	stow -R claude -t ~/.claude
 	cp claude/sandbox/CLAUDE.md ~/.claude/CLAUDE.md
 	cp claude/sandbox/settings.json ~/.claude/settings.json
 	cp claude/sandbox/scripts/statusline.sh ~/.claude/scripts/statusline.sh
