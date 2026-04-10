@@ -9,8 +9,8 @@ input=$(cat)
 
 # Validate JSON and extract fields safely
 if ! echo "$input" | jq -e . >/dev/null 2>&1; then
-    echo "⚠ invalid input"
-    exit 0
+	echo "⚠ invalid input"
+	exit 0
 fi
 
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty' 2>/dev/null)
@@ -25,8 +25,8 @@ model=$(echo "$input" | jq -r '
 ' 2>/dev/null)
 [ -z "$model" ] || [ "$model" = "null" ] && model="claude"
 # Clean up model name - remove claude- prefix, context suffix, and date suffix
-model="${model#claude-}"      # remove claude- prefix
-model="${model%%\[*}"         # remove [1m] context suffix
+model="${model#claude-}" # remove claude- prefix
+model="${model%%\[*}"    # remove [1m] context suffix
 model=$(echo "$model" | sed 's/-[0-9]\{8,\}$//' | cut -c1-12)
 
 # ANSI color codes (using $'...' for proper escape handling)
@@ -55,50 +55,50 @@ SEP=''
 
 # Git info - check status first to determine model background color
 git_segment=""
-model_bg=$BG_GREEN  # default to green
+model_bg=$BG_GREEN # default to green
 model_fg=$FG_GREEN
-if git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
-    branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
-    [ -z "$branch" ] && branch=$(git -C "$cwd" rev-parse --short HEAD 2>/dev/null)
+if git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
+	branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
+	[ -z "$branch" ] && branch=$(git -C "$cwd" rev-parse --short HEAD 2>/dev/null)
 
-    # Get status counts
-    status=$(git -C "$cwd" status --porcelain 2>/dev/null)
-    staged=$(echo "$status" | grep -c '^[MADRC]')
-    modified=$(echo "$status" | grep -c '^.[MD]')
+	# Get status counts
+	status=$(git -C "$cwd" status --porcelain 2>/dev/null)
+	staged=$(echo "$status" | grep -c '^[MADRC]')
+	modified=$(echo "$status" | grep -c '^.[MD]')
 
-    # Ahead/behind
-    ahead=$(git -C "$cwd" rev-list --count @{u}..HEAD 2>/dev/null || echo 0)
-    behind=$(git -C "$cwd" rev-list --count HEAD..@{u} 2>/dev/null || echo 0)
+	# Ahead/behind
+	ahead=$(git -C "$cwd" rev-list --count @{u}..HEAD 2>/dev/null || echo 0)
+	behind=$(git -C "$cwd" rev-list --count HEAD..@{u} 2>/dev/null || echo 0)
 
-    # Build compact git status (starship style)
-    git_status=""
-    [ "$ahead" -gt 0 ] 2>/dev/null && git_status+="⇡$ahead"
-    [ "$behind" -gt 0 ] 2>/dev/null && git_status+="⇣$behind"
-    [ "$staged" -gt 0 ] && git_status+="+$staged"
-    [ "$modified" -gt 0 ] && git_status+="!$modified"
+	# Build compact git status (starship style)
+	git_status=""
+	[ "$ahead" -gt 0 ] 2>/dev/null && git_status+="⇡$ahead"
+	[ "$behind" -gt 0 ] 2>/dev/null && git_status+="⇣$behind"
+	[ "$staged" -gt 0 ] && git_status+="+$staged"
+	[ "$modified" -gt 0 ] && git_status+="!$modified"
 
-    # Choose color - light blue for branch, green/yellow for model based on status
-    BG_LTBLUE=$'\033[48;5;75m'
-    FG_LTBLUE=$'\033[38;5;75m'
-    if [ -n "$git_status" ]; then
-        git_bg=$BG_LTBLUE
-        git_fg=$FG_LTBLUE
-        model_bg=$BG_YELLOW
-        model_fg=$FG_YELLOW
-        git_content=" $branch $git_status "
-    else
-        git_bg=$BG_LTBLUE
-        git_fg=$FG_LTBLUE
-        model_bg=$BG_GREEN
-        model_fg=$FG_GREEN
-        git_content=" $branch "
-    fi
-    git_segment="${FG_BLUE}${git_bg}${SEP}${FG_BLACK}${git_content}"
-    next_fg=$git_fg
-    next_bg=$BG_CYAN
+	# Choose color - light blue for branch, green/yellow for model based on status
+	BG_LTBLUE=$'\033[48;5;75m'
+	FG_LTBLUE=$'\033[38;5;75m'
+	if [ -n "$git_status" ]; then
+		git_bg=$BG_LTBLUE
+		git_fg=$FG_LTBLUE
+		model_bg=$BG_YELLOW
+		model_fg=$FG_YELLOW
+		git_content=" $branch $git_status "
+	else
+		git_bg=$BG_LTBLUE
+		git_fg=$FG_LTBLUE
+		model_bg=$BG_GREEN
+		model_fg=$FG_GREEN
+		git_content=" $branch "
+	fi
+	git_segment="${FG_BLUE}${git_bg}${SEP}${FG_BLACK}${git_content}"
+	next_fg=$git_fg
+	next_bg=$BG_CYAN
 else
-    next_fg=$FG_BLUE
-    next_bg=$BG_CYAN
+	next_fg=$FG_BLUE
+	next_bg=$BG_CYAN
 fi
 
 # Context usage
@@ -107,38 +107,53 @@ BG_DARK=$'\033[48;5;236m'
 FG_DARK=$'\033[38;5;236m'
 pct=$(echo "$input" | jq '.context_window.used_percentage // empty' 2>/dev/null)
 if [ -n "$pct" ] && [ "$pct" != "null" ] && [ "$pct" -ge 0 ] 2>/dev/null; then
-    # Color based on level
-    if [ "$pct" -gt 95 ]; then
-        pct_color=$'\033[38;5;196m'  # bright red
-    elif [ "$pct" -gt 85 ]; then
-        pct_color=$'\033[38;5;208m'  # orange
-    elif [ "$pct" -gt 70 ]; then
-        pct_color=$'\033[38;5;220m'  # yellow
-    else
-        pct_color=$FG_WHITE
-    fi
-    context_segment="${next_fg}${BG_DARK}${SEP}${FG_WHITE} ctx: ${pct_color}${pct}%${RESET}"
-    next_fg=$FG_DARK
+	# Color based on level
+	if [ "$pct" -gt 95 ]; then
+		pct_color=$'\033[38;5;196m' # bright red
+	elif [ "$pct" -gt 85 ]; then
+		pct_color=$'\033[38;5;208m' # orange
+	elif [ "$pct" -gt 70 ]; then
+		pct_color=$'\033[38;5;220m' # yellow
+	else
+		pct_color=$FG_WHITE
+	fi
+	context_segment="${next_fg}${BG_DARK}${SEP}${FG_WHITE} ctx: ${pct_color}${pct}%${RESET}"
+	next_fg=$FG_DARK
 else
-    context_segment="${next_fg}${BG_DARK}${SEP}${FG_WHITE} ctx: --%${RESET}"
-    next_fg=$FG_DARK
+	context_segment="${next_fg}${BG_DARK}${SEP}${FG_WHITE} ctx: --%${RESET}"
+	next_fg=$FG_DARK
 fi
 
 # Session usage (5-hour rolling window)
 session_segment=""
 session_pct=$(echo "$input" | jq '.rate_limits.five_hour.used_percentage // empty' 2>/dev/null)
 if [ -n "$session_pct" ] && [ "$session_pct" != "null" ] && [ "$session_pct" -ge 0 ] 2>/dev/null; then
-    if [ "$session_pct" -gt 95 ]; then
-        s_pct_color=$'\033[38;5;196m'
-    elif [ "$session_pct" -gt 85 ]; then
-        s_pct_color=$'\033[38;5;208m'
-    elif [ "$session_pct" -gt 70 ]; then
-        s_pct_color=$'\033[38;5;220m'
-    else
-        s_pct_color=$FG_WHITE
-    fi
-    session_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} session: ${s_pct_color}${session_pct}%${RESET}"
-    session_next_fg=$FG_DARK
+	if [ "$session_pct" -gt 95 ]; then
+		s_pct_color=$'\033[38;5;196m'
+	elif [ "$session_pct" -gt 85 ]; then
+		s_pct_color=$'\033[38;5;208m'
+	elif [ "$session_pct" -gt 70 ]; then
+		s_pct_color=$'\033[38;5;220m'
+	else
+		s_pct_color=$FG_WHITE
+	fi
+	session_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} session: ${s_pct_color}${session_pct}%${RESET}"
+fi
+
+# Weekly usage (7-day rolling window)
+weekly_segment=""
+weekly_pct=$(echo "$input" | jq '.rate_limits.seven_day.used_percentage // empty' 2>/dev/null)
+if [ -n "$weekly_pct" ] && [ "$weekly_pct" != "null" ] && [ "$weekly_pct" -ge 0 ] 2>/dev/null; then
+	if [ "$weekly_pct" -gt 95 ]; then
+		w_pct_color=$'\033[38;5;196m'
+	elif [ "$weekly_pct" -gt 85 ]; then
+		w_pct_color=$'\033[38;5;208m'
+	elif [ "$weekly_pct" -gt 70 ]; then
+		w_pct_color=$'\033[38;5;220m'
+	else
+		w_pct_color=$FG_WHITE
+	fi
+	weekly_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} week: ${w_pct_color}${weekly_pct}%${RESET}"
 fi
 
 # Build output with powerline style
@@ -148,8 +163,13 @@ echo -n "${model_fg}${BG_BLUE}${SEP}${FG_BLACK}  $dir_name ${RESET}"
 echo -n "$git_segment"
 echo -n "$context_segment"
 if [ -n "$session_segment" ]; then
-    echo -n "$session_segment"
-    echo -n "${session_next_fg}${RESET}${SEP}"
+	echo -n "$session_segment"
+fi
+if [ -n "$weekly_segment" ]; then
+	echo -n "$weekly_segment"
+	echo -n "${FG_DARK}${RESET}${SEP}"
+elif [ -n "$session_segment" ]; then
+	echo -n "${FG_DARK}${RESET}${SEP}"
 else
-    echo -n "${next_fg}${RESET}${SEP}"
+	echo -n "${next_fg}${RESET}${SEP}"
 fi
