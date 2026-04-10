@@ -138,6 +138,8 @@ if [ -n "$session_pct" ] && [ "$session_pct" != "null" ] && [ "$session_pct" -ge
 		s_pct_color=$FG_WHITE
 	fi
 	session_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} session: ${s_pct_color}${session_pct}%${RESET}"
+else
+	session_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} session: --%${RESET}"
 fi
 
 # Weekly usage (7-day rolling window)
@@ -154,6 +156,8 @@ if [ -n "$weekly_pct" ] && [ "$weekly_pct" != "null" ] && [ "$weekly_pct" -ge 0 
 		w_pct_color=$FG_WHITE
 	fi
 	weekly_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} week: ${w_pct_color}${weekly_pct}%${RESET}"
+else
+	weekly_segment="${FG_DARK}${BG_DARK}${SEP}${FG_WHITE} week: --%${RESET}"
 fi
 
 # Build output with powerline style
@@ -165,14 +169,6 @@ echo -n "${FG_PURPLE}${model_bg}${SEP}${FG_BLACK}${BOLD} $model ${RESET}"
 echo -n "${model_fg}${BG_BLUE}${SEP}${FG_BLACK}  $dir_name ${RESET}"
 echo -n "$git_segment"
 echo -n "$context_segment"
-if [ -n "$session_segment" ]; then
-	echo -n "$session_segment"
-fi
-if [ -n "$weekly_segment" ]; then
-	echo -n "$weekly_segment"
-	echo -n "${FG_DARK}${RESET}${SEP}"
-elif [ -n "$session_segment" ]; then
-	echo -n "${FG_DARK}${RESET}${SEP}"
-else
-	echo -n "${next_fg}${RESET}${SEP}"
-fi
+echo -n "$session_segment"
+echo -n "$weekly_segment"
+echo -n "${FG_DARK}${RESET}${SEP}"
