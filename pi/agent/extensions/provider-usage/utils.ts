@@ -1,8 +1,15 @@
-export interface UsageStats {
-  /** 0–100, percentage of quota consumed in the current window */
+export interface WindowStats {
+  /** 0–100, percentage of quota consumed in this window */
   usedPercent?: number;
-  /** Seconds until the quota window resets */
+  /** Seconds until this window resets */
   resetAfterSeconds?: number;
+}
+
+export interface UsageStats {
+  /** Short window (e.g. 3–5 hours) */
+  primary?: WindowStats;
+  /** Long window (e.g. weekly) */
+  secondary?: WindowStats;
   /** True when the hard limit has been reached */
   limitReached?: boolean;
   /** Credit balance string for credit-based plans (e.g. "4.20") */
@@ -26,6 +33,11 @@ export function formatDuration(seconds: number): string {
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
   const h = Math.floor(seconds / 3600);
   const m = Math.round((seconds % 3600) / 60);
+  if (h >= 24) {
+    const d = Math.floor(h / 24);
+    const rh = h % 24;
+    return rh > 0 ? `${d}d ${rh}h` : `${d}d`;
+  }
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
@@ -33,21 +45,53 @@ export function buildFooterText(
   adapter: ProviderAdapter,
   stats: UsageStats,
 ): string {
-  const parts: string[] = [];
+  if (stats.balance !== undefined) {
+    const parts = [`${adapter.label}: $${stats.balance}`];
+    if (stats.primary?.resetAfterSeconds !== undefined) {
+      parts.push(
+        `resets in ${formatDuration(stats.primary.resetAfterSeconds)}`,
+      );
+    }
+    return parts.join(" · ");
+  }
 
   if (stats.limitReached) {
-    parts.push(`${adapter.label}: limit reached`);
-  } else if (stats.usedPercent !== undefined) {
-    parts.push(`${adapter.label}: ${stats.usedPercent}%`);
-  } else if (stats.balance !== undefined) {
-    parts.push(`${adapter.label}: $${stats.balance}`);
-  } else {
-    parts.push(adapter.label);
+    const parts = [`${adapter.label}: limit reached`];
+    if (stats.primary?.resetAfterSeconds !== undefined) {
+      parts.push(
+        `resets in ${formatDuration(stats.primary.resetAfterSeconds)}`,
+      );
+    }
+    return parts.join(" · ");
   }
 
-  if (stats.resetAfterSeconds !== undefined) {
-    parts.push(`resets in ${formatDuration(stats.resetAfterSeconds)}`);
+  const pPct = stats.primary?.usedPercent;
+  const sPct = stats.secondary?.usedPercent;
+  const pReset = stats.primary?.resetAfterSeconds;
+  const sReset = stats.secondary?.resetAfterSeconds;
+
+  if (pPct === undefined && sPct === undefined) return adapter.label;
+
+  let pctStr = "";
+  if (pPct !== undefined && sPct !== undefined) {
+    pctStr = `${pPct}% (${sPct}%)`;
+  } else if (pPct !== undefined) {
+    pctStr = `${pPct}%`;
+  } else if (sPct !== undefined) {
+    pctStr = `${sPct}%`;
   }
+
+  let resetStr = "";
+  if (pReset !== undefined && sReset !== undefined) {
+    resetStr = `resets in ${formatDuration(pReset)} (${formatDuration(sReset)})`;
+  } else if (pReset !== undefined) {
+    resetStr = `resets in ${formatDuration(pReset)}`;
+  } else if (sReset !== undefined) {
+    resetStr = `resets in ${formatDuration(sReset)}`;
+  }
+
+  const parts = [`${adapter.label}: ${pctStr}`];
+  if (resetStr) parts.push(resetStr);
 
   return parts.join(" · ");
 }

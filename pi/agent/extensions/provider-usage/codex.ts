@@ -1,4 +1,12 @@
-import type { ProviderAdapter } from "./utils.js";
+import type { ProviderAdapter, WindowStats } from "./utils.js";
+
+function parseWindow(window: any): WindowStats | undefined {
+  if (!window) return undefined;
+  return {
+    usedPercent: window.used_percent,
+    resetAfterSeconds: window.reset_after_seconds,
+  };
+}
 
 export const codexAdapter: ProviderAdapter = {
   label: "Codex",
@@ -27,16 +35,12 @@ export const codexAdapter: ProviderAdapter = {
     const codexEntry = (data.additional_rate_limits ?? []).find(
       (r: any) => r.metered_feature === "codex",
     );
-    const window =
-      codexEntry?.rate_limit?.primary_window ?? data.rate_limit?.primary_window;
-    const limitReached =
-      codexEntry?.rate_limit?.limit_reached ??
-      data.rate_limit?.limit_reached ??
-      false;
+    const rateLimit = codexEntry?.rate_limit ?? data.rate_limit;
+    const limitReached = rateLimit?.limit_reached ?? false;
 
     return {
-      usedPercent: window?.used_percent,
-      resetAfterSeconds: window?.reset_after_seconds,
+      primary: parseWindow(rateLimit?.primary_window),
+      secondary: parseWindow(rateLimit?.secondary_window),
       limitReached,
       balance:
         data.credits?.has_credits && !data.credits?.unlimited

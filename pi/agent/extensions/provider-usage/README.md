@@ -5,12 +5,12 @@ Pi extension that displays provider rate-limit quota in the footer.
 ## Footer format
 
 ```
-Codex: 45% · resets in 2h 30m
+Codex: 45% (20%) · resets in 2h 30m (3d 12h)
 Codex: limit reached · resets in 2h 30m
 Codex: $4.20 · resets in 1h 15m
 ```
 
-Shows the current provider's usage percentage and time until the quota window resets. When the hard limit is reached, the reset timer is still shown so you know when quota returns. Credit-based plans show the balance instead of a percentage.
+Shows the current provider's short and weekly window usage as paired percentages and reset timers. When only one window is available, the format degrades gracefully to a single value. When the hard limit is reached, the reset timer is still shown so you know when quota returns. Credit-based plans show the balance instead of a percentage.
 
 The footer updates on session start and after each turn, debounced to one API call per 60 seconds.
 
