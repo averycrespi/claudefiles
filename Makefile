@@ -14,10 +14,11 @@ stow-claude:
 
 stow-claude-sandbox:
 	mkdir -p ~/.claude
+	rm -f ~/.claude/CLAUDE.md ~/.claude/settings.json
 	stow -R claude -t ~/.claude
+	rm -f ~/.claude/CLAUDE.md ~/.claude/settings.json
 	cp claude/sandbox/CLAUDE.md ~/.claude/CLAUDE.md
 	cp claude/sandbox/settings.json ~/.claude/settings.json
-	cp claude/sandbox/scripts/statusline.sh ~/.claude/scripts/statusline.sh
 
 unstow-claude:
 	stow -D claude -t ~/.claude
