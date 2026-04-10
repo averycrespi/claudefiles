@@ -97,7 +97,7 @@ A custom powerline-style status line (`scripts/statusline.sh`) configured via `s
 | Context    | Context window usage percentage; color shifts white → yellow → orange → red as usage increases |
 | Session    | 5-hour rolling rate limit usage; same color scale as context                                   |
 
-The sandbox variant (`sandbox/scripts/statusline.sh`) adds a purple "sandbox" badge prefix.
+The sandbox variant (`scripts/statusline-sandbox.sh`) adds a purple "sandbox" badge prefix.
 
 ## Sandbox
 
@@ -109,7 +109,7 @@ The `sandbox/` directory provides overrides for Claude Code's [sandbox mode](htt
 | ------------------------------- | -------------------------------------------------------------------------------- |
 | `sandbox/settings.json`         | Sandbox-specific settings; skips dangerous-mode prompt, removes allow/deny lists |
 | `sandbox/CLAUDE.md`             | Simplified instructions for the sandbox environment                              |
-| `sandbox/scripts/statusline.sh` | Status line variant with a "sandbox" prefix badge                                |
+| `scripts/statusline-sandbox.sh` | Status line variant with a "sandbox" prefix badge                                |
 
 ### Additional Hooks
 
