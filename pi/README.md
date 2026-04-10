@@ -27,7 +27,7 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | `ask-user`               | Improved TUI for user questions                |
 | `autoformat`             | Auto-run gofmt and prettier on edited files    |
 | `mcp-broker`             | Broker CLI skill + guard for remote operations |
-| `compact-read`           | Compress verbose read output                   |
+| `compact-tools`          | Compact rendering for read and bash            |
 | `context-files-reminder` | Inject context file contents into LLM calls    |
 | `subagents`              | Dynamic subagent loading and dispatch          |
 | `provider-usage`         | Provider rate-limit quota in the footer        |
