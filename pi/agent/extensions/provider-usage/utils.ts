@@ -38,7 +38,7 @@ export function buildFooterText(
   if (stats.limitReached) {
     parts.push(`${adapter.label}: limit reached`);
   } else if (stats.usedPercent !== undefined) {
-    parts.push(`${adapter.label}: ${stats.usedPercent}% used`);
+    parts.push(`${adapter.label}: ${stats.usedPercent}%`);
   } else if (stats.balance !== undefined) {
     parts.push(`${adapter.label}: $${stats.balance}`);
   } else {

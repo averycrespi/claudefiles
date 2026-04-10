@@ -1,7 +1,7 @@
 /**
- * Usage stats footer extension for Pi.
+ * Provider usage footer extension for Pi.
  *
- * Displays the current provider's session/quota usage in the footer.
+ * Displays the current provider's rate-limit quota in the footer.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -40,7 +40,7 @@ export default function (pi: ExtensionAPI) {
 
   async function refreshAndUpdate(ctx: any): Promise<void> {
     await refresh(ctx);
-    if (ctx.hasUI) ctx.ui.setStatus("usage", footerText || undefined);
+    if (ctx.hasUI) ctx.ui.setStatus("provider-usage", footerText || undefined);
   }
 
   pi.on("session_start", async (_event, ctx) => {

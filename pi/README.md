@@ -30,7 +30,7 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | `compact-read`           | Compress verbose read output                          |
 | `context-files-reminder` | Inject context file contents into LLM calls           |
 | `subagents`              | Dynamic subagent loading and dispatch                 |
-| `usage`                  | Session usage tracking                                |
+| `provider-usage`         | Provider rate-limit quota in the footer               |
 | `web`                    | Web search and fetch tools                            |
 
 See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
