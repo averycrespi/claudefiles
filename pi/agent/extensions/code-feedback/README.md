@@ -67,6 +67,13 @@ Edit `lsp/servers.ts` to add a new entry to `DEFAULT_SERVERS` with:
 
 If the LSP `languageId` for the new language differs from the registry key (e.g. JSX/TSX variants), update `lsp/language-map.ts`'s `getLspLanguageId` accordingly.
 
+## Inspiration
+
+- [apmantza/pi-lens](https://github.com/apmantza/pi-lens) — large pi extension with 41 hardcoded LSP servers, debounced `publishDiagnostics`, permanent stream `error` listeners for post-crash stdio hygiene, and production-grade error handling for long-running LSP sessions
+- [samfoy/pi-lsp-extension](https://github.com/samfoy/pi-lsp-extension) — smaller `vscode-languageserver-protocol`-based pi extension with lazy-start-and-return-null, LRU(100) document tracking with `didClose` eviction, and the `stdin.write` monkey-patch pattern for surviving mid-write EPIPE/ECONNRESET errors
+- [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) — single unified `lsp` tool with an `action` parameter (diagnostics, definition, references, hover, rename, code actions), workspace-local binary resolution, diagnostic `relatedInformation` rendering, `$/cancelRequest` on abort, `workspace/diagnostic` via compiler shell-out, and `lspmux` process-multiplexing integration
+- Anthropic Claude Code — `vscode-jsonrpc`-based LSP client, plugin-driven server discovery, pull-mode diagnostics preferred, and diagnostics delivered to the model as tool-result attachments rather than via a dedicated tool
+
 ## Design
 
 See [`DESIGN.md`](DESIGN.md) for the architectural context: non-goals for v1, why the extension is unified, why formatting stays on CLI tools, the lazy-start pattern, the diagnostic acquisition strategy (pull mode + push fallback), the server state machine, and the three crash-avoidance landmines in the LSP client.

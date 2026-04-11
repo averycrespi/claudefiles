@@ -426,13 +426,12 @@ non-goals — revisit if the failure modes show up in practice.
 ### Symbol-name column resolution in `lsp_navigation`
 
 Today `definition` / `references` / `hover` require `line` + `character`,
-forcing the model to count columns. `can1357/oh-my-pi` accepts `symbol`
-
-- `occurrence` as an alternative: the tool reads the target line, finds
-  the Nth match of the symbol string, and resolves the column itself. The
-  theoretical win is robustness against tab-indented or unicode-heavy
-  lines, plus ergonomics when the agent has a symbol name from `grep`
-  output but not a column.
+forcing the model to count columns. `can1357/oh-my-pi` accepts
+`symbol` + `occurrence` as an alternative: the tool reads the target
+line, finds the Nth match of the symbol string, and resolves the column
+itself. The theoretical win is robustness against tab-indented or
+unicode-heavy lines, plus ergonomics when the agent has a symbol name
+from `grep` output but not a column.
 
 Deferred because: we haven't observed the model mis-counting columns in
 practice, source files are mostly ASCII, and `documentSymbol` already
@@ -480,7 +479,7 @@ already handles the one waste site that exists today.
 
 ## Reference implementations
 
-The design was informed by studying three prior art projects, each of
+The design was informed by studying four prior art projects, each of
 which independently converged on many of the same patterns:
 
 - **Anthropic Claude Code** — `vscode-jsonrpc` based, plugin-driven
@@ -494,6 +493,12 @@ which independently converged on many of the same patterns:
   `vscode-languageserver-protocol`, lazy-start with return-null
   pattern, LRU(100) document tracking. The `stdin.write` monkey-patch
   came from this project.
+- **`can1357/oh-my-pi`** — single unified `lsp` tool with an `action`
+  parameter, workspace-local binary resolution (`node_modules/.bin`
+  before `$PATH`), diagnostic `relatedInformation` rendering,
+  `$/cancelRequest` on abort, and `workspace/diagnostic` implemented
+  by shelling out to compiler toolchains. Source of the local-bin,
+  related-info, and cancel-on-timeout patterns in this extension.
 
-All three surface diagnostics by appending to `tool_result.content`
+All four surface diagnostics by appending to `tool_result.content`
 rather than overriding built-in tools. We do the same.
