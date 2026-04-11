@@ -25,6 +25,15 @@ import {
   plural,
 } from "./render.js";
 
+const VALID_OPERATIONS = [
+  "definition",
+  "references",
+  "hover",
+  "documentSymbol",
+  "workspaceSymbol",
+] as const;
+type ValidOperation = (typeof VALID_OPERATIONS)[number];
+
 const params = Type.Object({
   operation: Type.Union(
     [
@@ -76,6 +85,14 @@ export function registerLspNavigationTool(pi: ExtensionAPI, deps: Deps): void {
     description:
       "Provides LSP-powered code navigation: jump to definition, find references, hover for type info, list document symbols, or search workspace symbols. Use this instead of grep when you need precise semantic results.",
     parameters: params,
+
+    // Accepts common variants (snake_case, plural, abbreviations) so
+    // the model doesn't bounce off AJV's cryptic "must be equal to
+    // constant" union error. If the operation isn't recognized at all,
+    // we throw a message that explicitly lists the valid values — the
+    // thrown error surfaces as the tool result (see prepareToolCall
+    // in pi-agent-core/agent-loop.js).
+    prepareArguments: prepareNavigationArguments,
 
     async execute(
       _toolCallId,
@@ -373,6 +390,96 @@ function errorResult(message: string) {
     content: [{ type: "text" as const, text: message }],
     details: {},
   };
+}
+
+/**
+ * Normalizes common operation-name variants before schema validation:
+ * lowercases, strips separators, maps abbreviations and plurals to the
+ * canonical spelling. Throws a descriptive error when the operation
+ * can't be recognized at all — that error becomes the tool result,
+ * which is much more useful than AJV's "must be equal to constant"
+ * avalanche.
+ */
+function prepareNavigationArguments(args: unknown): Static<typeof params> {
+  // Bail out quietly for anything that isn't a plain object — let AJV
+  // produce its own (reasonable) top-level error in that case.
+  if (typeof args !== "object" || args === null || Array.isArray(args)) {
+    return args as Static<typeof params>;
+  }
+  const input = args as Record<string, unknown>;
+  if (typeof input.operation !== "string") {
+    return input as unknown as Static<typeof params>;
+  }
+  const normalized = normalizeOperation(input.operation, input);
+  if (!normalized) {
+    throw new Error(
+      `Unknown operation "${input.operation}" for lsp_navigation. ` +
+        `Valid operations: ${VALID_OPERATIONS.join(", ")}. ` +
+        `Use 'definition', 'references', or 'hover' with filePath + 1-based line + 1-based character; ` +
+        `'documentSymbol' with filePath; or 'workspaceSymbol' with a query string.`,
+    );
+  }
+  if (normalized === input.operation) {
+    return input as unknown as Static<typeof params>;
+  }
+  return { ...input, operation: normalized } as Static<typeof params>;
+}
+
+/**
+ * Maps a user-supplied operation string to a valid literal, or returns
+ * null when nothing matches. The comparison is case-insensitive and
+ * ignores `_` / `-` separators, so `document_symbol`, `DocumentSymbols`,
+ * and `docsymbol` all resolve to `documentSymbol`. The bare word
+ * `symbols` is ambiguous between `documentSymbol` and `workspaceSymbol`,
+ * so we disambiguate from the other fields the caller provided.
+ */
+function normalizeOperation(
+  value: string,
+  input: Record<string, unknown>,
+): ValidOperation | null {
+  const key = value.toLowerCase().replace(/[_-]/g, "");
+  switch (key) {
+    case "definition":
+    case "def":
+    case "defs":
+    case "gotodefinition":
+      return "definition";
+    case "references":
+    case "reference":
+    case "refs":
+    case "ref":
+    case "findreferences":
+      return "references";
+    case "hover":
+    case "hoverinfo":
+      return "hover";
+    case "documentsymbol":
+    case "documentsymbols":
+    case "docsymbol":
+    case "docsymbols":
+      return "documentSymbol";
+    case "workspacesymbol":
+    case "workspacesymbols":
+    case "wssymbol":
+    case "wssymbols":
+    case "navto":
+      return "workspaceSymbol";
+    case "symbol":
+    case "symbols": {
+      // Ambiguous. Disambiguate from other fields: a filePath (and no
+      // query) → documentSymbol; a query (and no filePath) →
+      // workspaceSymbol; otherwise default to documentSymbol since
+      // that's the more common ask when the model is inspecting code.
+      const hasFilePath =
+        typeof input.filePath === "string" && input.filePath.length > 0;
+      const hasQuery =
+        typeof input.query === "string" && input.query.length > 0;
+      if (hasQuery && !hasFilePath) return "workspaceSymbol";
+      return "documentSymbol";
+    }
+    default:
+      return null;
+  }
 }
 
 function uriToRel(uri: string, cwd: string): string {
