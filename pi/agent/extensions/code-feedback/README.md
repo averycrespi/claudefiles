@@ -41,4 +41,4 @@ If the LSP `languageId` for the new language differs from the registry key (e.g.
 
 ## Design
 
-See `.designs/2026-04-10-lsp-extension.md` for the full design rationale, including the three landmines that the LSP client handles, the diagnostic acquisition strategy (pull mode + push fallback), and decisions explicitly out of scope for v1.
+See [`DESIGN.md`](DESIGN.md) for the architectural context: non-goals for v1, why the extension is unified, why formatting stays on CLI tools, the lazy-start pattern, the diagnostic acquisition strategy (pull mode + push fallback), the server state machine, and the three crash-avoidance landmines in the LSP client.
