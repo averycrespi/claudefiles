@@ -20,6 +20,8 @@ initial version:
 - **No completions, rename, or code actions** — the `lsp_navigation`
   tool stops at read-only navigation features.
 - **No slash commands** — no `/lsp-status`, `/lsp-restart`, etc.
+- **No workspace-wide `lsp_diagnostics`** — `path: "*"` was tried and
+  removed. See "Why no workspace-wide diagnostics" below.
 
 ## Why one unified extension (not two)
 
@@ -34,6 +36,54 @@ Format and LSP must run in a specific order on every `write`/`edit`:
 If format and LSP lived in separate Pi extensions, the ordering would
 depend on Pi's listener invocation order — fragile. A single extension
 with one `tool_result` handler sequences them deterministically.
+
+## Why no workspace-wide diagnostics
+
+An earlier version of `lsp_diagnostics` accepted `path: "*"` and
+returned whatever the LSP had cached across all currently-tracked
+files. The affordance was removed because every realistic code path
+made it worse, not better:
+
+- **Cold-start failure.** The most common way the model reached for
+  `*` was at session start — before it had touched any file — hoping
+  for a "what's broken in this repo" snapshot. The LSP had nothing
+  tracked, so the tool returned "no files have been opened yet."
+  The model was paying a tool call for a non-answer. Worse, it was
+  being trained to reach for the affordance first.
+- **Stale for the useful case.** When files _were_ tracked, the
+  returned diagnostics were whatever was last cached — possibly from
+  an auto-inject an hour ago, with no refresh. The model read them as
+  current state and acted on outdated info.
+- **Duplicated bad options for the good case.** Actually getting
+  workspace-wide diagnostics right means one of:
+  (a) Sending `workspace/diagnostic` per server — works for gopls,
+  weak for tsserver (whose "workspace" is still the set of opened
+  files), and gives nothing for push-only servers.
+  (b) Pre-opening every matching file in the workspace tree — blows
+  up tsserver's open-file set, slow for large repos, violates the
+  "reads are cheap" contract the read-path observes.
+  (c) Shelling out to `tsc --noEmit` / `go build ./...` / `go vet
+./...` / `cargo check` — reliable, but it's _exactly_ what the
+  model can already do via bash in one call, with no per-toolchain
+  parser for us to maintain.
+
+Option (c) is the best answer, and the model already has it — via
+bash. Wrapping it in an LSP tool would add a format-consistency win
+and a one-line discoverability win, in exchange for maintaining
+per-toolchain output parsers and committing the model to our
+opinionated subset of flags. Not worth it.
+
+The compromise is documentation. `lsp_diagnostics`'s description
+explicitly points at bash compiler invocations for whole-project
+checks, so the model's mental model is "single-file LSP vs.
+whole-project compiler" rather than "there's a workspace mode
+somewhere."
+
+If this decision is revisited, the current cache-read behavior is
+almost never the thing to re-add. The choice is between (a) a real
+`workspace/diagnostic` implementation gated on server capability —
+useful primarily for Go — or (c) a compiler shell-out wrapped in a
+tool, with a per-language output parser.
 
 ## Why CLI formatters instead of LSP formatting
 

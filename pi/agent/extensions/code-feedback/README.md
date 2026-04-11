@@ -18,7 +18,7 @@ Servers are spawned lazily on the first write/edit of a matching file. If a bina
 
 ## Tools registered
 
-- `lsp_diagnostics` — explicit diagnostic query for one file or the entire workspace. Returns all severities (errors, warnings, info, hints).
+- `lsp_diagnostics` — explicit diagnostic query for a single file. Returns all severities (errors, warnings, info, hints). For whole-project checks, run the project's own compiler via bash (`tsc --noEmit`, `go build ./...`, `go vet ./...`) — faster and more complete than anything the LSP can offer at workspace scope.
 - `lsp_navigation` — definition / references / hover / documentSymbol / workspaceSymbol via LSP.
 
 Both tools install compact TUI renderers (`renderCall` / `renderResult`)
