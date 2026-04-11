@@ -167,6 +167,25 @@ Each `(language, workspace-root)` pair has one of six states:
 - `broken` — spawn failed or server crashed (cooldown + retry)
 - `crashed-too-often` — exceeded `MAX_RESTARTS_PER_SESSION` (permanent)
 
+```mermaid
+stateDiagram-v2
+    [*] --> not_started
+
+    not_started --> starting: first getRunningClient<br/>on a matching file
+
+    starting --> running: client.start() resolves
+    starting --> missing_binary: ENOENT on spawn<br/>(SpawnError)
+    starting --> broken: init timeout /<br/>exit during init /<br/>protocol error
+
+    running --> broken: mid-session crash<br/>(proc.on exit → onCrash)
+
+    broken --> starting: cooldown elapsed &<br/>attempts < MAX_RESTARTS_PER_SESSION
+    broken --> crashed_too_often: attempts ≥ MAX_RESTARTS_PER_SESSION<br/>(checked at startServer entry)
+
+    note right of missing_binary: permanent<br/>(session-latched)
+    note right of crashed_too_often: permanent<br/>(session-latched)
+```
+
 `missing-binary` is explicitly distinct from `broken` because ENOENT
 means the binary literally doesn't exist on disk — retrying won't
 change that. `broken` has a 15-second cooldown because its failures
@@ -174,11 +193,46 @@ are often transient (server was indexing, hit a file watcher limit,
 etc.). After 3 failed restarts the state latches to `crashed-too-often`
 and stays there for the session.
 
-Mid-session crashes are observed via an `onCrash` callback the client
-calls from its `proc.on("exit")` handler, which transitions the
-manager's state from `running` to `broken`. Without this wire-up, a
-dead client would stay in `running` and the next edit would hand out
-a corpse.
+### Entry points into `startServer`
+
+Only two things can move a server toward `starting`, and both live in
+`getRunningClient`:
+
+1. **First-use** — the state is `not-started` and the model just
+   touched a matching file (via auto-inject, `lsp_diagnostics`, or
+   `lsp_navigation`).
+2. **Cooldown retry** — the state is `broken` and
+   `Date.now() >= state.cooldownUntil`. The retry counter is carried
+   forward so repeated init failures eventually hit the latch.
+
+Neither explicit tool path blocks for very long on a `starting`
+server (`EXPLICIT_TOOL_BLOCK_TIMEOUT_MS`, 10 s), and the auto-inject
+path never blocks — it returns null and lets the next edit pick up a
+warm server.
+
+### Why the `crashed-too-often` latch happens at start time, not crash time
+
+`handleClientCrash` (wired from the client's `proc.on("exit")`) only
+knows how to do one thing: move `running` to `broken`. It does not
+look at the restart counter. That means every runtime crash — no
+matter how many have happened — first produces a regular `broken`
+state with cooldown, and only the _next_ call into `startServer`
+checks whether attempts have exceeded `MAX_RESTARTS_PER_SESSION` and
+decides to latch. Keeping the check in one place (the start path)
+makes the crash handler trivial and guarantees that a rapid burst of
+crashes still gets at least one more retry attempt after the cooldown.
+
+### Failure-mode convergence in `client.start()`
+
+Three separate failure paths — the `INITIALIZE_TIMEOUT_MS` deadline,
+a process exit during initialize (`startupExitRejector`), and any
+protocol-level rejection from vscode-jsonrpc — all converge on
+`client.start()`'s single catch block, which rethrows a single
+enriched `Error`. From the manager's perspective, there's one
+rejection type (non-`missing-binary`) that produces one transition
+(`broken`). Adding a new init-time failure mode to the client is
+therefore a local change: as long as it throws, it slots into the
+state machine automatically.
 
 ## Crash hygiene: the three landmines
 
