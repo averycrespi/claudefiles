@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { existsSync } from "node:fs";
 
 import { MAX_RESTARTS_PER_SESSION } from "../constants.js";
+import { logError } from "../log.js";
 import { BROKEN_COOLDOWN_MS } from "../timing.js";
 import { fileUriFor, LspClient, type SpawnError } from "./client.js";
 import { getLanguageIdForFile } from "./language-map.js";
@@ -274,7 +275,7 @@ export class LspManager {
       try {
         listener(languageId, message);
       } catch (err) {
-        console.error(
+        logError(
           `[code-feedback] serverError listener threw:`,
           err instanceof Error ? err.message : err,
         );

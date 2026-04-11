@@ -24,9 +24,28 @@ Servers are spawned lazily on the first write/edit of a matching file. If a bina
 - `index.ts` — extension entry point and orchestration
 - `constants.ts` — tunable limits (cap, severities, file size, restarts)
 - `timing.ts` — timeout values
+- `log.ts` — UI-aware logging helper (see "Logs" below)
 - `format/` — gofmt and prettier wrappers (unchanged from `autoformat`)
 - `lsp/` — LSP client, manager, file sync, server registry, formatters
 - `tools/` — `lsp_diagnostics` and `lsp_navigation` tool definitions
+
+## Logs
+
+When Pi is running in interactive TUI mode, diagnostic messages from this
+extension — language server stderr, connection lifecycle events, crash
+reports — are appended to:
+
+```
+~/.pi/logs/code-feedback.log
+```
+
+Writing to `stdout`/`stderr` directly would corrupt the TUI's footer and
+status-line rendering, so the extension routes everything through a
+small logger (`log.ts`) that falls back to `console.error` only in
+non-interactive modes (`--mode json`, `--mode rpc`, `-p`).
+
+If an LSP server is misbehaving and the error surfaced via `lsp_diagnostics`
+isn't enough, `tail -f ~/.pi/logs/code-feedback.log` is the place to look.
 
 ## Adding a new language
 

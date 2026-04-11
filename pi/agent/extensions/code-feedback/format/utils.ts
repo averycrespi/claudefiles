@@ -1,3 +1,5 @@
+import { logError } from "../log.js";
+
 export type NotifyContext = {
   cwd: string;
   hasUI: boolean;
@@ -23,7 +25,7 @@ export function getToolPath(event: {
 }
 
 export function logFormattingIssue(ctx: NotifyContext, message: string): void {
-  console.warn(`[code-feedback] ${message}`);
+  logError(`[code-feedback] ${message}`);
   if (ctx.hasUI) {
     ctx.ui.notify(message, "warning");
   }

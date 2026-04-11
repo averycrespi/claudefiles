@@ -159,6 +159,41 @@ but a summary:
    `SpawnError` that the manager uses to distinguish missing-binary
    from other failures.
 
+## Why logs go to a file in TUI mode
+
+Pi's interactive TUI draws to the same terminal that receives any stdout
+or stderr writes from extension code. A single `console.error` from
+this extension — for example, a chunk of language server stderr, a
+connection-closed notice, or a crash report — lands in the middle of
+the TUI footer and corrupts the display. The user sees diagnostic
+noise interleaved with the status line and has no way to recover
+rendering short of redrawing the screen.
+
+Every other logging approach we considered had a worse tradeoff:
+
+- **Just silence the logs** — loses debugging information exactly
+  when it's most useful (when an LSP server is failing to start).
+- **Send everything through `ctx.ui.notify`** — turns routine stderr
+  chatter into a notification spam storm and buries the notifications
+  that actually need user attention.
+- **Write to stderr only when `!process.stderr.isTTY`** — in TUI mode
+  stderr _is_ a TTY (the same one the TUI is drawing to), so the check
+  wouldn't help.
+
+The `log.ts` helper resolves this by appending to
+`~/.pi/logs/code-feedback.log` when `ctx.hasUI` is true (set once in
+`session_start` via `configureLogging`) and falling through to
+`console.error` in non-interactive modes so existing log-capture
+tooling keeps working. All diagnostic call sites — `client.ts`,
+`manager.ts`, `format/utils.ts`, and the extension entry point — go
+through `logError` rather than `console.*` directly. Adding a new
+file to the extension is a good reminder to import `logError` rather
+than reach for `console.error`.
+
+Failure modes are swallowed: if the log directory can't be created or
+an append fails, the message is dropped rather than crashing the host
+or spilling back into the TUI.
+
 ## Reference implementations
 
 The design was informed by studying three prior art projects, each of

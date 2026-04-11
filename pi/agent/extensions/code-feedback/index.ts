@@ -26,6 +26,7 @@ import {
   type NotifyContext,
   logFormattingIssue,
 } from "./format/utils.js";
+import { configureLogging, logError } from "./log.js";
 import { formatAutoInjectSummary } from "./lsp/format-diagnostics.js";
 import { FileSync } from "./lsp/file-sync.js";
 import { getLanguageIdForFile } from "./lsp/language-map.js";
@@ -104,7 +105,7 @@ async function lspFeedbackForFile(
   try {
     diagnostics = await client.getDiagnostics(uri);
   } catch (err) {
-    console.error(
+    logError(
       "[code-feedback] getDiagnostics failed:",
       err instanceof Error ? err.message : err,
     );
@@ -155,6 +156,11 @@ function buildStatusLine(states: Map<string, ServerState>): string {
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
+    // Route diagnostic logging to a file in TUI mode so stderr writes
+    // don't corrupt the terminal display. Safe fallthrough to console
+    // in non-interactive modes.
+    configureLogging(ctx.hasUI);
+
     state.manager = new LspManager();
     state.fileSync = new FileSync(state.manager);
 

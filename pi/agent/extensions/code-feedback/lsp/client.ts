@@ -26,6 +26,7 @@ import {
 } from "vscode-languageserver-protocol";
 
 import { STARTUP_STDERR_CAP_BYTES } from "../constants.js";
+import { logError } from "../log.js";
 import {
   INITIALIZE_TIMEOUT_MS,
   PUSH_DEBOUNCE_MS,
@@ -221,7 +222,7 @@ export class LspClient {
       ) {
         return;
       }
-      console.error(
+      logError(
         `[code-feedback/lsp] ${this.options.serverName} ${label} stream error:`,
         err.message,
       );
@@ -239,7 +240,7 @@ export class LspClient {
       const text = data.toString();
       const trimmed = text.trim();
       if (trimmed) {
-        console.error(
+        logError(
           `[code-feedback/lsp] ${this.options.serverName} stderr:`,
           trimmed,
         );
@@ -281,13 +282,13 @@ export class LspClient {
       const error = new Error(
         `LSP server ${this.options.serverName} exited unexpectedly (code=${code}, signal=${signal})`,
       );
-      console.error(`[code-feedback/lsp] ${error.message}`);
+      logError(`[code-feedback/lsp] ${error.message}`);
       this.connection?.dispose();
       this.connection = null;
       try {
         this.options.onCrash?.(error);
       } catch (err) {
-        console.error(
+        logError(
           `[code-feedback/lsp] onCrash handler threw:`,
           err instanceof Error ? err.message : err,
         );
@@ -301,7 +302,7 @@ export class LspClient {
     );
 
     this.connection.onError(([err]) => {
-      console.error(
+      logError(
         `[code-feedback/lsp] ${this.options.serverName} connection error:`,
         err.message,
       );
@@ -309,7 +310,7 @@ export class LspClient {
 
     this.connection.onClose(() => {
       if (!this.isStopping) {
-        console.error(
+        logError(
           `[code-feedback/lsp] ${this.options.serverName} connection closed`,
         );
       }
@@ -492,7 +493,7 @@ export class LspClient {
     if (type === 4) return;
     if (type !== 1) {
       // Warning / Info — log to console but don't escalate to UI.
-      console.error(
+      logError(
         `[code-feedback/lsp] ${this.options.serverName} ${source} (type=${type}):`,
         trimmed,
       );
@@ -501,14 +502,14 @@ export class LspClient {
     // Error. Remember it for init-failure enrichment and fan out to the
     // manager's callback.
     this.lastErrorMessage = trimmed;
-    console.error(
+    logError(
       `[code-feedback/lsp] ${this.options.serverName} ${source} error:`,
       trimmed,
     );
     try {
       this.options.onServerError?.(trimmed);
     } catch (err) {
-      console.error(
+      logError(
         `[code-feedback/lsp] onServerError handler threw:`,
         err instanceof Error ? err.message : err,
       );
@@ -644,7 +645,7 @@ export class LspClient {
       // unless we provide a previousResultId, which we don't.
       return this.diagnosticsCache.get(uri) ?? [];
     } catch (err) {
-      console.error(
+      logError(
         `[code-feedback/lsp] ${this.options.serverName} pull-mode diagnostic failed:`,
         err instanceof Error ? err.message : err,
       );
