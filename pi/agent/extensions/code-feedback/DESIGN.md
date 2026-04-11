@@ -139,9 +139,16 @@ stdio. Skipping any of them produces random host crashes weeks into
 use. Each is documented with a detailed inline comment in `client.ts`,
 but a summary:
 
-1. **`stdin.write` monkey-patch** — no-ops writes to a destroyed
-   stream so fire-and-forget notifications don't become unhandled
-   rejections after the server dies.
+1. **`stdin.write` monkey-patch** — guards against two distinct
+   failure modes: (a) writes to an already-unwritable stream are
+   no-oped instead of throwing, and (b) mid-write EPIPE / ECONNRESET
+   / ERR_STREAM_DESTROYED errors are intercepted in the write
+   callback and reported as successful writes, because otherwise
+   vscode-jsonrpc's internal write promise rejects and the
+   rejection propagates as an unhandled rejection that kills the
+   host. The naive `stdin.destroyed` check alone is not enough —
+   the OS pipe can be broken before Node has marked the local
+   stream as destroyed.
 2. **Permanent stream `error` listeners** attached before
    `createMessageConnection` — catches the `EPIPE` / `ECONNRESET` /
    `ERR_STREAM_DESTROYED` window between `connection.dispose()` and

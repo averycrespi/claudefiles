@@ -139,20 +139,69 @@ export class LspClient {
       proc.once("error", onError);
     });
 
-    // LANDMINE #1: patch stdin.write to no-op after destruction. Pending
-    // fire-and-forget notifications would otherwise produce unhandled
-    // rejections when the server dies mid-notification.
+    // LANDMINE #1: patch stdin.write so fire-and-forget writes can never
+    // produce unhandled promise rejections, even when the server dies
+    // mid-write.
+    //
+    // The naive "bail if stdin.destroyed" guard is insufficient because
+    // there is a window where the OS pipe is already broken but Node
+    // hasn't yet marked the local stream as destroyed. In that window,
+    // `originalWrite` hands the payload to Node's stream machinery,
+    // `afterWriteDispatched` constructs `Error: write EPIPE`, and that
+    // error is delivered to the write callback that vscode-jsonrpc's
+    // `ril.js` uses to reject its write Promise. Something inside
+    // vscode-jsonrpc's own plumbing doesn't always `.catch()` that
+    // rejected promise, and the unhandled rejection crashes the host.
+    //
+    // Defense in depth:
+    //   1. Bail if `!stdin.writable`, which covers destroyed, ended,
+    //      and errored-but-not-yet-destroyed states in one check.
+    //   2. Wrap the caller's write callback so expected post-crash
+    //      errors (EPIPE / ECONNRESET / ERR_STREAM_DESTROYED) are
+    //      reported as successful writes. vscode-jsonrpc's write
+    //      Promise then resolves instead of rejecting. Losing the
+    //      payload is acceptable — the exit handler disposes the
+    //      connection moments later anyway.
+    //   3. try/catch around originalWrite in case any future Node
+    //      version synchronously throws these errors.
     const stdin = proc.stdin;
     const originalWrite = stdin.write.bind(stdin);
+    const isExpectedPostCrashError = (code: string | undefined): boolean =>
+      code === "EPIPE" ||
+      code === "ECONNRESET" ||
+      code === "ERR_STREAM_DESTROYED";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (stdin as any).write = function (...args: any[]): boolean {
-      if (stdin.destroyed) {
+      if (!stdin.writable) {
         const cb = args[args.length - 1];
         if (typeof cb === "function") process.nextTick(cb);
         return false;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      return (originalWrite as any)(...args);
+      const lastArg = args[args.length - 1];
+      const wrappedArgs =
+        typeof lastArg === "function"
+          ? [
+              ...args.slice(0, -1),
+              (err?: NodeJS.ErrnoException | null) => {
+                if (err && isExpectedPostCrashError(err.code)) {
+                  lastArg(null);
+                  return;
+                }
+                lastArg(err);
+              },
+            ]
+          : args;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        return (originalWrite as any)(...wrappedArgs);
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException)?.code;
+        if (isExpectedPostCrashError(code)) {
+          if (typeof lastArg === "function") process.nextTick(lastArg);
+          return false;
+        }
+        throw err;
+      }
     };
 
     // LANDMINE #2: permanent stream error listeners attached BEFORE
