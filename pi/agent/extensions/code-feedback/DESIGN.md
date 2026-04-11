@@ -364,6 +364,42 @@ arithmetic — at that point, add `symbol`/`occurrence` as an alternative
 to `character` (enforce exactly one of the two, no case-insensitive
 fallback).
 
+### Diagnostic version gating in push-mode path
+
+**Latent race — must fix before adding any push-only language server.**
+
+`getDiagnosticsPushMode` in `lsp/client.ts` does not verify that the
+`publishDiagnostics` it observes corresponds to the document version we
+just sent. The race:
+
+1. Edit sends `didChange` v1; server publishes v1 diagnostics; cached.
+2. Edit sends `didChange` v2; waiter arms, waits for the next
+   notification.
+3. If v2 is clean (no publish) or slow, the waiter times out and reads
+   the cache — which still contains v1's diagnostics. The caller gets
+   stale results presented as fresh.
+
+This has no effect today because `supportsPullDiagnostics()` is true
+for both gopls and typescript-language-server, so every `getDiagnostics`
+call takes the pull branch. The push path is fallback code. The race
+becomes real the moment we add a language server that doesn't advertise
+`diagnosticProvider` (pyright, some eslint-ls configurations, older
+rust-analyzer builds, etc.).
+
+The fix, when the time comes: have `FileSync.syncWrite` return the
+version it just sent, thread it into `getDiagnosticsPushMode`, stamp
+cache entries with `params.version` from the notification, and require
+`cachedVersion >= expectedVersion` before returning. Accept
+unversioned publishes only when the server never populates `version`
+at all (detected by tracking whether any prior publish on the URI had
+one).
+
+Not fixed preemptively because (a) the code has no runtime coverage
+with our current two servers, (b) different push-only servers populate
+`params.version` inconsistently — the right fix is easier to design
+against a concrete test subject — and (c) cancelling in pull mode
+already handles the one waste site that exists today.
+
 ## Reference implementations
 
 The design was informed by studying three prior art projects, each of
