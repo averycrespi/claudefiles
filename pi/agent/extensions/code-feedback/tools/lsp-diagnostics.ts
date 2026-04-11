@@ -1,5 +1,6 @@
 import { Type, type Static } from "@sinclair/typebox";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { Text } from "@mariozechner/pi-tui";
 import { resolve } from "node:path";
 
 import { EXPLICIT_TOOL_BLOCK_TIMEOUT_MS } from "../timing.js";
@@ -9,6 +10,12 @@ import { formatExplicitDiagnostics } from "../lsp/format-diagnostics.js";
 import { getLanguageIdForFile } from "../lsp/language-map.js";
 import { type LspManager } from "../lsp/manager.js";
 import { DEFAULT_SERVERS } from "../lsp/servers.js";
+import {
+  firstLine,
+  getRelativeLabel,
+  getResultText,
+  plural,
+} from "./render.js";
 
 const params = Type.Object({
   path: Type.String({
@@ -166,5 +173,54 @@ export function registerLspDiagnosticsTool(pi: ExtensionAPI, deps: Deps): void {
         details: { mode: "single", count: diagnostics.length },
       };
     },
+
+    renderCall(args, theme, context) {
+      const header = theme.fg("toolTitle", theme.bold("lsp_diagnostics"));
+      const target =
+        args?.path === "*"
+          ? theme.fg("muted", "workspace")
+          : theme.fg("accent", getRelativeLabel(context.cwd, args?.path));
+      return new Text(`${header} ${target}`, 0, 0);
+    },
+
+    renderResult(result, { isPartial }, theme, context) {
+      if (isPartial) {
+        return new Text(theme.fg("warning", "Querying diagnostics…"), 0, 0);
+      }
+      const text = getResultText(result);
+      if (context.isError) {
+        return new Text(
+          theme.fg("error", firstLine(text) || "lsp_diagnostics error"),
+          0,
+          0,
+        );
+      }
+      return new Text(theme.fg("muted", summarizeDiagnostics(text)), 0, 0);
+    },
   });
+}
+
+/**
+ * One-line summary of a `formatExplicitDiagnostics` result. Recognizes
+ * the "No diagnostics." sentinel and otherwise counts severity labels
+ * in the formatted text so we don't need to plumb counts through
+ * `details`.
+ */
+function summarizeDiagnostics(text: string): string {
+  if (!text || text === "No diagnostics.") return "No diagnostics.";
+  const counts = { error: 0, warning: 0, info: 0, hint: 0 };
+  for (const line of text.split("\n")) {
+    // Diagnostic body lines look like "  12:5 error: some message [src]".
+    const match = line.match(/^\s+\d+:\d+\s+(error|warning|info|hint):/);
+    if (match) {
+      counts[match[1] as keyof typeof counts] += 1;
+    }
+  }
+  const parts: string[] = [];
+  if (counts.error) parts.push(plural(counts.error, "error"));
+  if (counts.warning) parts.push(plural(counts.warning, "warning"));
+  if (counts.info) parts.push(plural(counts.info, "info"));
+  if (counts.hint) parts.push(plural(counts.hint, "hint"));
+  if (parts.length === 0) return firstLine(text);
+  return parts.join(", ");
 }

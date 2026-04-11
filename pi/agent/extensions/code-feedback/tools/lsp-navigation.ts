@@ -1,5 +1,6 @@
 import { Type, type Static } from "@sinclair/typebox";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { Text } from "@mariozechner/pi-tui";
 import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -16,6 +17,13 @@ import { type FileSync } from "../lsp/file-sync.js";
 import { getLanguageIdForFile } from "../lsp/language-map.js";
 import { type LspManager } from "../lsp/manager.js";
 import { DEFAULT_SERVERS } from "../lsp/servers.js";
+import {
+  countNonEmptyLines,
+  firstLine,
+  getRelativeLabel,
+  getResultText,
+  plural,
+} from "./render.js";
 
 const params = Type.Object({
   operation: Type.Union(
@@ -271,7 +279,93 @@ export function registerLspNavigationTool(pi: ExtensionAPI, deps: Deps): void {
         }
       }
     },
+
+    renderCall(args, theme, context) {
+      const header = theme.fg("toolTitle", theme.bold("lsp_navigation"));
+      const operation = args?.operation
+        ? theme.fg("muted", args.operation)
+        : "";
+      const target = theme.fg("accent", renderCallTarget(args, context.cwd));
+      return new Text(
+        [header, operation, target].filter(Boolean).join(" "),
+        0,
+        0,
+      );
+    },
+
+    renderResult(result, { isPartial }, theme, context) {
+      const operation = context.args?.operation;
+      if (isPartial) {
+        return new Text(
+          theme.fg("warning", `Querying ${operation ?? "lsp"}…`),
+          0,
+          0,
+        );
+      }
+      const text = getResultText(result);
+      if (context.isError) {
+        return new Text(
+          theme.fg("error", firstLine(text) || "lsp_navigation error"),
+          0,
+          0,
+        );
+      }
+      return new Text(
+        theme.fg("muted", summarizeNavigationResult(operation, text)),
+        0,
+        0,
+      );
+    },
   });
+}
+
+/** Human-readable call label for the header line. */
+function renderCallTarget(
+  args: Static<typeof params> | undefined,
+  cwd: string,
+): string {
+  if (!args) return "";
+  if (args.operation === "workspaceSymbol") {
+    return args.query ? `"${args.query}"` : "";
+  }
+  if (!args.filePath) return "";
+  const label = getRelativeLabel(cwd, args.filePath);
+  if (
+    (args.operation === "definition" ||
+      args.operation === "references" ||
+      args.operation === "hover") &&
+    typeof args.line === "number" &&
+    typeof args.character === "number"
+  ) {
+    return `${label}:${args.line}:${args.character}`;
+  }
+  return label;
+}
+
+/** One-line summary of the result, suitable for the TUI row beneath the call. */
+function summarizeNavigationResult(
+  operation: string | undefined,
+  text: string,
+): string {
+  if (!text) return "";
+  // Empty-result messages from the formatters all start with "No ".
+  if (text.startsWith("No ")) return firstLine(text);
+  switch (operation) {
+    case "definition": {
+      const n = countNonEmptyLines(text);
+      if (n === 1) return `→ ${text.trim()}`;
+      return plural(n, "definition");
+    }
+    case "references":
+      return plural(countNonEmptyLines(text), "reference");
+    case "documentSymbol":
+    case "workspaceSymbol":
+      return plural(countNonEmptyLines(text), "symbol");
+    case "hover":
+      return firstLine(text);
+    default:
+      return firstLine(text);
+  }
 }
 
 function errorResult(message: string) {

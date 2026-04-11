@@ -19,6 +19,13 @@ Servers are spawned lazily on the first write/edit of a matching file. If a bina
 - `lsp_diagnostics` — explicit diagnostic query for one file or the entire workspace. Returns all severities (errors, warnings, info, hints).
 - `lsp_navigation` — definition / references / hover / documentSymbol / workspaceSymbol via LSP.
 
+Both tools install compact TUI renderers (`renderCall` / `renderResult`)
+that mirror the `compact-tools` extension pattern. The model still sees
+the full tool output — semantic results are never truncated for the LLM
+— but the TUI shows a one-line summary like `42 references`, `4 errors,
+2 warnings`, or the first line of a hover, so a large navigation result
+doesn't blow out the footer with 40+ lines of symbols.
+
 ## File layout
 
 - `index.ts` — extension entry point and orchestration
@@ -27,7 +34,7 @@ Servers are spawned lazily on the first write/edit of a matching file. If a bina
 - `log.ts` — UI-aware logging helper (see "Logs" below)
 - `format/` — gofmt and prettier wrappers (unchanged from `autoformat`)
 - `lsp/` — LSP client, manager, file sync, server registry, formatters
-- `tools/` — `lsp_diagnostics` and `lsp_navigation` tool definitions
+- `tools/` — `lsp_diagnostics` and `lsp_navigation` tool definitions, plus `render.ts` (compact TUI renderers)
 
 ## Logs
 
