@@ -13,10 +13,16 @@ import {
 } from "vscode-jsonrpc/node.js";
 import {
   type Diagnostic,
+  type DocumentSymbol,
+  type Hover,
   type InitializeParams,
   type InitializeResult,
+  type Location,
+  type LocationLink,
+  type Position,
   type PublishDiagnosticsParams,
   type ServerCapabilities,
+  type SymbolInformation,
 } from "vscode-languageserver-protocol";
 
 import {
@@ -450,12 +456,55 @@ export class LspClient {
     return Array.from(this.diagnosticsCache.keys());
   }
 
-  // Methods to be filled in by Tasks 7, 8 below:
-  // - definition(...)             → Task 7
-  // - references(...)             → Task 7
-  // - hover(...)                  → Task 7
-  // - documentSymbol(...)         → Task 7
-  // - workspaceSymbol(...)        → Task 7
+  /** `textDocument/definition` */
+  async definition(
+    uri: string,
+    position: Position,
+  ): Promise<Location[] | LocationLink[] | null> {
+    if (!this.connection) return null;
+    return this.connection.sendRequest("textDocument/definition", {
+      textDocument: { uri },
+      position,
+    });
+  }
+
+  /** `textDocument/references` */
+  async references(
+    uri: string,
+    position: Position,
+  ): Promise<Location[] | null> {
+    if (!this.connection) return null;
+    return this.connection.sendRequest("textDocument/references", {
+      textDocument: { uri },
+      position,
+      context: { includeDeclaration: true },
+    });
+  }
+
+  /** `textDocument/hover` */
+  async hover(uri: string, position: Position): Promise<Hover | null> {
+    if (!this.connection) return null;
+    return this.connection.sendRequest("textDocument/hover", {
+      textDocument: { uri },
+      position,
+    });
+  }
+
+  /** `textDocument/documentSymbol` */
+  async documentSymbol(
+    uri: string,
+  ): Promise<DocumentSymbol[] | SymbolInformation[] | null> {
+    if (!this.connection) return null;
+    return this.connection.sendRequest("textDocument/documentSymbol", {
+      textDocument: { uri },
+    });
+  }
+
+  /** `workspace/symbol` */
+  async workspaceSymbol(query: string): Promise<SymbolInformation[] | null> {
+    if (!this.connection) return null;
+    return this.connection.sendRequest("workspace/symbol", { query });
+  }
 }
 
 /** Builds the `file://` URI from an absolute filesystem path. */
