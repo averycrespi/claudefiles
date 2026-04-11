@@ -1,0 +1,53 @@
+import { DiagnosticSeverity } from "vscode-languageserver-protocol";
+
+/**
+ * Maximum number of error diagnostics to inline in a write/edit tool_result.
+ *
+ * Beyond this we show "... and N more error(s)". Increase if the model
+ * frequently needs more context at once; decrease if context bloat becomes
+ * a problem.
+ */
+export const MAX_INLINE_ERRORS_PER_FILE = 10;
+
+/**
+ * Maximum documents tracked in the per-language LRU. When exceeded, the
+ * oldest tracked document is evicted with a `didClose` notification to the
+ * relevant LSP server. Prevents memory leaks in long sessions on big repos.
+ */
+export const MAX_TRACKED_DOCUMENTS = 100;
+
+/**
+ * Maximum number of restart attempts per language server per session before
+ * we give up and mark the server as `crashed-too-often`. Prevents infinite
+ * crash loops on a fundamentally broken server (e.g. one that panics on a
+ * specific malformed file the model keeps editing).
+ */
+export const MAX_RESTARTS_PER_SESSION = 3;
+
+/**
+ * Skip LSP entirely for files larger than this many bytes. Format still
+ * runs (it's a separate code path); LSP just doesn't bother. Avoids
+ * sending huge generated files through tsserver/gopls.
+ */
+export const LSP_MAX_FILE_BYTES = 1_000_000;
+
+/**
+ * Severities we surface in the auto-inject path on tool_result.
+ *
+ * We deliberately surface ONLY errors here, not warnings/info/hints.
+ *
+ * Reasoning: the auto-inject runs after every write and edit, so anything
+ * included here costs context tokens on every tool result. Warnings are
+ * usually lint/style noise the model doesn't need to act on immediately,
+ * and including them tends to make the model "fix" things that aren't
+ * actually broken — wasted turns and worse signal-to-noise.
+ *
+ * The explicit `lsp_diagnostics` tool returns ALL severities, so if the
+ * model wants the full picture it can ask. Auto-inject stays focused on
+ * "you broke the build."
+ *
+ * To include warnings here, add DiagnosticSeverity.Warning to this set.
+ */
+export const AUTO_INJECT_SEVERITIES: ReadonlySet<DiagnosticSeverity> = new Set([
+  DiagnosticSeverity.Error,
+]);
