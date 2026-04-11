@@ -2,12 +2,14 @@ import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type Diagnostic,
+  type DiagnosticRelatedInformation,
   DiagnosticSeverity,
 } from "vscode-languageserver-protocol";
 
 import {
   AUTO_INJECT_SEVERITIES,
   MAX_INLINE_ERRORS_PER_FILE,
+  MAX_RELATED_PER_DIAG,
 } from "../constants.js";
 
 /**
@@ -31,12 +33,14 @@ export function formatAutoInjectSummary(
   const relPath = relative(cwd, filePath) || filePath;
   const shown = errors.slice(0, MAX_INLINE_ERRORS_PER_FILE);
 
-  const lines = shown.map((d) => {
+  const lines: string[] = [];
+  for (const d of shown) {
     const line = d.range.start.line + 1;
     const col = d.range.start.character + 1;
     const source = d.source ? ` [${d.source}]` : "";
-    return `${relPath}:${line}:${col} error: ${d.message}${source}`;
-  });
+    lines.push(`${relPath}:${line}:${col} error: ${d.message}${source}`);
+    lines.push(...formatRelatedInfo(d.relatedInformation, cwd, "  "));
+  }
 
   let header = `⚠ LSP: ${errors.length} error(s) in ${relPath}`;
   if (errors.length > MAX_INLINE_ERRORS_PER_FILE) {
@@ -74,9 +78,35 @@ export function formatExplicitDiagnostics(
       const col = d.range.start.character + 1;
       const source = d.source ? ` [${d.source}]` : "";
       lines.push(`  ${line}:${col} ${sev}: ${d.message}${source}`);
+      lines.push(...formatRelatedInfo(d.relatedInformation, cwd, "    "));
     }
   }
   return lines.join("\n").trim();
+}
+
+/**
+ * Renders `relatedInformation` entries as indented continuation lines under
+ * the parent diagnostic. Capped at MAX_RELATED_PER_DIAG with a "... and N
+ * more related" tail. Returns an empty array when there's nothing to show.
+ */
+function formatRelatedInfo(
+  related: DiagnosticRelatedInformation[] | undefined,
+  cwd: string,
+  indent: string,
+): string[] {
+  if (!related || related.length === 0) return [];
+  const shown = related.slice(0, MAX_RELATED_PER_DIAG);
+  const lines = shown.map((r) => {
+    const path = uriToRelative(r.location.uri, cwd);
+    const line = r.location.range.start.line + 1;
+    return `${indent}↳ ${path}:${line}: ${r.message}`;
+  });
+  if (related.length > MAX_RELATED_PER_DIAG) {
+    lines.push(
+      `${indent}... and ${related.length - MAX_RELATED_PER_DIAG} more related`,
+    );
+  }
+  return lines;
 }
 
 function severityLabel(severity?: DiagnosticSeverity): string {

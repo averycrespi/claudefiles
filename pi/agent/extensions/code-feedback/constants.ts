@@ -10,6 +10,22 @@ import { DiagnosticSeverity } from "vscode-languageserver-protocol";
 export const MAX_INLINE_ERRORS_PER_FILE = 10;
 
 /**
+ * Maximum number of `relatedInformation` entries rendered per diagnostic.
+ *
+ * Related info is the set of secondary locations a language server attaches
+ * to a diagnostic — e.g. TypeScript's "the expected type comes from
+ * property X declared here" pointing at the type declaration. These are
+ * genuinely useful for the model to jump straight to the fix, but a small
+ * number of diagnostics (notably failed overload resolutions) carry a
+ * dozen entries that drown the primary message in noise.
+ *
+ * Capping at 3 keeps the common case informative (most useful TS errors
+ * have 1-2 related entries) while trimming the long tail. Beyond the cap
+ * we append a "... and N more related" line.
+ */
+export const MAX_RELATED_PER_DIAG = 3;
+
+/**
  * Maximum documents tracked in the per-language LRU. When exceeded, the
  * oldest tracked document is evicted with a `didClose` notification to the
  * relevant LSP server. Prevents memory leaks in long sessions on big repos.
