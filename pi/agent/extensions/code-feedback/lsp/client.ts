@@ -47,6 +47,12 @@ export interface LspClientOptions {
   cwd: string;
   /** Workspace root URI passed to LSP `initialize`. */
   rootUri: string;
+  /**
+   * Invoked when the server process exits unexpectedly (not via graceful
+   * `stop()`). Used by `LspManager` to transition from `running` to
+   * `broken` and allow retry after cooldown.
+   */
+  onCrash?: (error: Error) => void;
 }
 
 /**
@@ -176,12 +182,20 @@ export class LspClient {
     // Detect crashes — used by the manager to transition to `broken`.
     proc.on("exit", (code, signal) => {
       if (this.isStopping) return;
-      console.error(
-        `[code-feedback/lsp] ${this.options.serverName} exited unexpectedly`,
-        { code, signal },
+      const error = new Error(
+        `LSP server ${this.options.serverName} exited unexpectedly (code=${code}, signal=${signal})`,
       );
+      console.error(`[code-feedback/lsp] ${error.message}`);
       this.connection?.dispose();
       this.connection = null;
+      try {
+        this.options.onCrash?.(error);
+      } catch (err) {
+        console.error(
+          `[code-feedback/lsp] onCrash handler threw:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
     });
 
     // Wire up vscode-jsonrpc.
