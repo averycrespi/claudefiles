@@ -60,13 +60,100 @@ export function registerLspDiagnosticsTool(pi: ExtensionAPI, deps: Deps): void {
 
       // Workspace-wide
       if (input.path === "*") {
+        // Differentiate "no diagnostics because everything is clean"
+        // from "no diagnostics because no server is running" or "no
+        // server has seen any files yet". Returning a bare "No
+        // diagnostics." in those cases misleads the model into
+        // thinking the workspace is healthy.
+        const entries = Array.from(manager.getAllStates().entries());
+        const hasRunning = entries.some(([, s]) => s.kind === "running");
+
+        if (!hasRunning) {
+          // Walk the non-running states for the most informative reason,
+          // mirroring the workspaceSymbol branch of lsp_navigation. The
+          // state key is `${languageId}:${rootDir}` so we can pull the
+          // language id out for installHint lookups.
+          let starting = false;
+          let brokenError: string | null = null;
+          let missingBinary: { command: string; languageId: string } | null =
+            null;
+          let crashedError: string | null = null;
+          for (const [key, serverState] of entries) {
+            const languageId = key.split(":", 1)[0];
+            switch (serverState.kind) {
+              case "starting":
+                starting = true;
+                break;
+              case "broken":
+                brokenError ??= serverState.error.message;
+                break;
+              case "missing-binary":
+                missingBinary ??= {
+                  command: serverState.command,
+                  languageId,
+                };
+                break;
+              case "crashed-too-often":
+                crashedError ??= serverState.error.message;
+                break;
+            }
+          }
+          let text: string;
+          let stateTag: string;
+          if (starting) {
+            text = "LSP server is still starting up. Try again in a moment.";
+            stateTag = "starting";
+          } else if (brokenError) {
+            text = `LSP server failed to start: ${brokenError}`;
+            stateTag = "broken";
+          } else if (missingBinary) {
+            const installHint =
+              DEFAULT_SERVERS[missingBinary.languageId]?.installHint ?? "";
+            text =
+              `LSP server '${missingBinary.command}' is not installed. ` +
+              `${missingBinary.languageId} diagnostics are unavailable this session. ${installHint}`.trim();
+            stateTag = "missing-binary";
+          } else if (crashedError) {
+            text = `LSP server crashed too many times this session and is disabled. Last error: ${crashedError}`;
+            stateTag = "crashed-too-often";
+          } else {
+            const supported = Object.keys(DEFAULT_SERVERS).sort().join(", ");
+            text =
+              "No LSP servers are running. Workspace-wide diagnostics require at least one running server. " +
+              `Edit a file in a supported language (${supported}) or call lsp_diagnostics on a specific file path to start one.`;
+            stateTag = "not-started";
+          }
+          return {
+            content: [{ type: "text" as const, text }],
+            details: { mode: "workspace", state: stateTag },
+          };
+        }
+
+        // At least one server is running. If no files have been tracked
+        // yet (no writes / edits / explicit queries), there's nothing to
+        // report on — say so explicitly instead of implying the workspace
+        // is clean.
         const uris = fileSync.getTrackedUris();
+        if (uris.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text:
+                  "LSP server is running but no files have been opened yet. " +
+                  "Edit or query a specific file (with `lsp_diagnostics <path>` or `lsp_navigation`) first so diagnostics can be collected.",
+              },
+            ],
+            details: { mode: "workspace", state: "no-tracked-files" },
+          };
+        }
+
         const collected: Array<{ uri: string; diagnostics: any[] }> = [];
         for (const uri of uris) {
           // Find the running client that owns this URI.
-          for (const [, state] of manager.getAllStates()) {
-            if (state.kind !== "running") continue;
-            const cached = state.client.getCachedDiagnostics(uri);
+          for (const [, serverState] of manager.getAllStates()) {
+            if (serverState.kind !== "running") continue;
+            const cached = serverState.client.getCachedDiagnostics(uri);
             if (cached.length > 0) {
               collected.push({ uri, diagnostics: cached });
               break;
