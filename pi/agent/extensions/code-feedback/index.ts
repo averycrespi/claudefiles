@@ -34,9 +34,15 @@ import { DEFAULT_SERVERS } from "./lsp/servers.js";
 import { registerLspDiagnosticsTool } from "./tools/lsp-diagnostics.js";
 import { registerLspNavigationTool } from "./tools/lsp-navigation.js";
 
-let manager: LspManager | null = null;
-let fileSync: FileSync | null = null;
-let unsubscribeStateChange: (() => void) | null = null;
+const state: {
+  manager: LspManager | null;
+  fileSync: FileSync | null;
+  unsubscribeStateChange: (() => void) | null;
+} = {
+  manager: null,
+  fileSync: null,
+  unsubscribeStateChange: null,
+};
 
 async function autoformatFile(
   filePath: string,
@@ -64,7 +70,7 @@ async function lspFeedbackForFile(
   absPath: string,
   cwd: string,
 ): Promise<string | null> {
-  if (!manager || !fileSync) return null;
+  if (!state.manager || !state.fileSync) return null;
 
   const registryId = getLanguageIdForFile(absPath);
   if (!registryId || !DEFAULT_SERVERS[registryId]) return null;
@@ -78,7 +84,7 @@ async function lspFeedbackForFile(
   }
 
   // Trigger lazy start (returns null if not yet running).
-  const client = manager.getRunningClient(absPath);
+  const client = state.manager.getRunningClient(absPath);
   if (!client) return null;
 
   // Re-read the (post-format) content from disk.
@@ -89,7 +95,7 @@ async function lspFeedbackForFile(
     return null;
   }
 
-  const uri = fileSync.syncWrite(absPath, content, registryId);
+  const uri = state.fileSync.syncWrite(absPath, content, registryId);
   if (!uri) return null;
 
   let diagnostics;
@@ -147,41 +153,43 @@ function buildStatusLine(states: Map<string, ServerState>): string {
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
-    manager = new LspManager();
-    fileSync = new FileSync(manager);
+    state.manager = new LspManager();
+    state.fileSync = new FileSync(state.manager);
 
     // One-time TUI notifications on the first transition into bad states.
-    unsubscribeStateChange = manager.onStateChange((languageId, state) => {
-      if (!ctx.hasUI) return;
-      if (state.kind === "missing-binary") {
-        if (manager?.shouldNotifyMissingBinary(languageId)) {
-          const config = DEFAULT_SERVERS[languageId];
-          ctx.ui.notify(
-            `[code-feedback] LSP server '${state.command}' is not installed. ` +
-              `${languageId} diagnostics disabled for this session. ` +
-              (config?.installHint ?? ""),
-            "warning",
-          );
+    state.unsubscribeStateChange = state.manager.onStateChange(
+      (languageId, serverState) => {
+        if (!ctx.hasUI) return;
+        if (serverState.kind === "missing-binary") {
+          if (state.manager?.shouldNotifyMissingBinary(languageId)) {
+            const config = DEFAULT_SERVERS[languageId];
+            ctx.ui.notify(
+              `[code-feedback] LSP server '${serverState.command}' is not installed. ` +
+                `${languageId} diagnostics disabled for this session. ` +
+                (config?.installHint ?? ""),
+              "warning",
+            );
+          }
+        } else if (serverState.kind === "crashed-too-often") {
+          if (state.manager?.shouldNotifyCrashedTooOften(languageId)) {
+            ctx.ui.notify(
+              `[code-feedback] LSP server for ${languageId} crashed too many ` +
+                `times this session and has been disabled. Last error: ${serverState.error.message}`,
+              "error",
+            );
+          }
         }
-      } else if (state.kind === "crashed-too-often") {
-        if (manager?.shouldNotifyCrashedTooOften(languageId)) {
-          ctx.ui.notify(
-            `[code-feedback] LSP server for ${languageId} crashed too many ` +
-              `times this session and has been disabled. Last error: ${state.error.message}`,
-            "error",
-          );
-        }
-      }
-    });
+      },
+    );
   });
 
   registerLspDiagnosticsTool(pi, {
-    getManager: () => manager,
-    getFileSync: () => fileSync,
+    getManager: () => state.manager,
+    getFileSync: () => state.fileSync,
   });
 
   registerLspNavigationTool(pi, {
-    getManager: () => manager,
+    getManager: () => state.manager,
   });
 
   pi.on("tool_result", async (event, ctx) => {
@@ -201,12 +209,18 @@ export default function (pi: ExtensionAPI) {
 
     const absPath = resolve(ctx.cwd, path);
 
+    const notifyCtx: NotifyContext = {
+      cwd: ctx.cwd,
+      hasUI: ctx.hasUI,
+      ui: ctx.ui,
+    };
+
     // Step 1: autoformat
     try {
-      await autoformatFile(absPath, ctx as NotifyContext);
+      await autoformatFile(absPath, notifyCtx);
     } catch (error) {
       logFormattingIssue(
-        ctx as NotifyContext,
+        notifyCtx,
         `Autoformat failed for ${path}: ${
           error instanceof Error ? error.message : String(error)
         }`,
@@ -226,18 +240,18 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("tool_execution_end", async (_event, ctx) => {
-    if (!manager || !ctx.hasUI) return;
-    const status = buildStatusLine(manager.getAllStates());
+    if (!state.manager || !ctx.hasUI) return;
+    const status = buildStatusLine(state.manager.getAllStates());
     if (status) ctx.ui.setStatus("code-feedback", status);
   });
 
   pi.on("session_shutdown", async () => {
-    unsubscribeStateChange?.();
-    unsubscribeStateChange = null;
-    if (manager) {
-      await manager.shutdownAll();
-      manager = null;
-      fileSync = null;
+    state.unsubscribeStateChange?.();
+    state.unsubscribeStateChange = null;
+    if (state.manager) {
+      await state.manager.shutdownAll();
+      state.manager = null;
+      state.fileSync = null;
     }
   });
 }

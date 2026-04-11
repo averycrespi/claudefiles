@@ -95,6 +95,28 @@ export class LspManager {
   }
 
   /**
+   * Single-call variant of `getRunningClient` that also returns the
+   * workspace root and the internal state key. Returns `null` if the
+   * server for this file isn't in the `running` state. Unlike
+   * `getRunningClient`, this does NOT trigger lazy start on `not-started`
+   * or `broken` states — use `getRunningClient` for that effect.
+   */
+  lookupRunning(
+    filePath: string,
+  ): { client: LspClient; rootDir: string; key: string } | null {
+    const languageId = getLanguageIdForFile(filePath);
+    if (!languageId) return null;
+    const config = DEFAULT_SERVERS[languageId];
+    if (!config) return null;
+    const root = this.resolveRoot(filePath, config.rootMarkers);
+    if (!root) return null;
+    const key = `${languageId}:${root}`;
+    const state = this.states.get(key);
+    if (!state || state.kind !== "running") return null;
+    return { client: state.client, rootDir: root, key };
+  }
+
+  /**
    * Returns the current state for the (language, root) pair backing
    * `filePath`, or `not-started` if we've never tried.
    */

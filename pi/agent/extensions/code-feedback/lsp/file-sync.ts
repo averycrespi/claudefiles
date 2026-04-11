@@ -38,15 +38,13 @@ export class FileSync {
     content: string,
     registryId: string,
   ): string | null {
-    const client = this.manager.getRunningClient(absPath);
-    if (!client) return null;
+    const resolved = this.manager.lookupRunning(absPath);
+    if (!resolved) return null;
 
+    const { client, rootDir } = resolved;
     const uri = fileUriFor(resolve(absPath));
     const lspLanguageId = getLspLanguageId(absPath, registryId);
-
-    const state = this.manager.getState(absPath);
-    if (state.kind !== "running") return null;
-    const serverKey = `${registryId}:${state.rootDir}`;
+    const serverKey = `${registryId}:${rootDir}`;
 
     const existing = this.tracked.get(uri);
     if (existing && existing.serverKey === serverKey) {

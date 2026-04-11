@@ -1,4 +1,5 @@
 import { relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   type Diagnostic,
   DiagnosticSeverity,
@@ -94,6 +95,6 @@ function severityLabel(severity?: DiagnosticSeverity): string {
 }
 
 function uriToRelative(uri: string, cwd: string): string {
-  const path = uri.startsWith("file://") ? uri.slice(7) : uri;
+  const path = uri.startsWith("file://") ? fileURLToPath(uri) : uri;
   return relative(cwd, path) || path;
 }
