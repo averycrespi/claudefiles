@@ -1,40 +1,44 @@
-# Autoformat extension
+# code-feedback extension
 
-This extension automatically formats files after successful `write` and `edit` tool results.
+This extension provides post-write feedback on every successful `write` and `edit` tool result. It runs in two phases:
 
-## Current formatters
+1. **Autoformat** — runs `gofmt` for `.go` files and `prettier` for files Prettier understands. Identical to the previous `autoformat` extension this replaces.
+2. **LSP diagnostics** — for Go and TypeScript/JavaScript files, syncs the post-format content to the language server (gopls or typescript-language-server) and appends any errors to the tool result so the model sees them on its next turn.
 
-- **Go** (`.go`) → `gofmt -w`
-- **Prettier-supported files** → `prettier --write --ignore-unknown`
+## Languages supported
 
-## How it works
+| Language                | Server                               | File extensions                         |
+| ----------------------- | ------------------------------------ | --------------------------------------- |
+| Go                      | `gopls serve`                        | `.go`                                   |
+| TypeScript / JavaScript | `typescript-language-server --stdio` | `.ts .tsx .js .jsx .mjs .cjs .mts .cts` |
 
-The extension listens to `tool_result` events for the built-in `write` and `edit` tools.
-After a successful write/edit, it:
+Servers are spawned lazily on the first write/edit of a matching file. If a binary isn't installed, the user is notified once per session and Go/TS edits proceed without LSP feedback.
 
-1. resolves the target path
-2. picks a formatter based on file extension
-3. runs the formatter in a per-file mutation queue
-4. leaves the original tool result unchanged if formatting fails
+## Tools registered
+
+- `lsp_diagnostics` — explicit diagnostic query for one file or the entire workspace. Returns all severities (errors, warnings, info, hints).
+- `lsp_navigation` — definition / references / hover / documentSymbol / workspaceSymbol via LSP.
 
 ## File layout
 
-- `index.ts` — extension entry point and routing
-- `gofmt.ts` — Go formatter implementation
-- `prettier.ts` — Prettier CLI formatter implementation
-- `utils.ts` — shared helpers and types
+- `index.ts` — extension entry point and orchestration
+- `constants.ts` — tunable limits (cap, severities, file size, restarts)
+- `timing.ts` — timeout values
+- `format/` — gofmt and prettier wrappers (unchanged from `autoformat`)
+- `lsp/` — LSP client, manager, file sync, server registry, formatters
+- `tools/` — `lsp_diagnostics` and `lsp_navigation` tool definitions
 
-## Adding another formatter
+## Adding a new language
 
-To add a new formatter later:
+Edit `lsp/servers.ts` to add a new entry to `DEFAULT_SERVERS` with:
 
-1. create a new file, e.g. `rustfmt.ts`
-2. export a formatter function from it
-3. import and dispatch to it from `index.ts`
-4. keep formatter-specific behavior isolated in its own module
+- `command` and `args` for the language server
+- `extensions` (lowercase, with leading dot)
+- `rootMarkers` (filenames to walk up from a file's directory looking for the workspace root)
+- `installHint` (shown to the user if the binary is missing)
 
-## Notes
+If the LSP `languageId` for the new language differs from the registry key (e.g. JSX/TSX variants), update `lsp/language-map.ts`'s `getLspLanguageId` accordingly.
 
-- Prettier is resolved first from `node_modules/.bin/prettier`
-- If that is missing, the extension falls back to `prettier` from `$PATH`
-- Unsupported files are ignored
+## Design
+
+See `.designs/2026-04-10-lsp-extension.md` for the full design rationale, including the three landmines that the LSP client handles, the diagnostic acquisition strategy (pull mode + push fallback), and decisions explicitly out of scope for v1.

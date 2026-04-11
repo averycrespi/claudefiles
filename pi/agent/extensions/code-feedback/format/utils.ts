@@ -23,7 +23,7 @@ export function getToolPath(event: {
 }
 
 export function logFormattingIssue(ctx: NotifyContext, message: string): void {
-  console.warn(`[autoformat] ${message}`);
+  console.warn(`[code-feedback] ${message}`);
   if (ctx.hasUI) {
     ctx.ui.notify(message, "warning");
   }
