@@ -31,6 +31,7 @@ import { FileSync } from "./lsp/file-sync.js";
 import { getLanguageIdForFile } from "./lsp/language-map.js";
 import { LspManager, type ServerState } from "./lsp/manager.js";
 import { DEFAULT_SERVERS } from "./lsp/servers.js";
+import { registerLspDiagnosticsTool } from "./tools/lsp-diagnostics.js";
 
 let manager: LspManager | null = null;
 let fileSync: FileSync | null = null;
@@ -170,6 +171,11 @@ export default function (pi: ExtensionAPI) {
         }
       }
     });
+  });
+
+  registerLspDiagnosticsTool(pi, {
+    getManager: () => manager,
+    getFileSync: () => fileSync,
   });
 
   pi.on("tool_result", async (event, ctx) => {
