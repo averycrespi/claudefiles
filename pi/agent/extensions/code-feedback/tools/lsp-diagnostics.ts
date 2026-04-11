@@ -152,6 +152,12 @@ export function registerLspDiagnosticsTool(pi: ExtensionAPI, deps: Deps): void {
         };
       }
 
+      // Ensure the file is opened in the LSP server before querying.
+      // gopls doesn't need this (auto-indexes the workspace), but
+      // tsserver returns "Unexpected resource" for files it has never
+      // been introduced to via `didOpen`.
+      await fileSync.openForQuery(absPath, registryId);
+
       const uri = fileUriFor(absPath);
       const diagnostics = await client.getDiagnostics(uri);
       const text = formatExplicitDiagnostics([{ uri, diagnostics }], ctx.cwd);

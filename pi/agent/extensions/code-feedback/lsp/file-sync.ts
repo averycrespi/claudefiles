@@ -1,6 +1,7 @@
+import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { MAX_TRACKED_DOCUMENTS } from "../constants.js";
+import { LSP_MAX_FILE_BYTES, MAX_TRACKED_DOCUMENTS } from "../constants.js";
 import { fileUriFor } from "./client.js";
 import { getLspLanguageId } from "./language-map.js";
 import { type LspManager } from "./manager.js";
@@ -18,8 +19,15 @@ interface TrackedDocument {
  * Tracks open documents per LSP server with an LRU cap. Eviction sends
  * `didClose` so long sessions don't leak memory in jdtls/pyright/gopls.
  *
- * Reads do NOT open documents. Only writes/edits do — see
- * `.designs/2026-04-10-lsp-extension.md` for why.
+ * Documents are opened in three situations only:
+ *   1. A successful `write` or `edit` tool result — handled by the
+ *      auto-inject path in `index.ts` via `syncWrite`.
+ *   2. An explicit `lsp_diagnostics` call on a single file — via
+ *      `openForQuery` below.
+ *   3. An explicit `lsp_navigation` call on a file — same.
+ *
+ * Plain `read` tool calls and bash commands do NOT open documents.
+ * See DESIGN.md ("When files get opened") for the rationale.
  */
 export class FileSync {
   // Insertion order = LRU. We re-insert on touch.
@@ -98,5 +106,30 @@ export class FileSync {
   /** Used by `lsp_diagnostics` for `path: "*"` — all currently-tracked URIs. */
   getTrackedUris(): string[] {
     return Array.from(this.tracked.keys());
+  }
+
+  /**
+   * Ensures `absPath` has been sent to its LSP server (via `didOpen` or
+   * `didChange`) so that explicit query tools — `lsp_diagnostics` and
+   * `lsp_navigation` — can operate on it. The original "reads don't
+   * open documents" rule is preserved for the auto-inject path; this
+   * method only runs when the model has asked for semantic info by
+   * name, which we treat as permission to open.
+   *
+   * Silently no-ops if the file is over `LSP_MAX_FILE_BYTES`, can't be
+   * stat'd, or can't be read — the caller's LSP request will then
+   * either succeed (if the file was already open from a prior edit)
+   * or fail with the LSP's own error.
+   */
+  async openForQuery(absPath: string, registryId: string): Promise<void> {
+    try {
+      const stats = await stat(absPath);
+      if (stats.size > LSP_MAX_FILE_BYTES) return;
+      const content = await readFile(absPath, "utf-8");
+      this.syncWrite(absPath, content, registryId);
+    } catch {
+      // Best-effort — swallowed so explicit queries still get a chance
+      // to run against whatever state the server already has.
+    }
   }
 }

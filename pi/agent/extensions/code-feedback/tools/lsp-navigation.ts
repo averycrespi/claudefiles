@@ -12,6 +12,7 @@ import {
 
 import { EXPLICIT_TOOL_BLOCK_TIMEOUT_MS } from "../timing.js";
 import { fileUriFor } from "../lsp/client.js";
+import { type FileSync } from "../lsp/file-sync.js";
 import { getLanguageIdForFile } from "../lsp/language-map.js";
 import { type LspManager } from "../lsp/manager.js";
 import { DEFAULT_SERVERS } from "../lsp/servers.js";
@@ -57,6 +58,7 @@ const params = Type.Object({
 
 interface Deps {
   getManager: () => LspManager | null;
+  getFileSync: () => FileSync | null;
 }
 
 export function registerLspNavigationTool(pi: ExtensionAPI, deps: Deps): void {
@@ -196,6 +198,16 @@ export function registerLspNavigationTool(pi: ExtensionAPI, deps: Deps): void {
         return errorResult(
           `LSP server for ${registryId} is still starting up. Try again in a moment.`,
         );
+      }
+
+      // Ensure the file is opened in the LSP server before querying.
+      // gopls auto-indexes the workspace and doesn't need this, but
+      // tsserver returns "Unexpected resource" for files it has never
+      // been introduced to via `didOpen`, and "No Project" for
+      // workspace-wide requests made before any file has been opened.
+      const fileSync = deps.getFileSync();
+      if (fileSync) {
+        await fileSync.openForQuery(absPath, registryId);
       }
 
       const uri = fileUriFor(absPath);

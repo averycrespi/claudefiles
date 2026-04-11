@@ -214,6 +214,7 @@ export default function (pi: ExtensionAPI) {
 
   registerLspNavigationTool(pi, {
     getManager: () => state.manager,
+    getFileSync: () => state.fileSync,
   });
 
   pi.on("tool_result", async (event, ctx) => {

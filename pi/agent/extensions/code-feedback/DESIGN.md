@@ -69,6 +69,55 @@ if the model asked for diagnostics directly, it blocks with a timeout
 (`EXPLICIT_TOOL_BLOCK_TIMEOUT_MS`) rather than silently returning
 empty. That's appropriate because the model is asking on purpose.
 
+## When files get opened
+
+Language servers fall into two camps for how they learn about files:
+
+- **Workspace indexers** (gopls, rust-analyzer, jdtls) — read the
+  whole project during `initialize`. By the time the init handshake
+  returns, the server already knows every file it cares about, and
+  explicit `textDocument/didOpen` notifications mostly just mark a
+  file as "in active editing" for buffered-content tracking.
+- **Open-file-first servers** (tsserver, pyright) — don't know about
+  a file until someone sends `didOpen` for it. Any request that
+  references an unopened URI is rejected: tsserver responds with
+  "Unexpected resource" for file-specific requests and "No Project"
+  for workspace-wide requests, because in its model a "project" is
+  created lazily from the first opened file that lands inside a
+  `tsconfig.json` ancestor tree.
+
+The extension handles this by opening files in exactly three
+situations:
+
+1. **After a successful `write` or `edit`** — the auto-inject path
+   in `index.ts` reads the post-format content and calls
+   `FileSync.syncWrite`, which sends `didOpen` on first touch or
+   `didChange` thereafter.
+2. **When `lsp_diagnostics` is called on a single file** — the tool
+   calls `FileSync.openForQuery` before `client.getDiagnostics`,
+   which stats, reads, and routes through `syncWrite`.
+3. **When `lsp_navigation` is called on a file** — same pattern,
+   before any `definition` / `references` / `hover` / `documentSymbol`
+   request.
+
+The common thread: we only open files when the model has signalled
+intent. Writes/edits mean "I care about this file's correctness";
+calling an LSP tool by name means "I want semantic info about this
+file". Plain `read` tool calls deliberately do NOT open documents —
+reads are cheap and frequent, and spawning or waking a language
+server every time the model glances at a file would burn indexing
+time for payoff that often never comes. The tradeoff is that the
+very first semantic operation on a fresh TypeScript file incurs a
+small `didOpen` round trip, but that's dwarfed by the server's own
+processing time and happens exactly once per file per session
+(subsequent queries re-route through `didChange`).
+
+`FileSync.openForQuery` silently no-ops when the file is over
+`LSP_MAX_FILE_BYTES` or can't be read, so the caller's LSP request
+still runs against whatever state the server already has. That
+preserves the "explicit tools should always attempt a response"
+contract even when the file-open step fails.
+
 ## Diagnostic acquisition: pull with push fallback
 
 LSP 3.17 added `textDocument/diagnostic` as a synchronous
