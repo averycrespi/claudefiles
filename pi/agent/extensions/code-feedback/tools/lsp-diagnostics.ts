@@ -127,6 +127,19 @@ export function registerLspDiagnosticsTool(pi: ExtensionAPI, deps: Deps): void {
           details: { state: "crashed-too-often" },
         };
       }
+      if (state.kind === "broken") {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text:
+                `LSP server for ${registryId} failed to start. ` +
+                `Last error: ${state.error.message}`,
+            },
+          ],
+          details: { state: "broken" },
+        };
+      }
       if (!client) {
         return {
           content: [

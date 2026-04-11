@@ -26,6 +26,7 @@ import {
 } from "vscode-languageserver-protocol";
 
 import {
+  INITIALIZE_TIMEOUT_MS,
   PUSH_DEBOUNCE_MS,
   PUSH_FIRST_NOTIFICATION_TIMEOUT_MS,
   PUSH_HARD_TIMEOUT_MS,
@@ -53,6 +54,13 @@ export interface LspClientOptions {
    * `broken` and allow retry after cooldown.
    */
   onCrash?: (error: Error) => void;
+  /**
+   * Invoked whenever the server reports a severity-Error message via
+   * `window/showMessage` or `window/logMessage`. Used by `LspManager` to
+   * forward the message to the UI so the user sees why a server is
+   * complaining (e.g. gopls's "cannot find main module" warning).
+   */
+  onServerError?: (message: string) => void;
 }
 
 /**
@@ -81,6 +89,7 @@ export class LspClient {
   private connection: MessageConnection | null = null;
   private capabilities: ServerCapabilities | null = null;
   private isStopping = false;
+  private lastErrorMessage: string | null = null;
   private readonly diagnosticsCache = new Map<string, Diagnostic[]>();
   private readonly diagnosticEmitter = new EventEmitter();
 
@@ -227,6 +236,24 @@ export class LspClient {
       },
     );
 
+    // window/showMessage and window/logMessage — surface server-reported
+    // errors (e.g. gopls "cannot find main module") instead of silently
+    // swallowing them. MessageType: 1=Error, 2=Warning, 3=Info, 4=Log.
+    // We only store and forward severity-Error messages; warnings are
+    // too noisy for the UI, and logMessage at Info/Log level is spammy.
+    this.connection.onNotification(
+      "window/showMessage",
+      (params: { type: number; message: string }) => {
+        this.handleServerMessage(params.type, params.message, "showMessage");
+      },
+    );
+    this.connection.onNotification(
+      "window/logMessage",
+      (params: { type: number; message: string }) => {
+        this.handleServerMessage(params.type, params.message, "logMessage");
+      },
+    );
+
     // workspace/configuration is a request-response that some servers
     // (pyright, tsserver) send during init. We don't have any per-section
     // config to provide; return null per item to satisfy the protocol.
@@ -275,13 +302,96 @@ export class LspClient {
       initializationOptions: {},
     };
 
-    const initResult: InitializeResult = await this.connection.sendRequest(
-      "initialize",
-      initParams,
-    );
-    this.capabilities = initResult.capabilities;
+    // Race the initialize request against a hard deadline. Without this,
+    // a server whose initialize handler hangs (gopls on a broken workspace,
+    // for instance) would leave us stuck in `starting` forever.
+    let initTimer: NodeJS.Timeout | undefined;
+    try {
+      const initPromise = this.connection.sendRequest<InitializeResult>(
+        "initialize",
+        initParams,
+      );
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        initTimer = setTimeout(() => {
+          reject(
+            new Error(
+              `LSP server ${this.options.serverName} did not respond to initialize within ${INITIALIZE_TIMEOUT_MS}ms`,
+            ),
+          );
+        }, INITIALIZE_TIMEOUT_MS);
+      });
+      const initResult = await Promise.race([initPromise, timeoutPromise]);
+      this.capabilities = initResult.capabilities;
+      await this.connection.sendNotification("initialized", {});
+    } catch (err) {
+      // Init failed (either a protocol error or our timeout). Tear down the
+      // hung/broken process so we don't leak it, then enrich the error with
+      // anything the server reported via window/showMessage so the caller
+      // can show the model a meaningful reason instead of a bare timeout.
+      this.isStopping = true;
+      try {
+        this.connection?.dispose();
+      } catch {
+        /* ignore */
+      }
+      this.connection = null;
+      if (this.process && !this.process.killed) {
+        this.process.kill("SIGKILL");
+      }
+      this.process = null;
+      const baseMessage = err instanceof Error ? err.message : String(err);
+      const hint = this.lastErrorMessage
+        ? ` (server reported: ${this.lastErrorMessage})`
+        : "";
+      throw new Error(baseMessage + hint);
+    } finally {
+      if (initTimer) clearTimeout(initTimer);
+    }
+  }
 
-    await this.connection.sendNotification("initialized", {});
+  /**
+   * Handles a `window/showMessage` or `window/logMessage` notification.
+   * Stores severity-Error messages so they can be surfaced via init
+   * failure reports and the `onServerError` callback, and logs non-log
+   * messages to the console for post-hoc debugging.
+   */
+  private handleServerMessage(
+    type: number,
+    message: string,
+    source: string,
+  ): void {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+    // Log-level (type 4) is pure debug spam — drop it entirely.
+    if (type === 4) return;
+    if (type !== 1) {
+      // Warning / Info — log to console but don't escalate to UI.
+      console.error(
+        `[code-feedback/lsp] ${this.options.serverName} ${source} (type=${type}):`,
+        trimmed,
+      );
+      return;
+    }
+    // Error. Remember it for init-failure enrichment and fan out to the
+    // manager's callback.
+    this.lastErrorMessage = trimmed;
+    console.error(
+      `[code-feedback/lsp] ${this.options.serverName} ${source} error:`,
+      trimmed,
+    );
+    try {
+      this.options.onServerError?.(trimmed);
+    } catch (err) {
+      console.error(
+        `[code-feedback/lsp] onServerError handler threw:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  /** Most recent severity-Error message reported by the server, if any. */
+  getLastErrorMessage(): string | null {
+    return this.lastErrorMessage;
   }
 
   /** Server capabilities reported in InitializeResult. */

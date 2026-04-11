@@ -92,29 +92,67 @@ export function registerLspNavigationTool(pi: ExtensionAPI, deps: Deps): void {
         if (!input.query) {
           return errorResult("workspaceSymbol requires `query`.");
         }
-        // Find any running client to ask. Prefer the first one.
-        let client = null;
-        for (const [, state] of manager.getAllStates()) {
-          if (state.kind === "running") {
-            client = state.client;
-            break;
+        // Pick the first running client, falling back to the most
+        // informative non-running state so the caller gets a real reason
+        // ("still starting", "gopls not installed", ...) instead of the
+        // generic "edit a file first".
+        let runningClient = null;
+        let starting = false;
+        let brokenError: string | null = null;
+        let missingBinary: string | null = null;
+        let crashedLanguage: string | null = null;
+        for (const [, serverState] of manager.getAllStates()) {
+          switch (serverState.kind) {
+            case "running":
+              runningClient = serverState.client;
+              break;
+            case "starting":
+              starting = true;
+              break;
+            case "broken":
+              brokenError ??= serverState.error.message;
+              break;
+            case "missing-binary":
+              missingBinary ??= serverState.command;
+              break;
+            case "crashed-too-often":
+              crashedLanguage ??= serverState.error.message;
+              break;
           }
+          if (runningClient) break;
         }
-        if (!client) {
+        if (runningClient) {
+          const symbols =
+            (await runningClient.workspaceSymbol(input.query)) ?? [];
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: formatWorkspaceSymbols(symbols, ctx.cwd),
+              },
+            ],
+            details: { count: symbols.length },
+          };
+        }
+        if (starting) {
           return errorResult(
-            "No LSP server is currently running. Edit a file in a supported language first.",
+            "LSP server is still starting up. Try again in a moment.",
           );
         }
-        const symbols = (await client.workspaceSymbol(input.query)) ?? [];
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: formatWorkspaceSymbols(symbols, ctx.cwd),
-            },
-          ],
-          details: { count: symbols.length },
-        };
+        if (brokenError) {
+          return errorResult(`LSP server failed to start: ${brokenError}`);
+        }
+        if (missingBinary) {
+          return errorResult(`LSP server '${missingBinary}' is not installed.`);
+        }
+        if (crashedLanguage) {
+          return errorResult(
+            `LSP server crashed too many times this session and is disabled. Last error: ${crashedLanguage}`,
+          );
+        }
+        return errorResult(
+          "No LSP server is currently running. Edit a file in a supported language first.",
+        );
       }
 
       // All other operations need a file path.
@@ -147,6 +185,11 @@ export function registerLspNavigationTool(pi: ExtensionAPI, deps: Deps): void {
       if (state.kind === "crashed-too-often") {
         return errorResult(
           `LSP server for ${registryId} crashed too many times this session and is disabled.`,
+        );
+      }
+      if (state.kind === "broken") {
+        return errorResult(
+          `LSP server for ${registryId} failed to start. Last error: ${state.error.message}`,
         );
       }
       if (!client) {

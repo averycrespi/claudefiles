@@ -38,10 +38,12 @@ const state: {
   manager: LspManager | null;
   fileSync: FileSync | null;
   unsubscribeStateChange: (() => void) | null;
+  unsubscribeServerError: (() => void) | null;
 } = {
   manager: null,
   fileSync: null,
   unsubscribeStateChange: null,
+  unsubscribeServerError: null,
 };
 
 async function autoformatFile(
@@ -181,6 +183,22 @@ export default function (pi: ExtensionAPI) {
         }
       },
     );
+
+    // Forward severity-Error messages from `window/showMessage` and
+    // `window/logMessage` to the UI, deduped per (language, message) so
+    // a chatty server doesn't spam notifications.
+    state.unsubscribeServerError = state.manager.onServerError(
+      (languageId, message) => {
+        if (!ctx.hasUI) return;
+        if (!state.manager?.shouldNotifyServerError(languageId, message)) {
+          return;
+        }
+        ctx.ui.notify(
+          `[code-feedback] ${languageId} LSP reported: ${message}`,
+          "error",
+        );
+      },
+    );
   });
 
   registerLspDiagnosticsTool(pi, {
@@ -248,6 +266,8 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     state.unsubscribeStateChange?.();
     state.unsubscribeStateChange = null;
+    state.unsubscribeServerError?.();
+    state.unsubscribeServerError = null;
     if (state.manager) {
       await state.manager.shutdownAll();
       state.manager = null;

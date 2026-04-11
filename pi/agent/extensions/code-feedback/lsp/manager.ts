@@ -25,6 +25,8 @@ export type StateChangeListener = (
   state: ServerState,
 ) => void;
 
+export type ServerErrorListener = (languageId: string, message: string) => void;
+
 /**
  * Per-(language, root) LSP server lifecycle. Lazy-start on first
  * write/edit of a matching file. Never started by `read` operations.
@@ -33,8 +35,10 @@ export class LspManager {
   // Key: `${languageId}:${rootDir}`
   private readonly states = new Map<string, ServerState>();
   private readonly listeners = new Set<StateChangeListener>();
+  private readonly serverErrorListeners = new Set<ServerErrorListener>();
   private readonly missingBinaryNotified = new Set<string>();
   private readonly crashedNotified = new Set<string>();
+  private readonly notifiedServerErrors = new Set<string>();
 
   /**
    * Walks up from `filePath`'s directory until it finds one of `markers`.
@@ -140,6 +144,23 @@ export class LspManager {
     return () => this.listeners.delete(listener);
   }
 
+  onServerError(listener: ServerErrorListener): () => void {
+    this.serverErrorListeners.add(listener);
+    return () => this.serverErrorListeners.delete(listener);
+  }
+
+  /**
+   * True the first time a given (language, message) pair is seen in this
+   * session. Callers use this to dedupe UI notifications for repeating
+   * server errors.
+   */
+  shouldNotifyServerError(languageId: string, message: string): boolean {
+    const key = `${languageId}::${message}`;
+    if (this.notifiedServerErrors.has(key)) return false;
+    this.notifiedServerErrors.add(key);
+    return true;
+  }
+
   /** Shut down all running clients. Called from `session_shutdown`. */
   async shutdownAll(): Promise<void> {
     const promises: Array<Promise<void>> = [];
@@ -204,6 +225,7 @@ export class LspManager {
       cwd: rootDir,
       rootUri: fileUriFor(rootDir),
       onCrash: (error) => this.handleClientCrash(key, error),
+      onServerError: (message) => this.handleServerError(languageId, message),
     });
 
     const promise = (async () => {
@@ -244,6 +266,20 @@ export class LspManager {
   ): void {
     this.states.set(key, state);
     for (const listener of this.listeners) listener(languageId, state);
+  }
+
+  /** Fan-out for `window/showMessage` / `window/logMessage` severity errors. */
+  private handleServerError(languageId: string, message: string): void {
+    for (const listener of this.serverErrorListeners) {
+      try {
+        listener(languageId, message);
+      } catch (err) {
+        console.error(
+          `[code-feedback] serverError listener threw:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
   }
 
   /** Whether we've already fired the one-time notification for this state. */
