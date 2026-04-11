@@ -23,6 +23,19 @@ export interface ServerConfig {
    * tries to use a missing server.
    */
   installHint: string;
+  /**
+   * Opt-in marker for per-project local binary resolution. When set, the
+   * manager walks up from the workspace root looking for a matching
+   * binary under a language-specific local bin directory and prefers that
+   * over `$PATH`:
+   *
+   * - `"node"` — `<root>/node_modules/.bin/<command>`
+   *
+   * Unset (default) means the server is spawned by bare name and resolved
+   * against `$PATH` only. Use this for servers installed into user/system
+   * locations (`gopls`, `rust-analyzer`, etc.).
+   */
+  localBin?: "node";
 }
 
 export const DEFAULT_SERVERS: Record<string, ServerConfig> = {
@@ -40,6 +53,9 @@ export const DEFAULT_SERVERS: Record<string, ServerConfig> = {
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
     rootMarkers: ["tsconfig.json", "jsconfig.json", "package.json"],
     installHint:
-      "Install: npm install -g typescript-language-server typescript",
+      "Install globally: npm install -g typescript-language-server typescript. " +
+      "Or as a dev dependency in your project: " +
+      "npm install --save-dev typescript-language-server typescript.",
+    localBin: "node",
   },
 };

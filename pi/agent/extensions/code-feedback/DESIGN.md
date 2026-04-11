@@ -156,6 +156,49 @@ model can't act on. The user sees a one-time notification and a status
 line indicator; the model finds out only if it explicitly calls
 `lsp_diagnostics` or `lsp_navigation`.
 
+## Command resolution: workspace-local before `$PATH`
+
+Servers opted in via `ServerConfig.localBin` are resolved against
+per-project bin directories before `$PATH`. v1 supports `"node"`, which
+walks up from the workspace root looking for
+`<dir>/node_modules/.bin/<command>` and takes the first hit.
+
+The motivation is `typescript-language-server`. It's commonly installed
+as a dev dependency alongside a pinned `typescript` version, and a
+global install can resolve a different `typescript` package at runtime
+than the repo's own compiler — producing diagnostics that disagree with
+`tsc` in the repo. Preferring the local bin keeps LSP feedback
+consistent with the project's toolchain and also makes the common
+"`npm install --save-dev typescript-language-server`" setup work with no
+global install.
+
+The walk starts at the workspace root (not the file directory) so
+monorepos with hoisted dependencies are handled naturally: if packages
+live under `packages/foo/` but `node_modules/` is at the monorepo top,
+`resolveRoot` finds `packages/foo/` first (via its own `tsconfig.json`
+or `package.json`), and the upward walk from there reaches the hoisted
+`node_modules/`. The walk stops at the filesystem root — we accept the
+theoretical risk of picking up a stale `node_modules/` somewhere in an
+ancestor directory in exchange for not having to reason about "is this
+still inside the user's project?" heuristics.
+
+Resolution fallbacks:
+
+1. Local bin found and executable → spawn the absolute path.
+2. Local bin not found → fall through to `$PATH` by spawning the bare
+   `config.command`.
+3. Neither works → `missing-binary` state, same as before.
+
+`LspClient` keeps `command` as the logical display name ("gopls",
+"typescript-language-server") for status line and notifications, and
+accepts a separate `executablePath` override for the actual spawn. That
+way a user seeing a `missing-binary` notification gets the friendly
+name, not an absolute path into `node_modules/.bin`.
+
+Servers without a `localBin` marker (e.g. `gopls`, which installs into
+`$GOPATH/bin` and not into any `node_modules`) skip resolution entirely
+and fall straight through to `$PATH`.
+
 ## Server lifecycle and restart policy
 
 Each `(language, workspace-root)` pair has one of six states:
@@ -296,6 +339,30 @@ than reach for `console.error`.
 Failure modes are swallowed: if the log directory can't be created or
 an append fails, the message is dropped rather than crashing the host
 or spilling back into the TUI.
+
+## Future considerations
+
+Ideas reviewed but deferred pending evidence they'd pay off. Not hard
+non-goals — revisit if the failure modes show up in practice.
+
+### Symbol-name column resolution in `lsp_navigation`
+
+Today `definition` / `references` / `hover` require `line` + `character`,
+forcing the model to count columns. `can1357/oh-my-pi` accepts `symbol`
+
+- `occurrence` as an alternative: the tool reads the target line, finds
+  the Nth match of the symbol string, and resolves the column itself. The
+  theoretical win is robustness against tab-indented or unicode-heavy
+  lines, plus ergonomics when the agent has a symbol name from `grep`
+  output but not a column.
+
+Deferred because: we haven't observed the model mis-counting columns in
+practice, source files are mostly ASCII, and `documentSymbol` already
+covers the "I know the name, not the position" case with exact ranges.
+Reconsider if we see real navigation misses attributable to column
+arithmetic — at that point, add `symbol`/`occurrence` as an alternative
+to `character` (enforce exactly one of the two, no case-insensitive
+fallback).
 
 ## Reference implementations
 

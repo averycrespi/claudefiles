@@ -42,8 +42,21 @@ export type SpawnError =
 export interface LspClientOptions {
   /** Logical name used in error messages and logs (e.g. "go", "typescript"). */
   serverName: string;
-  /** Executable to spawn. */
+  /**
+   * Logical command name. Used for user-facing display (status line, UI
+   * notifications, `missing-binary` error reporting). If `executablePath`
+   * is not set, this is also what gets passed to `spawn` and resolved
+   * against `$PATH`.
+   */
   command: string;
+  /**
+   * Optional absolute path to the executable. When set, `spawn` uses this
+   * instead of `command` — allowing callers to pin a specific binary
+   * (e.g. a workspace-local `node_modules/.bin/typescript-language-server`)
+   * while keeping `command` as the human-readable name in errors and
+   * notifications.
+   */
+  executablePath?: string;
   /** Args for the executable. */
   args: string[];
   /** Working directory for the spawned process. Should be the workspace root. */
@@ -111,7 +124,8 @@ export class LspClient {
    * ENOENT (permanent) from other failures (cooldown + retry).
    */
   async start(): Promise<void> {
-    const proc = spawnChildProcess(this.options.command, this.options.args, {
+    const executable = this.options.executablePath ?? this.options.command;
+    const proc = spawnChildProcess(executable, this.options.args, {
       cwd: this.options.cwd,
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,

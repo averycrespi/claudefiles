@@ -6,6 +6,7 @@ import { logError } from "../log.js";
 import { BROKEN_COOLDOWN_MS } from "../timing.js";
 import { fileUriFor, LspClient, type SpawnError } from "./client.js";
 import { getLanguageIdForFile } from "./language-map.js";
+import { resolveLocalBin } from "./resolve-command.js";
 import { DEFAULT_SERVERS, type ServerConfig } from "./servers.js";
 
 export type ServerState =
@@ -219,17 +220,24 @@ export class LspManager {
       return;
     }
 
-    const client = new LspClient({
-      serverName: languageId,
-      command: config.command,
-      args: config.args,
-      cwd: rootDir,
-      rootUri: fileUriFor(rootDir),
-      onCrash: (error) => this.handleClientCrash(key, error),
-      onServerError: (message) => this.handleServerError(languageId, message),
-    });
-
     const promise = (async () => {
+      // Prefer a workspace-local binary (e.g. node_modules/.bin/...) over
+      // whatever's on $PATH for servers opted in via `config.localBin`.
+      // Falls through to $PATH resolution when the resolver returns null.
+      const executablePath =
+        (await resolveLocalBin(config, rootDir)) ?? undefined;
+
+      const client = new LspClient({
+        serverName: languageId,
+        command: config.command,
+        executablePath,
+        args: config.args,
+        cwd: rootDir,
+        rootUri: fileUriFor(rootDir),
+        onCrash: (error) => this.handleClientCrash(key, error),
+        onServerError: (message) => this.handleServerError(languageId, message),
+      });
+
       try {
         await client.start();
         this.transition(languageId, key, {
