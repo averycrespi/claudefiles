@@ -112,6 +112,34 @@ small `didOpen` round trip, but that's dwarfed by the server's own
 processing time and happens exactly once per file per session
 (subsequent queries re-route through `didChange`).
 
+### Read-path cache piggyback
+
+Reads still deliberately don't _open_ files, but when the model reads
+a file that happens to be already tracked (from a prior write/edit
+or explicit LSP tool call) we surface the LSP's cached diagnostics
+alongside the read result. This is a strict cache lookup:
+`FileSync.isTracked` filters out untouched files; on a hit we read
+`client.getCachedDiagnostics(uri)` and format through the same
+`formatAutoInjectSummary` the write/edit path uses. No `didOpen`, no
+`didChange`, no `getDiagnostics` request, no wait — the feedback is
+whatever the server last told us.
+
+The motivation is that the model frequently re-reads a file after
+editing it (to double-check context, reason about a diff, or compare
+sections) and auto-inject's output has already scrolled out of the
+visible conversation window. Re-surfacing the cached errors on the
+re-read gives the model a nudge without costing anything. It also
+catches the case where an external agent or script mutated a file
+the LSP has seen — the cache may be stale relative to disk, but it's
+still better signal than nothing.
+
+The feature is deliberately scoped to the cache hit. Opening a file
+on read would reintroduce exactly the "reads trigger server work"
+problem the original rule exists to avoid — and would be especially
+bad for `tsserver`, which is an open-file-first server that grows its
+in-memory project set on every `didOpen`. Files the model reads but
+has never edited remain invisible to the LSP, and that is intentional.
+
 `FileSync.openForQuery` silently no-ops when the file is over
 `LSP_MAX_FILE_BYTES` or can't be read, so the caller's LSP request
 still runs against whatever state the server already has. That

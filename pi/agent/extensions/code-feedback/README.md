@@ -1,9 +1,11 @@
 # code-feedback extension
 
-This extension provides post-write feedback on every successful `write` and `edit` tool result. It runs in two phases:
+This extension surfaces LSP feedback to the model without making the model ask for it. After every successful `write` or `edit` tool result it runs two phases:
 
 1. **Autoformat** — runs `gofmt` for `.go` files and `prettier` for files Prettier understands. Identical to the previous `autoformat` extension this replaces.
 2. **LSP diagnostics** — for Go and TypeScript/JavaScript files, syncs the post-format content to the language server (gopls or typescript-language-server) and appends any errors to the tool result so the model sees them on its next turn.
+
+It also piggybacks on `read` tool results: when the model reads a file the LSP already knows about (from a prior write/edit or explicit LSP tool call), cached diagnostics are appended to the read result so the model is reminded of latent errors even after the original auto-inject has scrolled out of its context. The read path is strictly a cache lookup — it never opens files or issues LSP requests, preserving the "reads are cheap" contract.
 
 ## Languages supported
 

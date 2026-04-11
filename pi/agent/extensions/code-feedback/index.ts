@@ -27,6 +27,7 @@ import {
   logFormattingIssue,
 } from "./format/utils.js";
 import { configureLogging, logError } from "./log.js";
+import { fileUriFor } from "./lsp/client.js";
 import { formatAutoInjectSummary } from "./lsp/format-diagnostics.js";
 import { FileSync } from "./lsp/file-sync.js";
 import { getLanguageIdForFile } from "./lsp/language-map.js";
@@ -63,6 +64,31 @@ async function autoformatFile(
     }
     await formatWithPrettier(filePath, signal, ctx);
   });
+}
+
+/**
+ * Read-path opportunistic feedback. Returns a summary string iff the file
+ * is already tracked by the LSP (from a prior write/edit or explicit tool
+ * call) AND its server is running — in which case we read cached
+ * diagnostics without issuing any LSP request. On miss we return null
+ * immediately: no `didOpen`, no `getDiagnostics` round trip, no wait. This
+ * preserves the "reads are cheap" contract while surfacing latent errors
+ * on files the agent has touched earlier in the session.
+ */
+function lspFeedbackForRead(absPath: string, cwd: string): string | null {
+  if (!state.manager || !state.fileSync) return null;
+
+  const registryId = getLanguageIdForFile(absPath);
+  if (!registryId || !DEFAULT_SERVERS[registryId]) return null;
+
+  if (!state.fileSync.isTracked(absPath)) return null;
+
+  const resolved = state.manager.lookupRunning(absPath);
+  if (!resolved) return null;
+
+  const uri = fileUriFor(absPath);
+  const diagnostics = resolved.client.getCachedDiagnostics(uri);
+  return formatAutoInjectSummary(absPath, cwd, diagnostics);
 }
 
 /**
@@ -218,6 +244,35 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("tool_result", async (event, ctx) => {
+    // Read tool: opportunistic cache-read only. If the file is already
+    // tracked by the LSP (prior write/edit or explicit query) and its
+    // server is running, surface cached diagnostics alongside the read
+    // result. On cache miss we do nothing — no didOpen, no server round
+    // trip — so the "reads are cheap" contract holds.
+    if (event.toolName === "read") {
+      const path = getToolPath(event);
+      if (!path) return;
+      const first = event.content?.[0];
+      if (
+        first?.type === "text" &&
+        typeof first.text === "string" &&
+        first.text.startsWith("Error")
+      ) {
+        return;
+      }
+      const absPath = resolve(ctx.cwd, path);
+      const summary = lspFeedbackForRead(absPath, ctx.cwd);
+      if (summary) {
+        return {
+          content: [
+            ...event.content,
+            { type: "text" as const, text: `\n\n${summary}` },
+          ],
+        };
+      }
+      return;
+    }
+
     if (event.toolName !== "write" && event.toolName !== "edit") return;
 
     const path = getToolPath(event);
