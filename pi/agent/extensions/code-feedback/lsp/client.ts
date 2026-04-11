@@ -6,6 +6,7 @@ import { EventEmitter } from "node:events";
 import { pathToFileURL } from "node:url";
 import { type Readable, type Writable } from "node:stream";
 import {
+  CancellationTokenSource,
   createMessageConnection,
   type MessageConnection,
   StreamMessageReader,
@@ -635,21 +636,33 @@ export class LspClient {
 
   private async getDiagnosticsPullMode(uri: string): Promise<Diagnostic[]> {
     if (!this.connection) return [];
+
+    // Wire a CancellationTokenSource into sendRequest so the timeout path
+    // can fire `$/cancelRequest` back to the server instead of silently
+    // abandoning the pending JSON-RPC request. Without this, a server that
+    // blows past PULL_MODE_HARD_TIMEOUT_MS keeps computing diagnostics for
+    // a URI nobody is listening for — wasted work, and in long sessions
+    // enough of these stack up to matter. vscode-jsonrpc translates
+    // `cancelSource.cancel()` into the spec-compliant notification
+    // automatically; we only need to dispose the source in `finally`.
+    const cancelSource = new CancellationTokenSource();
     let timer: NodeJS.Timeout;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error("pull-mode diagnostic timed out")),
-        PULL_MODE_HARD_TIMEOUT_MS,
-      );
+      timer = setTimeout(() => {
+        cancelSource.cancel();
+        reject(new Error("pull-mode diagnostic timed out"));
+      }, PULL_MODE_HARD_TIMEOUT_MS);
     });
     try {
       const result = await Promise.race([
         this.connection.sendRequest<{
           kind: "full" | "unchanged";
           items?: Diagnostic[];
-        }>("textDocument/diagnostic", {
-          textDocument: { uri },
-        }),
+        }>(
+          "textDocument/diagnostic",
+          { textDocument: { uri } },
+          cancelSource.token,
+        ),
         timeoutPromise,
       ]);
 
@@ -666,6 +679,7 @@ export class LspClient {
       return this.diagnosticsCache.get(uri) ?? [];
     } finally {
       clearTimeout(timer!);
+      cancelSource.dispose();
     }
   }
 
