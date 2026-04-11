@@ -308,11 +308,149 @@ export class LspClient {
     }
   }
 
-  // Methods to be filled in by Tasks 6, 7, 8 below:
-  // - getDiagnostics(uri)         → Task 6 (pull mode + push fallback)
-  // - openDocument(...)           → Task 6
-  // - changeDocument(...)         → Task 6
-  // - closeDocument(uri)          → Task 6
+  /** Sends `textDocument/didOpen`. */
+  openDocument(
+    uri: string,
+    languageId: string,
+    version: number,
+    text: string,
+  ): void {
+    if (!this.connection) return;
+    this.connection
+      .sendNotification("textDocument/didOpen", {
+        textDocument: { uri, languageId, version, text },
+      })
+      .catch(() => {});
+  }
+
+  /**
+   * Sends `textDocument/didChange` with full-content sync. Incremental sync
+   * is not implemented — full-content is simpler and matches both pi-lens
+   * and pi-lsp-extension.
+   */
+  changeDocument(uri: string, version: number, text: string): void {
+    if (!this.connection) return;
+    this.connection
+      .sendNotification("textDocument/didChange", {
+        textDocument: { uri, version },
+        contentChanges: [{ text }],
+      })
+      .catch(() => {});
+  }
+
+  /** Sends `textDocument/didClose`. */
+  closeDocument(uri: string): void {
+    if (!this.connection) return;
+    this.connection
+      .sendNotification("textDocument/didClose", {
+        textDocument: { uri },
+      })
+      .catch(() => {});
+  }
+
+  /**
+   * Returns the current diagnostics for a URI. Uses pull-mode
+   * (`textDocument/diagnostic`) if the server supports it, otherwise
+   * falls back to push-mode wait-and-debounce.
+   */
+  async getDiagnostics(uri: string): Promise<Diagnostic[]> {
+    if (!this.connection) return [];
+
+    if (this.supportsPullDiagnostics()) {
+      return this.getDiagnosticsPullMode(uri);
+    }
+    return this.getDiagnosticsPushMode(uri);
+  }
+
+  private async getDiagnosticsPullMode(uri: string): Promise<Diagnostic[]> {
+    if (!this.connection) return [];
+    let timer: NodeJS.Timeout;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("pull-mode diagnostic timed out")),
+        PULL_MODE_HARD_TIMEOUT_MS,
+      );
+    });
+    try {
+      const result = await Promise.race([
+        this.connection.sendRequest<{
+          kind: "full" | "unchanged";
+          items?: Diagnostic[];
+        }>("textDocument/diagnostic", {
+          textDocument: { uri },
+        }),
+        timeoutPromise,
+      ]);
+
+      if (result.kind === "full") return result.items ?? [];
+      // "unchanged" — return cached, which is whatever we last got via push
+      // or the previous pull. Most servers don't actually use "unchanged"
+      // unless we provide a previousResultId, which we don't.
+      return this.diagnosticsCache.get(uri) ?? [];
+    } catch (err) {
+      console.error(
+        `[code-feedback/lsp] ${this.options.serverName} pull-mode diagnostic failed:`,
+        err instanceof Error ? err.message : err,
+      );
+      return this.diagnosticsCache.get(uri) ?? [];
+    } finally {
+      clearTimeout(timer!);
+    }
+  }
+
+  private async getDiagnosticsPushMode(uri: string): Promise<Diagnostic[]> {
+    // Wait for the first publishDiagnostics, then debounce for follow-ups.
+    // Hard cap at PUSH_HARD_TIMEOUT_MS.
+    const start = Date.now();
+
+    const firstNotification = new Promise<void>((resolve) => {
+      let timer: NodeJS.Timeout;
+      const onUpdate = () => {
+        this.diagnosticEmitter.off(uri, onUpdate);
+        clearTimeout(timer);
+        resolve();
+      };
+      this.diagnosticEmitter.on(uri, onUpdate);
+      timer = setTimeout(() => {
+        this.diagnosticEmitter.off(uri, onUpdate);
+        resolve();
+      }, PUSH_FIRST_NOTIFICATION_TIMEOUT_MS);
+    });
+
+    await firstNotification;
+
+    // Debounce: wait `PUSH_DEBOUNCE_MS` after the most recent notification,
+    // capped by `PUSH_HARD_TIMEOUT_MS` total.
+    let lastSeen = Date.now();
+    const onUpdate = () => {
+      lastSeen = Date.now();
+    };
+    this.diagnosticEmitter.on(uri, onUpdate);
+    try {
+      while (
+        Date.now() - lastSeen < PUSH_DEBOUNCE_MS &&
+        Date.now() - start < PUSH_HARD_TIMEOUT_MS
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, PUSH_DEBOUNCE_MS));
+      }
+    } finally {
+      this.diagnosticEmitter.off(uri, onUpdate);
+    }
+
+    return this.diagnosticsCache.get(uri) ?? [];
+  }
+
+  /** Direct cache read with no waiting. Used by `lsp_diagnostics` for `path: "*"`. */
+  getCachedDiagnostics(uri: string): Diagnostic[] {
+    return this.diagnosticsCache.get(uri) ?? [];
+  }
+
+  /** All URIs the client has diagnostics cached for. */
+  getCachedUris(): string[] {
+    return Array.from(this.diagnosticsCache.keys());
+  }
+
+  // Methods to be filled in by Tasks 7, 8 below:
   // - definition(...)             → Task 7
   // - references(...)             → Task 7
   // - hover(...)                  → Task 7
