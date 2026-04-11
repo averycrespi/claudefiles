@@ -32,6 +32,18 @@ export const MAX_RESTARTS_PER_SESSION = 3;
 export const LSP_MAX_FILE_BYTES = 1_000_000;
 
 /**
+ * Maximum bytes of server stderr buffered during the startup/init phase.
+ * When a language server fails to initialize (e.g. gopls's asdf shim
+ * printing "No version is set for command gopls" before exiting), we
+ * include the tail of its stderr in the init-failure error so the model
+ * gets an actionable reason instead of a generic "connection disposed"
+ * message. Buffering stops after init completes to avoid unbounded
+ * growth in long sessions. Size is tuned for one or two useful error
+ * lines without bloating every error message.
+ */
+export const STARTUP_STDERR_CAP_BYTES = 4096;
+
+/**
  * Severities we surface in the auto-inject path on tool_result.
  *
  * We deliberately surface ONLY errors here, not warnings/info/hints.

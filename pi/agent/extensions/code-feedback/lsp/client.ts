@@ -25,6 +25,7 @@ import {
   type SymbolInformation,
 } from "vscode-languageserver-protocol";
 
+import { STARTUP_STDERR_CAP_BYTES } from "../constants.js";
 import {
   INITIALIZE_TIMEOUT_MS,
   PUSH_DEBOUNCE_MS,
@@ -90,6 +91,10 @@ export class LspClient {
   private capabilities: ServerCapabilities | null = null;
   private isStopping = false;
   private lastErrorMessage: string | null = null;
+  private startupPhase = true;
+  private startupStderrBuffer: string[] = [];
+  private startupStderrBytes = 0;
+  private startupExitRejector: ((error: Error) => void) | null = null;
   private readonly diagnosticsCache = new Map<string, Diagnostic[]>();
   private readonly diagnosticEmitter = new EventEmitter();
 
@@ -226,20 +231,53 @@ export class LspClient {
     proc.stderr.on("error", swallow("stderr"));
 
     // Capture stderr for diagnostics. LSP servers often log helpful
-    // context here (e.g. tsserver "Initializing project...").
+    // context here (e.g. tsserver "Initializing project..." or gopls's
+    // asdf shim printing "No version is set for command gopls" before
+    // exiting). During the startup phase we also buffer the output so
+    // init-failure errors can quote it back to the model.
     proc.stderr.on("data", (data: Buffer) => {
-      const text = data.toString().trim();
-      if (text) {
+      const text = data.toString();
+      const trimmed = text.trim();
+      if (trimmed) {
         console.error(
           `[code-feedback/lsp] ${this.options.serverName} stderr:`,
-          text,
+          trimmed,
         );
+      }
+      if (
+        this.startupPhase &&
+        this.startupStderrBytes < STARTUP_STDERR_CAP_BYTES
+      ) {
+        const remaining = STARTUP_STDERR_CAP_BYTES - this.startupStderrBytes;
+        const chunk = text.length > remaining ? text.slice(0, remaining) : text;
+        this.startupStderrBuffer.push(chunk);
+        this.startupStderrBytes += chunk.length;
       }
     });
 
-    // Detect crashes — used by the manager to transition to `broken`.
+    // Detect exits. Two distinct paths:
+    //   - During the startup/init phase, reject the pending `initialize`
+    //     wait with a detailed error (exit code + buffered stderr) so
+    //     the caller sees *why* the server died instead of vscode-jsonrpc's
+    //     generic "Pending response rejected since connection got disposed"
+    //     fallback. The start() catch block handles cleanup from there.
+    //   - Post-init, this is a mid-session crash: dispose the connection
+    //     and call onCrash so the manager transitions `running` → `broken`.
     proc.on("exit", (code, signal) => {
       if (this.isStopping) return;
+
+      if (this.startupPhase && this.startupExitRejector) {
+        const rejector = this.startupExitRejector;
+        this.startupExitRejector = null;
+        const stderrHint = this.buildStartupStderrHint();
+        rejector(
+          new Error(
+            `LSP server ${this.options.serverName} exited during initialize (code=${code}, signal=${signal})${stderrHint}`,
+          ),
+        );
+        return;
+      }
+
       const error = new Error(
         `LSP server ${this.options.serverName} exited unexpectedly (code=${code}, signal=${signal})`,
       );
@@ -351,9 +389,13 @@ export class LspClient {
       initializationOptions: {},
     };
 
-    // Race the initialize request against a hard deadline. Without this,
-    // a server whose initialize handler hangs (gopls on a broken workspace,
-    // for instance) would leave us stuck in `starting` forever.
+    // Race the initialize request against three failure modes:
+    //   - Protocol-level rejection (vscode-jsonrpc rejects the request).
+    //   - Hard deadline (server hangs forever on initialize).
+    //   - Process exit during init (startupExitRejector — set by the
+    //     exit handler above, produces a much more useful error than
+    //     the generic "pending response rejected" vscode-jsonrpc emits
+    //     once it notices the connection is gone).
     let initTimer: NodeJS.Timeout | undefined;
     try {
       const initPromise = this.connection.sendRequest<InitializeResult>(
@@ -369,14 +411,22 @@ export class LspClient {
           );
         }, INITIALIZE_TIMEOUT_MS);
       });
-      const initResult = await Promise.race([initPromise, timeoutPromise]);
+      const exitPromise = new Promise<never>((_, reject) => {
+        this.startupExitRejector = reject;
+      });
+      const initResult = await Promise.race([
+        initPromise,
+        timeoutPromise,
+        exitPromise,
+      ]);
       this.capabilities = initResult.capabilities;
       await this.connection.sendNotification("initialized", {});
     } catch (err) {
-      // Init failed (either a protocol error or our timeout). Tear down the
-      // hung/broken process so we don't leak it, then enrich the error with
-      // anything the server reported via window/showMessage so the caller
-      // can show the model a meaningful reason instead of a bare timeout.
+      // Init failed (exit, timeout, or protocol rejection). Tear down
+      // the hung/broken process so we don't leak it, then enrich the
+      // error with buffered stderr (most actionable — usually contains
+      // the literal reason the server bailed) and any message the
+      // server sent via window/showMessage before dying.
       this.isStopping = true;
       try {
         this.connection?.dispose();
@@ -389,13 +439,40 @@ export class LspClient {
       }
       this.process = null;
       const baseMessage = err instanceof Error ? err.message : String(err);
-      const hint = this.lastErrorMessage
+      const stderrHint = this.buildStartupStderrHint();
+      const reportedHint = this.lastErrorMessage
         ? ` (server reported: ${this.lastErrorMessage})`
         : "";
-      throw new Error(baseMessage + hint);
+      // Avoid duplicating stderr content when the rejection error was
+      // produced by the exit handler (which already folded stderr in).
+      const needsStderr =
+        stderrHint && !baseMessage.includes("stderr:") ? stderrHint : "";
+      throw new Error(baseMessage + needsStderr + reportedHint);
     } finally {
       if (initTimer) clearTimeout(initTimer);
+      // Startup is over (success or failure). Release resources that
+      // were only useful for init-failure reporting and stop future
+      // stderr writes from landing in the buffer.
+      this.startupPhase = false;
+      this.startupExitRejector = null;
+      this.startupStderrBuffer = [];
+      this.startupStderrBytes = 0;
     }
+  }
+
+  /**
+   * Builds a one-line suffix describing the tail of whatever the server
+   * printed to stderr during startup. Returns `""` if the buffer is
+   * empty. The tail is preferred over the head because error messages
+   * typically land at the end of the output.
+   */
+  private buildStartupStderrHint(): string {
+    if (this.startupStderrBuffer.length === 0) return "";
+    const text = this.startupStderrBuffer.join("").trim();
+    if (!text) return "";
+    const maxLen = 500;
+    const truncated = text.length > maxLen ? "..." + text.slice(-maxLen) : text;
+    return `; stderr: ${JSON.stringify(truncated)}`;
   }
 
   /**
