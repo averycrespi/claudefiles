@@ -36,6 +36,7 @@ import { registerLspNavigationTool } from "./tools/lsp-navigation.js";
 
 let manager: LspManager | null = null;
 let fileSync: FileSync | null = null;
+let unsubscribeStateChange: (() => void) | null = null;
 
 async function autoformatFile(
   filePath: string,
@@ -150,13 +151,13 @@ export default function (pi: ExtensionAPI) {
     fileSync = new FileSync(manager);
 
     // One-time TUI notifications on the first transition into bad states.
-    manager.onStateChange((languageId, state) => {
+    unsubscribeStateChange = manager.onStateChange((languageId, state) => {
       if (!ctx.hasUI) return;
       if (state.kind === "missing-binary") {
         if (manager?.shouldNotifyMissingBinary(languageId)) {
           const config = DEFAULT_SERVERS[languageId];
           ctx.ui.notify(
-            `[code-feedback] ${state.command} not found on PATH. ` +
+            `[code-feedback] LSP server '${state.command}' is not installed. ` +
               `${languageId} diagnostics disabled for this session. ` +
               (config?.installHint ?? ""),
             "warning",
@@ -231,6 +232,8 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_shutdown", async () => {
+    unsubscribeStateChange?.();
+    unsubscribeStateChange = null;
     if (manager) {
       await manager.shutdownAll();
       manager = null;

@@ -106,7 +106,7 @@ export function registerLspDiagnosticsTool(pi: ExtensionAPI, deps: Deps): void {
             {
               type: "text" as const,
               text:
-                `LSP server '${state.command}' is not installed on this system. ` +
+                `LSP server '${state.command}' is not installed. ` +
                 `${registryId} diagnostics and navigation are unavailable this session. ` +
                 `${config?.installHint ?? ""}`,
             },
