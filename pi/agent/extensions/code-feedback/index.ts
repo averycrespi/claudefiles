@@ -13,13 +13,13 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { withFileMutationQueue } from "@mariozechner/pi-coding-agent";
 import { extname, resolve } from "node:path";
-import { formatGoFile } from "./gofmt.js";
-import { formatWithPrettier } from "./prettier.js";
+import { formatGoFile } from "./format/gofmt.js";
+import { formatWithPrettier } from "./format/prettier.js";
 import {
   getToolPath,
   type NotifyContext,
   logFormattingIssue,
-} from "./utils.js";
+} from "./format/utils.js";
 
 async function autoformatFile(
   filePath: string,
