@@ -1,7 +1,7 @@
 ---
 name: explore
 description: Read-only codebase research — finding files, understanding structure, and answering questions about the code
-tools: read
+tools: read, ls, find, grep
 extensions:
 model: openai-codex/gpt-5.4-mini
 thinking: medium

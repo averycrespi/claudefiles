@@ -1,7 +1,7 @@
 ---
 name: code
 description: Implementation — writing code, running tests, and committing changes for focused coding tasks
-tools: read, bash, edit, write
+tools: read, bash, edit, write, ls, find, grep
 extensions: code-feedback
 model: openai-codex/gpt-5.4
 thinking: medium

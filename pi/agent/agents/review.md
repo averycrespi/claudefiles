@@ -1,7 +1,7 @@
 ---
 name: review
 description: Code analysis and review — evaluating quality, finding issues, and checking against criteria
-tools: read
+tools: read, ls, find, grep
 extensions:
 model: openai-codex/gpt-5.4
 thinking: high
