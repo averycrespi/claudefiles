@@ -1,8 +1,24 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { taskList } from "../task-list/api.ts";
 import { dispatch } from "./lib/dispatch.ts";
+import { runImplement } from "./phases/implement.ts";
 import { runPlan } from "./phases/plan.ts";
 import { preflight } from "./preflight.ts";
+
+const execFileP = promisify(execFile);
+
+/**
+ * Resolves the current HEAD SHA of the repo at `cwd` via `git rev-parse`.
+ * Used by the implement phase to verify each task produces a new commit.
+ */
+function makeGetHead(cwd: string): () => Promise<string> {
+  return async () => {
+    const { stdout } = await execFileP("git", ["rev-parse", "HEAD"], { cwd });
+    return stdout.trim();
+  };
+}
 
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("autopilot", {
@@ -45,11 +61,31 @@ export default function (pi: ExtensionAPI) {
       taskList.create(plan.data.tasks);
 
       ctx.ui.notify(
-        `/autopilot: plan ok — ${plan.data.tasks.length} task(s) created. Implement/verify phases land in subsequent tasks.`,
+        `/autopilot: plan ok — ${plan.data.tasks.length} task(s) created. Implementing…`,
         "info",
       );
 
-      // Implement and verify phases wired in later tasks.
+      const implementResult = await runImplement({
+        archNotes: plan.data.architecture_notes,
+        dispatch,
+        getHead: makeGetHead(process.cwd()),
+        cwd: process.cwd(),
+      });
+
+      if (!implementResult.ok) {
+        ctx.ui.notify(
+          `/autopilot: implement halted at task ${implementResult.haltedAtTaskId ?? "?"}`,
+          "error",
+        );
+        return;
+      }
+
+      ctx.ui.notify(
+        `/autopilot: implement ok — all ${plan.data.tasks.length} task(s) completed. Verify phase lands in a subsequent task.`,
+        "info",
+      );
+
+      // Verify phase wired in a later task.
     },
   });
 }

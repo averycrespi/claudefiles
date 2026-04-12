@@ -11,3 +11,11 @@ export const PlanReportSchema = Type.Object({
 });
 
 export type PlanReport = Static<typeof PlanReportSchema>;
+
+export const ImplementReportSchema = Type.Object({
+  outcome: Type.Union([Type.Literal("success"), Type.Literal("failure")]),
+  commit: Type.Union([Type.String(), Type.Null()]),
+  summary: Type.String({ minLength: 1 }),
+});
+
+export type ImplementReport = Static<typeof ImplementReportSchema>;
