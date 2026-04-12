@@ -76,7 +76,7 @@ User runs /autopilot .designs/YYYY-MM-DD-<topic>.md
 │   └─ For each task (sequential):
 │       ├─ taskList.start(id)
 │       ├─ Dispatch fresh implement subagent with arch_notes + this task only
-│       ├─ Parse report (OUTCOME, COMMIT, SUMMARY)
+│       ├─ Parse JSON report ({outcome, commit, summary})
 │       ├─ Verify commit exists
 │       └─ taskList.complete(id, summary)  or  taskList.fail(id, reason) + break
 │
@@ -99,6 +99,31 @@ User runs /autopilot .designs/YYYY-MM-DD-<topic>.md
 - **Subagents dispatched via the existing `subagents` extension.** Builds on existing infrastructure; no new subagent machinery.
 - **Session-scoped, in-memory state.** The task list doesn't persist across sessions. If the user aborts mid-pipeline, they re-run `/autopilot` from scratch.
 - **Sequential, not parallel, at the implement step.** One task at a time keeps each task's base SHA predictable and avoids merge conflicts between concurrent implement subagents.
+
+### Subagent Output Contract
+
+Every subagent in autopilot (plan, implement, validation, reviewers, fixer) returns its report as a **strict JSON object** matching a per-subagent TypeBox schema. Uniform format across all subagents gives us:
+
+- One parser and one validation path — a shared helper `parseJsonReport<T>(output, schema): { ok: true, data: T } | { ok: false, error: string }`.
+- Robust handling of special characters (pipes, colons, newlines) in content — no ambiguity from ad-hoc delimiters.
+- Clear, loud failure mode via `JSON.parse` + schema validation rather than silent partial parses.
+- Schemas double as documentation of the subagent interface.
+- Where the LLM provider supports it, subagents can be dispatched with `response_format: { type: "json_object" }` to force valid JSON at the API level.
+
+**Shared prompt suffix for every subagent:**
+
+```
+Output ONLY the JSON object. No prose before or after. No markdown code fences.
+```
+
+**Shared parser behavior:**
+
+1. Strip common wrappers from the subagent's raw output (leading/trailing prose, ` ```json ... ``` ` fences).
+2. `JSON.parse` the stripped content.
+3. Validate against the subagent's TypeBox schema.
+4. Return `{ ok: true, data }` on success; `{ ok: false, error }` with a concise description on any parse or validation failure.
+
+Each phase's "Orchestrator Responsibilities" section specifies what happens on parse failure (typically: abort that phase or treat as failure outcome, without retrying).
 
 ---
 
@@ -304,9 +329,9 @@ Return the JSON and end your turn.
 
 ### Output Validation
 
-1. Parse subagent output as JSON. On parse failure → abort pipeline.
-2. Validate against TypeBox schema: `architecture_notes` is string, `tasks` is array of 1-15 items with `title` and `description`.
-3. If valid → `taskList.create(tasks)`.
+1. `parseJsonReport(output, PlanReportSchema)` where the schema enforces `architecture_notes` is a string and `tasks` is an array of 1-15 items with `title` and `description`.
+2. On parse or validation failure → abort pipeline.
+3. On success → `taskList.create(tasks)`.
 
 ### Retry Policy
 
@@ -364,36 +389,40 @@ Description: {TASK_DESCRIPTION}
 3. If tests are applicable for this task, write and run them.
 4. Commit your work. Use a conventional commit message: `<type>(<scope>):
    <description>`, imperative mood, under 50 chars.
-5. Report back in this exact format:
+5. Report back as strict JSON matching this schema:
 
-OUTCOME: success | failure
-COMMIT: <sha or "none">
-SUMMARY: <one sentence describing what you did or why you failed>
+{
+  "outcome": "success" | "failure",
+  "commit":  "<sha>" | null,
+  "summary": "<one sentence describing what you did or why you failed>"
+}
 
 === Constraints ===
 - Do ONLY what this task describes. Do not fix unrelated issues you notice.
   Do not refactor adjacent code. Do not add features beyond the task.
 - If the task is impossible or blocked (e.g. missing dependency, unclear
-  requirement), STOP, report OUTCOME: failure, and end your turn. Do not
-  guess.
+  requirement), STOP, return {"outcome":"failure","commit":null,"summary":"..."}
+  and end your turn. Do not guess.
 - Do not re-read or re-edit files you've already handled in this task.
   Produce a working commit and end your turn.
 - Do not create documentation files unless this task explicitly asks for it.
+
+Output ONLY the JSON object. No prose before or after. No markdown code fences.
 ```
 
 ### Key Prompt Choices for GPT-5
 
 - **"Do only what this task describes"** — counters perfectionist urge to fix adjacent code.
 - **"Do not re-read or re-edit files you've already handled"** — lifted from OpenAI's Codex prompting guide; specifically addresses the known over-refinement loop.
-- **Structured report format** — orchestrator parses `OUTCOME:`, `COMMIT:`, `SUMMARY:` lines; avoids fragile free-form parsing.
-- **"STOP, report failure, end your turn"** — clean exit when blocked, rather than thrashing.
+- **Strict JSON report format** — parsed via the shared `parseJsonReport` helper; avoids fragile free-form parsing.
+- **"STOP, end your turn"** — clean exit when blocked, rather than thrashing.
 - **No TDD ceremony** — "if tests are applicable" rather than forcing test-first. GPT-5 applied literally to TDD produces test-file ping-pong.
 
 ### Orchestrator Responsibilities
 
 1. Fill prompt template with `{ARCHITECTURE_NOTES}`, `{TASK_TITLE}`, `{TASK_DESCRIPTION}`.
 2. Dispatch subagent, wait for completion.
-3. Parse `OUTCOME:`, `COMMIT:`, `SUMMARY:` lines from the report.
+3. `parseJsonReport(output, ImplementReportSchema)` → `{ outcome, commit, summary }`. On parse/validation failure, treat as failure.
 4. Verify commit exists: `git rev-list <pre-task-head>..HEAD --count` must be ≥ 1. If the subagent reports success but no new commit exists, treat as failure.
 5. Update task list accordingly.
 
@@ -438,30 +467,34 @@ typecheck) and run those checks.
 
 2. Run each command from the repo root and collect pass/fail + output.
 
-3. Report back in this exact format:
+3. Report back as strict JSON matching this schema:
 
-   RESULTS:
-   test:      <pass | fail | skipped> | <cmd> | <trimmed output on fail>
-   lint:      <pass | fail | skipped> | <cmd> | <trimmed output on fail>
-   typecheck: <pass | fail | skipped> | <cmd> | <trimmed output on fail>
+{
+  "test":      { "status": "pass" | "fail" | "skipped", "command": "<cmd or empty>", "output": "<trimmed output on fail, empty otherwise>" },
+  "lint":      { "status": "pass" | "fail" | "skipped", "command": "<cmd or empty>", "output": "<trimmed output on fail, empty otherwise>" },
+  "typecheck": { "status": "pass" | "fail" | "skipped", "command": "<cmd or empty>", "output": "<trimmed output on fail, empty otherwise>" }
+}
 
-   Use "skipped" if no command applies for that category.
+Use "skipped" for a category if no command applies.
 
 === Constraints ===
 - Do NOT edit any code. You are read-only except for running the checks.
 - Do NOT commit or push.
 - Do NOT install new dependencies or modify lockfiles.
 - If a command hangs or takes more than 5 minutes, kill it and report
-  as "fail" with output "timeout".
+  "fail" with output "timeout".
 - If a category has multiple commands (e.g. frontend + backend tests),
-  run all of them and combine the results as "pass" only if all pass.
+  run all of them. Status is "pass" only if all pass; otherwise "fail"
+  with combined output.
+
+Output ONLY the JSON object. No prose before or after. No markdown code fences.
 ```
 
 The subagent is dispatched with bash (to run commands) and read tools (to inspect config), but **no edit/write tools** — it cannot modify code. If it finds failures, it reports them; fixing is a separate step.
 
 **Orchestrator behavior after validation:**
 
-1. Parse `RESULTS:` from the subagent report.
+1. `parseJsonReport(output, ValidationReportSchema)` → `{ test, lint, typecheck }`. On parse/validation failure, treat validation as inconclusive and record as a known issue (pipeline continues).
 2. If all categories are `pass` or `skipped` → validation passes, move to Step 2.
 3. If any category is `fail` → dispatch a fixer subagent with the failure outputs. Fixer prompt: fix only the failing cause, commit with `fix: <summary>`, no adjacent refactoring.
 4. After the fixer commits, re-dispatch validation subagent to re-check.
@@ -482,36 +515,60 @@ Shared prompt scaffolding (scope-specific body):
 ```
 You are a reviewer in an automated coding pipeline. Your scope: {SCOPE_DESC}.
 
-Produce findings in this exact format:
-FINDINGS:
-- <file>:<line> | <severity> | <confidence> | <description>
-NO_FINDINGS  (if nothing to report)
+Produce findings as strict JSON matching this schema:
 
-Severity: blocker | important | suggestion
-Confidence: integer 0-100
+{
+  "findings": [
+    {
+      "file":        "<relative path>",
+      "line":         <integer>,
+      "severity":    "blocker" | "important" | "suggestion",
+      "confidence":   <integer 0-100>,
+      "description": "<one or two sentences>"
+    }
+  ]
+}
+
+An empty array means no findings.
 
 Rules:
 - Flag only things within YOUR scope. Do not flag other categories.
 - "blocker" = will break in production or lose data.
 - "important" = real bug, broken feature, or security issue.
 - "suggestion" = nice-to-have, style, hypothetical edge case. Use sparingly.
-- Prefer NO_FINDINGS over low-confidence speculation.
+- Prefer an empty findings array over low-confidence speculation.
 - Do not propose fixes. Findings only.
+
+Output ONLY the JSON object. No prose before or after. No markdown code fences.
 ```
 
 ### Step 3 — Synthesize
 
-1. Parse each reviewer's `FINDINGS:` lines.
-2. Drop confidence < 80.
+1. `parseJsonReport(output, ReviewerReportSchema)` for each reviewer. On parse failure for any reviewer, that reviewer's findings are empty (skip silently, note in report).
+2. Drop findings with confidence < 80.
 3. Deduplicate: merge findings on the same file within 3 lines, keep highest severity, record contributing reviewers.
 4. Triage: `blocker` + `important` → fix loop; `suggestion` → known issues (never fixed).
 
 ### Step 4 — Auto-Fix Loop (capped 2 rounds)
 
+Fixer subagent returns strict JSON:
+
+```
+{
+  "outcome":    "success" | "failure",
+  "commit":     "<sha>" | null,
+  "fixed":      ["<finding description>", ...],
+  "unresolved": ["<finding description>", ...]
+}
+```
+
+Loop:
+
 - Dispatch fixer subagent with all blocker + important findings.
 - Fixer commits with `fix(verify): <summary>`.
-- Re-run automated checks after fix commit. Note new failures as known issues; don't loop further on automated-check regressions.
-- Re-parse the same reviewer outputs against the new diff; findings present in both pre- and post-fix state remain.
+- `parseJsonReport(output, FixerReportSchema)` → track what was claimed fixed.
+- Re-run validation subagent after fix commit. Note new failures as known issues; don't loop further on validation regressions.
+- Re-run the reviewers on the post-fix diff; findings present in both pre- and post-fix state remain.
 - After 2 rounds, remaining findings become known issues.
 
 ### Step 5 — Final Report
