@@ -11,8 +11,11 @@ import type {
   AgentToolResult,
   ExtensionAPI,
 } from "@mariozechner/pi-coding-agent";
+import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import type { BrokerClient, BrokerTool } from "./client.js";
+
+const FIRST_LINE_INLINE_MAX = 80;
 
 const SEARCH_PARAMS = Type.Object({
   query: Type.String({
@@ -41,8 +44,29 @@ const CALL_PARAMS = Type.Object({
   ),
 });
 
+function firstLine(text: string): string {
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return "";
+}
+
+function getResultText(result: AgentToolResult<unknown>): string {
+  const textContent = result.content.find((c) => c.type === "text");
+  return textContent?.type === "text" ? textContent.text : "";
+}
+
+function countNonEmptyLines(text: string): number {
+  let count = 0;
+  for (const line of text.split("\n")) {
+    if (line.trim().length > 0) count += 1;
+  }
+  return count;
+}
+
 function summarize(tool: BrokerTool): string {
-  const desc = (tool.description ?? "").split("\n")[0]?.trim() ?? "";
+  const desc = firstLine(tool.description ?? "");
   return desc ? `${tool.name} — ${desc}` : tool.name;
 }
 
@@ -85,6 +109,34 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
         details: { matchCount: matches.length, totalCount: tools.length },
       };
     },
+    renderCall(args, theme, _context) {
+      const header = theme.fg("toolTitle", theme.bold("mcp_search"));
+      const queryLabel =
+        args?.query && args.query.length > 0
+          ? theme.fg("accent", `"${args.query}"`)
+          : theme.fg("muted", "(all)");
+      return new Text(`${header} ${queryLabel}`, 0, 0);
+    },
+    renderResult(result, { isPartial }, theme, context) {
+      if (isPartial) {
+        return new Text(theme.fg("warning", "Searching broker tools…"), 0, 0);
+      }
+      const text = getResultText(result);
+      if (context.isError) {
+        return new Text(
+          theme.fg("error", firstLine(text) || "mcp_search error"),
+          0,
+          0,
+        );
+      }
+      const details = result.details as
+        | { matchCount?: number; totalCount?: number }
+        | undefined;
+      const matchCount = details?.matchCount ?? 0;
+      const totalCount = details?.totalCount ?? 0;
+      const summary = `${matchCount} matches of ${totalCount} tools`;
+      return new Text(theme.fg("muted", summary), 0, 0);
+    },
   });
 
   pi.registerTool({
@@ -121,8 +173,34 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
       ].join("\n");
       return {
         content: [{ type: "text" as const, text }],
-        details: { name: tool.name },
+        details: {
+          name: tool.name,
+          summary: firstLine(tool.description ?? ""),
+        },
       };
+    },
+    renderCall(args, theme, _context) {
+      const header = theme.fg("toolTitle", theme.bold("mcp_describe"));
+      const nameLabel = args?.name
+        ? theme.fg("accent", args.name)
+        : theme.fg("muted", "(missing name)");
+      return new Text(`${header} ${nameLabel}`, 0, 0);
+    },
+    renderResult(result, { isPartial }, theme, context) {
+      if (isPartial) {
+        return new Text(theme.fg("warning", "Describing…"), 0, 0);
+      }
+      const text = getResultText(result);
+      if (context.isError) {
+        return new Text(
+          theme.fg("error", firstLine(text) || "mcp_describe error"),
+          0,
+          0,
+        );
+      }
+      const details = result.details as { summary?: string } | undefined;
+      const summary = details?.summary ?? "";
+      return new Text(theme.fg("muted", summary), 0, 0);
     },
   });
 
@@ -142,13 +220,14 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
         );
         const content = (result.content ??
           []) as AgentToolResult<unknown>["content"];
-        if (result.isError) {
+        const brokerError = Boolean(result.isError);
+        if (brokerError) {
           content.unshift({
             type: "text" as const,
             text: `[mcp_call: broker tool '${params.name}' reported an error]`,
           });
         }
-        return { content, details: { name: params.name } };
+        return { content, details: { name: params.name, brokerError } };
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") throw err;
         const message = err instanceof Error ? err.message : String(err);
@@ -163,7 +242,8 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
             );
             const retriedContent = (retried.content ??
               []) as AgentToolResult<unknown>["content"];
-            if (retried.isError) {
+            const retriedBrokerError = Boolean(retried.isError);
+            if (retriedBrokerError) {
               retriedContent.unshift({
                 type: "text" as const,
                 text: `[mcp_call: broker tool '${params.name}' reported an error]`,
@@ -171,7 +251,11 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
             }
             return {
               content: retriedContent,
-              details: { name: params.name, retried: true },
+              details: {
+                name: params.name,
+                brokerError: retriedBrokerError,
+                retried: true,
+              },
             };
           } catch (retryErr) {
             const retryMsg =
@@ -183,6 +267,52 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
         }
         return errorResult(`mcp_call failed: ${message}`);
       }
+    },
+    renderCall(args, theme, _context) {
+      const header = theme.fg("toolTitle", theme.bold("mcp_call"));
+      const nameLabel = args?.name
+        ? theme.fg("accent", args.name)
+        : theme.fg("muted", "(missing name)");
+      const argKeys =
+        args?.arguments && typeof args.arguments === "object"
+          ? Object.keys(args.arguments)
+          : [];
+      const keysLabel = argKeys.length
+        ? ` ${theme.fg("muted", `(${argKeys.join(", ")})`)}`
+        : "";
+      return new Text(`${header} ${nameLabel}${keysLabel}`, 0, 0);
+    },
+    renderResult(result, { isPartial }, theme, context) {
+      const name = context.args?.name;
+      if (isPartial) {
+        const verb = name ? `Calling ${name}…` : "Calling broker tool…";
+        return new Text(theme.fg("warning", verb), 0, 0);
+      }
+      const text = getResultText(result);
+      if (context.isError) {
+        return new Text(
+          theme.fg("error", firstLine(text) || "mcp_call error"),
+          0,
+          0,
+        );
+      }
+      const details = result.details as { brokerError?: boolean } | undefined;
+      if (details?.brokerError) {
+        // The execute path prepends a marker text block on broker errors;
+        // peel it off so the user sees the underlying error message instead.
+        const lines = text.split("\n");
+        const underlying =
+          lines.length > 1 ? firstLine(lines.slice(1).join("\n")) : "";
+        const message = underlying || firstLine(text) || "broker error";
+        return new Text(theme.fg("error", `broker error: ${message}`), 0, 0);
+      }
+      const head = firstLine(text);
+      const lineCount = countNonEmptyLines(text);
+      const summary =
+        head.length > 0 && head.length <= FIRST_LINE_INLINE_MAX
+          ? head
+          : `${lineCount} lines`;
+      return new Text(theme.fg("muted", summary), 0, 0);
     },
   });
 }
