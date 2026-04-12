@@ -5,11 +5,16 @@
   "devDependencies": {
     "@mariozechner/pi-coding-agent": "^0.65.0",
     "@sinclair/typebox": "^0.34.0",
+    "@types/turndown": "^5.0.6",
     "prettier": "^3.8.1",
     "typescript": "^5.0.0",
     "vscode-languageserver-protocol": "^3.17.5"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@mozilla/readability": "^0.5.0",
+    "linkedom": "^0.18.0",
+    "turndown": "^7.2.0",
+    "unpdf": "^1.4.0"
   }
 }

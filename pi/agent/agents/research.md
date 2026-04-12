@@ -2,7 +2,7 @@
 name: research
 description: Repo and web research — questions requiring both codebase context and external sources
 tools: read
-extensions: web
+extensions: web-access
 model: openai-codex/gpt-5.4
 thinking: high
 disable_skills: true
