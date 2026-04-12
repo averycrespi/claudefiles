@@ -151,11 +151,32 @@ export const taskList = {
 
 Autopilot imports this directly. `subscribe` lets the TUI re-render on state changes.
 
-### LLM-Facing Tool
+### LLM-Facing Tools
 
-- `task_list_view` — read-only. Returns current list. For the main session's LLM to answer "what's left?" queries after the pipeline ends.
+Task-list is designed as a general-purpose primitive for any Pi session, mirroring the Claude Code pattern where the agent manages its own working memory via task tools.
 
-No LLM-facing write tools. All mutations go through the programmatic API — we don't want the LLM accidentally editing state the orchestrator is managing.
+| Tool                                                                | Description                                                                               |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `task_list_write(tasks)`                                            | Create or replace the entire list in one call. Mirrors Claude Code's `TodoWrite` pattern. |
+| `task_update(id, { status?, summary?, failureReason?, activity? })` | Update a single task's fields.                                                            |
+| `task_list_view`                                                    | Read-only. Returns current list.                                                          |
+
+**Exposure rules:**
+
+- **Main Pi session (normal use):** all three tools available. Agent can manage its own task list.
+- **Autopilot subagents:** only `task_list_view` (read-only). Writes are excluded.
+
+The write-exclusion in autopilot subagents preserves the "subagents report back, orchestrator owns state" protocol decided earlier in the design. Each subagent is a separate LLM session; if multiple subagents could write, we'd need cross-process state sync. Instead, subagents return structured reports (`OUTCOME:`, `COMMIT:`, `SUMMARY:`) and the orchestrator updates state programmatically.
+
+The `subagents` extension already lets the dispatcher configure which tools are exposed to each dispatched subagent, so autopilot simply omits the write tools when dispatching.
+
+**Programmatic API** (orchestrator uses this, not the LLM tools):
+
+The API defined earlier (`taskList.create/start/complete/fail/setActivity/…`) operates on the same state as the LLM tools. Orchestrators and the LLM cannot conflict because:
+
+- The autopilot orchestrator holds the Pi session while it runs — the main-session LLM is not active during `/autopilot`.
+- Autopilot subagents don't have write tools.
+- Outside of autopilot, only the main-session LLM mutates state.
 
 ### TUI Rendering
 
