@@ -163,19 +163,17 @@ Task-list is designed as a general-purpose primitive for any Pi session, mirrori
 
 **Exposure rules:**
 
-- **Main Pi session (normal use):** all three tools available. Agent can manage its own task list.
-- **Autopilot subagents:** only `task_list_view` (read-only). Writes are excluded.
+- **Main Pi session (normal use):** all three tools available. Agent manages its own task list.
+- **Autopilot subagents:** no task-list tools at all. Each subagent works on a single task that is inlined into its prompt — there's nothing to view or update.
 
-The write-exclusion in autopilot subagents preserves the "subagents report back, orchestrator owns state" protocol decided earlier in the design. Each subagent is a separate LLM session; if multiple subagents could write, we'd need cross-process state sync. Instead, subagents return structured reports (`OUTCOME:`, `COMMIT:`, `SUMMARY:`) and the orchestrator updates state programmatically.
-
-The `subagents` extension already lets the dispatcher configure which tools are exposed to each dispatched subagent, so autopilot simply omits the write tools when dispatching.
+The `subagents` extension lets the dispatcher configure which tools are exposed to each dispatched subagent, so autopilot simply omits the whole task-list extension when dispatching.
 
 **Programmatic API** (orchestrator uses this, not the LLM tools):
 
 The API defined earlier (`taskList.create/start/complete/fail/setActivity/…`) operates on the same state as the LLM tools. Orchestrators and the LLM cannot conflict because:
 
 - The autopilot orchestrator holds the Pi session while it runs — the main-session LLM is not active during `/autopilot`.
-- Autopilot subagents don't have write tools.
+- Autopilot subagents don't have any task-list tools.
 - Outside of autopilot, only the main-session LLM mutates state.
 
 ### TUI Rendering
