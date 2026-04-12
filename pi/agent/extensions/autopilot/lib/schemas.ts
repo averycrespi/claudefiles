@@ -48,3 +48,23 @@ export const FixerReportSchema = Type.Object({
 });
 
 export type FixerReport = Static<typeof FixerReportSchema>;
+
+export const FindingSchema = Type.Object({
+  file: Type.String({ minLength: 1 }),
+  line: Type.Integer({ minimum: 1 }),
+  severity: Type.Union([
+    Type.Literal("blocker"),
+    Type.Literal("important"),
+    Type.Literal("suggestion"),
+  ]),
+  confidence: Type.Integer({ minimum: 0, maximum: 100 }),
+  description: Type.String({ minLength: 1 }),
+});
+
+export type Finding = Static<typeof FindingSchema>;
+
+export const ReviewerReportSchema = Type.Object({
+  findings: Type.Array(FindingSchema),
+});
+
+export type ReviewerReport = Static<typeof ReviewerReportSchema>;
