@@ -26,12 +26,38 @@ Replaces the default stdout preview with a compact command label and short outpu
 
 Execution is delegated to Pi's built-in `bash` tool via `createBashTool(ctx.cwd)`, so all normal bash semantics (timeouts, truncation-to-tempfile, abort handling) continue to work.
 
+### `ls`
+
+Replaces the default directory listing with a one-line path label and entry count.
+
+- **Call:** `ls <cwd-relative path>`
+- **Running:** `Listing <path>...` in warning color
+- **Success:** entry count in muted color (e.g. "23 entries"), or "empty"
+- **Error:** first non-empty line of the error, in error color
+
+### `find`
+
+Replaces the default file search output with a one-line pattern label and result count.
+
+- **Call:** `find <pattern> in <path>`
+- **Running:** `Finding <pattern>...` in warning color
+- **Success:** result count in muted color (e.g. "14 results"), or "no matches"
+- **Error:** first non-empty line of the error, in error color
+
+### `grep`
+
+Replaces the default search output with a one-line pattern label and match count.
+
+- **Call:** `grep /<pattern>/ in <path>` (with glob filter if set)
+- **Running:** `Searching /<pattern>/...` in warning color
+- **Success:** match count in muted color (e.g. "8 matches"), or "no matches"
+- **Error:** first non-empty line of the error, in error color
+
 ## Non-goals
 
 Intentionally out of scope — this is a minimal, hand-rolled subset tailored to this user's setup:
 
 - **No MCP tool rendering.** MCP tools vary too widely to compact generically.
-- **No grep / glob / ls compaction.** Not currently enabled in this Pi setup; add if needed.
 - **No edit / write diff customization.** Pi's built-in diff renderer is already reasonable.
 - **No presets, config file, or slash commands.** Behavior is hardcoded.
 
