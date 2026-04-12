@@ -1,7 +1,6 @@
-# Ship-It: Autonomous Pi Workflow Design
+# Autopilot: Autonomous Pi Workflow Design
 
 > **Status:** Design complete, ready for plan.
-> **Name:** "Ship-It" is a working name. Final name TBD during implementation.
 
 ## Overview
 
@@ -29,7 +28,7 @@ GPT-5's strength is _precise execution of a single crisply-scoped instruction_. 
 
 ### Scope
 
-- Picks up _after_ brainstorming. An adapted Pi `brainstorming` skill produces the design doc; Ship-It consumes it.
+- Picks up _after_ brainstorming. An adapted Pi `brainstorming` skill produces the design doc; Autopilot consumes it.
 - Stops _before_ pushing. Produces a branch with commits; user decides whether to push or open a PR.
 
 ---
@@ -42,8 +41,8 @@ GPT-5's strength is _precise execution of a single crisply-scoped instruction_. 
 pi/agent/extensions/
 ├── task-list/              ← new: reusable task tracking primitive
 │   └── index.ts
-└── ship-it/                ← new: orchestrates the workflow
-    ├── index.ts            ← /ship command handler + pipeline
+└── autopilot/                ← new: orchestrates the workflow
+    ├── index.ts            ← /autopilot command handler + pipeline
     ├── phases/
     │   ├── plan.ts
     │   ├── implement.ts
@@ -64,7 +63,7 @@ pi/agent/skills/
 
 ```
 User runs /brainstorm  →  design doc at .designs/YYYY-MM-DD-<topic>.md
-User runs /ship .designs/YYYY-MM-DD-<topic>.md
+User runs /autopilot .designs/YYYY-MM-DD-<topic>.md
 │
 ├─ Orchestrator validates design file and clean working tree
 ├─ Orchestrator captures base SHA
@@ -95,10 +94,10 @@ User runs /ship .designs/YYYY-MM-DD-<topic>.md
 
 ### Architectural Choices
 
-- **Orchestrator is pure TypeScript code.** The `/ship` command handler is an `async` function sequencing subagent dispatches and state updates programmatically. No LLM in the main session during pipeline execution.
-- **Task list is a reusable primitive.** Exposes LLM-facing read-only tool plus a programmatic API that Ship-It imports directly.
+- **Orchestrator is pure TypeScript code.** The `/autopilot` command handler is an `async` function sequencing subagent dispatches and state updates programmatically. No LLM in the main session during pipeline execution.
+- **Task list is a reusable primitive.** Exposes LLM-facing read-only tool plus a programmatic API that Autopilot imports directly.
 - **Subagents dispatched via the existing `subagents` extension.** Builds on existing infrastructure; no new subagent machinery.
-- **Session-scoped, in-memory state.** The task list doesn't persist across sessions. If the user aborts mid-pipeline, they re-run `/ship` from scratch.
+- **Session-scoped, in-memory state.** The task list doesn't persist across sessions. If the user aborts mid-pipeline, they re-run `/autopilot` from scratch.
 - **Sequential, not parallel, at the implement step.** One task at a time keeps each task's base SHA predictable and avoids merge conflicts between concurrent implement subagents.
 
 ---
@@ -150,7 +149,7 @@ export const taskList = {
 };
 ```
 
-Ship-It imports this directly. `subscribe` lets the TUI re-render on state changes.
+Autopilot imports this directly. `subscribe` lets the TUI re-render on state changes.
 
 ### LLM-Facing Tool
 
@@ -198,7 +197,7 @@ Rendering strategy in Pi:
 
 ### Trigger
 
-`/ship <design-file-path>` reads the design file, validates clean working tree, and dispatches the plan subagent.
+`/autopilot <design-file-path>` reads the design file, validates clean working tree, and dispatches the plan subagent.
 
 ### Plan Subagent
 
@@ -248,7 +247,7 @@ Return the JSON and end your turn.
 
 ### Retry Policy
 
-No retry in v1. If plan fails, pipeline aborts with a clear message. User can re-run `/ship`. May revisit later with explicit format-correction retries.
+No retry in v1. If plan fails, pipeline aborts with a clear message. User can re-run `/autopilot`. May revisit later with explicit format-correction retries.
 
 ### Failure Modes
 
@@ -432,7 +431,7 @@ Unified principle: **always terminate with a report. Never leave the user in a s
 | Verify automated checks still failing after 2 fix rounds | Pipeline still completes. Checks flagged as known issues in report. User gets branch. |
 | Reviewer subagent fails to run                           | Orchestrator skips that reviewer. Skip noted in report. Other reviewers still run.    |
 | Fix subagent breaks something that was passing           | Record as known issue. Do not roll back.                                              |
-| Dirty working tree at `/ship` invocation                 | Abort immediately before plan phase.                                                  |
+| Dirty working tree at `/autopilot` invocation            | Abort immediately before plan phase.                                                  |
 
 No implicit retries (beyond the explicit fixer loops). No implicit rollbacks. Every commit that lands during the pipeline stays on the branch.
 
@@ -443,7 +442,7 @@ No implicit retries (beyond the explicit fixer loops). No implicit rollbacks. Ev
 ### Entry Point
 
 ```
-/ship <path-to-design-file>
+/autopilot <path-to-design-file>
 ```
 
 Takes exactly one argument. Validates file exists and is readable. No flags in v1.
@@ -459,7 +458,7 @@ Takes exactly one argument. Validates file exists and is readable. No flags in v
 Printed as a single transcript message at pipeline end:
 
 ```
-━━━ Ship-It Report ━━━
+━━━ Autopilot Report ━━━
 
 Design:  .designs/2026-04-12-rate-limiter.md
 Branch:  workflow  (5 commits ahead of main)
@@ -489,14 +488,14 @@ Next:
 - **Verify partial**: findings unresolved after 2 fix rounds listed as known issues.
 - **Automated checks still failing**: listed as known issues, pipeline still completes.
 
-### What `/ship` Does NOT Do
+### What `/autopilot` Does NOT Do
 
 - Does not push the branch
 - Does not create a PR
 - Does not switch branches
 - Does not modify remote state in any way
 
-Handoff is deferred to the user. Keeps `/ship` a pure local operation.
+Handoff is deferred to the user. Keeps `/autopilot` a pure local operation.
 
 ### Brainstorming Skill Handoff
 
@@ -504,7 +503,7 @@ The adapted Pi `brainstorming` skill ends with:
 
 ```
 Design saved to .designs/YYYY-MM-DD-<topic>.md and committed.
-Ready to build? Run: /ship .designs/YYYY-MM-DD-<topic>.md
+Ready to build? Run: /autopilot .designs/YYYY-MM-DD-<topic>.md
 ```
 
 No automatic chaining from brainstorm to ship. Manual, explicit.
