@@ -731,6 +731,16 @@ Each diagram must include a caption explaining what it shows.
 - No performance benchmarks or tuning guides
 - No FAQ section — add only if real questions accumulate
 
+### Update `pi/README.md` at end of implementation
+
+The root `pi/README.md` has an Extensions table that lists every extension with a one-line purpose. As the final documentation task of this project, update that table to:
+
+- Add `task-list` with purpose: "Session-scoped task tracking with rich inline TUI rendering"
+- Add `autopilot` with purpose: "Autonomous plan → implement → verify pipeline from a design doc"
+- Reconcile any other drift noticed while editing (the table is already slightly out of date — for example `readonly-tools` is present in the extensions directory but not listed). Do a full pass against `pi/agent/extensions/` and bring the table in sync.
+
+This is a single-commit cleanup task at the tail end of the implementation plan, not something to do incrementally as each extension lands.
+
 ---
 
 ## Explicit Non-Goals for v1
