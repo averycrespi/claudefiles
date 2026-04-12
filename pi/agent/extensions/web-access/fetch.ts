@@ -111,8 +111,12 @@ async function fetchWithJina(
   let text = await response.text();
   text = text.trim();
 
-  // Strip Jina's header block (URL/title/description lines it prepends)
-  text = text.replace(/^(URL|Title|Description): .+\n/gm, "").trim();
+  // Extract title before stripping Jina's header block
+  const titleMatch = text.match(/^Title: (.+)$/m);
+  const title = titleMatch?.[1]?.trim();
+
+  // Strip Jina's header block (URL/Title/Description/URL Source lines)
+  text = text.replace(/^(URL Source|URL|Title|Description): .+\n/gm, "").trim();
 
   if (text.length > maxChars) {
     text =
@@ -120,5 +124,5 @@ async function fetchWithJina(
       `\n\n[Content truncated — ${text.length.toLocaleString()} total characters. Use max_chars to read more.]`;
   }
 
-  return { text, method: "jina" };
+  return { text, title, method: "jina" };
 }

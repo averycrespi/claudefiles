@@ -183,7 +183,12 @@ const fetchTool = {
     }
 
     const details = result.details as
-      | { method?: string; clonePath?: string; pageCount?: number }
+      | {
+          method?: string;
+          clonePath?: string;
+          pageCount?: number;
+          title?: string;
+        }
       | undefined;
 
     // GitHub clone: show clone path
@@ -204,8 +209,9 @@ const fetchTool = {
       );
     }
 
-    // Regular fetch: first-line preview
-    const preview = firstLine(text);
+    // Regular fetch: show page title, falling back to first content line
+    const title = details?.title;
+    const preview = title || firstLine(text);
     return new Text(
       theme.fg(
         "muted",
