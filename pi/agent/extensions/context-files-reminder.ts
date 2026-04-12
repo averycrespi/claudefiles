@@ -11,9 +11,14 @@
  *
  * The reminder is rebuilt only when the discovered files change on disk or the date changes.
  * It is injected through the context hook, so it affects outbound requests without being
- * stored in session history or shown in the UI. This is also relatively token-efficient,
- * since the reminder content stays stable across turns and therefore reuses the prompt
- * cache effectively.
+ * stored in session history or shown in the UI. This means the reminder survives context
+ * compaction automatically — it's re-injected fresh on every call, not stored in history
+ * where it could be summarized away.
+ *
+ * The full reminder is always injected (never a diff/delta), and it's prepended as the
+ * first user message rather than appended near the end. Both choices are deliberate:
+ * OpenAI's prompt cache matches on prefix, so a stable first message maximizes cache hits,
+ * and differential injection would bust the cache on every turn where the delta differs.
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { existsSync, readFileSync, statSync } from "node:fs";
