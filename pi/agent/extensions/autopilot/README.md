@@ -241,10 +241,10 @@ Reading the blocks:
 
 ## Inspiration
 
-- `tmustier/pi-extensions/ralph-wiggum` — iterative loop pattern with periodic reflection checkpoints
-- `klaudworks/ralph-meets-rex` — plan → implement → verify three-phase pipeline with loopback routing
-- `ruizrica/agent-pi` — declarative YAML pipelines, role specialization, multi-model fan-out
-- `davidorex/pi-project-workflows` — DAG execution engine with schema-validated step boundaries
-- `tmdgusya/roach-pi` — phase-gated state machine (clarify → plan → build → review), depth-capped subagent spawning
-- Claude Code's `executing-plans` skill — task triplet structure (implement → spec review → code review) and subagent dispatch per phase
-- Claude Code's `verifying-work` skill — parallel reviewers, confidence filtering, auto-fix vs ambiguous triage
+- [tmustier/pi-extensions/ralph-wiggum](https://github.com/tmustier/pi-extensions/tree/main/ralph-wiggum) — iterative loop pattern with periodic reflection checkpoints
+- [klaudworks/ralph-meets-rex](https://github.com/klaudworks/ralph-meets-rex) — plan → implement → verify three-phase pipeline with loopback routing
+- [ruizrica/agent-pi](https://github.com/ruizrica/agent-pi) — declarative YAML pipelines, role specialization, multi-model fan-out
+- [davidorex/pi-project-workflows](https://github.com/davidorex/pi-project-workflows) — DAG execution engine with schema-validated step boundaries
+- [tmdgusya/roach-pi](https://github.com/tmdgusya/roach-pi) — phase-gated state machine (clarify → plan → build → review), depth-capped subagent spawning
+- Claude Code's [`executing-plans`](../../../../claude/skills/executing-plans/SKILL.md) skill (adapted from [obra/superpowers](https://github.com/obra/superpowers)) — task triplet structure (implement → spec review → code review) and subagent dispatch per phase
+- Claude Code's [`verifying-work`](../../../../claude/skills/verifying-work/SKILL.md) skill — parallel reviewers, confidence filtering, auto-fix vs ambiguous triage
