@@ -352,6 +352,87 @@ test("runVerify: fix round introduces new validation failure → logged as known
   );
 });
 
+test("runVerify: fixer-review dispatch failure → knownIssues records it, loop breaks", async () => {
+  const auto = blockerFinding("x.ts", 42, "null deref");
+  let fixerCalls = 0;
+  // Base dispatcher handles validation and reviewers via planDispatch.
+  const base = planDispatch({
+    validation: [allPassValidation],
+    reviewerRounds: [
+      {
+        "plan-completeness": JSON.stringify({ findings: [auto] }),
+        integration: JSON.stringify({ findings: [] }),
+        security: JSON.stringify({ findings: [] }),
+      },
+    ],
+    fixerReview: [],
+  });
+
+  const dispatch = async (opts: DispatchOptions): Promise<DispatchResult> => {
+    if (opts.prompt.includes("=== Findings to fix ===")) {
+      fixerCalls++;
+      return { ok: false, stdout: "", error: "fixer dispatch boom" };
+    }
+    return base.dispatch(opts);
+  };
+
+  const result = await runVerify({
+    dispatch,
+    getDiff,
+    archNotes: ARCH_NOTES,
+    taskListSummary: TASK_LIST_SUMMARY,
+    cwd: "/tmp",
+    maxFixRounds: 2,
+  });
+
+  assert.equal(fixerCalls, 1, "fixer called exactly once before loop breaks");
+  const stringIssues = result.knownIssues.filter((k) => typeof k === "string");
+  assert.ok(
+    stringIssues.some((s) => /verify fixer dispatch failed/i.test(s as string)),
+    `expected verify fixer dispatch failed knownIssue, got: ${JSON.stringify(stringIssues)}`,
+  );
+});
+
+test("runVerify: fixer-review parse failure → knownIssues marks unproductive, loop breaks", async () => {
+  const auto = blockerFinding("x.ts", 42, "null deref");
+  let fixerCalls = 0;
+  const base = planDispatch({
+    validation: [allPassValidation],
+    reviewerRounds: [
+      {
+        "plan-completeness": JSON.stringify({ findings: [auto] }),
+        integration: JSON.stringify({ findings: [] }),
+        security: JSON.stringify({ findings: [] }),
+      },
+    ],
+    fixerReview: [],
+  });
+
+  const dispatch = async (opts: DispatchOptions): Promise<DispatchResult> => {
+    if (opts.prompt.includes("=== Findings to fix ===")) {
+      fixerCalls++;
+      return { ok: true, stdout: "not json at all" };
+    }
+    return base.dispatch(opts);
+  };
+
+  const result = await runVerify({
+    dispatch,
+    getDiff,
+    archNotes: ARCH_NOTES,
+    taskListSummary: TASK_LIST_SUMMARY,
+    cwd: "/tmp",
+    maxFixRounds: 2,
+  });
+
+  assert.equal(fixerCalls, 1, "fixer called exactly once before loop breaks");
+  const stringIssues = result.knownIssues.filter((k) => typeof k === "string");
+  assert.ok(
+    stringIssues.some((s) => /unproductive/i.test(s as string)),
+    `expected unproductive knownIssue, got: ${JSON.stringify(stringIssues)}`,
+  );
+});
+
 test("runVerify: initial validation failure → its knownIssues flow through; post-fix regressions detected by signature", async () => {
   // Initial validation fails (typecheck). runValidation will itself
   // attempt a fix. We stub a simple "typecheck fails again after fix"

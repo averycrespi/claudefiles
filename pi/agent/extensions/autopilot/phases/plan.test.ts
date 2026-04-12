@@ -34,3 +34,21 @@ test("runPlan returns ok:false on schema validation error", async () => {
   const r = await runPlan({ designPath: "x.md", dispatch: badSchema });
   assert.equal(r.ok, false);
 });
+
+test("runPlan propagates dispatch failure error", async () => {
+  const r = await runPlan({
+    designPath: "x.md",
+    dispatch: async () => ({ ok: false, stdout: "", error: "boom" }),
+  });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.error, "boom");
+});
+
+test("runPlan falls back to 'dispatch failed' when error is undefined", async () => {
+  const r = await runPlan({
+    designPath: "x.md",
+    dispatch: async () => ({ ok: false, stdout: "" }),
+  });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.error, "dispatch failed");
+});

@@ -113,7 +113,7 @@ _Caption: Per-task implement loop. Tasks run sequentially; a single failure halt
 4. **Post-reviewer fix loop** — fixer subagent resolves blockers and importants; reviewers re-run on the post-fix diff. **Cap: 2 fix rounds.** Anything still present becomes a known issue.
 5. **Final report** — printed; pipeline ends.
 
-**Subagent prompts.** `prompts/reviewer-plan-completeness.md`, `prompts/reviewer-integration.md`, `prompts/reviewer-security.md`, `prompts/fixer.md`, and the inline validation prompt in `phases/verify.ts`.
+**Subagent prompts.** `prompts/validation.md` (used by `phases/validate.ts`), `prompts/reviewer-plan-completeness.md`, `prompts/reviewer-integration.md`, `prompts/reviewer-security.md`, `prompts/fixer-validation.md`, and `prompts/fixer-review.md`.
 
 **Output schemas.** `ValidationReportSchema`, `ReviewerReportSchema`, `FixerReportSchema` — all validated via `parseJsonReport`.
 

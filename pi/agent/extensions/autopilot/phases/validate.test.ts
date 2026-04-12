@@ -112,6 +112,47 @@ test("runValidation: fix cap — both rounds fail, returns knownIssues", async (
   );
 });
 
+test("runValidation: validation dispatch failure → knownIssues inconclusive", async () => {
+  const dispatch = async (): Promise<DispatchResult> => ({
+    ok: false,
+    stdout: "",
+    error: "boom",
+  });
+  const result = await runValidation({
+    dispatch,
+    cwd: process.cwd(),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.report, null);
+  assert.ok(
+    result.knownIssues.some((s) => /validation inconclusive/i.test(s)),
+    `knownIssues should mention validation inconclusive, got: ${JSON.stringify(result.knownIssues)}`,
+  );
+});
+
+test("runValidation: fixer dispatch failure → knownIssues mentions fixer, loop terminates", async () => {
+  let callIdx = 0;
+  const dispatch = async (): Promise<DispatchResult> => {
+    callIdx++;
+    if (callIdx === 1) {
+      // First validation fails.
+      return { ok: true, stdout: testFailJson };
+    }
+    // Fixer dispatch fails.
+    return { ok: false, stdout: "", error: "fixer blew up" };
+  };
+  const result = await runValidation({
+    dispatch,
+    cwd: process.cwd(),
+  });
+  assert.equal(result.ok, true);
+  assert.ok(
+    result.knownIssues.some((s) => /fixer dispatch failed/i.test(s)),
+    `knownIssues should mention fixer dispatch failed, got: ${JSON.stringify(result.knownIssues)}`,
+  );
+  assert.equal(callIdx, 2, "loop terminates after fixer dispatch failure");
+});
+
 test("runValidation: parse failure on validation → knownIssues inconclusive", async () => {
   const { dispatch } = sequenceDispatch(["not json at all"]);
   const result = await runValidation({

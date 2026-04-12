@@ -101,6 +101,31 @@ test("runImplement treats unparseable subagent output as failure", async () => {
   assert.equal(t?.status, "failed");
 });
 
+test("runImplement marks task failed and breaks on dispatch failure", async () => {
+  taskList.create([
+    { title: "a", description: "aa" },
+    { title: "b", description: "bb" },
+  ]);
+  let dispatchCount = 0;
+  const result = await runImplement({
+    archNotes: "notes",
+    dispatch: async () => {
+      dispatchCount++;
+      return { ok: false, stdout: "", error: "dispatch failed" };
+    },
+    getHead: makeHeadSeq(["sha0", "sha0"]),
+    cwd: process.cwd(),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.haltedAtTaskId, 1);
+  assert.equal(dispatchCount, 1, "loop should break after dispatch failure");
+  const t1 = taskList.get(1);
+  assert.equal(t1?.status, "failed");
+  assert.match(t1?.failureReason ?? "", /dispatch/i);
+  const t2 = taskList.get(2);
+  assert.equal(t2?.status, "pending", "later tasks remain pending");
+});
+
 test("runImplement skips non-pending tasks", async () => {
   taskList.create([
     { title: "a", description: "aa" },
