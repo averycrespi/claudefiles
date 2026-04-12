@@ -11,11 +11,13 @@ import { getLanguageIdForFile } from "../lsp/language-map.js";
 import { type LspManager } from "../lsp/manager.js";
 import { DEFAULT_SERVERS } from "../lsp/servers.js";
 import {
+  clearPartialTimer,
   firstLine,
   getRelativeLabel,
   getResultText,
+  partialElapsed,
   plural,
-} from "./render.js";
+} from "../../_shared/render.js";
 
 const params = Type.Object({
   path: Type.String({
@@ -161,8 +163,16 @@ export function registerLspDiagnosticsTool(pi: ExtensionAPI, deps: Deps): void {
 
     renderResult(result, { isPartial }, theme, context) {
       if (isPartial) {
-        return new Text(theme.fg("warning", "Querying diagnostics…"), 0, 0);
+        return new Text(
+          theme.fg(
+            "warning",
+            `Querying diagnostics...${partialElapsed(context)}`,
+          ),
+          0,
+          0,
+        );
       }
+      clearPartialTimer(context);
       const text = getResultText(result);
       if (context.isError) {
         return new Text(

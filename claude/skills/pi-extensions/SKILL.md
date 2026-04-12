@@ -82,6 +82,10 @@ pi.registerTool({
 
 **Tool override:** register with the same name as a built-in (`"read"`, `"edit"`, `"write"`, `"bash"`, `"grep"`) to replace it. The original built-in renderer is reused if you don't provide `renderCall`/`renderResult`.
 
+### Rendering tool calls in the TUI
+
+Tools should implement `renderCall` and `renderResult` with compact, one-line output so the TUI footer doesn't overflow. We've converged on a specific shape — read `references/tui-rendering.md` before writing renderers, and import shared helpers (`firstLine`, `getResultText`, `getRelativeLabel`, `formatDuration`, `partialElapsed`, `clearPartialTimer`, ...) from `pi/agent/extensions/_shared/render.ts` rather than reimplementing them per-extension.
+
 ## Handling events
 
 ```typescript

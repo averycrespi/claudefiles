@@ -18,12 +18,14 @@ import { getLanguageIdForFile } from "../lsp/language-map.js";
 import { type LspManager } from "../lsp/manager.js";
 import { DEFAULT_SERVERS } from "../lsp/servers.js";
 import {
+  clearPartialTimer,
   countNonEmptyLines,
   firstLine,
   getRelativeLabel,
   getResultText,
+  partialElapsed,
   plural,
-} from "./render.js";
+} from "../../_shared/render.js";
 
 const VALID_OPERATIONS = [
   "definition",
@@ -314,11 +316,15 @@ export function registerLspNavigationTool(pi: ExtensionAPI, deps: Deps): void {
       const operation = context.args?.operation;
       if (isPartial) {
         return new Text(
-          theme.fg("warning", `Querying ${operation ?? "lsp"}…`),
+          theme.fg(
+            "warning",
+            `Querying ${operation ?? "lsp"}...${partialElapsed(context)}`,
+          ),
           0,
           0,
         );
       }
+      clearPartialTimer(context);
       const text = getResultText(result);
       if (context.isError) {
         return new Text(
@@ -379,10 +385,32 @@ function summarizeNavigationResult(
     case "workspaceSymbol":
       return plural(countNonEmptyLines(text), "symbol");
     case "hover":
-      return firstLine(text);
+      return summarizeHover(text);
     default:
       return firstLine(text);
   }
+}
+
+/**
+ * Summarize a hover result. LSP hover content is usually fenced markdown:
+ *
+ *     ```typescript
+ *     function foo(bar: Baz): Quux
+ *     ```
+ *
+ *     Description text...
+ *
+ * We want the signature line, not the fence. Skip blank lines and
+ * lines that are (or start with) a code fence.
+ */
+function summarizeHover(text: string): string {
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (line.length === 0) continue;
+    if (line.startsWith("```")) continue;
+    return line;
+  }
+  return firstLine(text);
 }
 
 function errorResult(message: string) {

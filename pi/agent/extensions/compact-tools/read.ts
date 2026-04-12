@@ -8,7 +8,13 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createReadTool } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
-import { firstLine, getRelativeLabel, getResultText } from "./shared.js";
+import {
+  clearPartialTimer,
+  firstLine,
+  getRelativeLabel,
+  getResultText,
+  partialElapsed,
+} from "../_shared/render.js";
 
 const readTools = new Map<string, ReturnType<typeof createReadTool>>();
 
@@ -47,8 +53,17 @@ export default function registerRead(pi: ExtensionAPI) {
       const fileLabel = getRelativeLabel(context.cwd, context.args?.path);
 
       if (isPartial) {
-        return new Text(theme.fg("warning", `Reading ${fileLabel}…`), 0, 0);
+        return new Text(
+          theme.fg(
+            "warning",
+            `Reading ${fileLabel}...${partialElapsed(context)}`,
+          ),
+          0,
+          0,
+        );
       }
+
+      clearPartialTimer(context);
 
       if (context.isError) {
         const message =

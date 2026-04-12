@@ -9,7 +9,14 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createBashTool } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
-import { firstLine, getResultText, singleLineCommand } from "./shared.js";
+import {
+  clearPartialTimer,
+  firstLine,
+  getResultText,
+  partialElapsed,
+  singleLineCommand,
+  tailNonEmptyLines,
+} from "../_shared/render.js";
 
 const TAIL_LINES = 3;
 
@@ -22,21 +29,6 @@ function getBashTool(cwd: string) {
     bashTools.set(cwd, tool);
   }
   return tool;
-}
-
-/**
- * Take the last N non-empty lines of text, ignoring trailing whitespace.
- */
-function tailNonEmptyLines(text: string, count: number): string[] {
-  const lines = text.split("\n");
-  const result: string[] = [];
-  for (let i = lines.length - 1; i >= 0 && result.length < count; i--) {
-    const line = lines[i];
-    if (line && line.trim().length > 0) {
-      result.unshift(line);
-    }
-  }
-  return result;
 }
 
 export default function registerBash(pi: ExtensionAPI) {
@@ -65,8 +57,17 @@ export default function registerBash(pi: ExtensionAPI) {
       const commandLabel = singleLineCommand(context.args?.command);
 
       if (isPartial) {
-        return new Text(theme.fg("warning", `Running ${commandLabel}…`), 0, 0);
+        return new Text(
+          theme.fg(
+            "warning",
+            `Running ${commandLabel}...${partialElapsed(context)}`,
+          ),
+          0,
+          0,
+        );
       }
+
+      clearPartialTimer(context);
 
       const text = getResultText(result);
 

@@ -1,6 +1,11 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import {
+  clearPartialTimer,
+  formatDuration,
+  startPartialTimer,
+} from "../_shared/render.js";
+import {
   buildSpawnAgentParams,
   buildSpawnAgentsParams,
   type AgentDefinition,
@@ -52,14 +57,6 @@ function formatTokens(count: number): string {
   return String(count);
 }
 
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${totalSeconds}s`;
-  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
-}
-
 function getActivity(details: unknown): SubagentRunState | undefined {
   if (!details || typeof details !== "object") return undefined;
   const record = details as Record<string, unknown>;
@@ -76,14 +73,6 @@ function getActivity(details: unknown): SubagentRunState | undefined {
     return record as unknown as SubagentRunState;
   }
   return undefined;
-}
-
-function clearRenderTimer(state: Record<string, unknown>): void {
-  const handle = state.renderTimer;
-  if (handle && typeof handle === "object") {
-    clearInterval(handle as ReturnType<typeof setInterval>);
-  }
-  state.renderTimer = undefined;
 }
 
 function buildAgentDescription(agents: AgentDefinition[]): string {
@@ -135,36 +124,24 @@ function renderAgentResult(
 ) {
   const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
   const activity = getActivity(result.details);
-  const state = context.state as Record<string, unknown>;
   const showActivity = context.args?.show_activity ?? true;
 
   if (options.isPartial && showActivity) {
-    if (!state.renderTimer) {
-      state.renderTimer = setInterval(() => context.invalidate(), 1_000);
-    }
+    startPartialTimer(context);
   } else {
-    clearRenderTimer(state);
+    clearPartialTimer(context);
   }
 
   const sp = theme.fg("muted", "⎿  ");
 
   if (options.isPartial) {
     const toolInfo =
-      activity?.currentCommand ?? activity?.lastCommand ?? "initializing";
-    const elapsed = activity
-      ? formatDuration(Date.now() - activity.startedAt)
-      : "";
-    const toolUses = activity?.toolUseCount ?? 0;
-    const runParts = [
-      toolUses > 0 ? `${toolUses} tool ${toolUses === 1 ? "use" : "uses"}` : "",
-      elapsed,
-    ]
-      .filter(Boolean)
-      .join(" · ");
+      activity?.currentCommand ?? activity?.lastCommand ?? "Initializing...";
+    const runningLine = formatRunningLine(activity);
     t.setText(
       [
         `${sp}${theme.fg("muted", toolInfo)}`,
-        `${sp}${theme.fg("muted", `running: ${runParts}`)}`,
+        `${sp}${theme.fg("muted", runningLine)}`,
       ].join("\n"),
     );
     return t;
@@ -239,20 +216,31 @@ function agentProgressLine(
     return `${nameLine}\n${theme.fg("muted", sp)}${theme.fg("muted", doneLine)}`;
   }
 
-  const toolInfo = agent.currentCommand ?? agent.lastCommand ?? "initializing";
-  const elapsed = formatDuration(Date.now() - agent.startedAt);
-  const toolUses = agent.toolUseCount;
-  const runParts = [
-    toolUses > 0 ? `${toolUses} tool ${toolUses === 1 ? "use" : "uses"}` : "",
-    elapsed,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const toolInfo =
+    agent.currentCommand ?? agent.lastCommand ?? "Initializing...";
+  const runningLine = formatRunningLine(agent);
   return [
     nameLine,
     `${theme.fg("muted", sp)}${theme.fg("muted", toolInfo)}`,
-    `${theme.fg("muted", sp)}${theme.fg("muted", `running: ${runParts}`)}`,
+    `${theme.fg("muted", sp)}${theme.fg("muted", runningLine)}`,
   ].join("\n");
+}
+
+/**
+ * Build the per-agent running line. Format:
+ *   "Running: 3 tool uses (1m 03s)"  when there are tool uses
+ *   "Running... (1m 03s)"            before the first tool use
+ *   "Running..."                     when no activity is known yet
+ */
+function formatRunningLine(agent: SubagentRunState | undefined): string {
+  if (!agent) return "Running...";
+  const elapsedSuffix = ` (${formatDuration(Date.now() - agent.startedAt)})`;
+  const toolUses = agent.toolUseCount;
+  if (toolUses > 0) {
+    const label = toolUses === 1 ? "1 tool use" : `${toolUses} tool uses`;
+    return `Running: ${label}${elapsedSuffix}`;
+  }
+  return `Running...${elapsedSuffix}`;
 }
 
 function renderAgentsResult(
@@ -262,7 +250,6 @@ function renderAgentsResult(
   context: any,
 ) {
   const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-  const state = context.state as Record<string, unknown>;
   const d = (result.details ?? {}) as {
     agents?: SubagentRunState[];
     total?: number;
@@ -270,9 +257,7 @@ function renderAgentsResult(
   };
 
   if (options.isPartial) {
-    if (!state.renderTimer) {
-      state.renderTimer = setInterval(() => context.invalidate(), 1_000);
-    }
+    startPartialTimer(context);
     const agents = d.agents ?? [];
     const lines: string[] = [];
     for (let i = 0; i < agents.length; i++) {
@@ -282,7 +267,7 @@ function renderAgentsResult(
     return t;
   }
 
-  clearRenderTimer(state);
+  clearPartialTimer(context);
 
   const agents = d.agents ?? [];
   const failed = d.failed ?? 0;

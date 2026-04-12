@@ -13,9 +13,18 @@ import type {
 } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
-import type { BrokerClient, BrokerTool } from "./client.js";
+import {
+  clearPartialTimer,
+  countNonEmptyLines,
+  firstLine,
+  getResultText,
+  headNonEmptyLines,
+  partialElapsed,
+  plural,
+} from "../_shared/render.js";
 
-const FIRST_LINE_INLINE_MAX = 80;
+const CALL_HEAD_LINES = 3;
+import type { BrokerClient, BrokerTool } from "./client.js";
 
 const SEARCH_PARAMS = Type.Object({
   query: Type.String({
@@ -43,27 +52,6 @@ const CALL_PARAMS = Type.Object({
     },
   ),
 });
-
-function firstLine(text: string): string {
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed.length > 0) return trimmed;
-  }
-  return "";
-}
-
-function getResultText(result: AgentToolResult<unknown>): string {
-  const textContent = result.content.find((c) => c.type === "text");
-  return textContent?.type === "text" ? textContent.text : "";
-}
-
-function countNonEmptyLines(text: string): number {
-  let count = 0;
-  for (const line of text.split("\n")) {
-    if (line.trim().length > 0) count += 1;
-  }
-  return count;
-}
 
 function summarize(tool: BrokerTool): string {
   const desc = firstLine(tool.description ?? "");
@@ -119,8 +107,16 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
     },
     renderResult(result, { isPartial }, theme, context) {
       if (isPartial) {
-        return new Text(theme.fg("warning", "Searching broker tools…"), 0, 0);
+        return new Text(
+          theme.fg(
+            "warning",
+            `Searching broker tools...${partialElapsed(context)}`,
+          ),
+          0,
+          0,
+        );
       }
+      clearPartialTimer(context);
       const text = getResultText(result);
       if (context.isError) {
         return new Text(
@@ -188,8 +184,20 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
     },
     renderResult(result, { isPartial }, theme, context) {
       if (isPartial) {
-        return new Text(theme.fg("warning", "Describing…"), 0, 0);
+        const name =
+          typeof context.args?.name === "string" && context.args.name.length > 0
+            ? context.args.name
+            : "broker tool";
+        return new Text(
+          theme.fg(
+            "warning",
+            `Describing ${name}...${partialElapsed(context)}`,
+          ),
+          0,
+          0,
+        );
       }
+      clearPartialTimer(context);
       const text = getResultText(result);
       if (context.isError) {
         return new Text(
@@ -285,9 +293,14 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
     renderResult(result, { isPartial }, theme, context) {
       const name = context.args?.name;
       if (isPartial) {
-        const verb = name ? `Calling ${name}…` : "Calling broker tool…";
-        return new Text(theme.fg("warning", verb), 0, 0);
+        const subject = name ? `Calling ${name}` : "Calling broker tool";
+        return new Text(
+          theme.fg("warning", `${subject}...${partialElapsed(context)}`),
+          0,
+          0,
+        );
       }
+      clearPartialTimer(context);
       const text = getResultText(result);
       if (context.isError) {
         return new Text(
@@ -298,21 +311,32 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
       }
       const details = result.details as { brokerError?: boolean } | undefined;
       if (details?.brokerError) {
-        // The execute path prepends a marker text block on broker errors;
-        // peel it off so the user sees the underlying error message instead.
-        const lines = text.split("\n");
-        const underlying =
-          lines.length > 1 ? firstLine(lines.slice(1).join("\n")) : "";
-        const message = underlying || firstLine(text) || "broker error";
+        // The execute path unshifts a marker text block onto content
+        // when the broker reports an error. getResultText() returns
+        // only the first text item (the marker), so pull the underlying
+        // error from the text items past the marker instead.
+        const textItems = result.content.filter(
+          (c): c is { type: "text"; text: string } => c.type === "text",
+        );
+        const underlyingText = textItems
+          .slice(1)
+          .map((t) => t.text)
+          .join("\n");
+        const message = firstLine(underlyingText) || "broker error";
         return new Text(theme.fg("error", `broker error: ${message}`), 0, 0);
       }
-      const head = firstLine(text);
-      const lineCount = countNonEmptyLines(text);
-      const summary =
-        head.length > 0 && head.length <= FIRST_LINE_INLINE_MAX
-          ? head
-          : `${lineCount} lines`;
-      return new Text(theme.fg("muted", summary), 0, 0);
+      const head = headNonEmptyLines(text, CALL_HEAD_LINES);
+      if (head.length === 0) {
+        return new Text("", 0, 0);
+      }
+      const totalLines = countNonEmptyLines(text);
+      const extra = totalLines - head.length;
+      const displayLines =
+        extra > 0 ? [...head, `... +${plural(extra, "more line")}`] : head;
+      const rendered = displayLines
+        .map((line) => theme.fg("muted", line))
+        .join("\n");
+      return new Text(rendered, 0, 0);
     },
   });
 }
