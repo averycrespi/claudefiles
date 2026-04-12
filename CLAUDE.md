@@ -29,6 +29,16 @@ make stow-pi             # symlink pi/agent/ into ~/.pi/agent/
 make typecheck          # type-check Pi extension TypeScript files
 ```
 
+## Testing
+
+Pure-logic tests run via Node's built-in test runner with experimental type stripping — no tsx/vitest/jest:
+
+```bash
+node --experimental-strip-types --test pi/agent/extensions/<ext>/*.test.ts
+```
+
+Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This requires `"allowImportingTsExtensions": true` in `tsconfig.json` — don't remove it or `make typecheck` will break.
+
 ## Skill Naming Convention
 
 - **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)
