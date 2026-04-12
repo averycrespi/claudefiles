@@ -138,8 +138,9 @@ Module-level singleton, scoped to one Pi session. No disk persistence in v1.
 ```typescript
 export const taskList = {
   create(tasks: Omit<Task, "id" | "status">[]): Task[];
+  add(title: string, description: string): Task;
   start(id: number): void;
-  complete(id: number, summary?: string): void;
+  complete(id: number, summary: string): void;
   fail(id: number, reason: string): void;
   setActivity(id: number, text: string): void;
   get(id: number): Task | undefined;
@@ -149,21 +150,64 @@ export const taskList = {
 };
 ```
 
+The programmatic API enforces the same state-transition rules as the LLM tools (see below). `start`, `complete`, `fail` each validate the current status before mutating and throw on invalid transitions. `clear()` is API-only (not exposed as an LLM tool) and is used by autopilot for cleanup.
+
 Autopilot imports this directly. `subscribe` lets the TUI re-render on state changes.
 
 ### LLM-Facing Tools
 
 Task-list is designed as a general-purpose primitive for any Pi session, mirroring the Claude Code pattern where the agent manages its own working memory via task tools.
 
-| Tool                                                                | Description                                                                               |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `task_list_write(tasks)`                                            | Create or replace the entire list in one call. Mirrors Claude Code's `TodoWrite` pattern. |
-| `task_update(id, { status?, summary?, failureReason?, activity? })` | Update a single task's fields.                                                            |
-| `task_list_view`                                                    | Read-only. Returns current list.                                                          |
+| Tool                                                              | Description                                                                                     |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `task_list_create(tasks)`                                         | Initialize the list with an array of tasks. Implicit clear of fully-terminal lists (see below). |
+| `task_add(title, description)`                                    | Append a new pending task to the list.                                                          |
+| `task_update(id, {status?, summary?, failureReason?, activity?})` | Update one task's fields. Enforces state-transition rules.                                      |
+| `task_list_view`                                                  | Read-only. Returns the current list.                                                            |
+
+No `task_list_clear` tool is exposed. Clearing state is destructive, has no undo, and would let the LLM bypass the "completion is sticky" rule by clearing and recreating. The programmatic API still has `taskList.clear()` for orchestrator use (autopilot calls it for cleanup).
+
+**`task_list_create` semantics:**
+
+- If the list is empty → creates the new list.
+- If every existing task is terminal (`completed` or `failed`) → clears the list and creates the new one. This handles the "I'm done with the last multi-step thing, starting a new one" case without needing an explicit clear.
+- If any existing task is `pending` or `in_progress` → errors. The agent must terminate active work (complete or fail) before starting a new list.
+
+**`task_add` semantics:**
+
+- Appends one new `pending` task. Order in the list matches creation order.
+- No `prepend` option in v1 — YAGNI. Execution order is driven by LLM choice, not list position.
+
+**`task_update` semantics:**
+
+Fields:
+
+| Field           | Rule                                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `status`        | Must be a valid transition from current status (see table below). Invalid transitions return an error.            |
+| `summary`       | Required on transition to `completed`. Ignored on other transitions.                                              |
+| `failureReason` | Required on transition to `failed`. Ignored on other transitions.                                                 |
+| `activity`      | May be set at any time while the task is `in_progress`. Cleared automatically on transition out of `in_progress`. |
+| `title`         | Not updatable. Identity is fixed at creation.                                                                     |
+| `description`   | Not updatable. Same rationale.                                                                                    |
+
+Valid state transitions:
+
+| From          | To            | Notes                                       |
+| ------------- | ------------- | ------------------------------------------- |
+| `pending`     | `in_progress` | Start work                                  |
+| `pending`     | `failed`      | Task determined impossible without starting |
+| `in_progress` | `completed`   | Finish work (requires `summary`)            |
+| `in_progress` | `failed`      | Give up (requires `failureReason`)          |
+| `failed`      | `pending`     | Retry                                       |
+| `failed`      | `in_progress` | Retry directly                              |
+| `completed`   | _(anything)_  | **Not allowed.** Completion is sticky.      |
+
+The sticky-completion rule is the key anti-perfectionism nudge. If the LLM realizes a completed task had a bug, it has to `task_add` a new task ("Fix regression from task N") rather than reopening. Preserves forward motion and history.
 
 **Exposure rules:**
 
-- **Main Pi session (normal use):** all three tools available. Agent manages its own task list.
+- **Main Pi session (normal use):** all four tools available. Agent manages its own task list.
 - **Autopilot subagents:** no task-list tools at all. Each subagent works on a single task that is inlined into its prompt — there's nothing to view or update.
 
 The `subagents` extension lets the dispatcher configure which tools are exposed to each dispatched subagent, so autopilot simply omits the whole task-list extension when dispatching.
