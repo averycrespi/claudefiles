@@ -22,15 +22,18 @@ Running `make stow-pi` creates symlinks from `pi/agent/` into `~/.pi/agent/`. Ed
 
 TypeScript modules that customize the Pi agent. Type-check with `make typecheck`.
 
-| Extension                | Purpose                                        |
-| ------------------------ | ---------------------------------------------- |
-| `ask-user`               | Improved TUI for user questions                |
-| `code-feedback`          | Auto-format and surface LSP errors after edits |
-| `mcp-broker`             | Broker CLI skill + guard for remote operations |
-| `compact-tools`          | Compact rendering for read and bash            |
-| `context-files-reminder` | Inject context file contents into LLM calls    |
-| `subagents`              | Dynamic subagent loading and dispatch          |
-| `provider-usage`         | Provider rate-limit quota in the footer        |
-| `web`                    | Web search and fetch tools                     |
+| Extension                | Purpose                                                         |
+| ------------------------ | --------------------------------------------------------------- |
+| `ask-user`               | Improved TUI for user questions                                 |
+| `autopilot`              | Autonomous plan → implement → verify pipeline from a design doc |
+| `code-feedback`          | Auto-format and surface LSP errors after edits                  |
+| `compact-tools`          | Compact rendering for read and bash                             |
+| `context-files-reminder` | Inject context file contents into LLM calls                     |
+| `mcp-broker`             | Broker CLI skill + guard for remote operations                  |
+| `provider-usage`         | Provider rate-limit quota in the footer                         |
+| `readonly-tools`         | Enable built-in ls/find/grep tools for read-only exploration    |
+| `subagents`              | Dynamic subagent loading and dispatch                           |
+| `task-list`              | Session-scoped task tracking with rich inline TUI rendering     |
+| `web-access`             | Web search and fetch tools                                      |
 
 See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
