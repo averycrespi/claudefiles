@@ -19,3 +19,32 @@ export const ImplementReportSchema = Type.Object({
 });
 
 export type ImplementReport = Static<typeof ImplementReportSchema>;
+
+export const ValidationCategorySchema = Type.Object({
+  status: Type.Union([
+    Type.Literal("pass"),
+    Type.Literal("fail"),
+    Type.Literal("skipped"),
+  ]),
+  command: Type.String(),
+  output: Type.String(),
+});
+
+export type ValidationCategory = Static<typeof ValidationCategorySchema>;
+
+export const ValidationReportSchema = Type.Object({
+  test: ValidationCategorySchema,
+  lint: ValidationCategorySchema,
+  typecheck: ValidationCategorySchema,
+});
+
+export type ValidationReport = Static<typeof ValidationReportSchema>;
+
+export const FixerReportSchema = Type.Object({
+  outcome: Type.Union([Type.Literal("success"), Type.Literal("failure")]),
+  commit: Type.Union([Type.String(), Type.Null()]),
+  fixed: Type.Array(Type.String()),
+  unresolved: Type.Array(Type.String()),
+});
+
+export type FixerReport = Static<typeof FixerReportSchema>;
