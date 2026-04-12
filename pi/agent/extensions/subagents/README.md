@@ -51,30 +51,41 @@ Launch multiple subagents in parallel. Each runs independently in its own contex
 
 ## UI behavior
 
-**`spawn_agent`** — while running, shows the current tool call and a running status line:
+**`spawn_agent`** — while running, shows recent tool events and a running status line:
 
 ```
-Explore agent find auth flows
-⎿  read: src/auth/middleware.ts
-⎿  running: 4 tool uses · 14s
+ **Explore agent** Find auth flows
+ - read: src/auth/middleware.ts
+ Running: 4 tool uses (14s)
 ```
 
-On completion: `⎿  done: 5 tool uses · 20.3k tokens · 20s`. On error, the error message is shown. Pass `show_activity: false` to suppress live updates.
-
-**`spawn_agents`** — shows a tree per agent:
+On completion:
 
 ```
-├─ Explore: find auth flows
-│  ⎿  read: src/auth.ts
-│  ⎿  running: 4 tool uses · 14s
-├─ Code: run tests
-│  ⎿  done: 5 tool uses · 20.3k tokens · 20s
-└─ Review: check config
-   ⎿  bash: npm test
-   ⎿  running: 1 tool use · 3s
+ **Explore agent** Find auth flows
+ Done: 5 tool uses · 20.3k tokens · 20s
 ```
 
-Each agent shows its type, intent, current tool call, and a `running:` or `done:` status line with tool use count, token count, and elapsed time. On failure, a header `N of M agents failed` is shown above the tree.
+On error, the error message is shown inline. Pass `show_activity: false` to suppress live updates.
+
+**`spawn_agents`** — shows each agent as a section separated by blank lines:
+
+```
+ **Spawn agents** Find auth flows, Run tests, Check config
+
+ **Explore agent** Find auth flows
+ - read: src/auth.ts
+ Running: 4 tool uses (14s)
+
+ **Code agent** Run tests
+ Done: 5 tool uses · 20.3k tokens · 20s
+
+ **Review agent** Check config
+ - bash: npm test
+ Running: 1 tool use (3s)
+```
+
+Each agent shows its type, intent, recent tool events, and a Running/Done status line. On failure, a header `N of M agents failed` is shown above the agent sections.
 
 Activity widgets are removed when all subagents finish, error, or are aborted.
 

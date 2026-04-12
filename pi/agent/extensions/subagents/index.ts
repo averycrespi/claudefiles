@@ -52,11 +52,15 @@ function truncate(str: string, max = 120): string {
   return `${trimmed.slice(0, max)}…`;
 }
 
-function renderEventLine(event: SubagentEvent, sp: string, theme: any): string {
+function renderEventLine(
+  event: SubagentEvent,
+  prefix: string,
+  theme: any,
+): string {
   if (event.kind === "stderr") {
-    return `${sp}${theme.fg("error", `stderr: ${event.text}`)}`;
+    return `${prefix}${theme.fg("error", `stderr: ${event.text}`)}`;
   }
-  return `${sp}${theme.fg("muted", event.text)}`;
+  return `${prefix}${theme.fg("muted", event.text)}`;
 }
 
 function formatTokens(count: number): string {
@@ -140,20 +144,21 @@ function renderAgentResult(
     clearPartialTimer(context);
   }
 
-  const sp = theme.fg("muted", "⎿  ");
-
   if (options.isPartial) {
     const events = activity?.recentEvents ?? [];
-    const lines: string[] = [];
     if (events.length > 0) {
+      const lines: string[] = [];
       for (const event of events) {
-        lines.push(renderEventLine(event, sp, theme));
+        lines.push(renderEventLine(event, "- ", theme));
       }
+      lines.push(theme.fg("muted", formatRunningLine(activity)));
+      t.setText(lines.join("\n"));
     } else {
-      lines.push(`${sp}${theme.fg("muted", "Initializing...")}`);
+      const elapsed = activity
+        ? ` (${formatDuration(Date.now() - activity.startedAt)})`
+        : "";
+      t.setText(theme.fg("muted", `Initializing...${elapsed}`));
     }
-    lines.push(`${sp}${theme.fg("muted", formatRunningLine(activity))}`);
-    t.setText(lines.join("\n"));
     return t;
   }
 
@@ -164,7 +169,7 @@ function renderAgentResult(
   const summary = firstText?.text?.trim();
 
   if (context.isError || summary?.startsWith("Error:")) {
-    t.setText(`${sp}${theme.fg("error", summary || "Error: subagent failed")}`);
+    t.setText(theme.fg("error", summary || "Error: subagent failed"));
     return t;
   }
 
@@ -175,8 +180,8 @@ function renderAgentResult(
         Math.max(0, activity.lastUpdateAt - activity.startedAt),
       )
     : "";
-  const doneLine = doneStats ? `done: ${doneStats}` : "done";
-  t.setText(`${sp}${theme.fg("muted", doneLine)}`);
+  const doneLine = doneStats ? `Done: ${doneStats}` : "Done";
+  t.setText(theme.fg("muted", doneLine));
   return t;
 }
 
@@ -206,15 +211,13 @@ function renderAgentsCall(
 
 function agentProgressLine(
   agent: SubagentRunState,
-  isLast: boolean,
+  _isLast: boolean,
   theme: any,
 ): string {
   const isResolved = agent.resolved === true;
-  const treeChar = isLast ? "└─" : "├─";
-  const sp = isLast ? "   ⎿  " : "│  ⎿  ";
   const typeName = agent.agentType ?? "agent";
   const typeLabel = typeName.charAt(0).toUpperCase() + typeName.slice(1);
-  const nameLine = `${theme.fg("muted", treeChar)} ${theme.bold(typeLabel)}${theme.fg("muted", `: ${agent.intent}`)}`;
+  const nameLine = `${theme.bold(`${typeLabel} agent`)} ${theme.fg("muted", agent.intent)}`;
 
   if (isResolved) {
     const doneInfo = statsLine(
@@ -222,21 +225,17 @@ function agentProgressLine(
       agent.totalTokens,
       Math.max(0, agent.lastUpdateAt - agent.startedAt),
     );
-    const doneLine = doneInfo ? `done: ${doneInfo}` : "done";
-    return `${nameLine}\n${theme.fg("muted", sp)}${theme.fg("muted", doneLine)}`;
+    const doneLine = doneInfo ? `Done: ${doneInfo}` : "Done";
+    return `${nameLine}\n${theme.fg("muted", doneLine)}`;
   }
 
   const events = agent.recentEvents ?? [];
   const lastEvent = events[events.length - 1];
   const toolInfoLine = lastEvent
-    ? renderEventLine(lastEvent, theme.fg("muted", sp), theme)
-    : `${theme.fg("muted", sp)}${theme.fg("muted", "Initializing...")}`;
+    ? renderEventLine(lastEvent, "- ", theme)
+    : theme.fg("muted", "Initializing...");
   const runningLine = formatRunningLine(agent);
-  return [
-    nameLine,
-    toolInfoLine,
-    `${theme.fg("muted", sp)}${theme.fg("muted", runningLine)}`,
-  ].join("\n");
+  return [nameLine, toolInfoLine, theme.fg("muted", runningLine)].join("\n");
 }
 
 /**
@@ -276,7 +275,7 @@ function renderAgentsResult(
     for (let i = 0; i < agents.length; i++) {
       lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
     }
-    t.setText(lines.join("\n"));
+    t.setText("\n" + lines.join("\n\n"));
     return t;
   }
 
@@ -292,7 +291,7 @@ function renderAgentsResult(
     for (let i = 0; i < agents.length; i++) {
       lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
     }
-    t.setText(lines.join("\n"));
+    t.setText("\n" + lines.join("\n\n"));
     return t;
   }
 
@@ -300,7 +299,7 @@ function renderAgentsResult(
   for (let i = 0; i < agents.length; i++) {
     lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
   }
-  t.setText(lines.join("\n"));
+  t.setText("\n" + lines.join("\n\n"));
   return t;
 }
 
