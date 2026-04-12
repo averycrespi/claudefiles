@@ -1,5 +1,13 @@
 import { spawn } from "node:child_process";
 import {
+  createWriteStream,
+  mkdirSync,
+  unlinkSync,
+  type WriteStream,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
   MAX_SUBAGENT_DEPTH,
   type BuiltinTool,
   type InheritSession,
@@ -21,6 +29,7 @@ export interface SpawnInvocation {
   parentSessionFile?: string;
   disableSkills?: boolean;
   disablePromptTemplates?: boolean;
+  logId?: string;
   cwd: string;
   signal?: AbortSignal;
   onEvent?: (event: unknown) => void;
@@ -34,6 +43,7 @@ export interface SpawnOutcome {
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   errorMessage?: string;
+  logFile?: string;
 }
 
 function getCurrentDepth(): number {
@@ -90,11 +100,9 @@ function buildArgs(params: {
     args.push("--append-system-prompt", params.systemPrompt.trim());
   }
 
-  if (params.extensions.length > 0) {
-    args.push("--no-extensions");
-    for (const extensionPath of params.extensions) {
-      args.push("-e", extensionPath);
-    }
+  args.push("--no-extensions");
+  for (const extensionPath of params.extensions) {
+    args.push("-e", extensionPath);
   }
 
   for (const file of params.files) {
@@ -159,12 +167,44 @@ function reduceJsonLine(
   return currentText;
 }
 
+const LOG_DIR = join(tmpdir(), "pi-subagent-logs");
+
+function ensureLogDir(): void {
+  try {
+    mkdirSync(LOG_DIR, { recursive: true });
+  } catch {
+    // best-effort
+  }
+}
+
+function removeLogFile(path: string): void {
+  try {
+    unlinkSync(path);
+  } catch {
+    // best-effort
+  }
+}
+
+function createLogFile(id: string): { path: string; stream: WriteStream } {
+  ensureLogDir();
+  const safeName = id.replace(/[^a-zA-Z0-9_:-]/g, "_");
+  const path = join(LOG_DIR, `${safeName}-${Date.now()}.log`);
+  const stream = createWriteStream(path, { flags: "a" });
+  return { path, stream };
+}
+
 async function runSpawn(
   args: string[],
   cwd: string,
+  logId: string,
   signal?: AbortSignal,
   onEvent?: (event: unknown) => void,
 ): Promise<SpawnOutcome> {
+  const log = createLogFile(logId);
+  log.stream.write(
+    `$ pi ${args.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ")}\n\n`,
+  );
+
   return await new Promise<SpawnOutcome>((resolve) => {
     let finished = false;
     let aborted = Boolean(signal?.aborted);
@@ -179,6 +219,12 @@ async function runSpawn(
       finished = true;
       signal?.removeEventListener("abort", onAbort);
       if (killTimer) clearTimeout(killTimer);
+      log.stream.end();
+      if (outcome.ok) {
+        removeLogFile(log.path);
+      } else {
+        outcome.logFile = log.path;
+      }
       resolve(outcome);
     };
 
@@ -225,6 +271,7 @@ async function runSpawn(
 
     child?.stdout?.setEncoding("utf8");
     child?.stdout?.on("data", (chunk: string) => {
+      log.stream.write(chunk);
       stdoutBuffer += chunk;
       let newlineIndex = stdoutBuffer.indexOf("\n");
       while (newlineIndex !== -1) {
@@ -238,6 +285,7 @@ async function runSpawn(
     child?.stderr?.setEncoding("utf8");
     let stderrLineBuffer = "";
     child?.stderr?.on("data", (chunk: string) => {
+      log.stream.write(`[stderr] ${chunk}`);
       stderrBuffer += chunk;
       stderrLineBuffer += chunk;
       let newlineIndex = stderrLineBuffer.indexOf("\n");
@@ -336,15 +384,25 @@ export async function spawnSubagent(
     };
   }
 
-  return await runSpawn(args, options.cwd, options.signal, options.onEvent);
+  const logId = options.logId ?? "subagent";
+  return await runSpawn(
+    args,
+    options.cwd,
+    logId,
+    options.signal,
+    options.onEvent,
+  );
 }
 
 export function formatSpawnFailure(outcome: SpawnOutcome): string {
-  if (outcome.aborted) return "Error: subagent aborted";
+  const logSuffix = outcome.logFile ? `\nLog: ${outcome.logFile}` : "";
+
+  if (outcome.aborted) return `Error: subagent aborted${logSuffix}`;
 
   const lines = [`Error: ${outcome.errorMessage ?? "subagent failed"}`];
   if (outcome.exitCode != null) lines.push(`Exit code: ${outcome.exitCode}`);
   if (outcome.stderr.trim()) lines.push("stderr:", outcome.stderr.trimEnd());
   if (outcome.stdout.trim()) lines.push("stdout:", outcome.stdout.trimEnd());
+  if (outcome.logFile) lines.push(`Log: ${outcome.logFile}`);
   return lines.join("\n");
 }

@@ -363,6 +363,7 @@ async function runSpawn(
     parentSessionFile: ctx.sessionManager.getSessionFile(),
     disableSkills: agent.disableSkills,
     disablePromptTemplates: agent.disablePromptTemplates,
+    logId: toolCallId,
     cwd: ctx.cwd,
     signal: ctx.signal,
     onEvent: (event) => tracker.handleEvent(event),
@@ -379,6 +380,7 @@ async function runSpawn(
         signal: result.signal,
         stderr: result.stderr,
         stdout: result.stdout,
+        logFile: result.logFile,
         activity: tracker.state,
       },
     };
