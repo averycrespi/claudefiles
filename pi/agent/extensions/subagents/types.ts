@@ -37,6 +37,11 @@ export interface SpawnAgentsParams {
   agents: SpawnAgentItem[];
 }
 
+export interface SubagentEvent {
+  kind: "tool" | "stderr";
+  text: string;
+}
+
 export interface SubagentRunState {
   intent: string;
   agentType?: string;
@@ -46,6 +51,7 @@ export interface SubagentRunState {
   lastCommand?: string;
   lastOutput?: string;
   lastToolInfo?: string;
+  recentEvents: SubagentEvent[];
   toolUseCount: number;
   totalTokens: number;
   resolved?: boolean;

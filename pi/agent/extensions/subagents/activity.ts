@@ -1,4 +1,8 @@
-import type { SubagentPhase, SubagentRunState } from "./types.js";
+import type {
+  SubagentEvent,
+  SubagentPhase,
+  SubagentRunState,
+} from "./types.js";
 
 export interface SubagentCompletion {
   ok: boolean;
@@ -33,12 +37,13 @@ export interface SubagentActivityTracker {
 }
 
 const OUTPUT_TAIL_LIMIT = 120;
+const RECENT_EVENT_LIMIT = 3;
 const TICK_MS = 1_000;
 
 function truncate(text: string, max = OUTPUT_TAIL_LIMIT): string {
   const trimmed = text.trim();
   if (trimmed.length <= max) return trimmed;
-  return `…${trimmed.slice(-max)}`;
+  return `${trimmed.slice(0, max)}…`;
 }
 
 function stringifyArgs(args: unknown): string {
@@ -123,6 +128,7 @@ export function createSubagentActivityTracker(
   const state: SubagentRunState = {
     intent: options.intent,
     phase: "starting",
+    recentEvents: [],
     toolUseCount: 0,
     totalTokens: 0,
     startedAt: Date.now(),
@@ -131,6 +137,13 @@ export function createSubagentActivityTracker(
 
   let tickHandle: ReturnType<typeof setInterval> | undefined;
   let finished = false;
+
+  function pushRecentEvent(kind: SubagentEvent["kind"], text: string): void {
+    state.recentEvents.push({ kind, text: truncate(text, OUTPUT_TAIL_LIMIT) });
+    if (state.recentEvents.length > RECENT_EVENT_LIMIT) {
+      state.recentEvents.shift();
+    }
+  }
 
   function setPhase(phase: SubagentPhase): void {
     state.phase = phase;
@@ -207,6 +220,7 @@ export function createSubagentActivityTracker(
         const summary = describeToolCall(toolName, record.args);
         state.activeTool = toolName;
         pushCurrentCommand(summary);
+        pushRecentEvent("tool", summary);
         setPhase(toolName);
         emitProgress(`${state.intent}: ${summary}`);
         break;
@@ -271,6 +285,16 @@ export function createSubagentActivityTracker(
         }
         state.activeTool = undefined;
         completeCurrentCommand();
+        break;
+      }
+      case "stderr": {
+        const stderrText =
+          typeof record.text === "string" ? record.text.trim() : "";
+        if (stderrText) {
+          pushRecentEvent("stderr", stderrText);
+          state.lastUpdateAt = Date.now();
+          emitProgress(`${state.intent}: stderr: ${truncate(stderrText, 80)}`);
+        }
         break;
       }
       default:

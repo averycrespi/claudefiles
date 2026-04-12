@@ -12,6 +12,7 @@ import {
   type SpawnAgentItem,
   type SpawnAgentParams,
   type SpawnAgentsParams,
+  type SubagentEvent,
   type SubagentRunState,
 } from "./types.js";
 import {
@@ -48,7 +49,14 @@ function normalizeIntent(intent: string): string {
 function truncate(str: string, max = 120): string {
   const trimmed = str.trim();
   if (trimmed.length <= max) return trimmed;
-  return `…${trimmed.slice(-max)}`;
+  return `${trimmed.slice(0, max)}…`;
+}
+
+function renderEventLine(event: SubagentEvent, sp: string, theme: any): string {
+  if (event.kind === "stderr") {
+    return `${sp}${theme.fg("error", `stderr: ${event.text}`)}`;
+  }
+  return `${sp}${theme.fg("muted", event.text)}`;
 }
 
 function formatTokens(count: number): string {
@@ -135,15 +143,17 @@ function renderAgentResult(
   const sp = theme.fg("muted", "⎿  ");
 
   if (options.isPartial) {
-    const toolInfo =
-      activity?.currentCommand ?? activity?.lastCommand ?? "Initializing...";
-    const runningLine = formatRunningLine(activity);
-    t.setText(
-      [
-        `${sp}${theme.fg("muted", toolInfo)}`,
-        `${sp}${theme.fg("muted", runningLine)}`,
-      ].join("\n"),
-    );
+    const events = activity?.recentEvents ?? [];
+    const lines: string[] = [];
+    if (events.length > 0) {
+      for (const event of events) {
+        lines.push(renderEventLine(event, sp, theme));
+      }
+    } else {
+      lines.push(`${sp}${theme.fg("muted", "Initializing...")}`);
+    }
+    lines.push(`${sp}${theme.fg("muted", formatRunningLine(activity))}`);
+    t.setText(lines.join("\n"));
     return t;
   }
 
@@ -216,12 +226,15 @@ function agentProgressLine(
     return `${nameLine}\n${theme.fg("muted", sp)}${theme.fg("muted", doneLine)}`;
   }
 
-  const toolInfo =
-    agent.currentCommand ?? agent.lastCommand ?? "Initializing...";
+  const events = agent.recentEvents ?? [];
+  const lastEvent = events[events.length - 1];
+  const toolInfoLine = lastEvent
+    ? renderEventLine(lastEvent, theme.fg("muted", sp), theme)
+    : `${theme.fg("muted", sp)}${theme.fg("muted", "Initializing...")}`;
   const runningLine = formatRunningLine(agent);
   return [
     nameLine,
-    `${theme.fg("muted", sp)}${theme.fg("muted", toolInfo)}`,
+    toolInfoLine,
     `${theme.fg("muted", sp)}${theme.fg("muted", runningLine)}`,
   ].join("\n");
 }
@@ -395,6 +408,7 @@ async function runParallelSpawn(
     intent: s.intent,
     agentType: s.agent,
     phase: "starting",
+    recentEvents: [],
     toolUseCount: 0,
     totalTokens: 0,
     startedAt: Date.now(),

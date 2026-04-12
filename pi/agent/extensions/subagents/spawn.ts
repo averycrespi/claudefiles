@@ -236,8 +236,17 @@ async function runSpawn(
     });
 
     child?.stderr?.setEncoding("utf8");
+    let stderrLineBuffer = "";
     child?.stderr?.on("data", (chunk: string) => {
       stderrBuffer += chunk;
+      stderrLineBuffer += chunk;
+      let newlineIndex = stderrLineBuffer.indexOf("\n");
+      while (newlineIndex !== -1) {
+        const line = stderrLineBuffer.slice(0, newlineIndex).trim();
+        stderrLineBuffer = stderrLineBuffer.slice(newlineIndex + 1);
+        if (line) onEvent?.({ type: "stderr", text: line });
+        newlineIndex = stderrLineBuffer.indexOf("\n");
+      }
     });
 
     child?.on("close", (code, sig) => {
