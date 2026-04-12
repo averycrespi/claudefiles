@@ -23,6 +23,9 @@ import {
 import { formatSpawnFailure, spawnSubagent } from "./spawn.js";
 import { loadAgents } from "./loader.js";
 
+export { spawnSubagent, formatSpawnFailure } from "./spawn.js";
+export type { SpawnInvocation, SpawnOutcome } from "./spawn.js";
+
 const text = (value: string) => [{ type: "text" as const, text: value }];
 
 function modelSelectorFromCtx(ctx: {
