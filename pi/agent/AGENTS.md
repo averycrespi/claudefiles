@@ -19,9 +19,9 @@
 ## Broker-backed External Access
 
 - This environment is intentionally minimal: do not assume direct access to external services via local secrets or ad hoc authenticated CLIs.
-- When a task needs authenticated or broker-backed access to external systems, use the `broker-cli` skill and invoke `broker-cli` through `bash`.
-- Treat the broker catalog as dynamic. Discover available namespaces and tools with `broker-cli --help` and `broker-cli <namespace> --help` before choosing a command.
-- Use broker-backed tools for operations such as remote git or GitHub access. `git` and `github` are common examples, but additional namespaces may also be available.
+- When a task needs authenticated or broker-backed access to external systems, use the `mcp_search`, `mcp_describe`, and `mcp_call` tools provided by the `mcp-broker` extension.
+- Treat the broker catalog as dynamic. The session's system prompt lists the currently available provider namespaces; use `mcp_search` to find specific tools and `mcp_describe` to inspect a tool's schema before calling it.
+- Tool names follow `<namespace>.<tool>`. Use broker-backed tools for operations such as remote git or GitHub access — `git` and `github` are common examples, but additional namespaces may also be available.
 - If the task is purely local, prefer local tools and do not route it through the broker.
 
 ## Reading & Editing Files
