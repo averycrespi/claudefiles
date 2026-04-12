@@ -55,6 +55,8 @@ export interface SubagentRunState {
   toolUseCount: number;
   totalTokens: number;
   resolved?: boolean;
+  errorMessage?: string;
+  logFile?: string;
   startedAt: number;
   lastUpdateAt: number;
 }

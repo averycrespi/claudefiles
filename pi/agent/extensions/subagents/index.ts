@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import {
   clearPartialTimer,
+  firstLine,
   formatDuration,
   startPartialTimer,
 } from "../_shared/render.js";
@@ -169,7 +170,14 @@ function renderAgentResult(
   const summary = firstText?.text?.trim();
 
   if (context.isError || summary?.startsWith("Error:")) {
-    t.setText(theme.fg("error", summary || "Error: subagent failed"));
+    const errorMsg = activity?.errorMessage
+      ? `Error: ${activity.errorMessage}`
+      : firstLine(summary || "Error: subagent failed");
+    const lines = [theme.fg("error", errorMsg)];
+    if (activity?.logFile) {
+      lines.push(theme.fg("muted", `Log: ${activity.logFile}`));
+    }
+    t.setText(lines.join("\n"));
     return t;
   }
 
@@ -220,6 +228,18 @@ function agentProgressLine(
   const nameLine = `${theme.bold(`${typeLabel} agent`)} ${theme.fg("muted", agent.intent)}`;
 
   if (isResolved) {
+    if (agent.phase === "aborted" || agent.phase === "error") {
+      const msg = agent.errorMessage
+        ? firstLine(agent.errorMessage)
+        : agent.phase === "aborted"
+          ? "Error: subagent aborted"
+          : "Error: subagent failed";
+      const lines = [nameLine, theme.fg("error", msg)];
+      if (agent.logFile) {
+        lines.push(theme.fg("muted", `Log: ${agent.logFile}`));
+      }
+      return lines.join("\n");
+    }
     const doneInfo = statsLine(
       agent.toolUseCount,
       agent.totalTokens,
@@ -231,11 +251,16 @@ function agentProgressLine(
 
   const events = agent.recentEvents ?? [];
   const lastEvent = events[events.length - 1];
-  const toolInfoLine = lastEvent
-    ? renderEventLine(lastEvent, "- ", theme)
-    : theme.fg("muted", "Initializing...");
-  const runningLine = formatRunningLine(agent);
-  return [nameLine, toolInfoLine, theme.fg("muted", runningLine)].join("\n");
+  if (lastEvent) {
+    const runningLine = formatRunningLine(agent);
+    return [
+      nameLine,
+      renderEventLine(lastEvent, "- ", theme),
+      theme.fg("muted", runningLine),
+    ].join("\n");
+  }
+  const elapsed = ` (${formatDuration(Date.now() - agent.startedAt)})`;
+  return `${nameLine}\n${theme.fg("muted", `Initializing...${elapsed}`)}`;
 }
 
 /**
@@ -283,17 +308,6 @@ function renderAgentsResult(
 
   const agents = d.agents ?? [];
   const failed = d.failed ?? 0;
-
-  if (context.isError || failed > 0) {
-    const total = d.total ?? 1;
-    const header = theme.fg("error", `${failed} of ${total} agents failed`);
-    const lines = [header];
-    for (let i = 0; i < agents.length; i++) {
-      lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
-    }
-    t.setText("\n" + lines.join("\n\n"));
-    return t;
-  }
 
   const lines: string[] = [];
   for (let i = 0; i < agents.length; i++) {
@@ -451,7 +465,19 @@ async function runParallelSpawn(
           emitCombined();
         },
       );
+      const finalActivity = getActivity(result.details);
+      if (finalActivity) {
+        finalActivity.agentType = spec.agent;
+        states[i] = finalActivity;
+      }
       states[i].resolved = true;
+      const errorText = result.content[0]?.text;
+      if (errorText?.startsWith("Error:")) {
+        states[i].errorMessage = errorText;
+      }
+      if (typeof result.details.logFile === "string") {
+        states[i].logFile = result.details.logFile;
+      }
       emitCombined();
       return result;
     }),

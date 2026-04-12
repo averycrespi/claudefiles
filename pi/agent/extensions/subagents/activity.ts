@@ -12,6 +12,7 @@ export interface SubagentCompletion {
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   errorMessage?: string;
+  logFile?: string;
 }
 
 export interface SubagentActivityOptions {
@@ -315,6 +316,9 @@ export function createSubagentActivityTracker(
     } else {
       setPhase("error");
     }
+
+    if (outcome.errorMessage) state.errorMessage = outcome.errorMessage;
+    if (outcome.logFile) state.logFile = outcome.logFile;
 
     if (outcome.stdout.trim()) setLastOutput(outcome.stdout);
     if (outcome.stderr.trim() && !state.lastOutput) {
