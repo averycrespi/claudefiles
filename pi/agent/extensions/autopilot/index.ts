@@ -5,6 +5,7 @@ import { taskList } from "../task-list/api.ts";
 import { dispatch } from "./lib/dispatch.ts";
 import { runImplement } from "./phases/implement.ts";
 import { runPlan } from "./phases/plan.ts";
+import { runVerify } from "./phases/verify.ts";
 import { preflight } from "./preflight.ts";
 
 const execFileP = promisify(execFile);
@@ -81,11 +82,38 @@ export default function (pi: ExtensionAPI) {
       }
 
       ctx.ui.notify(
-        `/autopilot: implement ok — all ${plan.data.tasks.length} task(s) completed. Verify phase lands in a subsequent task.`,
+        `/autopilot: implement ok — all ${plan.data.tasks.length} task(s) completed. Verifying…`,
         "info",
       );
 
-      // Verify phase wired in a later task.
+      const taskListSummary = taskList
+        .all()
+        .map((t) => `[${t.status}] ${t.title}`)
+        .join("\n");
+      const cwd = process.cwd();
+      const verifyResult = await runVerify({
+        dispatch,
+        getDiff: async () => {
+          const { stdout } = await execFileP(
+            "git",
+            ["diff", `${pre.baseSha}...HEAD`],
+            { cwd },
+          );
+          return stdout;
+        },
+        archNotes: plan.data.architecture_notes,
+        taskListSummary,
+        cwd,
+      });
+
+      // Brief summary for now; Task 14 formats the full final report.
+      const fixedCount = verifyResult.fixed.length;
+      const knownCount = verifyResult.knownIssues.length;
+      const skippedCount = verifyResult.skippedReviewers.length;
+      ctx.ui.notify(
+        `/autopilot: verify ok — fixed ${fixedCount}, known issues ${knownCount}, reviewers skipped ${skippedCount}.`,
+        "info",
+      );
     },
   });
 }
