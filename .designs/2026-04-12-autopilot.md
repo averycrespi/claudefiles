@@ -411,24 +411,61 @@ Orchestrator sets in-progress task's activity line via `taskList.setActivity(id,
 ### Structure
 
 ```
-1. Automated checks        (orchestrator runs, fixer subagent on fail, cap 2)
+1. Validation              (validation subagent discovers + runs checks; fixer subagent on fail, cap 2)
 2. Parallel reviewers      (3 subagents in parallel, one shot each)
 3. Synthesize findings     (orchestrator: filter + dedupe + triage)
 4. Auto-fix loop           (fixer subagent on blocker+important, cap 2)
 5. Final report            (printed, ends pipeline)
 ```
 
-### Step 1 — Automated Checks
+### Step 1 — Validation
 
-Orchestrator runs checks directly via shell. Commands are auto-detected from the project:
+Auto-detecting test/lint/typecheck commands from file patterns is unreliable. Real projects use `bun test` vs `npm test` vs `make test` vs `./scripts/test.sh`; package.json `test` scripts are sometimes placeholders; pyproject.toml configures ruff and mypy in project-specific ways; monorepos have multiple commands. The validation step therefore dispatches a **validation subagent** that discovers and runs the project's checks in a single pass.
 
-- Tests: `package.json` `scripts.test`, `cargo test`, `pytest`, `go test ./...`, etc.
-- Lint: `npm run lint`, `cargo clippy`, `ruff check`, `golangci-lint run`, etc.
-- Typecheck: `npx tsc --noEmit`, `mypy`, `pyright`, etc.
+**Validation subagent prompt:**
 
-On failure, dispatch a fixer subagent with the failure output. Narrow prompt: fix only the failing cause, commit with `fix: <summary>`, no adjacent refactoring.
+```
+You are the validation phase of an automated coding pipeline. Your job
+is to determine how this project validates itself (tests, lint,
+typecheck) and run those checks.
 
-Cap: **2 fix rounds.** After 2 rounds, remaining failures become known issues (pipeline still completes).
+=== Steps ===
+1. Inspect the repo to figure out validation commands. Look at:
+   - README.md and CLAUDE.md for documented commands.
+   - package.json, pyproject.toml, Cargo.toml, go.mod, Makefile.
+   - scripts/ directory and any CI config files.
+   Prefer commands that are documented over commands you infer.
+
+2. Run each command from the repo root and collect pass/fail + output.
+
+3. Report back in this exact format:
+
+   RESULTS:
+   test:      <pass | fail | skipped> | <cmd> | <trimmed output on fail>
+   lint:      <pass | fail | skipped> | <cmd> | <trimmed output on fail>
+   typecheck: <pass | fail | skipped> | <cmd> | <trimmed output on fail>
+
+   Use "skipped" if no command applies for that category.
+
+=== Constraints ===
+- Do NOT edit any code. You are read-only except for running the checks.
+- Do NOT commit or push.
+- Do NOT install new dependencies or modify lockfiles.
+- If a command hangs or takes more than 5 minutes, kill it and report
+  as "fail" with output "timeout".
+- If a category has multiple commands (e.g. frontend + backend tests),
+  run all of them and combine the results as "pass" only if all pass.
+```
+
+The subagent is dispatched with bash (to run commands) and read tools (to inspect config), but **no edit/write tools** — it cannot modify code. If it finds failures, it reports them; fixing is a separate step.
+
+**Orchestrator behavior after validation:**
+
+1. Parse `RESULTS:` from the subagent report.
+2. If all categories are `pass` or `skipped` → validation passes, move to Step 2.
+3. If any category is `fail` → dispatch a fixer subagent with the failure outputs. Fixer prompt: fix only the failing cause, commit with `fix: <summary>`, no adjacent refactoring.
+4. After the fixer commits, re-dispatch validation subagent to re-check.
+5. Cap: **2 fix rounds.** After 2 rounds, remaining failures become known issues (pipeline still completes).
 
 ### Step 2 — Parallel Reviewers
 
