@@ -648,6 +648,91 @@ No automatic chaining from brainstorm to ship. Manual, explicit.
 
 ---
 
+## Documentation
+
+Both new extensions must ship with detailed `README.md` files that follow the conventions of existing Pi extensions in this repo (see `pi/agent/extensions/subagents/README.md` for a full-featured example, and `pi/agent/extensions/ask-user/README.md` for a minimal one).
+
+### Shared conventions
+
+Every extension README includes:
+
+1. **One-line summary** under the `# extension-name` heading.
+2. **Interfaces** — tools (if any), commands (if any), programmatic API (if exported).
+3. **UI behavior** — what the user sees in the TUI.
+4. **How it works** — implementation notes at the level a future contributor would need.
+5. **Inspiration** — bulleted list of related projects/prior art with one-line rationales. This section is not optional; it documents the lineage of ideas and helps future readers understand why design choices were made.
+6. **File layout** — optional but recommended for multi-file extensions.
+
+### `task-list/README.md` — required content
+
+- One-line summary: "Pi extension providing session-scoped task tracking with a rich inline TUI rendering."
+- **Programmatic API** — full signature of every exported function, with a short description for each.
+- **State model** — prose description plus a mermaid state diagram of the task state machine.
+- **TUI rendering** — example output showing completed/in-progress/pending/failed rows with glyphs, plus the standalone-mode header. Describe activity second-line behavior, truncation, 30s grace window, and auto-hide.
+- **Consumers** — call out that autopilot is the first consumer in this repo; note that the API is public for other extensions.
+- **How it works** — singleton state store, subscribe/notify pattern, debounced re-render, Pi rendering strategy (custom-type messages vs footer fallback).
+- **Inspiration** — Claude Code's `TaskListV2` component (v2 task tool), Claude Code's `TodoWrite` tool (auto-clear-on-complete pattern), ralph-wiggum's `.ralph/*.md` checklist pattern.
+
+**Required mermaid diagram — task state machine:**
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: create / add
+    pending --> in_progress: start
+    pending --> failed: fail (impossible)
+    in_progress --> completed: complete (requires summary)
+    in_progress --> failed: fail (requires reason)
+    failed --> pending: retry
+    failed --> in_progress: retry directly
+    completed --> [*]: sticky (terminal)
+```
+
+Annotate the diagram with a caption that highlights the "completion is sticky" rule as the key anti-perfectionism nudge.
+
+### `autopilot/README.md` — required content
+
+- One-line summary: "Pi extension that runs an autonomous plan → implement → verify pipeline from a design doc to a PR-ready branch."
+- **Command reference** — `/autopilot <design-file>` signature, args, pre-flight checks (file exists, clean tree).
+- **Pipeline overview** — prose summary plus a mermaid flowchart of the full pipeline.
+- **Phase reference** — one subsection per phase (plan, implement, verify) with:
+  - What the phase does
+  - Subagent prompt shape (or a pointer to `prompts/<phase>.md`)
+  - Structured JSON output schema
+  - Orchestrator responsibilities after the subagent returns
+  - Caps and failure modes specific to that phase
+- **Subagent output contract** — brief restatement of the JSON-everywhere rule and the `parseJsonReport` helper.
+- **Failure matrix** — table of failure modes and handling (copied/adapted from the Failure Handling section of the design doc).
+- **Final report** — example output with narration of what each block means.
+- **How it works** — orchestrator-is-code architecture, why subagent-per-task, why sequential, why no loopback from verify.
+- **Inspiration** — list of prior art explored while designing this extension:
+  - `tmustier/pi-extensions/ralph-wiggum` — iterative loop pattern with periodic reflection checkpoints
+  - `klaudworks/ralph-meets-rex` — plan → implement → verify three-phase pipeline with loopback routing
+  - `ruizrica/agent-pi` — declarative YAML pipelines, role specialization, multi-model fan-out
+  - `davidorex/pi-project-workflows` — DAG execution engine with schema-validated step boundaries
+  - `tmdgusya/roach-pi` — phase-gated state machine (clarify → plan → build → review), depth-capped subagent spawning
+  - Claude Code's `executing-plans` skill — task triplet structure (implement → spec review → code review) and subagent dispatch per phase
+  - Claude Code's `verifying-work` skill — parallel reviewers, confidence filtering, auto-fix vs ambiguous triage
+
+**Required mermaid diagrams:**
+
+1. **Pipeline overview** — top-level flow from `/autopilot` invocation to final report. Shows plan → implement → verify as boxes with parse-failure exits and the implement-loop substructure.
+
+2. **Implement phase loop** — sequential per-task dispatch with pass/fail branches. Explicitly shows that a task failure halts the pipeline (no retry).
+
+3. **Verify phase state diagram** — the five-step verify structure with the two capped fix loops (validation + post-reviewer) clearly visible, including cap counters and the "known issues" exit when caps are hit.
+
+4. **Task state machine** — same diagram as task-list README (repeat it here for reader convenience, since the orchestrator drives these transitions).
+
+Each diagram must include a caption explaining what it shows.
+
+### Non-goals for READMEs in v1
+
+- No generated screenshots of the TUI — ASCII examples are fine
+- No performance benchmarks or tuning guides
+- No FAQ section — add only if real questions accumulate
+
+---
+
 ## Explicit Non-Goals for v1
 
 - No resume-from-failure / mid-pipeline restart
