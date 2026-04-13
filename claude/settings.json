@@ -227,25 +227,11 @@
     "type": "command",
     "command": "bash ~/.claude/scripts/statusline.sh"
   },
-  "enabledPlugins": {
-    "gopls-lsp@claude-plugins-official": true
-  },
+  "enabledPlugins": {},
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
     "allowUnsandboxedCommands": true,
-    "excludedCommands": [
-      "aws:*",
-      "docker:*",
-      "docker-compose:*",
-      "gh:*",
-      "git:*",
-      "go build:*",
-      "go install:*",
-      "go test:*",
-      "launchctl:*",
-      "playwright-cli:*"
-    ],
     "network": {
       "allowedDomains": [
         "bitbucket.org",
@@ -261,6 +247,18 @@
         "storage.googleapis.com",
         "sum.golang.org"
       ]
-    }
+    },
+    "excludedCommands": [
+      "aws:*",
+      "docker:*",
+      "docker-compose:*",
+      "gh:*",
+      "git:*",
+      "go build:*",
+      "go install:*",
+      "go test:*",
+      "launchctl:*",
+      "playwright-cli:*"
+    ]
   }
 }
