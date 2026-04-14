@@ -35,7 +35,7 @@ export function registerLspDiagnosticsTool(pi: ExtensionAPI, deps: Deps): void {
     name: "lsp_diagnostics",
     label: "LSP Diagnostics",
     description:
-      "Returns LSP diagnostics (errors, warnings, info, hints) for a single file. Useful for checking a file you want to investigate without editing it, or for getting non-error severities the auto-inject feedback leaves out. For whole-project checks, run the project's own compiler via bash (e.g. `tsc --noEmit`, `go build ./...`, `go vet ./...`) — faster and more complete than anything the LSP can offer at workspace scope.",
+      "Returns LSP diagnostics (errors, warnings, info, hints) for a single file. Call this after writing or editing a file when you want to check for type errors, unused imports, or other issues the language server has flagged. Diagnostics are pull-only — nothing is surfaced automatically after edits, so you need to invoke this tool explicitly at coherent checkpoints. For whole-project checks, run the project's own compiler via bash (e.g. `tsc --noEmit`, `go build ./...`, `go vet ./...`) — faster and more complete than anything the LSP can offer at workspace scope.",
     parameters: params,
 
     async execute(
