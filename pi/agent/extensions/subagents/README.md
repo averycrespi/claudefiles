@@ -26,7 +26,7 @@ The built-in types:
 | `explore`  | read                    | —          | gpt-5.4-mini | medium   |
 | `review`   | read                    | —          | gpt-5.4      | high     |
 | `research` | read                    | web        | gpt-5.4      | high     |
-| `code`     | read, bash, edit, write | —          | gpt-5.4      | medium   |
+| `code`     | read, bash, edit, write | autoformat | gpt-5.4      | medium   |
 
 `explore` and `review` are read-only. `research` adds web search and fetch via the `web` extension. `code` has full write access including shell.
 
