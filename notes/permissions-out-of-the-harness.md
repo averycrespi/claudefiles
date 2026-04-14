@@ -27,10 +27,10 @@ Matt Kotsenas puts it well in ["Sandboxing the Eager Deputy"](https://matt.kotse
 ## Caveats
 
 - The sandbox needs to be genuinely destructible. `rm -rf` inside it should be a non-event — if losing the sandbox state costs you real work, the boundary is in the wrong place.
-- The broker is itself a trusted component. Credentials still live somewhere, and if that somewhere is compromised the scheme falls. Defense in depth, not defense in one place.
-- Approval prompts still fatigue if the rules are too loose. Reserving approval for business-consequence actions (push, publish, rotate) is a tuning problem, not a design one.
+- The gating layer becomes the new trust boundary. Credentials still live somewhere on the host; if that layer is compromised, the scheme falls. This is defense in depth, not defense in one place.
+- Approval prompts still fatigue if the rule set is too loose. Reserving approval for business-consequence actions (push, publish, rotate) is a tuning problem, not a design one.
 
-My own implementation of this lives in [`mcp-broker`](https://github.com/averycrespi/agent-tools) — a local MCP reverse proxy in front of a Lima-VM'd agent. Out of scope for this note; linked for reference.
+I've written my own take on this in [`mcp-broker`](https://github.com/averycrespi/agent-tools). Out of scope for this note; linked for reference.
 
 ## References
 
