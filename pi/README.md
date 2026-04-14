@@ -26,11 +26,12 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | ------------------------ | ---------------------------------------------- |
 | `ask-user`               | Improved TUI for user questions                |
 | `code-feedback`          | Auto-format and surface LSP errors after edits |
-| `mcp-broker`             | Broker CLI skill + guard for remote operations |
 | `compact-tools`          | Compact rendering for read and bash            |
 | `context-files-reminder` | Inject context file contents into LLM calls    |
-| `subagents`              | Dynamic subagent loading and dispatch          |
+| `mcp-broker`             | Broker CLI skill + guard for remote operations |
 | `provider-usage`         | Provider rate-limit quota in the footer        |
-| `web`                    | Web search and fetch tools                     |
+| `readonly-tools`         | Enable built-in `ls`, `find`, `grep` tools     |
+| `subagents`              | Dynamic subagent loading and dispatch          |
+| `web-access`             | Web search, fetch, GitHub, and PDF tools       |
 
 See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
