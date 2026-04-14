@@ -14,6 +14,8 @@ This is a **quality** argument, not a cost argument. Subagents burn more tokens,
 
 Secondary benefits worth noting: subagents can run with different models (cheap model under expensive orchestrator), different tool allowlists, and without inheriting the orchestrator's conversational assumptions when that's desirable (e.g. independent review).
 
+The formalized version of this argument is [Recursive Language Models](https://alexzhang13.github.io/blog/2025/rlm/) (Zhang et al., MIT, 2025): if the root model never directly sees the big context and instead dispatches recursive calls that return distilled results, you get near-infinite effective context without context rot. Subagents as used in coding harnesses are the depth-1, human-scaffolded case of the same idea — agents decompose problems; RLMs decompose context.
+
 ## The observability complaint
 
 The standard objection: you can't see what the subagent is doing, and you can't steer it mid-flight the way you can steer the main agent. The stronger version is about auditing — "I can't verify what it did after the fact, so I don't trust the output."
@@ -35,4 +37,5 @@ I think this is accurate for **parallel peer coordination** — genuinely hard, 
 - [Anthropic — Subagents in Claude Code](https://claude.com/blog/subagents-in-claude-code)
 - [Cognition — Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents)
 - [Voidwire Labs — The Real Cost of Claude Code Subagents](https://labs.voidwire.info/posts/the-real-cost-of-claude-code-subagents/)
+- [Zhang et al. — Recursive Language Models](https://alexzhang13.github.io/blog/2025/rlm/)
 - [`plan-execute-review.md`](./plan-execute-review.md) — the workflow shape this note assumes
