@@ -48,8 +48,5 @@
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/scripts/statusline-sandbox.sh"
-  },
-  "enabledPlugins": {
-    "gopls-lsp@claude-plugins-official": true
   }
 }
