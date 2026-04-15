@@ -1,4 +1,4 @@
-import { spawnSubagent } from "../../subagents/index.js";
+import { spawnSubagent } from "../../subagents/api.js";
 
 export interface DispatchOptions {
   prompt: string;

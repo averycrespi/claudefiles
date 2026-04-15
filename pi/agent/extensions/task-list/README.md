@@ -2,13 +2,16 @@
 
 Pi extension providing session-scoped task tracking with a rich inline TUI rendering.
 
-## Programmatic API
+## Public API
 
-The extension exports a singleton store, `taskList`, from `api.ts`. The store type and its factory live in `state.ts`.
+Other extensions may import the following from `api.ts`. Anything not listed here is internal and may change without notice.
 
 ```ts
 import { taskList } from "../task-list/api.js";
 ```
+
+- `taskList` — the singleton store described below.
+- Types: `Task`, `TaskStatus`, `TaskListState`, `TaskStore` (re-exported from `state.ts`).
 
 ### `taskList.create(tasks: Omit<Task, "id" | "status">[]): Task[]`
 

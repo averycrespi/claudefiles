@@ -2,6 +2,19 @@
 
 Pi extension that provides tools for delegating work to child Pi processes as focused subagents.
 
+## Public API
+
+Other extensions may import the following from `api.ts`. Anything not listed here is internal and may change without notice.
+
+```ts
+import { spawnSubagent, formatSpawnFailure } from "../subagents/api.js";
+import type { SpawnInvocation, SpawnOutcome } from "../subagents/api.js";
+```
+
+- `spawnSubagent(options: SpawnInvocation): Promise<SpawnOutcome>` — low-level child-process spawn that backs `spawn_agent`. Use when you need to run a Pi subagent from extension code without going through the LLM tool interface. Honors `signal` for cancellation.
+- `formatSpawnFailure(outcome: SpawnOutcome): string` — canonical error formatter for a failed `SpawnOutcome`. Produces the same error text rendered by the `spawn_agent` tool.
+- `SpawnInvocation`, `SpawnOutcome` — input/output types for `spawnSubagent`.
+
 ## Tools
 
 ### `spawn_agent`
@@ -143,6 +156,7 @@ Fields: `name` (defaults to filename without extension), `description` (shown in
 ## File layout
 
 - `index.ts` — tool registrations and execution orchestration
+- `api.ts` — public surface re-exported for other extensions (see **Public API** above)
 - `loader.ts` — agent discovery and frontmatter parsing
 - `spawn.ts` — child process spawning, CLI argument construction, and result handling
 - `activity.ts` — live activity tracking and UI widget updates
