@@ -2,8 +2,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { taskList } from "../task-list/api.ts";
-import { dispatch } from "./lib/dispatch.ts";
+import { dispatch as rawDispatch } from "./lib/dispatch.ts";
+import type { DispatchOptions, DispatchResult } from "./lib/dispatch.ts";
 import { formatReport } from "./lib/report.ts";
+import { createStatusWidget, type StatusWidget } from "./lib/status-widget.ts";
 import { runImplement } from "./phases/implement.ts";
 import { runPlan } from "./phases/plan.ts";
 import { runVerify, type RunVerifyResult } from "./phases/verify.ts";
@@ -11,10 +13,12 @@ import { preflight } from "./preflight.ts";
 
 const execFileP = promisify(execFile);
 
-/**
- * Resolves the current HEAD SHA of the repo at `cwd` via `git rev-parse`.
- * Used by the implement phase to verify each task produces a new commit.
- */
+interface ActiveRun {
+  controller: AbortController;
+  startedAt: number;
+}
+let activeRun: ActiveRun | null = null;
+
 function makeGetHead(cwd: string): () => Promise<string> {
   return async () => {
     const { stdout } = await execFileP("git", ["rev-parse", "HEAD"], { cwd });
@@ -22,27 +26,16 @@ function makeGetHead(cwd: string): () => Promise<string> {
   };
 }
 
-/**
- * Subscribes to taskList changes and captures HEAD after any task
- * transitions into the `completed` state. The subagent reports its
- * commit sha, but we prefer the live HEAD — it is authoritative and
- * already verified to have moved by the implement phase. Returns the
- * populated map plus an unsubscribe handle.
- */
 function makeCommitTracker(getHead: () => Promise<string>): {
   map: Record<number, string>;
   unsubscribe: () => void;
 } {
   const map: Record<number, string> = {};
-  // Track which task ids we've already captured — subscribe fires on
-  // any state mutation, including activity heartbeats.
   const captured = new Set<number>();
   const unsubscribe = taskList.subscribe((state) => {
     for (const t of state.tasks) {
       if (t.status === "completed" && !captured.has(t.id)) {
         captured.add(t.id);
-        // Fire-and-forget: capture HEAD asynchronously. Failures are
-        // non-fatal — the report falls back to `(no-sha)` if missing.
         getHead()
           .then((sha) => {
             map[t.id] = sha;
@@ -90,13 +83,9 @@ interface EmitReportArgs {
   baseSha: string;
   verify: RunVerifyResult | null;
   commitShas: Record<number, string>;
+  cancelled?: { elapsedMs: number };
 }
 
-/**
- * Renders the final report and pushes it to the transcript as a
- * single text message. Called from every pipeline termination path
- * so the user always gets a summary, even on early failure.
- */
 async function emitReport(args: EmitReportArgs): Promise<void> {
   const [branchName, commitsAhead] = await Promise.all([
     resolveBranch(args.cwd),
@@ -109,6 +98,7 @@ async function emitReport(args: EmitReportArgs): Promise<void> {
     tasks: taskList.all(),
     verify: args.verify,
     commitShas: args.commitShas,
+    cancelled: args.cancelled,
   });
   args.pi.sendMessage({
     customType: "autopilot-report",
@@ -118,7 +108,50 @@ async function emitReport(args: EmitReportArgs): Promise<void> {
   });
 }
 
+/**
+ * Wraps `rawDispatch` so every subagent call:
+ *   1. Inherits the run-level abort signal (unless the caller supplies one).
+ *   2. Creates a live subagent handle on the status widget and forwards
+ *      Pi subagent events to it.
+ */
+function makeWrappedDispatch(
+  widget: StatusWidget,
+  signal: AbortSignal,
+): (opts: DispatchOptions) => Promise<DispatchResult> {
+  return async (opts) => {
+    const intent = opts.intent ?? "subagent";
+    const handle = widget.subagent(intent);
+    try {
+      return await rawDispatch({
+        ...opts,
+        signal: opts.signal ?? signal,
+        onEvent: (event) => {
+          opts.onEvent?.(event);
+          handle.onEvent(event);
+        },
+      });
+    } finally {
+      handle.finish();
+    }
+  };
+}
+
 export default function (pi: ExtensionAPI) {
+  pi.registerCommand("autopilot-cancel", {
+    description: "Cancel the currently running /autopilot pipeline.",
+    handler: async (_args, ctx) => {
+      if (!activeRun) {
+        ctx.ui.notify("/autopilot-cancel: no autopilot run is active", "info");
+        return;
+      }
+      ctx.ui.notify(
+        "/autopilot-cancel: cancelling — will stop after current step",
+        "warning",
+      );
+      activeRun.controller.abort();
+    },
+  });
+
   pi.registerCommand("autopilot", {
     description:
       "Run the autonomous plan → implement → verify pipeline on a design document.",
@@ -134,57 +167,95 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
+      if (activeRun) {
+        ctx.ui.notify(
+          "/autopilot: a run is already active — use /autopilot-cancel to stop it first",
+          "error",
+        );
+        return;
+      }
+
       const pre = await preflight({ designPath, cwd: process.cwd() });
       if (!pre.ok) {
         ctx.ui.notify(`/autopilot: ${pre.reason}`, "error");
         return;
       }
 
-      ctx.ui.notify(
-        `/autopilot: preflight ok (base ${pre.baseSha.slice(0, 7)}). Planning…`,
-        "info",
-      );
-
       const cwd = process.cwd();
       const getHead = makeGetHead(cwd);
+      const controller = new AbortController();
+      const startedAt = Date.now();
+      activeRun = { controller, startedAt };
 
-      const plan = await runPlan({
-        designPath,
-        dispatch,
-        cwd,
+      const widget = createStatusWidget({
+        ui: ctx.hasUI ? ctx.ui : undefined,
       });
-      if (!plan.ok) {
-        ctx.ui.notify(`/autopilot: plan failed — ${plan.error}`, "error");
-        // No tasks to report. Still emit a (near-empty) report so the
-        // user sees a consistent summary.
-        await emitReport({
-          pi,
-          designPath,
-          cwd,
-          baseSha: pre.baseSha,
-          verify: null,
-          commitShas: {},
-        });
-        return;
-      }
+      const dispatch = makeWrappedDispatch(widget, controller.signal);
+      const commitTracker = makeCommitTracker(getHead);
 
-      taskList.clear();
-      taskList.create(plan.data.tasks);
+      const isCancelled = () => controller.signal.aborted;
+      const cancelledInfo = (): { elapsedMs: number } => ({
+        elapsedMs: Date.now() - startedAt,
+      });
 
       ctx.ui.notify(
-        `/autopilot: plan ok — ${plan.data.tasks.length} task(s) created. Implementing…`,
+        `/autopilot: started (base ${pre.baseSha.slice(0, 7)})`,
         "info",
       );
 
-      const commitTracker = makeCommitTracker(getHead);
-
       try {
+        widget.setPhase("Planning");
+        const plan = await runPlan({ designPath, dispatch, cwd });
+
+        if (isCancelled()) {
+          await emitReport({
+            pi,
+            designPath,
+            cwd,
+            baseSha: pre.baseSha,
+            verify: null,
+            commitShas: {},
+            cancelled: cancelledInfo(),
+          });
+          return;
+        }
+        if (!plan.ok) {
+          ctx.ui.notify(`/autopilot: plan failed — ${plan.error}`, "error");
+          await emitReport({
+            pi,
+            designPath,
+            cwd,
+            baseSha: pre.baseSha,
+            verify: null,
+            commitShas: {},
+          });
+          return;
+        }
+
+        taskList.clear();
+        taskList.create(plan.data.tasks);
+
+        widget.setPhase(`Implementing · ${plan.data.tasks.length} tasks`);
         const implementResult = await runImplement({
           archNotes: plan.data.architecture_notes,
           dispatch,
           getHead,
           cwd,
+          onPhase: (label) => widget.setPhase(label),
         });
+
+        if (isCancelled()) {
+          await emitReport({
+            pi,
+            designPath,
+            cwd,
+            baseSha: pre.baseSha,
+            verify: null,
+            commitShas: commitTracker.map,
+            cancelled: cancelledInfo(),
+          });
+          return;
+        }
 
         if (!implementResult.ok) {
           ctx.ui.notify(
@@ -202,11 +273,7 @@ export default function (pi: ExtensionAPI) {
           return;
         }
 
-        ctx.ui.notify(
-          `/autopilot: implement ok — all ${plan.data.tasks.length} task(s) completed. Verifying…`,
-          "info",
-        );
-
+        widget.setPhase("Verifying");
         const taskListSummary = taskList
           .all()
           .map((t) => `[${t.status}] ${t.title}`)
@@ -224,15 +291,21 @@ export default function (pi: ExtensionAPI) {
           archNotes: plan.data.architecture_notes,
           taskListSummary,
           cwd,
+          onPhase: (label) => widget.setPhase(label),
         });
 
-        const fixedCount = verifyResult.fixed.length;
-        const knownCount = verifyResult.knownIssues.length;
-        const skippedCount = verifyResult.skippedReviewers.length;
-        ctx.ui.notify(
-          `/autopilot: verify ok — fixed ${fixedCount}, known issues ${knownCount}, reviewers skipped ${skippedCount}.`,
-          "info",
-        );
+        if (isCancelled()) {
+          await emitReport({
+            pi,
+            designPath,
+            cwd,
+            baseSha: pre.baseSha,
+            verify: verifyResult,
+            commitShas: commitTracker.map,
+            cancelled: cancelledInfo(),
+          });
+          return;
+        }
 
         await emitReport({
           pi,
@@ -243,7 +316,9 @@ export default function (pi: ExtensionAPI) {
           commitShas: commitTracker.map,
         });
       } finally {
+        widget.dispose();
         commitTracker.unsubscribe();
+        activeRun = null;
       }
     },
   });

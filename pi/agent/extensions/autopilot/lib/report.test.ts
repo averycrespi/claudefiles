@@ -156,6 +156,31 @@ test("verify partial lists findings as known issues", () => {
   assert.ok(text.includes("security (skipped)"), "skipped reviewer annotated");
 });
 
+test("cancelled run shows cancelled banner and replaces verify with cancelled reason", () => {
+  const tasks: Task[] = [
+    mkTask(1, "Task one", "completed", { summary: "done" }),
+    mkTask(2, "Task two", "in_progress"),
+    mkTask(3, "Task three", "pending"),
+  ];
+  const text = formatReport({
+    designPath: "design.md",
+    branchName: "feat/foo",
+    commitsAhead: 1,
+    tasks,
+    verify: null,
+    commitShas: { 1: "abc1234" },
+    cancelled: { elapsedMs: 6 * 60_000 + 18_000 },
+  });
+  assert.ok(
+    text.includes("Cancelled by user at 06:18"),
+    "cancelled banner with elapsed time",
+  );
+  assert.ok(
+    text.includes("skipped (cancelled by user)"),
+    "verify section says cancelled",
+  );
+});
+
 test("validation still failing is flagged as known issue", () => {
   const tasks: Task[] = [
     mkTask(1, "Only task", "completed", { summary: "ok" }),

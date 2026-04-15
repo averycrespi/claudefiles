@@ -8,6 +8,39 @@ Pi extension that runs an autonomous plan → implement → verify pipeline from
 
 One positional argument: the path to a design document (typically `.designs/YYYY-MM-DD-<topic>.md`). No flags in v1.
 
+Only one autopilot run may be active at a time — invoking `/autopilot` while a run is in progress errors immediately. Use `/autopilot-cancel` to stop the active run first.
+
+### `/autopilot-cancel`
+
+Signals the active autopilot run to stop. The orchestrator aborts its current subagent (via `AbortSignal`), skips any remaining phases, tears down the status widget, and emits the final report with a `Cancelled by user at MM:SS` banner and `Verify: skipped (cancelled by user)`. Any commits the implement phase already landed remain on the branch.
+
+If no run is active, the command is a no-op with an informational notification.
+
+## Status widget
+
+While a run is active, a sticky widget is rendered above the editor (key `autopilot`). It updates in place on every subagent event and every task-list transition.
+
+Layout:
+
+```
+autopilot · <phase> · MM:SS
+  ↳ <subagent intent> (MM:SS)
+     - <recent tool event>
+     - <recent tool event>
+     - <recent tool event>
+  N tasks (D done, A in progress, O open)
+    ◼ <in-progress task title>
+type /autopilot-cancel to stop
+```
+
+Phase labels:
+
+- `Planning` — plan subagent is running
+- `Implementing · N tasks` → `Implementing · task N/M` — set per task
+- `Verifying · validation`, `Verifying · reviewers`, `Verifying · auto-fix round N (K findings)` — sub-phases inside verify
+
+The widget is torn down when the run ends (success, implement failure, or cancel). The inline task-list messages emitted by the `task-list` extension remain in scrollback so there's a permanent record of the run.
+
 **Pre-flight checks** (run before any subagent is dispatched):
 
 1. The design file exists and is readable.
@@ -188,6 +221,7 @@ Unified principle: **always terminate with a report. Never leave the user in a s
 | Reviewer subagent fails to run                           | Orchestrator skips that reviewer. Skip noted in report. Other reviewers still run.    |
 | Fix subagent breaks something that was passing           | Record as known issue. Do not roll back.                                              |
 | Dirty working tree at `/autopilot` invocation            | Abort immediately before plan phase.                                                  |
+| User runs `/autopilot-cancel` mid-run                    | Abort current subagent. Skip remaining phases. Emit report with cancelled banner.     |
 
 No implicit retries (beyond the explicit fixer loops). No implicit rollbacks. Every commit that lands during the pipeline stays on the branch.
 

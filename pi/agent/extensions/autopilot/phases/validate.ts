@@ -133,6 +133,10 @@ export async function runValidation(
       prompt: validationPrompt,
       tools: ["read", "bash", "ls", "find", "grep"],
       cwd: args.cwd,
+      intent:
+        rounds === 1
+          ? "Validate: tests + lint + typecheck"
+          : `Re-validate (round ${rounds})`,
     });
 
     if (!validationDispatch.ok) {
@@ -189,6 +193,7 @@ export async function runValidation(
       tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
       extensions: ["code-feedback"],
       cwd: args.cwd,
+      intent: `Fix validation failures (round ${rounds})`,
     });
 
     if (!fixerDispatch.ok) {

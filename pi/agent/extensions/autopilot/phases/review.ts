@@ -87,6 +87,7 @@ export async function runReviewers(
         prompt,
         tools: ["read", "ls", "find", "grep"],
         cwd: args.cwd,
+        intent: `Review: ${name}`,
       });
       const emptyReport: ReviewerReport = { findings: [] };
       if (!dispatchResult.ok) {

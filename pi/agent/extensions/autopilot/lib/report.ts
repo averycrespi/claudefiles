@@ -21,10 +21,12 @@ export interface ReportInput {
   /** Defaults to "main" if omitted. */
   baseBranch?: string;
   tasks: Task[];
-  /** `null` when verify was skipped (implement failed). */
+  /** `null` when verify was skipped (implement failed or cancelled). */
   verify: RunVerifyResult | null;
   /** Map of task id → HEAD sha captured after that task's commit landed. */
   commitShas?: Record<number, string>;
+  /** Present when the run was cancelled by the user. */
+  cancelled?: { elapsedMs: number };
 }
 
 const HEADER = "━━━ Autopilot Report ━━━";
@@ -87,6 +89,14 @@ export function formatReport(input: ReportInput): string {
   const baseBranch = input.baseBranch ?? "main";
   const lines: string[] = [];
   lines.push(HEADER);
+  if (input.cancelled) {
+    const sec = Math.max(0, Math.floor(input.cancelled.elapsedMs / 1000));
+    const mm = Math.floor(sec / 60)
+      .toString()
+      .padStart(2, "0");
+    const ss = (sec % 60).toString().padStart(2, "0");
+    lines.push(`Cancelled by user at ${mm}:${ss}`);
+  }
   lines.push("");
   lines.push(`Design:  ${input.designPath}`);
   const commitWord = input.commitsAhead === 1 ? "commit" : "commits";
@@ -123,7 +133,8 @@ export function formatReport(input: ReportInput): string {
   // --- Verify section -----------------------------------------------
   lines.push("Verify:");
   if (input.verify === null) {
-    lines.push(`  skipped (implement failed)`);
+    const reason = input.cancelled ? "cancelled by user" : "implement failed";
+    lines.push(`  skipped (${reason})`);
   } else {
     const v = input.verify;
     // Automated checks line.
