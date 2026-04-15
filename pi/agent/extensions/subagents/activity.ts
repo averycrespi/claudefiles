@@ -2,7 +2,7 @@ import type {
   SubagentEvent,
   SubagentPhase,
   SubagentRunState,
-} from "./types.js";
+} from "./types.ts";
 
 export interface SubagentCompletion {
   ok: boolean;

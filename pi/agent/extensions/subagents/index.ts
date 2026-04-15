@@ -15,13 +15,13 @@ import {
   type SpawnAgentsParams,
   type SubagentEvent,
   type SubagentRunState,
-} from "./types.js";
+} from "./types.ts";
 import {
   createSubagentActivityTracker,
   type SubagentActivityTracker,
-} from "./activity.js";
-import { formatSpawnFailure, spawnSubagent } from "./spawn.js";
-import { loadAgents } from "./loader.js";
+} from "./activity.ts";
+import { formatSpawnFailure, spawnSubagent } from "./spawn.ts";
+import { loadAgents } from "./loader.ts";
 
 const text = (value: string) => [{ type: "text" as const, text: value }];
 

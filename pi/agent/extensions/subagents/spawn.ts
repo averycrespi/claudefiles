@@ -11,8 +11,8 @@ import {
   MAX_SUBAGENT_DEPTH,
   type BuiltinTool,
   type InheritSession,
-} from "./types.js";
-import { resolveExtensionAllowlist } from "./utils.js";
+} from "./types.ts";
+import { resolveExtensionAllowlist } from "./utils.ts";
 
 export const PI_BINARY = "pi";
 

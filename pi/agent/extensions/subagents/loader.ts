@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import type { AgentDefinition, BuiltinTool } from "./types.js";
-import { getAgentDir } from "./utils.js";
+import type { AgentDefinition, BuiltinTool } from "./types.ts";
+import { getAgentDir } from "./utils.ts";
 
 function parseBool(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined) return fallback;
