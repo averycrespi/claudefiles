@@ -1,11 +1,11 @@
 # code-feedback extension
 
-This extension surfaces LSP feedback to the model without making the model ask for it. After every successful `write` or `edit` tool result it runs two phases:
+This extension autoformats files and keeps a language server warm for the model to poll. After every successful `write` or `edit` tool result it runs two phases:
 
 1. **Autoformat** — runs `gofmt` for `.go` files and `prettier` for files Prettier understands. Identical to the previous `autoformat` extension this replaces.
-2. **LSP diagnostics** — for Go and TypeScript/JavaScript files, syncs the post-format content to the language server (gopls or typescript-language-server) and appends any errors to the tool result so the model sees them on its next turn.
+2. **LSP warm-up** — for Go and TypeScript/JavaScript files, syncs the post-format content to the language server (gopls or typescript-language-server) via `didOpen` / `didChange` so a later `lsp_diagnostics` call doesn't pay a cold-start cost. Nothing is appended to the tool result.
 
-It also piggybacks on `read` tool results: when the model reads a file the LSP already knows about (from a prior write/edit or explicit LSP tool call), cached diagnostics are appended to the read result so the model is reminded of latent errors even after the original auto-inject has scrolled out of its context. The read path is strictly a cache lookup — it never opens files or issues LSP requests, preserving the "reads are cheap" contract.
+Diagnostics are strictly pull-only: the model sees them only when it explicitly invokes `lsp_diagnostics` (or gets them incidentally through `lsp_navigation`). Read, write, and edit tool results never have LSP output injected into them. See [DESIGN.md](DESIGN.md) for why.
 
 ## Languages supported
 
@@ -14,7 +14,7 @@ It also piggybacks on `read` tool results: when the model reads a file the LSP a
 | Go                      | `gopls serve`                        | `.go`                                   |
 | TypeScript / JavaScript | `typescript-language-server --stdio` | `.ts .tsx .js .jsx .mjs .cjs .mts .cts` |
 
-Servers are spawned lazily on the first write/edit of a matching file. If a binary isn't installed, the user is notified once per session and Go/TS edits proceed without LSP feedback.
+Servers are spawned lazily on the first write/edit of a matching file (or on the first `lsp_diagnostics` / `lsp_navigation` call against one). If a binary isn't installed, the user is notified once per session and subsequent LSP tool calls fail gracefully.
 
 ## Tools registered
 
@@ -31,7 +31,7 @@ doesn't blow out the footer with 40+ lines of symbols.
 ## File layout
 
 - `index.ts` — extension entry point and orchestration
-- `constants.ts` — tunable limits (cap, severities, file size, restarts)
+- `constants.ts` — tunable limits (related-info cap, tracked-docs LRU, file size, restarts)
 - `timing.ts` — timeout values
 - `log.ts` — UI-aware logging helper (see "Logs" below)
 - `format/` — gofmt and prettier wrappers (unchanged from `autoformat`)
@@ -72,7 +72,7 @@ If the LSP `languageId` for the new language differs from the registry key (e.g.
 - [apmantza/pi-lens](https://github.com/apmantza/pi-lens) — large pi extension with 41 hardcoded LSP servers, debounced `publishDiagnostics`, permanent stream `error` listeners for post-crash stdio hygiene, and production-grade error handling for long-running LSP sessions
 - [samfoy/pi-lsp-extension](https://github.com/samfoy/pi-lsp-extension) — smaller `vscode-languageserver-protocol`-based pi extension with lazy-start-and-return-null, LRU(100) document tracking with `didClose` eviction, and the `stdin.write` monkey-patch pattern for surviving mid-write EPIPE/ECONNRESET errors
 - [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) — single unified `lsp` tool with an `action` parameter (diagnostics, definition, references, hover, rename, code actions), workspace-local binary resolution, diagnostic `relatedInformation` rendering, `$/cancelRequest` on abort, `workspace/diagnostic` via compiler shell-out, and `lspmux` process-multiplexing integration
-- Anthropic Claude Code — `vscode-jsonrpc`-based LSP client, plugin-driven server discovery, pull-mode diagnostics preferred, and diagnostics delivered to the model as tool-result attachments rather than via a dedicated tool
+- Anthropic Claude Code — `vscode-jsonrpc`-based LSP client, plugin-driven server discovery, pull-mode diagnostics preferred, and diagnostics delivered to the model as tool-result attachments. (This extension experimented with the attachment approach and dropped it; see DESIGN.md's "Why pull-only diagnostics" section for the rationale.)
 
 ## Design
 

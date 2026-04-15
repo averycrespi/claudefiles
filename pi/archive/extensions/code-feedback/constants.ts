@@ -1,14 +1,3 @@
-import { DiagnosticSeverity } from "vscode-languageserver-protocol";
-
-/**
- * Maximum number of error diagnostics to inline in a write/edit tool_result.
- *
- * Beyond this we show "... and N more error(s)". Increase if the model
- * frequently needs more context at once; decrease if context bloat becomes
- * a problem.
- */
-export const MAX_INLINE_ERRORS_PER_FILE = 10;
-
 /**
  * Maximum number of `relatedInformation` entries rendered per diagnostic.
  *
@@ -58,24 +47,3 @@ export const LSP_MAX_FILE_BYTES = 1_000_000;
  * lines without bloating every error message.
  */
 export const STARTUP_STDERR_CAP_BYTES = 4096;
-
-/**
- * Severities we surface in the auto-inject path on tool_result.
- *
- * We deliberately surface ONLY errors here, not warnings/info/hints.
- *
- * Reasoning: the auto-inject runs after every write and edit, so anything
- * included here costs context tokens on every tool result. Warnings are
- * usually lint/style noise the model doesn't need to act on immediately,
- * and including them tends to make the model "fix" things that aren't
- * actually broken — wasted turns and worse signal-to-noise.
- *
- * The explicit `lsp_diagnostics` tool returns ALL severities, so if the
- * model wants the full picture it can ask. Auto-inject stays focused on
- * "you broke the build."
- *
- * To include warnings here, add DiagnosticSeverity.Warning to this set.
- */
-export const AUTO_INJECT_SEVERITIES: ReadonlySet<DiagnosticSeverity> = new Set([
-  DiagnosticSeverity.Error,
-]);

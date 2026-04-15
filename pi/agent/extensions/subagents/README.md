@@ -34,12 +34,12 @@ Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. Th
 
 The built-in types:
 
-| Type       | Tools                   | Extensions    | Model        | Thinking |
-| ---------- | ----------------------- | ------------- | ------------ | -------- |
-| `explore`  | read                    | —             | gpt-5.4-mini | medium   |
-| `review`   | read                    | —             | gpt-5.4      | high     |
-| `research` | read                    | web           | gpt-5.4      | high     |
-| `code`     | read, bash, edit, write | code-feedback | gpt-5.4      | medium   |
+| Type       | Tools                   | Extensions | Model        | Thinking |
+| ---------- | ----------------------- | ---------- | ------------ | -------- |
+| `explore`  | read                    | —          | gpt-5.4-mini | medium   |
+| `review`   | read                    | —          | gpt-5.4      | high     |
+| `research` | read                    | web        | gpt-5.4      | high     |
+| `code`     | read, bash, edit, write | autoformat | gpt-5.4      | medium   |
 
 `explore` and `review` are read-only. `research` adds web search and fetch via the `web` extension. `code` has full write access including shell.
 
@@ -111,7 +111,7 @@ When loaded, the extension hooks `before_agent_start` to append delegation guida
 Each spawn:
 
 1. Looks up the agent type config (tools, model, thinking level, system prompt)
-2. Resolves extension short names (`web`, `code-feedback`) to concrete paths — searched in order: `.pi/extensions/`, `~/.pi/agent/extensions/`, and any roots listed in `settings.json`
+2. Resolves extension short names (e.g. `web-access`) to concrete paths — searched in order: `.pi/extensions/`, `~/.pi/agent/extensions/`, and any roots listed in `settings.json`
 3. Launches `pi --mode json -p --no-session` as a child process with the resolved tool allowlist and extension paths
 4. Streams JSONL events from the child process to track phase, active tool, and current command
 5. Returns the child's final assistant message, or a formatted failure message on non-zero exit

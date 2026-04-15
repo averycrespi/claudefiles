@@ -5,12 +5,12 @@
  *   1. Autoformat the file (gofmt or prettier — same as the previous
  *      `autoformat` extension this replaces).
  *   2. If a Go or TypeScript/JavaScript file, sync the post-format content
- *      to the language server (lazy-start the server if needed).
- *   3. Wait for the LSP to report diagnostics.
- *   4. Append a summary of *errors only* to the tool_result content so
- *      the model sees them on its next turn.
+ *      to the language server (lazy-start the server if needed) so the
+ *      server is warm when the model later polls via `lsp_diagnostics`.
  *
- * See `.designs/2026-04-10-lsp-extension.md` for the full design rationale.
+ * Diagnostics are surfaced only through the explicit `lsp_diagnostics`
+ * and `lsp_navigation` tools — nothing is auto-injected into tool
+ * results. See DESIGN.md for the rationale.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -26,9 +26,7 @@ import {
   type NotifyContext,
   logFormattingIssue,
 } from "./format/utils.js";
-import { configureLogging, logError } from "./log.js";
-import { fileUriFor } from "./lsp/client.js";
-import { formatAutoInjectSummary } from "./lsp/format-diagnostics.js";
+import { configureLogging } from "./log.js";
 import { FileSync } from "./lsp/file-sync.js";
 import { getLanguageIdForFile } from "./lsp/language-map.js";
 import { LspManager, type ServerState } from "./lsp/manager.js";
@@ -67,78 +65,37 @@ async function autoformatFile(
 }
 
 /**
- * Read-path opportunistic feedback. Returns a summary string iff the file
- * is already tracked by the LSP (from a prior write/edit or explicit tool
- * call) AND its server is running — in which case we read cached
- * diagnostics without issuing any LSP request. On miss we return null
- * immediately: no `didOpen`, no `getDiagnostics` round trip, no wait. This
- * preserves the "reads are cheap" contract while surfacing latent errors
- * on files the agent has touched earlier in the session.
+ * Warms the LSP for a file after a successful write/edit: triggers lazy
+ * server start and sends the post-format content via `didOpen` /
+ * `didChange`. Does not request or return diagnostics — the model pulls
+ * them on demand through `lsp_diagnostics`. Keeping the server warm here
+ * means those polls don't pay a cold-start cost on files the model just
+ * touched.
  */
-function lspFeedbackForRead(absPath: string, cwd: string): string | null {
-  if (!state.manager || !state.fileSync) return null;
+async function warmLspForFile(absPath: string): Promise<void> {
+  if (!state.manager || !state.fileSync) return;
 
   const registryId = getLanguageIdForFile(absPath);
-  if (!registryId || !DEFAULT_SERVERS[registryId]) return null;
+  if (!registryId || !DEFAULT_SERVERS[registryId]) return;
 
-  if (!state.fileSync.isTracked(absPath)) return null;
-
-  const resolved = state.manager.lookupRunning(absPath);
-  if (!resolved) return null;
-
-  const uri = fileUriFor(absPath);
-  const diagnostics = resolved.client.getCachedDiagnostics(uri);
-  return formatAutoInjectSummary(absPath, cwd, diagnostics);
-}
-
-/**
- * Runs the LSP feedback step for a file. Returns the inline summary text
- * to append to the tool_result, or null if no diagnostics should be shown.
- */
-async function lspFeedbackForFile(
-  absPath: string,
-  cwd: string,
-): Promise<string | null> {
-  if (!state.manager || !state.fileSync) return null;
-
-  const registryId = getLanguageIdForFile(absPath);
-  if (!registryId || !DEFAULT_SERVERS[registryId]) return null;
-
-  // File size guard.
   try {
     const stats = await stat(absPath);
-    if (stats.size > LSP_MAX_FILE_BYTES) return null;
+    if (stats.size > LSP_MAX_FILE_BYTES) return;
   } catch {
-    return null;
+    return;
   }
 
-  // Trigger lazy start (returns null if not yet running).
   const client = state.manager.getRunningClient(absPath);
-  if (!client) return null;
+  if (!client) return;
 
-  // Re-read the (post-format) content from disk.
   let content: string;
   try {
     content = await readFile(absPath, "utf-8");
   } catch {
-    return null;
+    return;
   }
 
-  const uri = state.fileSync.syncWrite(absPath, content, registryId);
-  if (!uri) return null;
-
-  let diagnostics;
-  try {
-    diagnostics = await client.getDiagnostics(uri);
-  } catch (err) {
-    logError(
-      "[code-feedback] getDiagnostics failed:",
-      err instanceof Error ? err.message : err,
-    );
-    return null;
-  }
-
-  return formatAutoInjectSummary(absPath, cwd, diagnostics);
+  state.fileSync.syncWrite(absPath, content, registryId);
 }
 
 function buildStatusLine(states: Map<string, ServerState>): string {
@@ -244,35 +201,6 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("tool_result", async (event, ctx) => {
-    // Read tool: opportunistic cache-read only. If the file is already
-    // tracked by the LSP (prior write/edit or explicit query) and its
-    // server is running, surface cached diagnostics alongside the read
-    // result. On cache miss we do nothing — no didOpen, no server round
-    // trip — so the "reads are cheap" contract holds.
-    if (event.toolName === "read") {
-      const path = getToolPath(event);
-      if (!path) return;
-      const first = event.content?.[0];
-      if (
-        first?.type === "text" &&
-        typeof first.text === "string" &&
-        first.text.startsWith("Error")
-      ) {
-        return;
-      }
-      const absPath = resolve(ctx.cwd, path);
-      const summary = lspFeedbackForRead(absPath, ctx.cwd);
-      if (summary) {
-        return {
-          content: [
-            ...event.content,
-            { type: "text" as const, text: `\n\n${summary}` },
-          ],
-        };
-      }
-      return;
-    }
-
     if (event.toolName !== "write" && event.toolName !== "edit") return;
 
     const path = getToolPath(event);
@@ -307,16 +235,9 @@ export default function (pi: ExtensionAPI) {
       );
     }
 
-    // Step 2: LSP feedback
-    const lspSummary = await lspFeedbackForFile(absPath, ctx.cwd);
-    if (lspSummary) {
-      return {
-        content: [
-          ...event.content,
-          { type: "text" as const, text: `\n\n${lspSummary}` },
-        ],
-      };
-    }
+    // Step 2: warm the LSP with the post-format content so a later
+    // `lsp_diagnostics` call doesn't pay a cold-start cost.
+    await warmLspForFile(absPath);
   });
 
   pi.on("tool_execution_end", async (_event, ctx) => {

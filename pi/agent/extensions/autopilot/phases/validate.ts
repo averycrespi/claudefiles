@@ -191,7 +191,7 @@ export async function runValidation(
     const fixerDispatch = await args.dispatch({
       prompt: fixerPrompt,
       tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
-      extensions: ["code-feedback"],
+      extensions: ["autoformat"],
       cwd: args.cwd,
       intent: `Fix validation failures (round ${rounds})`,
     });

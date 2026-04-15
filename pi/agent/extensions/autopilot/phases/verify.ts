@@ -175,7 +175,7 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
     const fixerDispatch = await args.dispatch({
       prompt: fixerPrompt,
       tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
-      extensions: ["code-feedback"],
+      extensions: ["autoformat"],
       cwd: args.cwd,
       intent: `Fix ${auto.length} finding${auto.length === 1 ? "" : "s"}`,
     });

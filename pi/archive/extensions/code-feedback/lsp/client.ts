@@ -725,16 +725,6 @@ export class LspClient {
     return this.diagnosticsCache.get(uri) ?? [];
   }
 
-  /** Direct cache read with no waiting. Used by `lsp_diagnostics` for `path: "*"`. */
-  getCachedDiagnostics(uri: string): Diagnostic[] {
-    return this.diagnosticsCache.get(uri) ?? [];
-  }
-
-  /** All URIs the client has diagnostics cached for. */
-  getCachedUris(): string[] {
-    return Array.from(this.diagnosticsCache.keys());
-  }
-
   /** `textDocument/definition` */
   async definition(
     uri: string,

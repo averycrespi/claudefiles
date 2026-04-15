@@ -23,15 +23,44 @@ initial version:
 - **No workspace-wide `lsp_diagnostics`** — `path: "*"` was tried and
   removed. See "Why no workspace-wide diagnostics" below.
 
+## Why pull-only diagnostics
+
+Earlier versions of this extension auto-injected LSP diagnostics into
+every `write`/`edit` tool_result and piggybacked cached diagnostics on
+`read` results. Both paths were removed.
+
+The problem is that tool calls mutate one file at a time, so during any
+multi-file change the LSP is transiently inconsistent: file A has been
+updated, but its dependents haven't. Diagnostics captured in that
+window are "real" from the server's point of view but misleading from
+the task's point of view — they describe an intermediate state the
+model is about to fix with its next write. Surfacing them pushed the
+model down rabbit holes fixing errors that would have gone away on
+their own.
+
+The fix is to let the model decide when the code is at a coherent
+checkpoint and pull diagnostics at that moment via `lsp_diagnostics`.
+Auto-formatting still runs on write/edit (it's a local, single-file
+transform with no cross-file state), and the LSP is warmed with the
+post-format content on write/edit so the next poll doesn't pay a
+cold-start cost. But the model — not the extension — picks when to
+look.
+
+Reads never warm the LSP either. Reads are high-volume and
+exploratory; tying LSP tracked-state to them would bloat the
+open-document set with files the model has no intent to modify, and
+would be especially bad for `tsserver` (an open-file-first server
+whose in-memory project grows on every `didOpen`).
+
 ## Why one unified extension (not two)
 
-Format and LSP must run in a specific order on every `write`/`edit`:
+Format and LSP warm-up must run in a specific order on every
+`write`/`edit`:
 
 1. Autoformat runs first — file bytes may change
 2. Content is re-read from disk
-3. LSP `didChange` with the post-format content
-4. Wait for diagnostics
-5. Append errors (if any) to the tool result
+3. LSP `didChange` with the post-format content — keeps the server
+   warm for a later `lsp_diagnostics` call
 
 If format and LSP lived in separate Pi extensions, the ordering would
 depend on Pi's listener invocation order — fragile. A single extension
@@ -52,7 +81,7 @@ made it worse, not better:
   being trained to reach for the affordance first.
 - **Stale for the useful case.** When files _were_ tracked, the
   returned diagnostics were whatever was last cached — possibly from
-  an auto-inject an hour ago, with no refresh. The model read them as
+  a poll an hour ago, with no refresh. The model read them as
   current state and acted on outdated info.
 - **Duplicated bad options for the good case.** Actually getting
   workspace-wide diagnostics right means one of:
@@ -102,22 +131,17 @@ Every reference implementation reviewed during design (Claude Code,
 ## Lazy-start with return-null
 
 When the model edits a file whose language server isn't running yet,
-the orchestrator kicks off `startServer` in the background and
-immediately returns — the model gets its tool result back instantly
-with no LSP output. From the next edit onwards, the server is warm
-and diagnostics appear normally.
+the warm-up path kicks off `startServer` in the background and
+immediately returns — the model gets its tool result back instantly.
+From the next edit onwards, the server is running and ready to answer
+a poll.
 
-This means the very first edit in a session never sees LSP errors.
-Acceptable for our use case: the model is unlikely to make a critical
-error on the first file it touches, and subsequent edits (or an
-explicit `lsp_diagnostics` call) catch it. The alternative — blocking
-the tool result for up to 10 seconds while tsserver warms up — would
-be much worse.
-
-Note that the explicit `lsp_diagnostics` tool uses a different policy:
-if the model asked for diagnostics directly, it blocks with a timeout
+The explicit `lsp_diagnostics` tool uses a different policy: if the
+model asked for diagnostics directly, it blocks with a timeout
 (`EXPLICIT_TOOL_BLOCK_TIMEOUT_MS`) rather than silently returning
-empty. That's appropriate because the model is asking on purpose.
+empty. That's appropriate because the model is asking on purpose — if
+it just edited the first Go file of the session and immediately polls,
+paying the init latency once is better than returning "no data."
 
 ## When files get opened
 
@@ -139,10 +163,11 @@ Language servers fall into two camps for how they learn about files:
 The extension handles this by opening files in exactly three
 situations:
 
-1. **After a successful `write` or `edit`** — the auto-inject path
-   in `index.ts` reads the post-format content and calls
+1. **After a successful `write` or `edit`** — the warm-up path in
+   `index.ts` reads the post-format content and calls
    `FileSync.syncWrite`, which sends `didOpen` on first touch or
-   `didChange` thereafter.
+   `didChange` thereafter. No diagnostics are requested here; the
+   goal is just to make a later poll cheap.
 2. **When `lsp_diagnostics` is called on a single file** — the tool
    calls `FileSync.openForQuery` before `client.getDiagnostics`,
    which stats, reads, and routes through `syncWrite`.
@@ -153,7 +178,7 @@ situations:
 The common thread: we only open files when the model has signalled
 intent. Writes/edits mean "I care about this file's correctness";
 calling an LSP tool by name means "I want semantic info about this
-file". Plain `read` tool calls deliberately do NOT open documents —
+file." Plain `read` tool calls deliberately do NOT open documents —
 reads are cheap and frequent, and spawning or waking a language
 server every time the model glances at a file would burn indexing
 time for payoff that often never comes. The tradeoff is that the
@@ -161,34 +186,6 @@ very first semantic operation on a fresh TypeScript file incurs a
 small `didOpen` round trip, but that's dwarfed by the server's own
 processing time and happens exactly once per file per session
 (subsequent queries re-route through `didChange`).
-
-### Read-path cache piggyback
-
-Reads still deliberately don't _open_ files, but when the model reads
-a file that happens to be already tracked (from a prior write/edit
-or explicit LSP tool call) we surface the LSP's cached diagnostics
-alongside the read result. This is a strict cache lookup:
-`FileSync.isTracked` filters out untouched files; on a hit we read
-`client.getCachedDiagnostics(uri)` and format through the same
-`formatAutoInjectSummary` the write/edit path uses. No `didOpen`, no
-`didChange`, no `getDiagnostics` request, no wait — the feedback is
-whatever the server last told us.
-
-The motivation is that the model frequently re-reads a file after
-editing it (to double-check context, reason about a diff, or compare
-sections) and auto-inject's output has already scrolled out of the
-visible conversation window. Re-surfacing the cached errors on the
-re-read gives the model a nudge without costing anything. It also
-catches the case where an external agent or script mutated a file
-the LSP has seen — the cache may be stale relative to disk, but it's
-still better signal than nothing.
-
-The feature is deliberately scoped to the cache hit. Opening a file
-on read would reintroduce exactly the "reads trigger server work"
-problem the original rule exists to avoid — and would be especially
-bad for `tsserver`, which is an open-file-first server that grows its
-in-memory project set on every `didOpen`. Files the model reads but
-has never edited remain invisible to the LSP, and that is intentional.
 
 `FileSync.openForQuery` silently no-ops when the file is over
 `LSP_MAX_FILE_BYTES` or can't be read, so the caller's LSP request
@@ -219,19 +216,20 @@ Exact values are in `timing.ts` with reasoning in the JSDoc comments.
 
 ## Error surfacing policy
 
-**Auto-inject (after every write/edit): errors only.** Warnings, info,
-and hints are explicitly excluded. The reasoning — and how to re-enable
-warnings if you change your mind — is documented in detail on
-`AUTO_INJECT_SEVERITIES` in `constants.ts`.
+**Explicit `lsp_diagnostics` tool: all severities.** When the model
+asks on purpose it wants the full picture — errors, warnings, info,
+and hints.
 
-**Explicit `lsp_diagnostics` tool: all severities.** When the model is
-asking on purpose it wants the full picture.
+**Write/edit tool results: nothing injected.** The warm-up step on
+write/edit sends `didChange` to keep the server hot but never touches
+the tool_result content. All diagnostic surfacing goes through the
+explicit tool.
 
-**Missing-binary / crashed-too-often: silent in auto-inject.** If the
-model edits a Go file and `gopls` isn't installed, we don't append
-"gopls not installed" to every Go edit — that's context spam the
-model can't act on. The user sees a one-time notification and a status
-line indicator; the model finds out only if it explicitly calls
+**Missing-binary / crashed-too-often: silent unless the model asks.**
+If the model edits a Go file and `gopls` isn't installed, we don't
+append "gopls not installed" anywhere — that's context spam the model
+can't act on. The user sees a one-time notification and a status line
+indicator; the model finds out only if it explicitly calls
 `lsp_diagnostics` or `lsp_navigation`.
 
 ## Command resolution: workspace-local before `$PATH`
@@ -320,16 +318,16 @@ Only two things can move a server toward `starting`, and both live in
 `getRunningClient`:
 
 1. **First-use** — the state is `not-started` and the model just
-   touched a matching file (via auto-inject, `lsp_diagnostics`, or
-   `lsp_navigation`).
+   touched a matching file (via warm-up on write/edit, `lsp_diagnostics`,
+   or `lsp_navigation`).
 2. **Cooldown retry** — the state is `broken` and
    `Date.now() >= state.cooldownUntil`. The retry counter is carried
    forward so repeated init failures eventually hit the latch.
 
 Neither explicit tool path blocks for very long on a `starting`
-server (`EXPLICIT_TOOL_BLOCK_TIMEOUT_MS`, 10 s), and the auto-inject
-path never blocks — it returns null and lets the next edit pick up a
-warm server.
+server (`EXPLICIT_TOOL_BLOCK_TIMEOUT_MS`, 10 s), and the warm-up path
+never blocks — it returns immediately and lets the next edit or
+explicit poll pick up a warm server.
 
 ### Why the `crashed-too-often` latch happens at start time, not crash time
 

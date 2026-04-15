@@ -3,8 +3,8 @@
 Most tools we add to pi implement `renderCall` and `renderResult` to
 produce compact output for the footer instead of dumping raw results.
 We've converged on a specific shape — match it unless there's a clear
-reason not to. `compact-tools`, `mcp-broker`, `code-feedback`, and
-`subagents` are the working reference.
+reason not to. `compact-tools`, `mcp-broker`, and `subagents` are the
+working reference.
 
 Shared helpers live in `pi/agent/extensions/_shared/render.ts` — import
 from there via `../_shared/render.js` rather than reimplementing

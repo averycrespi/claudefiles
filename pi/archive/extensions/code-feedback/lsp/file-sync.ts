@@ -21,15 +21,12 @@ interface TrackedDocument {
  *
  * Documents are opened in three situations only:
  *   1. A successful `write` or `edit` tool result — handled by the
- *      auto-inject path in `index.ts` via `syncWrite`.
+ *      warm-up path in `index.ts` via `syncWrite`.
  *   2. An explicit `lsp_diagnostics` call on a single file — via
  *      `openForQuery` below.
  *   3. An explicit `lsp_navigation` call on a file — same.
  *
  * Plain `read` tool calls and bash commands do NOT open documents.
- * Reads may still surface LSP diagnostics as a side effect, but only
- * when the file is *already* tracked (from a prior open above) — the
- * read path reads cached diagnostics without issuing any LSP requests.
  * See DESIGN.md ("When files get opened") for the rationale.
  */
 export class FileSync {
@@ -106,29 +103,13 @@ export class FileSync {
     }
   }
 
-  /** Used by `lsp_diagnostics` for `path: "*"` — all currently-tracked URIs. */
-  getTrackedUris(): string[] {
-    return Array.from(this.tracked.keys());
-  }
-
-  /**
-   * True if `absPath` has been opened against its LSP server previously
-   * in this session (via `syncWrite` or `openForQuery`). Used by the
-   * read-tool opportunistic-feedback path to decide whether it's safe to
-   * read cached diagnostics without triggering a new `didOpen` — we only
-   * surface cache hits on reads so the "reads are cheap" contract holds.
-   */
-  isTracked(absPath: string): boolean {
-    return this.tracked.has(fileUriFor(resolve(absPath)));
-  }
-
   /**
    * Ensures `absPath` has been sent to its LSP server (via `didOpen` or
    * `didChange`) so that explicit query tools — `lsp_diagnostics` and
-   * `lsp_navigation` — can operate on it. The original "reads don't
-   * open documents" rule is preserved for the auto-inject path; this
-   * method only runs when the model has asked for semantic info by
-   * name, which we treat as permission to open.
+   * `lsp_navigation` — can operate on it. Plain `read` tool calls
+   * deliberately don't open documents; this method runs only when the
+   * model has asked for semantic info by name, which we treat as
+   * permission to open.
    *
    * Silently no-ops if the file is over `LSP_MAX_FILE_BYTES`, can't be
    * stat'd, or can't be read — the caller's LSP request will then

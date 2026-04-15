@@ -86,7 +86,7 @@ export async function runImplement(
       dispatchResult = await args.dispatch({
         prompt,
         tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
-        extensions: ["code-feedback"],
+        extensions: ["autoformat"],
         cwd: args.cwd,
         intent: `Implement: ${task.title}`,
       });
