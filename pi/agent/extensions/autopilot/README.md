@@ -248,9 +248,6 @@ Verify:
   Fixed:             2 findings  (1 blocker, 1 important)
   Known issues:      1 suggestion
     └ src/middleware.ts:42 | suggestion | rate limit could be extracted to a helper
-
-Next:
-  Review the branch, run /push or gh pr create when ready.
 ```
 
 Reading the blocks:
@@ -261,7 +258,8 @@ Reading the blocks:
 - **Verify → Reviewers** — which reviewers ran (a skipped reviewer is listed with a `(skipped)` suffix).
 - **Verify → Fixed** — what the post-reviewer fix loop resolved.
 - **Verify → Known issues** — everything the pipeline deliberately left for the human: low-severity suggestions, findings that survived the fix cap, validation failures that survived the fix cap, and regressions the fixer introduced.
-- **Next** — a nudge, not an action. Autopilot does not push, does not open PRs, does not switch branches.
+
+Autopilot does not push, does not open PRs, and does not switch branches. Review the branch and ship it yourself.
 
 **Report variants.** On implement failure on task N, tasks 1..N-1 are `✔`, task N is `✗` with its failure reason, tasks N+1..end are `◻`, and the verify section is replaced with `skipped (implement failed)`. On verify partial, unresolved findings appear under known issues.
 

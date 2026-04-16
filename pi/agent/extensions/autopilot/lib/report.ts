@@ -30,7 +30,6 @@ export interface ReportInput {
 }
 
 const HEADER = "━━━ Autopilot Report ━━━";
-const NEXT_FOOTER = "Review the branch, run /push or gh pr create when ready.";
 /** Column (0-indexed) where verify section values start. */
 const VERIFY_LABEL_WIDTH = 17;
 
@@ -202,11 +201,5 @@ export function formatReport(input: ReportInput): string {
       }
     }
   }
-  lines.push("");
-
-  // --- Next footer ---------------------------------------------------
-  lines.push("Next:");
-  lines.push(`  ${NEXT_FOOTER}`);
-
   return lines.join("\n");
 }

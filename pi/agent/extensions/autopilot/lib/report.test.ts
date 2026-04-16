@@ -79,11 +79,8 @@ test("full success report matches design layout", () => {
   );
   assert.ok(text.includes("Known issues:      none"), "known issues none");
   assert.ok(
-    text.endsWith(
-      "Review the branch, run /push or gh pr create when ready.\n",
-    ) ||
-      text.endsWith("Review the branch, run /push or gh pr create when ready."),
-    "next footer",
+    !text.includes("Next:") && !text.includes("Review the branch"),
+    "no trailing next footer",
   );
 });
 
@@ -114,9 +111,6 @@ test("implement failure marks N/T and uses pending glyph for remaining", () => {
   assert.ok(
     text.includes("Verify:\n  skipped (implement failed)"),
     "verify skipped section",
-  );
-  assert.ok(
-    text.includes("Review the branch, run /push or gh pr create when ready."),
   );
 });
 
