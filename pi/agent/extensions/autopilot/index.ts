@@ -189,6 +189,7 @@ export default function (pi: ExtensionAPI) {
 
       const widget = createStatusWidget({
         ui: ctx.hasUI ? ctx.ui : undefined,
+        theme: ctx.hasUI ? ctx.ui.theme : undefined,
       });
       const dispatch = makeWrappedDispatch(widget, controller.signal);
       const commitTracker = makeCommitTracker(getHead);
@@ -203,98 +204,115 @@ export default function (pi: ExtensionAPI) {
         "info",
       );
 
-      try {
-        widget.setPhase("Planning");
-        const plan = await runPlan({ designPath, dispatch, cwd });
+      // Detach the pipeline so the command handler returns immediately.
+      // Pi's interactive loop awaits each command handler before reading the
+      // next user input — if we awaited the pipeline here, `/autopilot-cancel`
+      // could never be dispatched.
+      const pipeline = async () => {
+        try {
+          widget.setPhase("Planning");
+          const plan = await runPlan({ designPath, dispatch, cwd });
 
-        if (isCancelled()) {
-          await emitReport({
-            pi,
-            designPath,
+          if (isCancelled()) {
+            await emitReport({
+              pi,
+              designPath,
+              cwd,
+              baseSha: pre.baseSha,
+              verify: null,
+              commitShas: {},
+              cancelled: cancelledInfo(),
+            });
+            return;
+          }
+          if (!plan.ok) {
+            ctx.ui.notify(`/autopilot: plan failed — ${plan.error}`, "error");
+            await emitReport({
+              pi,
+              designPath,
+              cwd,
+              baseSha: pre.baseSha,
+              verify: null,
+              commitShas: {},
+            });
+            return;
+          }
+
+          taskList.clear();
+          taskList.create(plan.data.tasks);
+
+          widget.setPhase(`Implementing · ${plan.data.tasks.length} tasks`);
+          const implementResult = await runImplement({
+            archNotes: plan.data.architecture_notes,
+            dispatch,
+            getHead,
             cwd,
-            baseSha: pre.baseSha,
-            verify: null,
-            commitShas: {},
-            cancelled: cancelledInfo(),
+            onPhase: (label) => widget.setPhase(label),
           });
-          return;
-        }
-        if (!plan.ok) {
-          ctx.ui.notify(`/autopilot: plan failed — ${plan.error}`, "error");
-          await emitReport({
-            pi,
-            designPath,
-            cwd,
-            baseSha: pre.baseSha,
-            verify: null,
-            commitShas: {},
-          });
-          return;
-        }
 
-        taskList.clear();
-        taskList.create(plan.data.tasks);
+          if (isCancelled()) {
+            await emitReport({
+              pi,
+              designPath,
+              cwd,
+              baseSha: pre.baseSha,
+              verify: null,
+              commitShas: commitTracker.map,
+              cancelled: cancelledInfo(),
+            });
+            return;
+          }
 
-        widget.setPhase(`Implementing · ${plan.data.tasks.length} tasks`);
-        const implementResult = await runImplement({
-          archNotes: plan.data.architecture_notes,
-          dispatch,
-          getHead,
-          cwd,
-          onPhase: (label) => widget.setPhase(label),
-        });
-
-        if (isCancelled()) {
-          await emitReport({
-            pi,
-            designPath,
-            cwd,
-            baseSha: pre.baseSha,
-            verify: null,
-            commitShas: commitTracker.map,
-            cancelled: cancelledInfo(),
-          });
-          return;
-        }
-
-        if (!implementResult.ok) {
-          ctx.ui.notify(
-            `/autopilot: implement halted at task ${implementResult.haltedAtTaskId ?? "?"}`,
-            "error",
-          );
-          await emitReport({
-            pi,
-            designPath,
-            cwd,
-            baseSha: pre.baseSha,
-            verify: null,
-            commitShas: commitTracker.map,
-          });
-          return;
-        }
-
-        widget.setPhase("Verifying");
-        const taskListSummary = taskList
-          .all()
-          .map((t) => `[${t.status}] ${t.title}`)
-          .join("\n");
-        const verifyResult = await runVerify({
-          dispatch,
-          getDiff: async () => {
-            const { stdout } = await execFileP(
-              "git",
-              ["diff", `${pre.baseSha}...HEAD`],
-              { cwd },
+          if (!implementResult.ok) {
+            ctx.ui.notify(
+              `/autopilot: implement halted at task ${implementResult.haltedAtTaskId ?? "?"}`,
+              "error",
             );
-            return stdout;
-          },
-          archNotes: plan.data.architecture_notes,
-          taskListSummary,
-          cwd,
-          onPhase: (label) => widget.setPhase(label),
-        });
+            await emitReport({
+              pi,
+              designPath,
+              cwd,
+              baseSha: pre.baseSha,
+              verify: null,
+              commitShas: commitTracker.map,
+            });
+            return;
+          }
 
-        if (isCancelled()) {
+          widget.setPhase("Verifying");
+          const taskListSummary = taskList
+            .all()
+            .map((t) => `[${t.status}] ${t.title}`)
+            .join("\n");
+          const verifyResult = await runVerify({
+            dispatch,
+            getDiff: async () => {
+              const { stdout } = await execFileP(
+                "git",
+                ["diff", `${pre.baseSha}...HEAD`],
+                { cwd },
+              );
+              return stdout;
+            },
+            archNotes: plan.data.architecture_notes,
+            taskListSummary,
+            cwd,
+            onPhase: (label) => widget.setPhase(label),
+          });
+
+          if (isCancelled()) {
+            await emitReport({
+              pi,
+              designPath,
+              cwd,
+              baseSha: pre.baseSha,
+              verify: verifyResult,
+              commitShas: commitTracker.map,
+              cancelled: cancelledInfo(),
+            });
+            return;
+          }
+
           await emitReport({
             pi,
             designPath,
@@ -302,24 +320,20 @@ export default function (pi: ExtensionAPI) {
             baseSha: pre.baseSha,
             verify: verifyResult,
             commitShas: commitTracker.map,
-            cancelled: cancelledInfo(),
           });
-          return;
+        } finally {
+          widget.dispose();
+          commitTracker.unsubscribe();
+          activeRun = null;
         }
+      };
 
-        await emitReport({
-          pi,
-          designPath,
-          cwd,
-          baseSha: pre.baseSha,
-          verify: verifyResult,
-          commitShas: commitTracker.map,
-        });
-      } finally {
-        widget.dispose();
-        commitTracker.unsubscribe();
-        activeRun = null;
-      }
+      void pipeline().catch((err) => {
+        ctx.ui.notify(
+          `/autopilot: pipeline crashed — ${err instanceof Error ? err.message : String(err)}`,
+          "error",
+        );
+      });
     },
   });
 }

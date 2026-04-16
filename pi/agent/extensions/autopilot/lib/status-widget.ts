@@ -1,3 +1,4 @@
+import type { Theme } from "@mariozechner/pi-coding-agent";
 import {
   createSubagentActivityTracker,
   type SubagentActivityTracker,
@@ -8,6 +9,12 @@ import { summarizeCounts } from "../../task-list/render.ts";
 export interface StatusWidgetUi {
   setWidget(key: string, content: string[] | undefined): void;
 }
+
+/**
+ * Minimal subset of the pi `Theme` API the widget uses. Accepts the full
+ * `Theme` instance in production; tests can omit it entirely.
+ */
+export type WidgetTheme = Pick<Theme, "fg" | "bold">;
 
 export interface SubagentHandle {
   onEvent(event: unknown): void;
@@ -23,6 +30,7 @@ export interface StatusWidget {
 
 export interface StatusWidgetOptions {
   ui?: StatusWidgetUi;
+  theme?: WidgetTheme;
   key?: string;
   now?: () => number;
   tickMs?: number;
@@ -58,9 +66,16 @@ export function createStatusWidget(
   opts: StatusWidgetOptions = {},
 ): StatusWidget {
   const ui = opts.ui;
+  const theme = opts.theme;
   const key = opts.key ?? DEFAULT_KEY;
   const now = opts.now ?? Date.now;
   const tickMs = opts.tickMs ?? DEFAULT_TICK_MS;
+
+  const muted = (text: string) => (theme ? theme.fg("muted", text) : text);
+  const dim = (text: string) => (theme ? theme.fg("dim", text) : text);
+  const accent = (text: string) => (theme ? theme.fg("accent", text) : text);
+  const errorStyle = (text: string) => (theme ? theme.fg("error", text) : text);
+  const bold = (text: string) => (theme ? theme.bold(text) : text);
 
   const startedAt = now();
   let phase = "Starting";
@@ -79,30 +94,33 @@ export function createStatusWidget(
   function renderLines(): string[] {
     const lines: string[] = [];
     const elapsed = formatClock(now() - startedAt);
-    lines.push(`autopilot · ${phase} · ${elapsed}`);
+    lines.push(
+      `${bold(accent("autopilot"))} ${muted(`· ${phase} · ${elapsed}`)}`,
+    );
 
     for (const entry of live.values()) {
       const state = entry.tracker.state;
       const subElapsed = formatClock(now() - entry.startedAt);
-      lines.push(`  ↳ ${entry.intent} (${subElapsed})`);
+      lines.push(`  ${muted("↳")} ${entry.intent} ${dim(`(${subElapsed})`)}`);
       const events = state.recentEvents ?? [];
       const shown = events.slice(-MAX_RECENT_EVENTS);
       for (const e of shown) {
+        const style = e.kind === "stderr" ? errorStyle : dim;
         const prefix = e.kind === "stderr" ? "stderr: " : "";
-        lines.push(`     - ${truncate(prefix + e.text)}`);
+        lines.push(`     ${dim("-")} ${style(truncate(prefix + e.text))}`);
       }
     }
 
     const tasks = taskList.all();
     if (tasks.length > 0) {
-      lines.push(`  ${summarizeCounts(tasks)}`);
+      lines.push(`  ${muted(summarizeCounts(tasks))}`);
       const active = tasks.find((t) => t.status === "in_progress");
       if (active) {
-        lines.push(`    ◼ ${truncate(active.title, 70)}`);
+        lines.push(`    ${accent(bold(`◼ ${truncate(active.title, 70)}`))}`);
       }
     }
 
-    lines.push("type /autopilot-cancel to stop");
+    lines.push(dim("type /autopilot-cancel to stop"));
     return lines;
   }
 

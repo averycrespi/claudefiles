@@ -126,3 +126,34 @@ test("status-widget: cancel hint line is always present", () => {
     w.dispose();
   }
 });
+
+test("status-widget: when a theme is supplied, lines are styled", () => {
+  const theme = {
+    fg: (color: string, text: string) => `<fg:${color}>${text}</fg>`,
+    bold: (text: string) => `<b>${text}</b>`,
+  };
+  taskList.clear();
+  taskList.create([{ title: "one", description: "a" }]);
+  taskList.start(1);
+  const w = createStatusWidget({ theme, tickMs: 60_000 });
+  try {
+    const lines = w.renderLines();
+    assert.ok(
+      lines[0].includes("<fg:accent>autopilot</fg>"),
+      `header should style the word "autopilot" with accent, got: ${lines[0]}`,
+    );
+    assert.ok(lines[0].includes("<fg:muted>"), "header tail should be muted");
+    assert.ok(
+      lines.some((l) => l.includes("<fg:accent>") && l.includes("◼ one")),
+      "in-progress task line should use accent",
+    );
+    assert.ok(
+      lines[lines.length - 1].includes("<fg:dim>") &&
+        lines[lines.length - 1].includes("/autopilot-cancel"),
+      "cancel hint should be dim",
+    );
+  } finally {
+    w.dispose();
+    taskList.clear();
+  }
+});
