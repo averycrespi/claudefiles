@@ -136,7 +136,7 @@ function mkTask(id: number, status: Task["status"], title = `t${id}`): Task {
   return { id, title, description: "", status };
 }
 
-test("taskWindow: anchors on in_progress with 3 before and 3 after", () => {
+test("taskWindow: anchors on in_progress with 2 before and 2 after", () => {
   const tasks: Task[] = [
     mkTask(1, "completed"),
     mkTask(2, "completed"),
@@ -149,7 +149,7 @@ test("taskWindow: anchors on in_progress with 3 before and 3 after", () => {
     mkTask(9, "pending"),
   ];
   const w = taskWindow(tasks).map((t) => t.id);
-  assert.deepEqual(w, [2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(w, [3, 4, 5, 6, 7]);
 });
 
 test("taskWindow: anchors on first pending when nothing in progress", () => {
@@ -179,7 +179,7 @@ test("taskWindow: falls back to last task when everything is done", () => {
     mkTask(5, "completed"),
   ];
   const w = taskWindow(tasks).map((t) => t.id);
-  assert.deepEqual(w, [2, 3, 4, 5]);
+  assert.deepEqual(w, [3, 4, 5]);
 });
 
 test("status-widget: renders window with earlier/more ellipses", () => {
@@ -214,12 +214,12 @@ test("status-widget: renders window with earlier/more ellipses", () => {
       "expected in-progress task row",
     );
     assert.ok(
-      taskLines.some((l) => l.includes("✔ 2.")),
+      taskLines.some((l) => l.includes("✔ 3.")),
       "expected preceding completed task row",
     );
     assert.ok(
-      !taskLines.some((l) => l.includes(" 1.")),
-      "earliest task should be hidden under the 'earlier' line",
+      !taskLines.some((l) => l.includes(" 1.") || l.includes(" 2.")),
+      "earliest tasks should be hidden under the 'earlier' line",
     );
   } finally {
     w.dispose();

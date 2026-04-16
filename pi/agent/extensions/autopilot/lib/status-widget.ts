@@ -17,13 +17,13 @@ export interface StatusWidgetUi {
  */
 export type WidgetTheme = Pick<Theme, "fg" | "bold" | "strikethrough">;
 
-const MAX_TASKS_BEFORE = 3;
-const MAX_TASKS_AFTER = 3;
+const MAX_TASKS_BEFORE = 2;
+const MAX_TASKS_AFTER = 2;
 
 /**
- * Return a window around the "current" task: up to {@link MAX_TASKS_BEFORE}
- * tasks preceding the anchor, the anchor itself, and up to
- * {@link MAX_TASKS_AFTER} tasks following it. Anchor selection:
+ * Return a window of at most five tasks around the "current" task: up to
+ * {@link MAX_TASKS_BEFORE} tasks preceding the anchor, the anchor itself, and
+ * up to {@link MAX_TASKS_AFTER} tasks following it. Anchor selection:
  *   1. The first `in_progress` task, if any.
  *   2. Otherwise the first `pending` task.
  *   3. Otherwise the last task in the list.
