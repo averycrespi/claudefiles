@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { taskList } from "../../task-list/api.ts";
-import { createStatusWidget, type StatusWidgetUi } from "./status-widget.ts";
+import type { Task } from "../../task-list/api.ts";
+import {
+  createStatusWidget,
+  taskWindow,
+  type StatusWidgetUi,
+} from "./status-widget.ts";
 
 function mkUi(): StatusWidgetUi & {
   calls: Array<[string, string[] | undefined]>;
@@ -93,8 +98,8 @@ test("status-widget: shows task-list summary when tasks exist", () => {
       "expected task count summary line",
     );
     assert.ok(
-      lines.some((l) => l.includes("◼ one")),
-      "expected in-progress task row",
+      lines.some((l) => l.includes("◼ 1. one")),
+      "expected in-progress task row with id prefix",
     );
   } finally {
     w.dispose();
@@ -127,10 +132,106 @@ test("status-widget: cancel hint line is always present", () => {
   }
 });
 
+function mkTask(id: number, status: Task["status"], title = `t${id}`): Task {
+  return { id, title, description: "", status };
+}
+
+test("taskWindow: anchors on in_progress with 3 before and 3 after", () => {
+  const tasks: Task[] = [
+    mkTask(1, "completed"),
+    mkTask(2, "completed"),
+    mkTask(3, "completed"),
+    mkTask(4, "completed"),
+    mkTask(5, "in_progress"),
+    mkTask(6, "pending"),
+    mkTask(7, "pending"),
+    mkTask(8, "pending"),
+    mkTask(9, "pending"),
+  ];
+  const w = taskWindow(tasks).map((t) => t.id);
+  assert.deepEqual(w, [2, 3, 4, 5, 6, 7, 8]);
+});
+
+test("taskWindow: anchors on first pending when nothing in progress", () => {
+  const tasks: Task[] = [
+    mkTask(1, "completed"),
+    mkTask(2, "completed"),
+    mkTask(3, "pending"),
+    mkTask(4, "pending"),
+    mkTask(5, "pending"),
+  ];
+  const w = taskWindow(tasks).map((t) => t.id);
+  assert.deepEqual(w, [1, 2, 3, 4, 5]);
+});
+
+test("taskWindow: clamps at list edges", () => {
+  const tasks: Task[] = [mkTask(1, "in_progress"), mkTask(2, "pending")];
+  const w = taskWindow(tasks).map((t) => t.id);
+  assert.deepEqual(w, [1, 2]);
+});
+
+test("taskWindow: falls back to last task when everything is done", () => {
+  const tasks: Task[] = [
+    mkTask(1, "completed"),
+    mkTask(2, "completed"),
+    mkTask(3, "completed"),
+    mkTask(4, "completed"),
+    mkTask(5, "completed"),
+  ];
+  const w = taskWindow(tasks).map((t) => t.id);
+  assert.deepEqual(w, [2, 3, 4, 5]);
+});
+
+test("status-widget: renders window with earlier/more ellipses", () => {
+  taskList.clear();
+  taskList.create(
+    Array.from({ length: 9 }, (_, i) => ({
+      title: `task ${i + 1}`,
+      description: "",
+    })),
+  );
+  for (let i = 1; i <= 4; i++) {
+    taskList.start(i);
+    taskList.complete(i, "done");
+  }
+  taskList.start(5);
+  const w = createStatusWidget({ tickMs: 60_000 });
+  try {
+    const lines = w.renderLines();
+    const taskLines = lines.filter(
+      (l) => /\d+\.\s/.test(l) || l.includes("earlier") || l.includes("more"),
+    );
+    assert.ok(
+      taskLines.some((l) => l.includes("earlier")),
+      `expected "earlier" truncation line, got: ${JSON.stringify(taskLines)}`,
+    );
+    assert.ok(
+      taskLines.some((l) => l.includes("more")),
+      `expected "more" truncation line, got: ${JSON.stringify(taskLines)}`,
+    );
+    assert.ok(
+      taskLines.some((l) => l.includes("◼ 5.")),
+      "expected in-progress task row",
+    );
+    assert.ok(
+      taskLines.some((l) => l.includes("✔ 2.")),
+      "expected preceding completed task row",
+    );
+    assert.ok(
+      !taskLines.some((l) => l.includes(" 1.")),
+      "earliest task should be hidden under the 'earlier' line",
+    );
+  } finally {
+    w.dispose();
+    taskList.clear();
+  }
+});
+
 test("status-widget: when a theme is supplied, lines are styled", () => {
   const theme = {
     fg: (color: string, text: string) => `<fg:${color}>${text}</fg>`,
     bold: (text: string) => `<b>${text}</b>`,
+    strikethrough: (text: string) => `<s>${text}</s>`,
   };
   taskList.clear();
   taskList.create([{ title: "one", description: "a" }]);
@@ -144,7 +245,7 @@ test("status-widget: when a theme is supplied, lines are styled", () => {
     );
     assert.ok(lines[0].includes("<fg:muted>"), "header tail should be muted");
     assert.ok(
-      lines.some((l) => l.includes("<fg:accent>") && l.includes("◼ one")),
+      lines.some((l) => l.includes("<fg:accent>") && l.includes("◼ 1. one")),
       "in-progress task line should use accent",
     );
     assert.ok(

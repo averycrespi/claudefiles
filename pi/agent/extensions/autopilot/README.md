@@ -29,9 +29,19 @@ autopilot · <phase> · MM:SS
      - <recent tool event>
      - <recent tool event>
   N tasks (D done, A in progress, O open)
-    ◼ <in-progress task title>
+    … K earlier
+    ✔ 2. <recently completed task>
+    ✔ 3. <recently completed task>
+    ✔ 4. <recently completed task>
+    ◼ 5. <in-progress task title>
+    ◻ 6. <upcoming task>
+    ◻ 7. <upcoming task>
+    ◻ 8. <upcoming task>
+    … K more
 type /autopilot-cancel to stop
 ```
+
+The task window shows up to three recently completed tasks, the in-progress task, and up to three upcoming tasks. Tasks outside the window are summarised as `… K earlier` / `… K more` lines.
 
 Phase labels:
 

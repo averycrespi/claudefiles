@@ -4,7 +4,8 @@ import {
   type SubagentActivityTracker,
 } from "../../subagents/api.ts";
 import { taskList } from "../../task-list/api.ts";
-import { summarizeCounts } from "../../task-list/render.ts";
+import type { Task } from "../../task-list/api.ts";
+import { glyphFor, styleFor, summarizeCounts } from "../../task-list/render.ts";
 
 export interface StatusWidgetUi {
   setWidget(key: string, content: string[] | undefined): void;
@@ -14,7 +15,30 @@ export interface StatusWidgetUi {
  * Minimal subset of the pi `Theme` API the widget uses. Accepts the full
  * `Theme` instance in production; tests can omit it entirely.
  */
-export type WidgetTheme = Pick<Theme, "fg" | "bold">;
+export type WidgetTheme = Pick<Theme, "fg" | "bold" | "strikethrough">;
+
+const MAX_TASKS_BEFORE = 3;
+const MAX_TASKS_AFTER = 3;
+
+/**
+ * Return a window around the "current" task: up to {@link MAX_TASKS_BEFORE}
+ * tasks preceding the anchor, the anchor itself, and up to
+ * {@link MAX_TASKS_AFTER} tasks following it. Anchor selection:
+ *   1. The first `in_progress` task, if any.
+ *   2. Otherwise the first `pending` task.
+ *   3. Otherwise the last task in the list.
+ *
+ * Returns an empty array when there are no tasks.
+ */
+export function taskWindow(tasks: Task[]): Task[] {
+  if (tasks.length === 0) return [];
+  let anchor = tasks.findIndex((t) => t.status === "in_progress");
+  if (anchor < 0) anchor = tasks.findIndex((t) => t.status === "pending");
+  if (anchor < 0) anchor = tasks.length - 1;
+  const start = Math.max(0, anchor - MAX_TASKS_BEFORE);
+  const end = Math.min(tasks.length, anchor + MAX_TASKS_AFTER + 1);
+  return tasks.slice(start, end);
+}
 
 export interface SubagentHandle {
   onEvent(event: unknown): void;
@@ -77,6 +101,17 @@ export function createStatusWidget(
   const errorStyle = (text: string) => (theme ? theme.fg("error", text) : text);
   const bold = (text: string) => (theme ? theme.bold(text) : text);
 
+  const renderTaskLine = (task: Task): string => {
+    const style = styleFor(task.status);
+    const glyph = glyphFor(task.status);
+    const raw = `${glyph} ${task.id}. ${truncate(task.title, 64)}`;
+    if (!theme) return raw;
+    let out = raw;
+    if (style.strikethrough) out = theme.strikethrough(out);
+    if (style.bold) out = theme.bold(out);
+    return theme.fg(style.color, out);
+  };
+
   const startedAt = now();
   let phase = "Starting";
   let nextId = 1;
@@ -114,9 +149,16 @@ export function createStatusWidget(
     const tasks = taskList.all();
     if (tasks.length > 0) {
       lines.push(`  ${muted(summarizeCounts(tasks))}`);
-      const active = tasks.find((t) => t.status === "in_progress");
-      if (active) {
-        lines.push(`    ${accent(bold(`◼ ${truncate(active.title, 70)}`))}`);
+      const window = taskWindow(tasks);
+      if (window.length > 0 && window[0].id > 1) {
+        lines.push(`    ${dim(`… ${window[0].id - 1} earlier`)}`);
+      }
+      for (const task of window) {
+        lines.push(`    ${renderTaskLine(task)}`);
+      }
+      const last = window[window.length - 1];
+      if (last && last.id < tasks.length) {
+        lines.push(`    ${dim(`… ${tasks.length - last.id} more`)}`);
       }
     }
 
