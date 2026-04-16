@@ -227,6 +227,40 @@ test("status-widget: renders window with earlier/more ellipses", () => {
   }
 });
 
+test("status-widget: collapses to 1 event per subagent when 2+ are live", () => {
+  taskList.clear();
+  const w = createStatusWidget({ tickMs: 60_000 });
+  try {
+    const first = w.subagent("Review: a");
+    const second = w.subagent("Review: b");
+    for (const h of [first, second]) {
+      h.onEvent({
+        type: "tool_execution_start",
+        toolName: "read",
+        args: { path: "/a" },
+      });
+      h.onEvent({
+        type: "tool_execution_start",
+        toolName: "read",
+        args: { path: "/b" },
+      });
+      h.onEvent({
+        type: "tool_execution_start",
+        toolName: "read",
+        args: { path: "/c" },
+      });
+    }
+    const eventLines = w.renderLines().filter((l) => l.trim().startsWith("- "));
+    assert.equal(
+      eventLines.length,
+      2,
+      `expected one event per subagent (2 total), got: ${JSON.stringify(eventLines)}`,
+    );
+  } finally {
+    w.dispose();
+  }
+});
+
 test("status-widget: when a theme is supplied, lines are styled", () => {
   const theme = {
     fg: (color: string, text: string) => `<fg:${color}>${text}</fg>`,

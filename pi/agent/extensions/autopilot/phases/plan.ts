@@ -18,7 +18,7 @@ export async function runPlan(args: {
     prompt,
     tools: ["read", "ls", "find", "grep"],
     cwd: args.cwd ?? process.cwd(),
-    intent: "Plan design",
+    intent: "Plan",
   });
   if (!r.ok) return { ok: false as const, error: r.error ?? "dispatch failed" };
   return parseJsonReport(r.stdout, PlanReportSchema);

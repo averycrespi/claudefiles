@@ -44,7 +44,12 @@ const TICK_MS = 1_000;
 function truncate(text: string, max = OUTPUT_TAIL_LIMIT): string {
   const trimmed = text.trim();
   if (trimmed.length <= max) return trimmed;
-  return `${trimmed.slice(0, max)}…`;
+  // Middle-ellipsis: preserve both head (tool name / command prefix) and tail
+  // (path basename / suffix). Head gets ~60% of the budget, tail the rest.
+  const keep = max - 1;
+  const head = Math.ceil(keep * 0.6);
+  const tail = keep - head;
+  return `${trimmed.slice(0, head)}…${trimmed.slice(-tail)}`;
 }
 
 function stringifyArgs(args: unknown): string {

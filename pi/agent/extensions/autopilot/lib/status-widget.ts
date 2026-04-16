@@ -62,7 +62,8 @@ export interface StatusWidgetOptions {
 
 const DEFAULT_KEY = "autopilot";
 const DEFAULT_TICK_MS = 1000;
-const MAX_RECENT_EVENTS = 3;
+const MAX_EVENTS_SINGLE = 3;
+const MAX_EVENTS_MULTI = 1;
 
 interface LiveSubagent {
   id: number;
@@ -133,16 +134,17 @@ export function createStatusWidget(
       `${bold(accent("autopilot"))} ${muted(`· ${phase} · ${elapsed}`)}`,
     );
 
+    const maxEvents = live.size >= 2 ? MAX_EVENTS_MULTI : MAX_EVENTS_SINGLE;
     for (const entry of live.values()) {
       const state = entry.tracker.state;
       const subElapsed = formatClock(now() - entry.startedAt);
       lines.push(`  ${muted("↳")} ${entry.intent} ${dim(`(${subElapsed})`)}`);
       const events = state.recentEvents ?? [];
-      const shown = events.slice(-MAX_RECENT_EVENTS);
+      const shown = events.slice(-maxEvents);
       for (const e of shown) {
         const style = e.kind === "stderr" ? errorStyle : dim;
         const prefix = e.kind === "stderr" ? "stderr: " : "";
-        lines.push(`     ${dim("-")} ${style(truncate(prefix + e.text))}`);
+        lines.push(`     ${dim("-")} ${style(prefix + e.text)}`);
       }
     }
 

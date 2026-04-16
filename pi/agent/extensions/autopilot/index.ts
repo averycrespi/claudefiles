@@ -328,12 +328,21 @@ export default function (pi: ExtensionAPI) {
         }
       };
 
-      void pipeline().catch((err) => {
+      // In interactive mode we detach the pipeline so Pi's input loop unblocks
+      // and `/autopilot-cancel` can be accepted. In headless / print mode there
+      // is no input loop and no way to cancel — if we detached, Pi would exit
+      // as soon as the handler returned, killing the pipeline. Await instead.
+      const run = pipeline().catch((err) => {
         ctx.ui.notify(
           `/autopilot: pipeline crashed — ${err instanceof Error ? err.message : String(err)}`,
           "error",
         );
       });
+      if (!ctx.hasUI) {
+        await run;
+      } else {
+        void run;
+      }
     },
   });
 }
