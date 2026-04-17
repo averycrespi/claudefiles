@@ -63,6 +63,7 @@ make stow-pi            # symlink pi/agent/ into ~/.pi/agent/
 ```sh
 make install-dev # install Pi dev dependencies
 make typecheck   # type-check Pi extension TypeScript files
+make test        # run Pi extension unit tests
 ```
 
 ## Related
