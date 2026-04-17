@@ -41,7 +41,7 @@ function thinkingLevelFromPi(pi: ExtensionAPI): string | undefined {
   }
 }
 
-function normalizeIntent(intent: string): string {
+export function normalizeIntent(intent: string): string {
   const trimmed = intent.trim();
   if (!trimmed) throw new Error("intent is required");
   return trimmed;
@@ -58,13 +58,13 @@ function renderEventLine(
   return `${prefix}${theme.fg("muted", event.text)}`;
 }
 
-function formatTokens(count: number): string {
+export function formatTokens(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`;
   return String(count);
 }
 
-function getActivity(details: unknown): SubagentRunState | undefined {
+export function getActivity(details: unknown): SubagentRunState | undefined {
   if (!details || typeof details !== "object") return undefined;
   const record = details as Record<string, unknown>;
   const activity = record.activity;
@@ -82,7 +82,7 @@ function getActivity(details: unknown): SubagentRunState | undefined {
   return undefined;
 }
 
-function buildAgentDescription(agents: AgentDefinition[]): string {
+export function buildAgentDescription(agents: AgentDefinition[]): string {
   if (agents.length === 0) {
     return "Agent type. No agents are currently loaded — check that agent markdown files exist in ~/.pi/agent/agents/.";
   }
@@ -107,7 +107,7 @@ function renderAgentCall(
   return t;
 }
 
-function statsLine(
+export function statsLine(
   toolUseCount: number,
   totalTokens: number,
   durationMs: number,
@@ -263,7 +263,7 @@ function agentProgressLine(
  *   "Running... (1m 03s)"            before the first tool use
  *   "Running..."                     when no activity is known yet
  */
-function formatRunningLine(agent: SubagentRunState | undefined): string {
+export function formatRunningLine(agent: SubagentRunState | undefined): string {
   if (!agent) return "Running...";
   const elapsedSuffix = ` (${formatDuration(Date.now() - agent.startedAt)})`;
   const toolUses = agent.toolUseCount;
