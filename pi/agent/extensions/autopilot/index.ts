@@ -211,7 +211,12 @@ export default function (pi: ExtensionAPI) {
       const pipeline = async () => {
         try {
           widget.setStage("plan");
-          const plan = await runPlan({ designPath, dispatch, cwd });
+          const plan = await runPlan({
+            designPath,
+            dispatch,
+            cwd,
+            signal: controller.signal,
+          });
 
           if (isCancelled()) {
             await emitReport({
@@ -247,6 +252,7 @@ export default function (pi: ExtensionAPI) {
             dispatch,
             getHead,
             cwd,
+            signal: controller.signal,
           });
 
           if (isCancelled()) {

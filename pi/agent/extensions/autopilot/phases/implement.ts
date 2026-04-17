@@ -2,11 +2,13 @@ import { readFile } from "node:fs/promises";
 import { taskList } from "../../task-list/api.ts";
 import { parseJsonReport } from "../lib/parse.ts";
 import { ImplementReportSchema } from "../lib/schemas.ts";
-import type { DispatchOptions, DispatchResult } from "../lib/dispatch.ts";
+import {
+  dispatchWithOneRetry,
+  type DispatchFn,
+  type DispatchResult,
+} from "../lib/dispatch.ts";
 
 const PROMPT_PATH = new URL("../prompts/implement.md", import.meta.url);
-
-type Dispatch = (opts: DispatchOptions) => Promise<DispatchResult>;
 
 /**
  * Cached prompt template. Loaded on first call, reused after.
@@ -21,7 +23,7 @@ async function loadTemplate(): Promise<string> {
 
 export interface RunImplementArgs {
   archNotes: string;
-  dispatch: Dispatch;
+  dispatch: DispatchFn;
   /**
    * Resolves the current HEAD SHA. Called before and after each task
    * dispatch; a task is considered to have produced a commit iff HEAD
@@ -30,6 +32,8 @@ export interface RunImplementArgs {
    */
   getHead: () => Promise<string>;
   cwd: string;
+  /** Run-level abort signal; prevents retry after /autopilot-cancel. */
+  signal?: AbortSignal;
 }
 
 export interface RunImplementResult {
@@ -73,13 +77,17 @@ export async function runImplement(
     let headBefore: string;
     try {
       headBefore = await args.getHead();
-      dispatchResult = await args.dispatch({
-        prompt,
-        tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
-        extensions: ["autoformat"],
-        cwd: args.cwd,
-        intent: `Implement: ${task.title}`,
-      });
+      dispatchResult = await dispatchWithOneRetry(
+        args.dispatch,
+        {
+          prompt,
+          tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
+          extensions: ["autoformat"],
+          cwd: args.cwd,
+          intent: `Implement: ${task.title}`,
+        },
+        args.signal,
+      );
     } finally {
       clearInterval(heartbeat);
     }

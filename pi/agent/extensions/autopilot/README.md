@@ -95,7 +95,7 @@ _Caption: Top-level pipeline flow. Any parse or implement failure routes to the 
 3. On parse or validation failure → abort the pipeline.
 4. On success → `taskList.create(tasks)` and move to implement.
 
-**Caps & failure modes.** No retry. A malformed plan aborts the pipeline immediately.
+**Caps & failure modes.** Dispatch failures are retried exactly once (transient crashes / timeouts). A malformed plan — valid-but-unparseable response — aborts the pipeline immediately with no retry. See the Retry policy section below for the full guard list.
 
 ### Implement
 
@@ -117,13 +117,13 @@ _Caption: Top-level pipeline flow. Any parse or implement failure routes to the 
 
 1. `taskList.start(task.id)` and set activity line to `"dispatching subagent…"`.
 2. Record `pre-task HEAD`.
-3. Dispatch one subagent with the filled prompt.
+3. Dispatch the subagent with the filled prompt. Transient dispatch failures retry exactly once (intent becomes `Implement: <title> (retry)`).
 4. `parseJsonReport(output, ImplementReportSchema)`.
 5. Verify a new commit landed: `git rev-list <pre-task-head>..HEAD --count >= 1`.
 6. On success → `taskList.complete(id, summary)`.
 7. On parse failure, `outcome: "failure"`, or missing commit → `taskList.fail(id, reason)` and **break** the loop.
 
-**Caps & failure modes.** No per-task retry. Any task failure halts the pipeline; later tasks are never attempted.
+**Caps & failure modes.** At most one retry per task, and only for dispatch failures (process crash, transport error). Parse failures, `outcome: "failure"`, and phantom successes are _not_ retried — the first two are systematic and the third signals a real bug we want to surface. Any unrecovered task failure halts the pipeline; later tasks are never attempted.
 
 ```mermaid
 flowchart TD
@@ -138,7 +138,7 @@ flowchart TD
     F --> H([halt pipeline])
 ```
 
-_Caption: Per-task implement loop. Tasks run sequentially; a single failure halts the pipeline — no retries, no skipping ahead._
+_Caption: Per-task implement loop. Tasks run sequentially; a transient dispatch failure is retried once, any other failure halts the pipeline. No skipping ahead._
 
 ### Verify
 
@@ -217,17 +217,35 @@ It strips common wrappers (leading/trailing prose, ` ```json ... ``` ` fences), 
 
 Unified principle: **always terminate with a report. Never leave the user in a stuck state.**
 
-| Failure                                                  | Handling                                                                              |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Plan subagent returns invalid/unparseable output         | Abort pipeline. No branch changes. Report.                                            |
-| Implement subagent fails on task N                       | Stop pipeline. Tasks 1..N-1 remain committed. Tasks N+1..end never attempted. Report. |
-| Verify automated checks still failing after 2 fix rounds | Pipeline still completes. Checks flagged as known issues in report. User gets branch. |
-| Reviewer subagent fails to run                           | Orchestrator skips that reviewer. Skip noted in report. Other reviewers still run.    |
-| Fix subagent breaks something that was passing           | Record as known issue. Do not roll back.                                              |
-| Dirty working tree at `/autopilot` invocation            | Abort immediately before plan phase.                                                  |
-| User runs `/autopilot-cancel` mid-run                    | Abort current subagent. Skip remaining phases. Emit report with cancelled banner.     |
+| Failure                                                  | Handling                                                                                                   |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Plan subagent dispatch crashes/times out                 | Retry once (intent becomes `Plan (retry)`). If the second attempt also fails → abort pipeline, report.     |
+| Plan subagent returns invalid/unparseable output         | Abort pipeline. No retry — parse failures are systematic, not transient. Report.                           |
+| Implement subagent dispatch crashes/times out on task N  | Retry once. If the second attempt also fails → stop pipeline, fail task N, tasks N+1..end never attempted. |
+| Implement subagent reports `outcome: "failure"`          | Stop pipeline immediately. No retry — the subagent deliberately gave up.                                   |
+| Implement subagent claims success but HEAD didn't move   | Stop pipeline. No retry — signals a real bug we want to surface, not a transient glitch to paper over.     |
+| Verify automated checks still failing after 2 fix rounds | Pipeline still completes. Checks flagged as known issues in report. User gets branch.                      |
+| Reviewer subagent fails to run                           | Orchestrator skips that reviewer (no retry — reviewers are advisory). Skip noted in report.                |
+| Fix subagent breaks something that was passing           | Record as known issue. Do not roll back.                                                                   |
+| Dirty working tree at `/autopilot` invocation            | Abort immediately before plan phase.                                                                       |
+| User runs `/autopilot-cancel` mid-run                    | Abort current subagent. Skip remaining phases and any pending retry. Emit report with cancelled banner.    |
 
-No implicit retries (beyond the explicit fixer loops). No implicit rollbacks. Every commit that lands during the pipeline stays on the branch.
+### Retry policy
+
+Only two dispatches are retried automatically, both bounded at exactly **one retry** (at most 2 total attempts):
+
+1. **Plan dispatch** — highest blast radius (failure here burns the whole run before any commits land).
+2. **Implement dispatch, per task** — halting at task N discards the remaining tasks; a transient crash shouldn't cost that.
+
+Retry guards (all checked before the second attempt):
+
+- The first attempt's `aborted` flag is false — a cancelled subagent is never retried.
+- The run-level abort signal is not already set — `/autopilot-cancel` short-circuits pending retries.
+- The first attempt returned `ok: false` — a successful response with bad JSON is a caller problem, not a dispatch problem, and is never retried.
+
+On retry, the status widget shows the intent suffixed with `(retry)` so the user can see it happened. Verify's fix loops (validation fixer, post-reviewer fixer) are an independent, domain-specific retry mechanism and are documented in the Verify section above.
+
+No implicit rollbacks. Every commit that lands during the pipeline stays on the branch.
 
 ## Final report
 
