@@ -11,7 +11,7 @@ import {
   loadContextFileFromDir,
   renderReminder,
   type ContextFile,
-} from "./context-files-reminder.ts";
+} from "./index.ts";
 
 async function makeTempDir(): Promise<string> {
   return await mkdtemp(join(tmpdir(), "ctx-files-test-"));
