@@ -23,7 +23,7 @@ While a run is active, a sticky widget is rendered above the editor (key `autopi
 Layout:
 
 ```
-autopilot · <phase> · MM:SS
+autopilot · plan › implement › verify · MM:SS
   ↳ <subagent intent> (MM:SS)
      - <recent tool event>
      - <recent tool event>
@@ -41,11 +41,7 @@ type /autopilot-cancel to stop
 
 The task window shows up to two recently completed tasks, the in-progress task, and up to two upcoming tasks. Tasks outside the window are summarised as `… K earlier` / `… K more` lines.
 
-Phase labels:
-
-- `Planning` — plan subagent is running
-- `Implementing · N tasks` → `Implementing · task N/M` — set per task
-- `Verifying · validation`, `Verifying · reviewers`, `Verifying · auto-fix round N (K findings)` — sub-phases inside verify
+The header is a stage breadcrumb: `plan › implement › verify`. The currently-running stage is rendered bold+accent; the others are muted. Before the plan subagent dispatches, no stage is highlighted. Sub-phases (task index, validation vs. reviewers vs. fix rounds) are not surfaced in the header — the `↳` subagent line already names the active unit of work.
 
 The widget is torn down when the run ends (success, implement failure, or cancel). The inline task-list messages emitted by the `task-list` extension remain in scrollback so there's a permanent record of the run.
 

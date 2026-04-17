@@ -30,15 +30,29 @@ function mkClock(start: number) {
   };
 }
 
-test("status-widget: renders phase + elapsed in header", () => {
+test("status-widget: renders stage breadcrumb + elapsed in header", () => {
   const ui = mkUi();
   const clock = mkClock(0);
   const w = createStatusWidget({ ui, now: clock.now, tickMs: 60_000 });
   try {
-    w.setPhase("Planning");
+    w.setStage("implement");
     clock.advance(12_000);
     const lines = w.renderLines();
-    assert.match(lines[0], /^autopilot · Planning · 00:12$/);
+    assert.match(lines[0], /^autopilot · plan › implement › verify · 00:12$/);
+  } finally {
+    w.dispose();
+  }
+});
+
+test("status-widget: before setStage, no stage is highlighted", () => {
+  const ui = mkUi();
+  const w = createStatusWidget({ ui, tickMs: 60_000 });
+  try {
+    const lines = w.renderLines();
+    assert.match(
+      lines[0],
+      /^autopilot · plan › implement › verify · \d\d:\d\d$/,
+    );
   } finally {
     w.dispose();
   }
@@ -110,7 +124,7 @@ test("status-widget: shows task-list summary when tasks exist", () => {
 test("status-widget: dispose clears the widget via ui.setWidget(key, undefined)", () => {
   const ui = mkUi();
   const w = createStatusWidget({ ui, tickMs: 60_000 });
-  w.setPhase("Planning");
+  w.setStage("plan");
   const callsBefore = ui.calls.length;
   assert.ok(callsBefore >= 1, "expected at least one setWidget call");
   w.dispose();

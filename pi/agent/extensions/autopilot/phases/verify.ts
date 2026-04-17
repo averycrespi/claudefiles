@@ -38,8 +38,6 @@ export interface RunVerifyArgs {
   cwd: string;
   /** Max fixer-review rounds. Default 2. */
   maxFixRounds?: number;
-  /** Sub-phase label callback for the status widget. */
-  onPhase?: (label: string) => void;
 }
 
 export interface RunVerifyResult {
@@ -120,7 +118,6 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
   const fixed: string[] = [];
 
   // --- Step 1: initial validation ----------------------------------
-  args.onPhase?.("Verifying · validation");
   const initialValidation = await runValidation({
     dispatch: args.dispatch,
     cwd: args.cwd,
@@ -133,7 +130,6 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
   }
 
   // --- Step 2: initial reviewers + synthesize ----------------------
-  args.onPhase?.("Verifying · reviewers");
   const initialDiff = await args.getDiff();
   const { reports: initialReports, skippedReviewers } = await runReviewers({
     dispatch: args.dispatch,
@@ -165,9 +161,6 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
 
   for (let round = 0; round < maxFixRounds; round++) {
     // 4a. Dispatch fixer-review.
-    args.onPhase?.(
-      `Verifying · auto-fix round ${round + 1} (${auto.length} finding${auto.length === 1 ? "" : "s"})`,
-    );
     const fixerPrompt = fixerTemplate.replace(
       "{FINDINGS}",
       formatFindings(auto),

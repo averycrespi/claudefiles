@@ -45,8 +45,13 @@ export interface SubagentHandle {
   finish(): void;
 }
 
+export type Stage = "plan" | "implement" | "verify";
+
+const STAGES: Stage[] = ["plan", "implement", "verify"];
+const STAGE_ARROW = "›";
+
 export interface StatusWidget {
-  setPhase(label: string): void;
+  setStage(stage: Stage | null): void;
   subagent(intent: string): SubagentHandle;
   renderLines(): string[];
   dispose(): void;
@@ -114,7 +119,7 @@ export function createStatusWidget(
   };
 
   const startedAt = now();
-  let phase = "Starting";
+  let stage: Stage | null = null;
   let nextId = 1;
   const live = new Map<number, LiveSubagent>();
   let disposed = false;
@@ -130,8 +135,11 @@ export function createStatusWidget(
   function renderLines(): string[] {
     const lines: string[] = [];
     const elapsed = formatClock(now() - startedAt);
+    const breadcrumb = STAGES.map((s) =>
+      s === stage ? bold(accent(s)) : muted(s),
+    ).join(` ${muted(STAGE_ARROW)} `);
     lines.push(
-      `${bold(accent("autopilot"))} ${muted(`· ${phase} · ${elapsed}`)}`,
+      `${bold(accent("autopilot"))}${muted(" · ")}${breadcrumb}${muted(` · ${elapsed}`)}`,
     );
 
     const maxEvents = live.size >= 2 ? MAX_EVENTS_MULTI : MAX_EVENTS_SINGLE;
@@ -169,8 +177,8 @@ export function createStatusWidget(
   }
 
   return {
-    setPhase(label) {
-      phase = label;
+    setStage(next) {
+      stage = next;
       push();
     },
     subagent(intent) {

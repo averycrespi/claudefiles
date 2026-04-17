@@ -210,7 +210,7 @@ export default function (pi: ExtensionAPI) {
       // could never be dispatched.
       const pipeline = async () => {
         try {
-          widget.setPhase("Planning");
+          widget.setStage("plan");
           const plan = await runPlan({ designPath, dispatch, cwd });
 
           if (isCancelled()) {
@@ -241,13 +241,12 @@ export default function (pi: ExtensionAPI) {
           taskList.clear();
           taskList.create(plan.data.tasks);
 
-          widget.setPhase(`Implementing · ${plan.data.tasks.length} tasks`);
+          widget.setStage("implement");
           const implementResult = await runImplement({
             archNotes: plan.data.architecture_notes,
             dispatch,
             getHead,
             cwd,
-            onPhase: (label) => widget.setPhase(label),
           });
 
           if (isCancelled()) {
@@ -279,7 +278,7 @@ export default function (pi: ExtensionAPI) {
             return;
           }
 
-          widget.setPhase("Verifying");
+          widget.setStage("verify");
           const taskListSummary = taskList
             .all()
             .map((t) => `[${t.status}] ${t.title}`)
@@ -297,7 +296,6 @@ export default function (pi: ExtensionAPI) {
             archNotes: plan.data.architecture_notes,
             taskListSummary,
             cwd,
-            onPhase: (label) => widget.setPhase(label),
           });
 
           if (isCancelled()) {

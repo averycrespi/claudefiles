@@ -63,7 +63,7 @@ Event types, grouped by emitter:
 
 - `run.start` — `{design_path, base_sha, cwd, branch}`
 - `run.end` — `{outcome: "success" | "implement_failed" | "plan_failed" | "cancelled" | "crashed", elapsed_ms, error?}`
-- `phase.enter` — `{label}` — mirrors every `widget.setPhase(...)` call
+- `stage.enter` — `{stage: "plan" | "implement" | "verify"}` — mirrors every `widget.setStage(...)` call
 - `preflight.fail` — `{reason}` — for runs that abort before the plan phase
 
 **Subagent lifecycle** (emitted by the `dispatch` wrapper)
@@ -117,7 +117,7 @@ Three small commits, each independently testable.
   - Assigns subagent ids and returns an `onSubagent(intent, role)` helper that returns a per-subagent emitter bound to the assigned id.
 - `index.ts` creates the run directory (`mkdir -p`) and the logger before `preflight`; passes it into `makeWrappedDispatch` and the phase runners.
 - `makeWrappedDispatch` emits `subagent.start` / `subagent.event` / `subagent.end` around each `rawDispatch` call. The existing `handle.onEvent` fan-out stays; the logger is just another consumer.
-- `index.ts` emits `run.start`, `phase.enter` (each `widget.setPhase` is mirrored), `run.end`, `report.emit`.
+- `index.ts` emits `run.start`, `stage.enter` (each `widget.setStage` is mirrored), `run.end`, `report.emit`.
 - Phase runners emit `task.*` and `decision.*` at the points where they already make those choices internally — most of these are a single `log(...)` call next to an existing if-branch.
 
 No behaviour change; just writes. Smoke-test: run with a trivial design, inspect the JSONL.

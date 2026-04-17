@@ -30,8 +30,6 @@ export interface RunImplementArgs {
    */
   getHead: () => Promise<string>;
   cwd: string;
-  /** Sub-phase label callback for the status widget. */
-  onPhase?: (label: string) => void;
 }
 
 export interface RunImplementResult {
@@ -49,17 +47,9 @@ export async function runImplement(
   const template = await loadTemplate();
 
   const allTasks = taskList.all();
-  const total = allTasks.length;
-  let index = 0;
 
   for (const task of allTasks) {
-    if (task.status !== "pending") {
-      index++;
-      continue;
-    }
-    index++;
-
-    args.onPhase?.(`Implementing · task ${index}/${total}`);
+    if (task.status !== "pending") continue;
 
     taskList.start(task.id);
     taskList.setActivity(task.id, "dispatching subagent…");
