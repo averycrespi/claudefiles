@@ -7,7 +7,7 @@ reason not to. `compact-tools`, `mcp-broker`, and `subagents` are the
 working reference.
 
 Shared helpers live in `pi/agent/extensions/_shared/render.ts` — import
-from there via `../_shared/render.js` rather than reimplementing
+from there via `../_shared/render.ts` rather than reimplementing
 `firstLine`, `formatDuration`, and friends. The `_shared/` directory
 has no `index.ts`, so pi's extension loader skips it; do not add one.
 
@@ -74,6 +74,20 @@ clearPartialTimer(context);
   `startPartialTimer(context)` / `clearPartialTimer(context)` directly
   — you'll be rendering elapsed time inside the tree yourself, so
   `partialElapsed` isn't the right primitive. See `subagents/index.ts`.
+- For high-frequency, multi-line progress renderers that tick every
+  second (e.g. parallel subagents), reuse the previous frame's
+  component instead of returning a new `Text` on every render. Pull it
+  from `context.lastComponent` and mutate via `setText`:
+
+  ```ts
+  const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+  t.setText(lines.join("\n"));
+  return t;
+  ```
+
+  For single-line renderers and anything that ticks only on real state
+  changes, keep returning `new Text(...)` — the optimization isn't
+  worth the ceremony.
 
 ### 2. Error
 

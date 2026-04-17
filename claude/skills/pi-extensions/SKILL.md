@@ -41,14 +41,40 @@ export default function (pi: ExtensionAPI) {
 pi/agent/extensions/my-extension.ts
 ```
 
-**Multi-file extension** (when you need helpers or npm deps):
+Best for small, self-contained extensions with no tests. Pi's loader treats every top-level `*.ts` under `extensions/` as an extension entry point, so a co-located `my-extension.test.ts` would be loaded as a broken extension. If you need tests, use the subdirectory layout.
+
+**Multi-file extension** (when you need helpers, tests, or npm deps):
 
 ```
 pi/agent/extensions/my-extension/
 ├── index.ts          ← required entry point, exports default function
 ├── helpers.ts
+├── index.test.ts     ← co-located tests are safe here (not loaded)
 └── package.json      ← if npm deps needed
 ```
+
+Larger extensions can nest further (`autopilot/` has `lib/`, `phases/`, `prompts/`; `autoformat/` has `format/`). The only hard requirement is a top-level `index.ts` that exports the factory function.
+
+## Sharing code across extensions
+
+For helpers that don't belong to any one extension (render helpers, general utilities), put them in `pi/agent/extensions/_shared/`. That directory has no `index.ts`, so the loader skips it; other extensions import via relative path:
+
+```ts
+import { firstLine, formatDuration } from "../_shared/render.ts";
+```
+
+An extension can also expose a public surface to other extensions by creating an `api.ts` that re-exports its stable API. Siblings then import from that file:
+
+```ts
+// autopilot/index.ts
+import { taskList } from "../task-list/api.ts";
+import { spawnSubagent } from "../subagents/api.ts";
+```
+
+Two things to know about cross-extension imports:
+
+- **Singletons share via module caching.** `task-list/api.ts` does `export const taskList = createStore()`. Because Node caches imported modules, every extension that imports `taskList` sees the same store — that's how the autopilot pipeline drives the task list that `task-list` renders.
+- **Cross-extension imports create a load-order dependency.** If `autopilot` imports from `task-list`, it silently requires `task-list` to be installed. Consider whether the coupling is worth it; if the helper is general-purpose, `_shared/` is the better home.
 
 ## Registering tools
 
@@ -79,6 +105,25 @@ pi.registerTool({
   renderResult(result, { isPartial }, theme, context) { ... },
 });
 ```
+
+**Dynamic parameter schemas.** `parameters` is a regular value — compose it at registration time when the schema depends on load-time config:
+
+```typescript
+function buildSpawnParams(agentDescription: string) {
+  return Type.Object({
+    agent: Type.String({ description: agentDescription }),
+    prompt: Type.String(),
+  });
+}
+
+pi.registerTool({
+  name: "spawn_agent",
+  parameters: buildSpawnParams(buildAgentDescription(loadAgents())),
+  async execute(id, params: SpawnAgentParams, ...) { /* ... */ },
+});
+```
+
+Typical use: surfacing discovered configuration (available agent types, registered providers) in a parameter's description so the model sees it. When `parameters` is built by a function, `Static<typeof params>` doesn't work directly — declare an explicit `SpawnAgentParams` interface and use it for `execute`'s `params` type.
 
 **Tool override:** register with the same name as a built-in (`"read"`, `"edit"`, `"write"`, `"bash"`, `"grep"`) to replace it. The original built-in renderer is reused if you don't provide `renderCall`/`renderResult`.
 
@@ -113,6 +158,35 @@ pi.on("context", async (event, ctx) => {
 ```
 
 Key events: `session_start`, `turn_start`, `turn_end`, `before_agent_start`, `agent_start`, `agent_end`, `context`, `tool_call`, `tool_result`, `input`, `user_bash`. See `types.ts` for the full list and return shapes.
+
+## Custom messages
+
+When an extension needs to render persistent, structured UI inline in the chat log (not just in the footer), combine `pi.registerMessageRenderer` with `pi.sendMessage` in display mode:
+
+```typescript
+const CUSTOM_TYPE = "my-extension";
+
+pi.registerMessageRenderer<MyPayload>(
+  CUSTOM_TYPE,
+  (message, _options, theme) => {
+    const state = message.details;
+    if (!state) return undefined; // falls back to `content` text
+    return new Text(renderLines(state, theme).join("\n"), 0, 0);
+  },
+);
+
+pi.sendMessage<MyPayload>({
+  customType: CUSTOM_TYPE,
+  content: [{ type: "text", text: summaryForReplay(state) }],
+  display: true,
+  details: state,
+});
+```
+
+- The `details` payload is what the renderer reads back; keep it serializable so session replay works.
+- `content` is the plain-text fallback shown in session replay and in environments where the extension isn't loaded — make it a useful summary, not a placeholder.
+- Return `undefined` from the renderer on missing/invalid payload; Pi renders the `content` text instead.
+- Debounce high-frequency updates so the log doesn't flood — `task-list` uses a 100ms debounce on store mutations.
 
 ## Registering slash commands
 
@@ -150,14 +224,22 @@ if (ctx.hasUI) {
   const ok = await ctx.ui.confirm("Title", "Are you sure?");
   const choice = await ctx.ui.select("Pick one", ["A", "B", "C"]);
   const text = await ctx.ui.input("Label", "placeholder");
+
+  ctx.ui.setStatus("my-extension", "status text"); // single-line footer entry
+  ctx.ui.setWidget("my-extension", ["line 1", "line 2"]); // multi-line footer block
+  // pass undefined to clear either
 }
-ctx.ui.setStatus("my-extension", "status text"); // footer widget, always safe
 ```
+
+Use `setStatus` for a single-line footer entry and `setWidget` when you need multiple lines (autopilot's stage breadcrumb, subagents' activity tree). Both are keyed so multiple extensions can coexist.
+
+For full keyboard-driven modals that need their own render loop, use `ctx.ui.custom<T>(...)` — see `ask-user/index.ts` for the reference implementation.
 
 ## Workflow
 
 1. Fetch the relevant upstream docs/examples for the pattern you need.
-2. Decide: single file (`extensions/name.ts`) or subdirectory (`extensions/name/index.ts`)?
+2. Decide: single file (`extensions/name.ts`) or subdirectory (`extensions/name/index.ts`)? Pick subdirectory if you want tests.
 3. Write the extension.
-4. Run `npx tsc` from the repo root to verify types.
-5. Test by running pi in the target working directory — the extension loads automatically.
+4. Run `make typecheck` from the repo root to verify types.
+5. Write co-located unit tests (`*.test.ts`) for pure logic — tests use `node:test` via `tsx` and import source with `.ts` extensions. Run with `make test`. Keep tests to pure logic; TUI, event loop, and subagent spawn paths are covered by running pi end-to-end.
+6. Integration-test by running pi in the target working directory — the extension loads automatically.
