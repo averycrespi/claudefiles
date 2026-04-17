@@ -61,7 +61,7 @@ function uniqueTools(tools: BuiltinTool[]): BuiltinTool[] {
   return [...new Set(tools)];
 }
 
-function buildArgs(params: {
+export function buildArgs(params: {
   prompt: string;
   tools: BuiltinTool[];
   extensions: string[];

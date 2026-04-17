@@ -47,12 +47,6 @@ function normalizeIntent(intent: string): string {
   return trimmed;
 }
 
-function truncate(str: string, max = 120): string {
-  const trimmed = str.trim();
-  if (trimmed.length <= max) return trimmed;
-  return `${trimmed.slice(0, max)}…`;
-}
-
 function renderEventLine(
   event: SubagentEvent,
   prefix: string,
