@@ -27,14 +27,16 @@ make stow-claude         # symlink claude/ into ~/.claude/
 make stow-claude-sandbox # stow-claude + patch sandbox overrides
 make stow-pi             # symlink pi/agent/ into ~/.pi/agent/
 make typecheck          # type-check Pi extension TypeScript files
+make test               # run all Pi extension unit tests
 ```
 
 ## Testing
 
-Pure-logic tests run via Node's built-in test runner with experimental type stripping — no tsx/vitest/jest:
+Pure-logic tests run via Node's built-in `node:test` runner, loaded through `tsx` for TypeScript execution:
 
 ```bash
-node --experimental-strip-types --test pi/agent/extensions/<ext>/*.test.ts
+make test                                                    # run everything
+npx tsx --test pi/agent/extensions/<ext>/*.test.ts           # run one extension
 ```
 
 Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This requires `"allowImportingTsExtensions": true` in `tsconfig.json` — don't remove it or `make typecheck` will break.

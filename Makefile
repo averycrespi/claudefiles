@@ -1,4 +1,4 @@
-.PHONY: install-dev install-playwright stow-claude stow-claude-sandbox unstow-claude stow-pi unstow-pi typecheck
+.PHONY: install-dev install-playwright stow-claude stow-claude-sandbox unstow-claude stow-pi unstow-pi typecheck test
 
 install-dev:
 	npm install
@@ -32,3 +32,6 @@ unstow-pi:
 
 typecheck:
 	npx -p typescript tsc
+
+test:
+	npx tsx --test "pi/agent/extensions/**/*.test.ts"
