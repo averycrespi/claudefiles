@@ -53,6 +53,10 @@ Replaces the default search output with a one-line pattern label and match count
 - **Success:** match count in muted color (e.g. "8 matches"), or "no matches"
 - **Error:** first non-empty line of the error, in error color
 
+## Testing
+
+This extension has no unit tests of its own. Each per-tool module (`read.ts`, `bash.ts`, `ls.ts`, `find.ts`, `grep.ts`) is a thin wrapper that delegates execution to Pi's built-in tool and routes rendering through a pi-tui `theme` object. The only testable logic is the string shaping that feeds those renderers, and that lives in `../_shared/render.ts` — which is covered by `_shared/render.test.ts`. Adding a parallel test per compact renderer would mostly exercise pi-tui theme stubs rather than any behavior owned here.
+
 ## Non-goals
 
 Intentionally out of scope — this is a minimal, hand-rolled subset tailored to this user's setup:

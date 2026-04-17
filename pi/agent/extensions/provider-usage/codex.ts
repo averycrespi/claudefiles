@@ -1,6 +1,6 @@
 import type { ProviderAdapter, WindowStats } from "./utils.js";
 
-function parseWindow(window: any): WindowStats | undefined {
+export function parseWindow(window: any): WindowStats | undefined {
   if (!window) return undefined;
   return {
     usedPercent: window.used_percent,

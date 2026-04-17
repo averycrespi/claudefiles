@@ -25,19 +25,19 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
-type ContextFile = {
+export type ContextFile = {
   path: string;
   content: string;
 };
 
-function getAgentDir() {
+export function getAgentDir() {
   const override = process.env.PI_CODING_AGENT_DIR?.trim();
   return override && override.length > 0
     ? resolve(override)
     : join(homedir(), ".pi", "agent");
 }
 
-function loadContextFileFromDir(dir: string): ContextFile | null {
+export function loadContextFileFromDir(dir: string): ContextFile | null {
   const candidates = ["AGENTS.md", "CLAUDE.md"];
 
   for (const filename of candidates) {
@@ -57,7 +57,7 @@ function loadContextFileFromDir(dir: string): ContextFile | null {
   return null;
 }
 
-function discoverContextFiles(cwd: string, agentDir: string) {
+export function discoverContextFiles(cwd: string, agentDir: string) {
   const contextFiles: ContextFile[] = [];
   const seenPaths = new Set<string>();
 
@@ -89,11 +89,11 @@ function discoverContextFiles(cwd: string, agentDir: string) {
   return contextFiles;
 }
 
-function getCurrentDate() {
+export function getCurrentDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function buildFingerprint(files: ContextFile[], currentDate: string) {
+export function buildFingerprint(files: ContextFile[], currentDate: string) {
   return files
     .map((file) => {
       try {
@@ -107,7 +107,7 @@ function buildFingerprint(files: ContextFile[], currentDate: string) {
     .join("|");
 }
 
-function renderReminder(files: ContextFile[], currentDate: string) {
+export function renderReminder(files: ContextFile[], currentDate: string) {
   const sections = files.map(
     (file) =>
       `Contents of ${file.path} (Pi context instructions):\n\n${file.content.trim()}`,

@@ -53,7 +53,7 @@ const CALL_PARAMS = Type.Object({
   ),
 });
 
-function summarize(tool: BrokerTool): string {
+export function summarize(tool: BrokerTool): string {
   const desc = firstLine(tool.description ?? "");
   return desc ? `${tool.name} — ${desc}` : tool.name;
 }

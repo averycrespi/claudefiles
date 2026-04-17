@@ -104,7 +104,7 @@ export class BrokerClient {
   }
 }
 
-function extractProviders(tools: BrokerTool[]): string[] {
+export function extractProviders(tools: BrokerTool[]): string[] {
   const set = new Set<string>();
   for (const tool of tools) {
     const dot = tool.name.indexOf(".");

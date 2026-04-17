@@ -14,9 +14,9 @@
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-type BlockedCommandKind = "github-cli" | "git-remote";
+export type BlockedCommandKind = "github-cli" | "git-remote";
 
-type BlockedCommandMatch = {
+export type BlockedCommandMatch = {
   kind: BlockedCommandKind;
   segment: string;
 };
@@ -37,14 +37,16 @@ const BROKER_PROMPT_APPEND = [
   "- Discover available broker tools with mcp_search; inspect a tool's schema with mcp_describe before calling it.",
 ].join("\n");
 
-function splitCommand(command: string) {
+export function splitCommand(command: string) {
   return command
     .split(COMMAND_SPLIT_RE)
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
 }
 
-function findBlockedCommand(command: string): BlockedCommandMatch | undefined {
+export function findBlockedCommand(
+  command: string,
+): BlockedCommandMatch | undefined {
   for (const segment of splitCommand(command)) {
     if (GH_RE.test(segment)) return { kind: "github-cli", segment };
     if (GIT_REMOTE_RE.test(segment)) return { kind: "git-remote", segment };
@@ -52,14 +54,14 @@ function findBlockedCommand(command: string): BlockedCommandMatch | undefined {
   return undefined;
 }
 
-function getBlockReason(kind: BlockedCommandKind) {
+export function getBlockReason(kind: BlockedCommandKind) {
   if (kind === "github-cli") {
     return "Blocked GitHub CLI command. Use mcp_call with broker github tools instead.";
   }
   return "Blocked remote git command. Use mcp_call with broker git tools instead.";
 }
 
-function getSteerMessage(match: BlockedCommandMatch, _cwd: string) {
+export function getSteerMessage(match: BlockedCommandMatch, _cwd: string) {
   if (match.kind === "github-cli") {
     return [
       "The previous bash command was blocked because GitHub access in this environment should go through the MCP broker, not gh.",
