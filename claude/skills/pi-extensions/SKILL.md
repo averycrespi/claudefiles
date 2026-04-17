@@ -35,15 +35,7 @@ export default function (pi: ExtensionAPI) {
 
 ## File structure
 
-**Single-file extension:**
-
-```
-pi/agent/extensions/my-extension.ts
-```
-
-Best for small, self-contained extensions with no tests. Pi's loader treats every top-level `*.ts` under `extensions/` as an extension entry point, so a co-located `my-extension.test.ts` would be loaded as a broken extension. If you need tests, use the subdirectory layout.
-
-**Multi-file extension** (when you need helpers, tests, or npm deps):
+Every extension lives in its own subdirectory with an `index.ts` entry point:
 
 ```
 pi/agent/extensions/my-extension/
@@ -52,6 +44,8 @@ pi/agent/extensions/my-extension/
 ├── index.test.ts     ← co-located tests are safe here (not loaded)
 └── package.json      ← if npm deps needed
 ```
+
+Pi does support single-file top-level extensions (`extensions/name.ts`), but we don't use them in this repo — the loader treats every top-level `*.ts` as an extension entry point, so a co-located `name.test.ts` gets loaded as a broken extension and breaks Pi startup. Always use the subdirectory layout so you can add tests later without having to restructure.
 
 Larger extensions can nest further (`autopilot/` has `lib/`, `phases/`, `prompts/`; `autoformat/` has `format/`). The only hard requirement is a top-level `index.ts` that exports the factory function.
 
@@ -238,7 +232,7 @@ For full keyboard-driven modals that need their own render loop, use `ctx.ui.cus
 ## Workflow
 
 1. Fetch the relevant upstream docs/examples for the pattern you need.
-2. Decide: single file (`extensions/name.ts`) or subdirectory (`extensions/name/index.ts`)? Pick subdirectory if you want tests.
+2. Create the extension directory at `extensions/name/` with an `index.ts` entry point.
 3. Write the extension.
 4. Run `make typecheck` from the repo root to verify types.
 5. Write co-located unit tests (`*.test.ts`) for pure logic — tests use `node:test` via `tsx` and import source with `.ts` extensions. Run with `make test`. Keep tests to pure logic; TUI, event loop, and subagent spawn paths are covered by running pi end-to-end.
