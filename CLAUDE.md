@@ -41,6 +41,8 @@ npx tsx --test pi/agent/extensions/<ext>/*.test.ts           # run one extension
 
 Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This requires `"allowImportingTsExtensions": true` in `tsconfig.json` — don't remove it or `make typecheck` will break.
 
+**Before reporting any Pi extension change complete, run both `make typecheck` AND `make test`.** Typecheck alone catches type errors but not behavioral regressions — the tests cover pure logic that types can't verify.
+
 ## Skill Naming Convention
 
 - **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)

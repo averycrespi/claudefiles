@@ -81,7 +81,7 @@ export async function runImplement(
         args.dispatch,
         {
           prompt,
-          tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
+          tools: ["read", "edit", "write", "bash"],
           extensions: ["autoformat"],
           cwd: args.cwd,
           intent: `Implement: ${task.title}`,

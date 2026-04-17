@@ -131,7 +131,7 @@ export async function runValidation(
 
     const validationDispatch = await args.dispatch({
       prompt: validationPrompt,
-      tools: ["read", "bash", "ls", "find", "grep"],
+      tools: ["read", "bash"],
       cwd: args.cwd,
       intent:
         rounds === 1
@@ -190,7 +190,7 @@ export async function runValidation(
     const fixerPrompt = fixerTemplate.replace("{FAILURES}", failures);
     const fixerDispatch = await args.dispatch({
       prompt: fixerPrompt,
-      tools: ["read", "edit", "write", "bash", "ls", "find", "grep"],
+      tools: ["read", "edit", "write", "bash"],
       extensions: ["autoformat"],
       cwd: args.cwd,
       intent: `Fix validation failures (round ${rounds})`,

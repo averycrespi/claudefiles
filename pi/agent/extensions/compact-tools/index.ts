@@ -4,10 +4,6 @@
  * Overrides built-in tool renderers so the TUI shows compact labels and
  * summaries instead of full tool output. Tool execution behavior is
  * unchanged — only rendering is compacted.
- *
- * Note: the optional ls/find/grep tools must be enabled separately via
- * the `readonly-tools` extension. This extension only provides compact
- * rendering for them.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";

@@ -31,7 +31,6 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | `context-files-reminder` | Inject context file contents into LLM calls                     |
 | `mcp-broker`             | Broker CLI skill + guard for remote operations                  |
 | `provider-usage`         | Provider rate-limit quota in the footer                         |
-| `readonly-tools`         | Enable built-in `ls`, `find`, `grep` tools                      |
 | `subagents`              | Dynamic subagent loading and dispatch                           |
 | `task-list`              | Session-scoped task tracking with rich inline TUI rendering     |
 | `web-access`             | Web search, fetch, GitHub, and PDF tools                        |
