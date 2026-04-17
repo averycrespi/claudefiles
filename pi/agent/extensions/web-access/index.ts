@@ -18,11 +18,11 @@ import {
   headNonEmptyLines,
   partialElapsed,
   plural,
-} from "../_shared/render.js";
-import { webFetch } from "./fetch.js";
-import { fetchGitHub, parseGitHubUrl } from "./github.js";
-import { extractPdf } from "./pdf.js";
-import { formatResults, webSearch } from "./search.js";
+} from "../_shared/render.ts";
+import { webFetch } from "./fetch.ts";
+import { fetchGitHub, parseGitHubUrl } from "./github.ts";
+import { extractPdf } from "./pdf.ts";
+import { formatResults, webSearch } from "./search.ts";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

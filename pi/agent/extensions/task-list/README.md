@@ -7,7 +7,7 @@ Pi extension providing session-scoped task tracking with a rich inline TUI rende
 Other extensions may import the following from `api.ts`. Anything not listed here is internal and may change without notice.
 
 ```ts
-import { taskList } from "../task-list/api.js";
+import { taskList } from "../task-list/api.ts";
 ```
 
 - `taskList` — the singleton store described below.

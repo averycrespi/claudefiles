@@ -14,9 +14,10 @@ import {
   firstLine,
   getRelativeLabel,
   getResultText,
+  headNonEmptyLines,
   partialElapsed,
   plural,
-} from "../_shared/render.js";
+} from "../_shared/render.ts";
 
 const findTools = new Map<string, ReturnType<typeof createFindTool>>();
 
@@ -75,12 +76,19 @@ export default function registerFind(pi: ExtensionAPI) {
         return new Text(theme.fg("error", message), 0, 0);
       }
 
-      const count = countNonEmptyLines(text);
-      if (count === 0) {
+      const head = headNonEmptyLines(text, 3);
+      if (head.length === 0) {
         return new Text(theme.fg("muted", "no matches"), 0, 0);
       }
 
-      return new Text(theme.fg("muted", plural(count, "result")), 0, 0);
+      const totalLines = countNonEmptyLines(text);
+      const extra = totalLines - head.length;
+      const displayLines =
+        extra > 0 ? [...head, `... +${plural(extra, "more result")}`] : head;
+      const rendered = displayLines
+        .map((line) => theme.fg("muted", line))
+        .join("\n");
+      return new Text(rendered, 0, 0);
     },
   });
 }

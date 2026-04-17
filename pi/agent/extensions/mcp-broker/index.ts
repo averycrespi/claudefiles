@@ -9,9 +9,9 @@
  * prefixes without having to probe.
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { BrokerClient } from "./client.js";
-import initGuard from "./guard.js";
-import { registerTools } from "./tools.js";
+import { BrokerClient } from "./client.ts";
+import initGuard from "./guard.ts";
+import { registerTools } from "./tools.ts";
 
 export default function (pi: ExtensionAPI) {
   const client = new BrokerClient();

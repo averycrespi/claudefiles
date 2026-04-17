@@ -1,4 +1,4 @@
-import type { ProviderAdapter, WindowStats } from "./utils.js";
+import type { ProviderAdapter, WindowStats } from "./utils.ts";
 
 export function parseWindow(window: any): WindowStats | undefined {
   if (!window) return undefined;

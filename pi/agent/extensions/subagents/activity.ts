@@ -1,3 +1,4 @@
+import { formatDuration } from "../_shared/render.ts";
 import type {
   SubagentEvent,
   SubagentPhase,
@@ -118,14 +119,6 @@ function extractLastAssistantMessage(messages: unknown): string {
     }
   }
   return "";
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${seconds}s`;
-  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 }
 
 export function createSubagentActivityTracker(

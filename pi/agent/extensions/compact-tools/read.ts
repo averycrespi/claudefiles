@@ -14,7 +14,7 @@ import {
   getRelativeLabel,
   getResultText,
   partialElapsed,
-} from "../_shared/render.js";
+} from "../_shared/render.ts";
 
 const readTools = new Map<string, ReturnType<typeof createReadTool>>();
 

@@ -5,8 +5,8 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { codexAdapter } from "./codex.js";
-import { buildFooterText, type ProviderAdapter } from "./utils.js";
+import { codexAdapter } from "./codex.ts";
+import { buildFooterText, type ProviderAdapter } from "./utils.ts";
 
 // Add new adapters here.
 const ADAPTERS: ProviderAdapter[] = [codexAdapter];

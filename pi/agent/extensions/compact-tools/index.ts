@@ -7,11 +7,11 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import registerBash from "./bash.js";
-import registerFind from "./find.js";
-import registerGrep from "./grep.js";
-import registerLs from "./ls.js";
-import registerRead from "./read.js";
+import registerBash from "./bash.ts";
+import registerFind from "./find.ts";
+import registerGrep from "./grep.ts";
+import registerLs from "./ls.ts";
+import registerRead from "./read.ts";
 
 export default function (pi: ExtensionAPI) {
   registerRead(pi);

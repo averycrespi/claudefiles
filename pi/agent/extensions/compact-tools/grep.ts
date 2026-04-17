@@ -16,7 +16,7 @@ import {
   getResultText,
   partialElapsed,
   plural,
-} from "../_shared/render.js";
+} from "../_shared/render.ts";
 
 const grepTools = new Map<string, ReturnType<typeof createGrepTool>>();
 

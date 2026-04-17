@@ -21,10 +21,10 @@ import {
   headNonEmptyLines,
   partialElapsed,
   plural,
-} from "../_shared/render.js";
+} from "../_shared/render.ts";
 
 const CALL_HEAD_LINES = 3;
-import type { BrokerClient, BrokerTool } from "./client.js";
+import type { BrokerClient, BrokerTool } from "./client.ts";
 
 const SEARCH_PARAMS = Type.Object({
   query: Type.String({

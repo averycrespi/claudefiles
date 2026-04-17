@@ -5,7 +5,7 @@ import {
   firstLine,
   formatDuration,
   startPartialTimer,
-} from "../_shared/render.js";
+} from "../_shared/render.ts";
 import {
   buildSpawnAgentParams,
   buildSpawnAgentsParams,

@@ -16,7 +16,7 @@ import {
   partialElapsed,
   singleLineCommand,
   tailNonEmptyLines,
-} from "../_shared/render.js";
+} from "../_shared/render.ts";
 
 const TAIL_LINES = 3;
 

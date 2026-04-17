@@ -1,7 +1,7 @@
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import type { NotifyContext } from "./utils.js";
-import { logFormattingIssue } from "./utils.js";
+import type { NotifyContext } from "./utils.ts";
+import { logFormattingIssue } from "./utils.ts";
 
 const execFile = promisify(execFileCb);
 

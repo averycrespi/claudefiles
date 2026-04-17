@@ -15,6 +15,7 @@ import {
   truncateToWidth,
 } from "@mariozechner/pi-tui";
 import { Type, type Static } from "@sinclair/typebox";
+import { firstLine, getResultText } from "../_shared/render.ts";
 
 const OTHER_LABEL = "Type something.";
 const RECOMMENDED_SUFFIX = " (Recommended)";
@@ -347,7 +348,22 @@ export default function (pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
 
-    renderResult(result, _options, theme, _context) {
+    renderResult(result, { isPartial }, theme, context) {
+      if (isPartial) {
+        return new Text(theme.fg("warning", "Waiting for answer..."), 0, 0);
+      }
+
+      if (context.isError) {
+        return new Text(
+          theme.fg(
+            "error",
+            firstLine(getResultText(result)) || "ask_user error",
+          ),
+          0,
+          0,
+        );
+      }
+
       const details = result.details as AskDetails | undefined;
 
       if (!details || details.cancelled) {

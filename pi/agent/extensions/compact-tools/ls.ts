@@ -14,9 +14,10 @@ import {
   firstLine,
   getRelativeLabel,
   getResultText,
+  headNonEmptyLines,
   partialElapsed,
   plural,
-} from "../_shared/render.js";
+} from "../_shared/render.ts";
 
 const lsTools = new Map<string, ReturnType<typeof createLsTool>>();
 
@@ -77,16 +78,21 @@ export default function registerLs(pi: ExtensionAPI) {
         return new Text(theme.fg("error", message), 0, 0);
       }
 
-      const count = countNonEmptyLines(text);
-      if (count === 0) {
+      const head = headNonEmptyLines(text, 3);
+      if (head.length === 0) {
         return new Text(theme.fg("muted", "empty"), 0, 0);
       }
 
-      return new Text(
-        theme.fg("muted", plural(count, "entry", "entries")),
-        0,
-        0,
-      );
+      const totalLines = countNonEmptyLines(text);
+      const extra = totalLines - head.length;
+      const displayLines =
+        extra > 0
+          ? [...head, `... +${plural(extra, "more entry", "more entries")}`]
+          : head;
+      const rendered = displayLines
+        .map((line) => theme.fg("muted", line))
+        .join("\n");
+      return new Text(rendered, 0, 0);
     },
   });
 }
