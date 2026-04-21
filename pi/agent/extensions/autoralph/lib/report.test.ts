@@ -124,3 +124,23 @@ test("report: iteration without commit shows '(no commit)'", () => {
   assert.ok(planningLine);
   assert.match(planningLine!, /\(no commit\)/);
 });
+
+test("report: failed outcome with empty history uses fallback summary", () => {
+  const text = formatReport({
+    ...baseInput,
+    outcome: "failed",
+    history: [],
+  });
+  assert.match(text, /Outcome: failed/);
+  assert.match(text, /no summary available/);
+});
+
+test("report: zero commits ahead renders correctly", () => {
+  const text = formatReport({
+    ...baseInput,
+    commitsAhead: 0,
+    outcome: "complete",
+    history: [rec(1, "in_progress")],
+  });
+  assert.match(text, /\(0 commits ahead of main\)/);
+});
