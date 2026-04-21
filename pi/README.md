@@ -27,6 +27,7 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | `ask-user`               | Improved TUI for user questions                                 |
 | `autoformat`             | Run `gofmt` / `prettier` after write and edit                   |
 | `autopilot`              | Autonomous plan → implement → verify pipeline from a design doc |
+| `autoralph`              | Autonomous agent-driven Ralph-style loop from a design doc      |
 | `compact-tools`          | Compact rendering for read and bash                             |
 | `context-files-reminder` | Inject context file contents into LLM calls                     |
 | `mcp-broker`             | Broker CLI skill + guard for remote operations                  |
