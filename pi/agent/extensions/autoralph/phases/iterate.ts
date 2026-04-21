@@ -100,7 +100,7 @@ export async function runIteration(
     !args.signal?.aborted && controller.signal.aborted && !dispatchResult.ok;
 
   if (!dispatchResult.ok) {
-    if (timedOut || dispatchResult.aborted) {
+    if ((timedOut || dispatchResult.aborted) && !args.signal?.aborted) {
       return {
         outcome: "timeout",
         summary: `iteration timed out after ${Math.round(durationMs / 1000)}s`,

@@ -144,6 +144,39 @@ test("runIteration returns timeout when dispatch reports aborted via timer", asy
   assert.equal(result.outcome, "timeout");
 });
 
+test("runIteration does NOT return timeout when parent signal is aborted mid-dispatch", async () => {
+  const parentController = new AbortController();
+  const result = await runIteration({
+    iteration: 3,
+    maxIterations: 50,
+    designPath: "design.md",
+    taskFilePath: ".autoralph/design.md",
+    priorHandoff: "x",
+    isReflection: false,
+    timeoutMs: 60_000,
+    cwd: process.cwd(),
+    dispatch: async (opts) => {
+      // Simulate user pressing /autoralph-cancel mid-iteration.
+      parentController.abort();
+      // The parent-abort listener will have synchronously aborted
+      // iterate.ts's internal controller, propagating to opts.signal.
+      const aborted = opts.signal?.aborted ?? false;
+      return {
+        ok: false,
+        stdout: "",
+        error: aborted ? "aborted" : "x",
+        aborted,
+      };
+    },
+    getHead: makeHeadSeq(["sha0", "sha0"]),
+    signal: parentController.signal,
+  });
+  // Parent-cancel must NOT be classified as timeout — that distinction
+  // belongs to the orchestrator's own consecutive-timeout tracking.
+  assert.notEqual(result.outcome, "timeout");
+  assert.equal(result.outcome, "dispatch_error");
+});
+
 test("runIteration prompt includes bootstrap section on iteration 1", async () => {
   let capturedPrompt = "";
   await runIteration({
