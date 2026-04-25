@@ -110,3 +110,89 @@ describe("registerWorkflow — commands + lock", () => {
     await new Promise((r) => setTimeout(r, 10));
   });
 });
+
+describe("registerWorkflow — preflight", () => {
+  test("preflight failure aborts before run() is called", async () => {
+    const pi = fakePi();
+    let runCalled = false;
+    registerWorkflow(pi as any, {
+      name: "d",
+      description: "",
+      parseArgs: () => ({ ok: true, args: {} }),
+      preflight: async () => ({ ok: false, error: "missing file" }),
+      run: async () => {
+        runCalled = true;
+        return null;
+      },
+    });
+    const notes: any[] = [];
+    const ctx = {
+      waitForIdle: () => {},
+      ui: {
+        notify: (m: string, l: string) => notes.push({ m, l }),
+        theme: undefined,
+      },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(runCalled, false);
+    assert.ok(notes.some((n) => /missing file/.test(n.m)));
+  });
+
+  test("preflight success passes data through to run()", async () => {
+    const pi = fakePi();
+    let seenPreflight: any = null;
+    registerWorkflow(pi as any, {
+      name: "d",
+      description: "",
+      parseArgs: () => ({ ok: true, args: {} }),
+      preflight: async () => ({ ok: true, data: { foo: "bar" } }),
+      run: async (ctx: any) => {
+        seenPreflight = ctx.preflight;
+        return null;
+      },
+    });
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    assert.deepEqual(seenPreflight, { foo: "bar" });
+  });
+});
+
+describe("registerWorkflow — abort", () => {
+  test("/<name>-cancel aborts the controller signal seen by run()", async () => {
+    const pi = fakePi();
+    let signalSeen!: AbortSignal;
+    let resolveRun!: () => void;
+    registerWorkflow(pi as any, {
+      name: "d",
+      description: "",
+      parseArgs: () => ({ ok: true, args: {} }),
+      run: async (ctx: any) => {
+        signalSeen = ctx.signal;
+        await new Promise<void>((r) => {
+          ctx.signal.addEventListener("abort", () => {
+            r();
+          });
+          resolveRun = r;
+        });
+        return null;
+      },
+    });
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    assert.equal(signalSeen.aborted, false);
+    await pi.commands.get("d-cancel")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    assert.equal(signalSeen.aborted, true);
+    resolveRun();
+    await new Promise((r) => setTimeout(r, 10));
+  });
+});

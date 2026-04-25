@@ -64,10 +64,43 @@ export function registerWorkflow<Args, Pre>(
         return;
       }
       const controller = new AbortController();
-      active = { controller, startedAt: Date.now() };
+      const startedAt = Date.now();
+      active = { controller, startedAt };
+
+      let preflightData: any = {};
+      if (def.preflight) {
+        try {
+          const pre = await def.preflight(
+            process.cwd(),
+            parsed.args,
+            controller.signal,
+          );
+          if (!pre.ok) {
+            ctx.ui.notify(`/${def.name}-start: ${pre.error}`, "error");
+            active = null;
+            return;
+          }
+          preflightData = pre.data;
+        } catch (e) {
+          ctx.ui.notify(
+            `/${def.name}-start: preflight crashed: ${(e as Error).message}`,
+            "error",
+          );
+          active = null;
+          return;
+        }
+      }
+
       const pipeline = async () => {
         try {
-          await def.run({ args: parsed.args, signal: controller.signal });
+          await def.run({
+            args: parsed.args,
+            signal: controller.signal,
+            preflight: preflightData,
+            cwd: process.cwd(),
+            ui: pi,
+            startedAt,
+          });
         } finally {
           active = null;
         }
