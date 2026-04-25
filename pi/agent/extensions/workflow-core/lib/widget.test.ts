@@ -36,3 +36,57 @@ describe("Widget — setters", () => {
     w.dispose();
   });
 });
+
+describe("Widget — subagent slot lifecycle", () => {
+  test("start adds a running slot with intent and startedAt", () => {
+    const ui = fakeUi();
+    let nowVal = 1000;
+    const w = createWidget({ key: "test", ui, now: () => nowVal });
+    w._emitSubagentLifecycle({ kind: "start", id: 1, intent: "Plan" });
+    const s = w.subagents[0];
+    assert.equal(s.id, 1);
+    assert.equal(s.intent, "Plan");
+    assert.equal(s.status, "running");
+    assert.equal(s.startedAt, 1000);
+    w.dispose();
+  });
+
+  test("event appends to recentEvents (trims to max K)", () => {
+    const ui = fakeUi();
+    const w = createWidget({
+      key: "test",
+      ui,
+      now: () => 0,
+      maxRecentEventsPerSlot: 2,
+    });
+    w._emitSubagentLifecycle({ kind: "start", id: 1, intent: "x" });
+    w._emitSubagentLifecycle({ kind: "event", id: 1, event: "a" });
+    w._emitSubagentLifecycle({ kind: "event", id: 1, event: "b" });
+    w._emitSubagentLifecycle({ kind: "event", id: 1, event: "c" });
+    assert.deepEqual(w.subagents[0].recentEvents, ["b", "c"]);
+    w.dispose();
+  });
+
+  test("end transitions slot to finished", () => {
+    const ui = fakeUi();
+    const w = createWidget({ key: "test", ui, now: () => 0 });
+    w._emitSubagentLifecycle({ kind: "start", id: 1, intent: "x" });
+    w._emitSubagentLifecycle({ kind: "end", id: 1 });
+    assert.equal(w.subagents[0].status, "finished");
+    w.dispose();
+  });
+});
+
+describe("Widget — dispose", () => {
+  test("dispose stops the tick and clears the widget", () => {
+    const ui = fakeUi();
+    const w = createWidget({ key: "test", ui, now: () => 0, tickMs: 10 });
+    w.setTitle("hi");
+    const before = ui.calls.length;
+    w.dispose();
+    const after = ui.calls.length;
+    // dispose triggers a final setWidget(undefined)
+    assert.ok(after > before);
+    assert.equal(ui.calls[ui.calls.length - 1].lines, undefined);
+  });
+});
