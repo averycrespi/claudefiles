@@ -110,3 +110,187 @@ describe("Subagent.dispatch — failures", () => {
     if (!r.ok) assert.equal(r.reason, "schema");
   });
 });
+
+describe("Subagent.dispatch — retry policy", () => {
+  test("retries once on transient dispatch failure (default policy)", async () => {
+    let calls = 0;
+    const spawn = async () => {
+      calls++;
+      if (calls === 1) {
+        return {
+          ok: false,
+          aborted: false,
+          stdout: "",
+          stderr: "",
+          exitCode: 1,
+          signal: null,
+          errorMessage: "transient",
+        };
+      }
+      return {
+        ok: true,
+        aborted: false,
+        stdout: `{"outcome":"x","n":1}`,
+        stderr: "",
+        exitCode: 0,
+        signal: null,
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    const r = await sub.dispatch({
+      intent: "Plan",
+      prompt: "x",
+      schema: Schema,
+      tools: [],
+    });
+    assert.equal(r.ok, true);
+    assert.equal(calls, 2);
+  });
+
+  test("does not retry parse failures", async () => {
+    let calls = 0;
+    const spawn = async () => {
+      calls++;
+      return {
+        ok: true,
+        aborted: false,
+        stdout: "not json",
+        stderr: "",
+        exitCode: 0,
+        signal: null,
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    const r = await sub.dispatch({
+      intent: "x",
+      prompt: "y",
+      schema: Schema,
+      tools: [],
+    });
+    assert.equal(r.ok, false);
+    assert.equal(calls, 1);
+  });
+
+  test("does not retry aborted dispatches", async () => {
+    let calls = 0;
+    const spawn = async () => {
+      calls++;
+      return {
+        ok: false,
+        aborted: true,
+        stdout: "",
+        stderr: "",
+        exitCode: null,
+        signal: "SIGTERM" as NodeJS.Signals,
+        errorMessage: "aborted",
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    const r = await sub.dispatch({
+      intent: "x",
+      prompt: "y",
+      schema: Schema,
+      tools: [],
+    });
+    assert.equal(r.ok, false);
+    assert.equal(calls, 1);
+  });
+
+  test("does not retry when retry policy is 'none'", async () => {
+    let calls = 0;
+    const spawn = async () => {
+      calls++;
+      return {
+        ok: false,
+        aborted: false,
+        stdout: "",
+        stderr: "",
+        exitCode: 1,
+        signal: null,
+        errorMessage: "transient",
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    const r = await sub.dispatch({
+      intent: "x",
+      prompt: "y",
+      schema: Schema,
+      tools: [],
+      retry: "none",
+    });
+    assert.equal(r.ok, false);
+    assert.equal(calls, 1);
+  });
+
+  test("does not retry when run-level signal already aborted", async () => {
+    let calls = 0;
+    const spawn = async () => {
+      calls++;
+      return {
+        ok: false,
+        aborted: false,
+        stdout: "",
+        stderr: "",
+        exitCode: 1,
+        signal: null,
+        errorMessage: "transient",
+      };
+    };
+    const ctl = new AbortController();
+    ctl.abort();
+    const sub = createSubagent({
+      spawn: spawn as any,
+      cwd: "/tmp",
+      signal: ctl.signal,
+    });
+    const r = await sub.dispatch({
+      intent: "x",
+      prompt: "y",
+      schema: Schema,
+      tools: [],
+    });
+    assert.equal(r.ok, false);
+    assert.equal(calls, 1);
+  });
+
+  test("retry's intent gets '(retry)' suffix in the lifecycle event", async () => {
+    let calls = 0;
+    const spawn = async () => {
+      calls++;
+      if (calls === 1) {
+        return {
+          ok: false,
+          aborted: false,
+          stdout: "",
+          stderr: "",
+          exitCode: 1,
+          signal: null,
+          errorMessage: "transient",
+        };
+      }
+      return {
+        ok: true,
+        aborted: false,
+        stdout: `{"outcome":"x","n":1}`,
+        stderr: "",
+        exitCode: 0,
+        signal: null,
+      };
+    };
+    const intents: string[] = [];
+    const sub = createSubagent({
+      spawn: spawn as any,
+      cwd: "/tmp",
+      onSubagentLifecycle: (e) => {
+        if (e.kind === "start") intents.push(e.spec.intent);
+      },
+    });
+    await sub.dispatch({
+      intent: "Plan",
+      prompt: "x",
+      schema: Schema,
+      tools: [],
+    });
+    assert.deepEqual(intents, ["Plan", "Plan (retry)"]);
+  });
+});
