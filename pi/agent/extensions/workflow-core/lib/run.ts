@@ -29,6 +29,7 @@ export interface RegisterWorkflowOpts {
   spawn?: (inv: SpawnInvocation) => Promise<SpawnOutcome>;
   widgetUi?: WidgetUi;
   logBaseDir?: string;
+  cwd?: string;
 }
 
 interface ActiveRun {
@@ -101,6 +102,7 @@ export function registerWorkflow<Args, Pre>(
 
       const logBaseDir =
         testOpts.logBaseDir ?? join(homedir(), ".pi", "workflow-runs");
+      const cwd = testOpts.cwd ?? process.cwd();
       const slug = def.runSlug?.(parsed.args, preflightData) ?? null;
 
       const pipeline = async () => {
@@ -126,8 +128,11 @@ export function registerWorkflow<Args, Pre>(
           preflight: preflightData,
           retainRuns: def.retainRuns,
         });
+
+        let subagentCount = 0;
+        let subagentRetries = 0;
         const subagent = createSubagent({
-          cwd: process.cwd(),
+          cwd,
           spawn: testOpts.spawn,
           signal: controller.signal,
           onSubagentEvent: (id, ev) =>
@@ -138,6 +143,8 @@ export function registerWorkflow<Args, Pre>(
             }),
           onSubagentLifecycle: (e) => {
             if (e.kind === "start") {
+              subagentCount++;
+              if (e.parentId !== undefined) subagentRetries++;
               widget._emitSubagentLifecycle({
                 kind: "start",
                 id: e.id,
@@ -174,43 +181,51 @@ export function registerWorkflow<Args, Pre>(
         let error: string | null = null;
         let lines: string[] | null = null;
         try {
-          lines = await def.run({
-            args: parsed.args,
-            signal: controller.signal,
-            preflight: preflightData,
-            cwd: process.cwd(),
-            ui: pi,
-            startedAt,
-            subagent,
-            widget,
-            log: (type: string, payload?: Record<string, unknown>) =>
-              logger.logWorkflow(type, payload),
-            workflowDir: logger.workflowDir,
-          });
-          if (controller.signal.aborted) outcome = "cancelled";
-        } catch (e) {
-          outcome = "crashed";
-          error = (e as Error).message;
-          lines = [`/${def.name}: run crashed: ${error}`];
-        }
-
-        if (lines !== null) {
-          let text = lines.join("\n");
-          if (def.emitLogPath !== false) {
-            text = `${text}\nLog:     ${logger.runDir}`;
+          try {
+            lines = await def.run({
+              args: parsed.args,
+              signal: controller.signal,
+              preflight: preflightData,
+              cwd,
+              ui: pi,
+              startedAt,
+              subagent,
+              widget,
+              log: (type: string, payload?: Record<string, unknown>) =>
+                logger.logWorkflow(type, payload),
+              workflowDir: logger.workflowDir,
+            });
+            if (controller.signal.aborted) outcome = "cancelled";
+          } catch (e) {
+            outcome = "crashed";
+            error = (e as Error).message;
+            lines = [`/${def.name}: run crashed: ${error}`];
           }
-          pi.sendMessage({
-            customType: `${def.name}-report`,
-            content: [{ type: "text", text }],
-            display: true,
-            details: {},
-          });
-          logger.writeFinalReport(text);
-        }
 
-        await logger.close({ outcome, error });
-        widget.dispose();
-        active = null;
+          if (lines !== null) {
+            let text = lines.join("\n");
+            if (def.emitLogPath !== false) {
+              text = `${text}\nLog:     ${logger.runDir}`;
+            }
+            pi.sendMessage({
+              customType: `${def.name}-report`,
+              content: [{ type: "text", text }],
+              display: true,
+              details: {},
+            });
+            logger.writeFinalReport(text);
+          }
+
+          await logger.close({
+            outcome,
+            error,
+            subagentCount,
+            subagentRetries,
+          });
+        } finally {
+          widget.dispose();
+          active = null;
+        }
       };
       // Detach: do NOT await
       void pipeline();

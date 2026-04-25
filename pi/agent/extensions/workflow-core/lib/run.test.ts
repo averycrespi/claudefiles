@@ -507,3 +507,203 @@ describe("registerWorkflow — subagent log integration", () => {
     rmSync(tmpRoot, { recursive: true });
   });
 });
+
+describe("registerWorkflow — cwd / cleanup / counts", () => {
+  test("RegisterWorkflowOpts.cwd is forwarded to ctx.cwd", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-cwd-"));
+    let seenCwd: string | null = null;
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          seenCwd = ctx.cwd;
+          return null;
+        },
+      },
+      { logBaseDir: tmpRoot, cwd: "/tmp/custom-cwd" } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(seenCwd, "/tmp/custom-cwd");
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("widget is disposed even when run() throws", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-disp-"));
+    const widgetCalls: { key: string; lines: any }[] = [];
+    const widgetUi = {
+      setWidget: (key: string, lines: any) => {
+        widgetCalls.push({ key, lines });
+      },
+    };
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async () => {
+          throw new Error("boom");
+        },
+      },
+      { logBaseDir: tmpRoot, widgetUi } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    // The dispose() call sets widget content to undefined.
+    const lastCall = widgetCalls[widgetCalls.length - 1];
+    assert.equal(lastCall.lines, undefined);
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("widget is disposed when run() is cancelled mid-flight", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-disp-"));
+    const widgetCalls: { key: string; lines: any }[] = [];
+    const widgetUi = {
+      setWidget: (key: string, lines: any) => {
+        widgetCalls.push({ key, lines });
+      },
+    };
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          await new Promise<void>((r) => {
+            ctx.signal.addEventListener("abort", () => {
+              r();
+            });
+          });
+          return ["cancelled"];
+        },
+      },
+      { logBaseDir: tmpRoot, widgetUi } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    await pi.commands.get("d-cancel")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    const lastCall = widgetCalls[widgetCalls.length - 1];
+    assert.equal(lastCall.lines, undefined);
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("cancel mid-run records cancelled outcome in run.json", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-cancel-"));
+    let runDir = "";
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          runDir = ctx.workflowDir.replace(/\/workflow$/, "");
+          await new Promise<void>((r) => {
+            ctx.signal.addEventListener("abort", () => {
+              r();
+            });
+          });
+          return ["cancelled body"];
+        },
+      },
+      { logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    await pi.commands.get("d-cancel")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    const runJson = JSON.parse(readFileSync(join(runDir, "run.json"), "utf8"));
+    assert.equal(runJson.outcome, "cancelled");
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("subagent_count and subagent_retries reflect actual dispatches", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-cnt-"));
+    let attempts = 0;
+    const fakeSpawn = async () => {
+      attempts++;
+      if (attempts === 1) {
+        return {
+          ok: false as const,
+          aborted: false,
+          stdout: "",
+          stderr: "boom",
+          exitCode: 1,
+          signal: null,
+          errorMessage: "fail-once",
+        };
+      }
+      return {
+        ok: true as const,
+        aborted: false,
+        stdout: `{}`,
+        stderr: "",
+        exitCode: 0,
+        signal: null,
+      };
+    };
+    const { Type } = await import("@sinclair/typebox");
+    let runDir = "";
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          runDir = ctx.workflowDir.replace(/\/workflow$/, "");
+          await ctx.subagent.dispatch({
+            intent: "Plan",
+            prompt: "p",
+            schema: Type.Object({}),
+            tools: [],
+          });
+          return null;
+        },
+      },
+      { spawn: fakeSpawn as any, logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 50));
+    const runJson = JSON.parse(readFileSync(join(runDir, "run.json"), "utf8"));
+    assert.equal(runJson.subagent_count, 2);
+    assert.equal(runJson.subagent_retries, 1);
+    rmSync(tmpRoot, { recursive: true });
+  });
+});
