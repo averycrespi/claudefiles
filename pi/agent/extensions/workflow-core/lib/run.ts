@@ -106,6 +106,29 @@ export function registerWorkflow<Args, Pre>(
       const slug = def.runSlug?.(parsed.args, preflightData) ?? null;
 
       const pipeline = async () => {
+        // Create logger FIRST. It holds no live resources before its first
+        // write — if it throws (e.g., filesystem error), there is nothing
+        // to clean up and we must release the workflow lock so subsequent
+        // /<name>-start invocations can proceed.
+        let logger: Awaited<ReturnType<typeof createRunLogger>>;
+        try {
+          logger = await createRunLogger({
+            baseDir: logBaseDir,
+            workflow: def.name,
+            slug,
+            args: parsed.args,
+            preflight: preflightData,
+            retainRuns: def.retainRuns,
+          });
+        } catch (e) {
+          ctx.ui.notify(
+            `/${def.name}-start: failed to create run log: ${(e as Error).message}`,
+            "error",
+          );
+          active = null;
+          return;
+        }
+
         const piAny = pi as any;
         const widgetUi: WidgetUi =
           testOpts.widgetUi ??
@@ -119,14 +142,6 @@ export function registerWorkflow<Args, Pre>(
           key: def.name,
           ui: widgetUi,
           theme: piAny.hasUI ? piAny.ui?.theme : undefined,
-        });
-        const logger = await createRunLogger({
-          baseDir: logBaseDir,
-          workflow: def.name,
-          slug,
-          args: parsed.args,
-          preflight: preflightData,
-          retainRuns: def.retainRuns,
         });
 
         let subagentCount = 0;

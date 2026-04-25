@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import { strict as assert } from "node:assert";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -704,6 +704,86 @@ describe("registerWorkflow — cwd / cleanup / counts", () => {
     const runJson = JSON.parse(readFileSync(join(runDir, "run.json"), "utf8"));
     assert.equal(runJson.subagent_count, 2);
     assert.equal(runJson.subagent_retries, 1);
+    rmSync(tmpRoot, { recursive: true });
+  });
+});
+
+describe("registerWorkflow — logger creation failure", () => {
+  test("logger creation failure releases the lock, skips run(), and notifies", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    // Create a regular file and use it as logBaseDir — createRunLogger
+    // will mkdirSync(<file>/<workflow>) which fails with ENOTDIR.
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-bad-"));
+    const badBaseDir = join(tmpRoot, "not-a-dir");
+    writeFileSync(badBaseDir, "i am a file, not a directory");
+
+    let runCalled = false;
+    const widgetCalls: { key: string; lines: any }[] = [];
+    const widgetUi = {
+      setWidget: (key: string, lines: any) => {
+        widgetCalls.push({ key, lines });
+      },
+    };
+
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async () => {
+          runCalled = true;
+          return null;
+        },
+      },
+      { logBaseDir: badBaseDir, widgetUi } as any,
+    );
+
+    const notes: { m: string; l: string }[] = [];
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: {
+        notify: (m: string, l: string) => notes.push({ m, l }),
+        theme: undefined,
+      },
+    };
+
+    // First start: logger creation will throw.
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+
+    // run() must NOT have been called.
+    assert.equal(runCalled, false, "run() should not be invoked");
+
+    // A notify with an appropriate error must have been issued.
+    assert.ok(
+      notes.some(
+        (n) => /failed to create run log/.test(n.m) && n.l === "error",
+      ),
+      `expected a 'failed to create run log' error notify; got: ${JSON.stringify(notes)}`,
+    );
+
+    // Widget must NOT have been constructed (no setWidget calls), so no
+    // setInterval ticker is leaked.
+    assert.equal(
+      widgetCalls.length,
+      0,
+      `widget should not be constructed; got calls: ${JSON.stringify(widgetCalls)}`,
+    );
+
+    // Lock must be released: a second /<name>-start must NOT fail with
+    // "already active". (It will fail again from the same logger error,
+    // but that's a separate notify.)
+    const notesBefore = notes.length;
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    const newNotes = notes.slice(notesBefore);
+    assert.ok(
+      !newNotes.some((n) => /already active/.test(n.m)),
+      `second start should not be blocked by stale lock; got: ${JSON.stringify(newNotes)}`,
+    );
+
     rmSync(tmpRoot, { recursive: true });
   });
 });
