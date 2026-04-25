@@ -1,24 +1,30 @@
 /**
- * Re-injects Pi context files as a hidden <system-reminder> on every LLM call.
+ * Archived — no longer loaded in the main agent.
  *
- * This behavior is adapted from Claude Code. It was added after the user found that
- * the Pi agent was frequently forgetting earlier-loaded context such as AGENTS.md files
- * over the course of a session.
+ * Why disabled: redundant with Pi's native behavior. Originally adapted from
+ * Claude Code after the user observed AGENTS.md drift mid-session, but a later
+ * read of pi-coding-agent (≥0.65) shows Pi already pins context files into the
+ * system prompt on every turn:
  *
- * This mirrors Pi's built-in AGENTS.md/CLAUDE.md discovery order for parity:
- * global agent dir first, then ancestor directories from filesystem root down to cwd,
- * preferring AGENTS.md over CLAUDE.md within each directory.
+ *   - resource-loader.js loadProjectContextFiles → buildSystemPrompt
+ *     embeds AGENTS.md/CLAUDE.md under "# Project Context", plus the current
+ *     date and cwd.
+ *   - compaction.js summarizes the messages array only — agent.state.systemPrompt
+ *     is never touched, so context files survive compaction by construction.
  *
- * The reminder is rebuilt only when the discovered files change on disk or the date changes.
- * It is injected through the context hook, so it affects outbound requests without being
- * stored in session history or shown in the UI. This means the reminder survives context
- * compaction automatically — it's re-injected fresh on every call, not stored in history
- * where it could be summarized away.
+ * That makes this extension pure duplication: same content, also injected every
+ * turn, but as a user-role <system-reminder> sitting after the system prompt in
+ * the prefix cache. Net effect was extra cached tokens for no behavioral gain.
  *
- * The full reminder is always injected (never a diff/delta), and it's prepended as the
- * first user message rather than appended near the end. Both choices are deliberate:
- * OpenAI's prompt cache matches on prefix, so a stable first message maximizes cache hits,
- * and differential injection would bust the cache on every turn where the delta differs.
+ * The one capability Pi may not match is mid-session reload on AGENTS.md mtime
+ * change. If that ever matters in practice, the right fix is a small
+ * file-watcher extension that calls _rebuildSystemPrompt — not full re-injection.
+ *
+ * Originally: re-injected Pi context files as a hidden <system-reminder> on
+ * every LLM call. Mirrored Pi's discovery order (global agent dir, then ancestor
+ * dirs from root down to cwd, AGENTS.md preferred over CLAUDE.md). Rebuilt only
+ * on mtime/size/date change, prepended as the first user message for
+ * prompt-cache stability.
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { existsSync, readFileSync, statSync } from "node:fs";

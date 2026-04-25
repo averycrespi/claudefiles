@@ -22,17 +22,16 @@ Running `make stow-pi` creates symlinks from `pi/agent/` into `~/.pi/agent/`. Ed
 
 TypeScript modules that customize the Pi agent. Type-check with `make typecheck`.
 
-| Extension                | Purpose                                                         |
-| ------------------------ | --------------------------------------------------------------- |
-| `ask-user`               | Improved TUI for user questions                                 |
-| `autoformat`             | Run `gofmt` / `prettier` after write and edit                   |
-| `autopilot`              | Autonomous plan → implement → verify pipeline from a design doc |
-| `compact-tools`          | Compact rendering for read and bash                             |
-| `context-files-reminder` | Inject context file contents into LLM calls                     |
-| `mcp-broker`             | Broker CLI skill + guard for remote operations                  |
-| `provider-usage`         | Provider rate-limit quota in the footer                         |
-| `subagents`              | Dynamic subagent loading and dispatch                           |
-| `task-list`              | Session-scoped task tracking with rich inline TUI rendering     |
-| `web-access`             | Web search, fetch, GitHub, and PDF tools                        |
+| Extension        | Purpose                                                         |
+| ---------------- | --------------------------------------------------------------- |
+| `ask-user`       | Improved TUI for user questions                                 |
+| `autoformat`     | Run `gofmt` / `prettier` after write and edit                   |
+| `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc |
+| `compact-tools`  | Compact rendering for read and bash                             |
+| `mcp-broker`     | Broker CLI skill + guard for remote operations                  |
+| `provider-usage` | Provider rate-limit quota in the footer                         |
+| `subagents`      | Dynamic subagent loading and dispatch                           |
+| `task-list`      | Session-scoped task tracking with rich inline TUI rendering     |
+| `web-access`     | Web search, fetch, GitHub, and PDF tools                        |
 
 See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
