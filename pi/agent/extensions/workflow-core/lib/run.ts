@@ -1,5 +1,8 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { SpawnInvocation, SpawnOutcome } from "../../subagents/api.ts";
+import { createRunLogger } from "./log.ts";
 import { createSubagent } from "./subagent.ts";
 import { createWidget, type WidgetUi } from "./widget.ts";
 
@@ -25,6 +28,7 @@ export interface WorkflowDefinition<Args, Pre = unknown> {
 export interface RegisterWorkflowOpts {
   spawn?: (inv: SpawnInvocation) => Promise<SpawnOutcome>;
   widgetUi?: WidgetUi;
+  logBaseDir?: string;
 }
 
 interface ActiveRun {
@@ -95,6 +99,10 @@ export function registerWorkflow<Args, Pre>(
         }
       }
 
+      const logBaseDir =
+        testOpts.logBaseDir ?? join(homedir(), ".pi", "workflow-runs");
+      const slug = def.runSlug?.(parsed.args, preflightData) ?? null;
+
       const pipeline = async () => {
         const piAny = pi as any;
         const widgetUi: WidgetUi =
@@ -109,6 +117,14 @@ export function registerWorkflow<Args, Pre>(
           key: def.name,
           ui: widgetUi,
           theme: piAny.hasUI ? piAny.ui?.theme : undefined,
+        });
+        const logger = await createRunLogger({
+          baseDir: logBaseDir,
+          workflow: def.name,
+          slug,
+          args: parsed.args,
+          preflight: preflightData,
+          retainRuns: def.retainRuns,
         });
         const subagent = createSubagent({
           cwd: process.cwd(),
@@ -132,8 +148,12 @@ export function registerWorkflow<Args, Pre>(
             }
           },
         });
+
+        let outcome: "success" | "cancelled" | "crashed" = "success";
+        let error: string | null = null;
+        let lines: string[] | null = null;
         try {
-          await def.run({
+          lines = await def.run({
             args: parsed.args,
             signal: controller.signal,
             preflight: preflightData,
@@ -142,11 +162,34 @@ export function registerWorkflow<Args, Pre>(
             startedAt,
             subagent,
             widget,
+            log: (type: string, payload?: Record<string, unknown>) =>
+              logger.logWorkflow(type, payload),
+            workflowDir: logger.workflowDir,
           });
-        } finally {
-          widget.dispose();
-          active = null;
+          if (controller.signal.aborted) outcome = "cancelled";
+        } catch (e) {
+          outcome = "crashed";
+          error = (e as Error).message;
+          lines = [`/${def.name}: run crashed: ${error}`];
         }
+
+        if (lines !== null) {
+          let text = lines.join("\n");
+          if (def.emitLogPath !== false) {
+            text = `${text}\nLog:     ${logger.runDir}`;
+          }
+          pi.sendMessage({
+            customType: `${def.name}-report`,
+            content: [{ type: "text", text }],
+            display: true,
+            details: {},
+          });
+          logger.writeFinalReport(text);
+        }
+
+        await logger.close({ outcome, error });
+        widget.dispose();
+        active = null;
       };
       // Detach: do NOT await
       void pipeline();

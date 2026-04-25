@@ -1,5 +1,8 @@
 import { describe, test } from "node:test";
 import { strict as assert } from "node:assert";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 interface CommandSpec {
   description?: string;
@@ -273,5 +276,183 @@ describe("registerWorkflow — RunContext wiring", () => {
     assert.ok(seenWidget);
     assert.equal(typeof seenSubagent.dispatch, "function");
     assert.equal(typeof seenWidget.setBody, "function");
+  });
+});
+
+describe("registerWorkflow — report emission", () => {
+  test("string[] return is sent via pi.sendMessage with customType=<name>-report", async () => {
+    const pi = fakePi();
+    const messages: any[] = [];
+    pi.sendMessage = (m: any) => {
+      messages.push(m);
+    };
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-rep-"));
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async () => ["line one", "line two"],
+      },
+      { logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].customType, "d-report");
+    const text: string = messages[0].content[0].text;
+    assert.match(text, /^line one\nline two/);
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("framework appends 'Log: <path>' line when emitLogPath defaults true", async () => {
+    const pi = fakePi();
+    const messages: any[] = [];
+    pi.sendMessage = (m: any) => {
+      messages.push(m);
+    };
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-rep-"));
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async () => ["body"],
+      },
+      { logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    const text: string = messages[0].content[0].text;
+    assert.match(text, /\nLog:\s+.*\/d\//);
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("emitLogPath:false suppresses the Log line", async () => {
+    const pi = fakePi();
+    const messages: any[] = [];
+    pi.sendMessage = (m: any) => {
+      messages.push(m);
+    };
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-rep-"));
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async () => ["body"],
+        emitLogPath: false,
+      },
+      { logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    const text: string = messages[0].content[0].text;
+    assert.doesNotMatch(text, /\nLog:/);
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("null return suppresses both the report and the log line", async () => {
+    const pi = fakePi();
+    const messages: any[] = [];
+    pi.sendMessage = (m: any) => {
+      messages.push(m);
+    };
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-rep-"));
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async () => null,
+      },
+      { logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(messages.length, 0);
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("writes final-report.txt to runDir", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-rep-"));
+    let runDir = "";
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          runDir = ctx.workflowDir.replace(/\/workflow$/, "");
+          return ["body"];
+        },
+      },
+      { logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    const final = readFileSync(join(runDir, "final-report.txt"), "utf8");
+    assert.match(final, /^body/);
+    rmSync(tmpRoot, { recursive: true });
+  });
+
+  test("ctx.log writes a workflow-prefixed event into events.jsonl", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-rep-"));
+    let runDir = "";
+    registerWorkflow(
+      pi as any,
+      {
+        name: "wf",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          runDir = ctx.workflowDir.replace(/\/workflow$/, "");
+          ctx.log("hello", { foo: 1 });
+          return null;
+        },
+      },
+      { logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("wf-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    const lines = readFileSync(join(runDir, "events.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    assert.ok(lines.find((l: any) => l.type === "wf.hello" && l.foo === 1));
+    rmSync(tmpRoot, { recursive: true });
   });
 });
