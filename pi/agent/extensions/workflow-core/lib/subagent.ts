@@ -50,39 +50,61 @@ export function createSubagent(opts: CreateSubagentOpts): Subagent {
     const id = ++nextId;
     const startedAt = Date.now();
     opts.onSubagentLifecycle?.({ kind: "start", id, spec, parentId });
-    const outcome = await spawn({
-      prompt: spec.prompt,
-      toolAllowlist: spec.tools as readonly ToolName[] as any,
-      extensionAllowlist: spec.extensions ?? [],
-      model: spec.model,
-      thinking: spec.thinking,
-      cwd: opts.cwd,
-      signal: opts.signal,
-      onEvent: (e) => opts.onSubagentEvent?.(id, e),
-    });
+
+    const childCtl = new AbortController();
+    const linkAbort = () => childCtl.abort();
+    opts.signal?.addEventListener("abort", linkAbort);
+    let timedOut = false;
+    const timer = spec.timeoutMs
+      ? setTimeout(() => {
+          timedOut = true;
+          childCtl.abort();
+        }, spec.timeoutMs)
+      : null;
+
     let result: DispatchResult<S>;
-    if (!outcome.ok) {
-      result = {
-        ok: false,
-        reason: outcome.aborted ? "aborted" : "dispatch",
-        error: outcome.errorMessage ?? `exit ${outcome.exitCode}`,
-        raw: outcome.stdout,
-      };
-    } else {
-      const parsed = parseJsonReport(outcome.stdout, spec.schema);
-      if (parsed.ok) {
-        result = { ok: true, data: parsed.data, raw: outcome.stdout };
-      } else {
-        const reason = parsed.error.startsWith("JSON parse")
-          ? "parse"
-          : "schema";
+    try {
+      const outcome = await spawn({
+        prompt: spec.prompt,
+        toolAllowlist: spec.tools as readonly ToolName[] as any,
+        extensionAllowlist: spec.extensions ?? [],
+        model: spec.model,
+        thinking: spec.thinking,
+        cwd: opts.cwd,
+        signal: childCtl.signal,
+        onEvent: (e) => opts.onSubagentEvent?.(id, e),
+      });
+      if (!outcome.ok) {
+        const reason = timedOut
+          ? "timeout"
+          : outcome.aborted
+            ? "aborted"
+            : "dispatch";
         result = {
           ok: false,
           reason,
-          error: parsed.error,
+          error: outcome.errorMessage ?? `exit ${outcome.exitCode}`,
           raw: outcome.stdout,
         };
+      } else {
+        const parsed = parseJsonReport(outcome.stdout, spec.schema);
+        if (parsed.ok) {
+          result = { ok: true, data: parsed.data, raw: outcome.stdout };
+        } else {
+          const reason = parsed.error.startsWith("JSON parse")
+            ? "parse"
+            : "schema";
+          result = {
+            ok: false,
+            reason,
+            error: parsed.error,
+            raw: outcome.stdout,
+          };
+        }
       }
+    } finally {
+      if (timer) clearTimeout(timer);
+      opts.signal?.removeEventListener("abort", linkAbort);
     }
     opts.onSubagentLifecycle?.({
       kind: "end",

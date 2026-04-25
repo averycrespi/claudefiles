@@ -351,3 +351,35 @@ describe("Subagent.parallel", () => {
     assert.deepEqual(order, ["s:1", "e:1", "s:2", "e:2"]);
   });
 });
+
+describe("Subagent.dispatch — timeout", () => {
+  test("aborts when wall-clock exceeds timeoutMs (returns reason: 'timeout')", async () => {
+    const spawn = async (inv: any): Promise<any> => {
+      // hang until the signal aborts
+      await new Promise<void>((resolve) => {
+        inv.signal?.addEventListener("abort", () => {
+          resolve();
+        });
+      });
+      return {
+        ok: false,
+        aborted: true,
+        stdout: "",
+        stderr: "",
+        exitCode: null,
+        signal: "SIGTERM",
+        errorMessage: "aborted",
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    const r = await sub.dispatch({
+      intent: "x",
+      prompt: "y",
+      schema: Schema,
+      tools: [],
+      timeoutMs: 20,
+    });
+    assert.equal(r.ok, false);
+    if (!r.ok) assert.equal(r.reason, "timeout");
+  });
+});
