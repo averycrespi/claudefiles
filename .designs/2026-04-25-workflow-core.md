@@ -74,6 +74,11 @@ interface WorkflowDefinition<Args, Pre = unknown> {
     signal: AbortSignal,
   ) => Promise<{ ok: true; data: Pre } | { ok: false; error: string }>;
   run: (ctx: RunContext<Args, Pre>) => Promise<string[] | null>; // returns final report lines, or null
+
+  // Logging knobs — see §10
+  runSlug?: (args: Args, preflight: Pre) => string; // optional; framework prepends timestamp
+  retainRuns?: number; // default 20
+  emitLogPath?: boolean; // default true
 }
 
 interface RunContext<Args, Pre> {
@@ -85,6 +90,8 @@ interface RunContext<Args, Pre> {
   widget: Widget;
   ui: ExtensionAPI;
   startedAt: number;
+  log(type: string, payload?: Record<string, unknown>): void; // see §10
+  workflowDir: string; // <run-dir>/workflow/, workflow-owned; see §10
 }
 
 function registerWorkflow<Args, Pre>(
@@ -102,6 +109,7 @@ function registerWorkflow<Args, Pre>(
 5. Widget setup before `run()`, dispose after.
 6. Subagent wrapping — events forwarded to widget slots, signal inheritance.
 7. **Always-emit-a-report guarantee.** Workflow returns `string[] | null`; framework calls `pi.sendMessage` with `customType: "<name>-report"`. Backstop: if `run` throws, framework emits a generic `/<name>: run crashed: <error>` stub. Workflow `run` is _expected_ not to throw (failure modes go through tagged Subagent results), but the backstop covers bugs.
+8. **Per-run logging directory.** Allocates `~/.pi/workflow-runs/<name>/<slug>/`, opens the events.jsonl spine, exposes `ctx.log(...)` and `ctx.workflowDir`. Auto-emits framework events (`run.start`, `subagent.*`, `run.end`). On report emission, appends `Log: <path>` line and writes `final-report.txt` mirror. See §10.
 
 **Preflight is optional and per-workflow.** No fixed shape. Workflows compose from helpers in `preflight.ts`:
 
@@ -235,7 +243,7 @@ ctx.widget.setFooter(
 ## §6. What we deliberately don't ship in v1
 
 - **Pattern helpers** (`fixLoop`, `sequentialMap`, `iterationLoop`). Inlined loops with the primitives are ~10 lines and have workflow-specific bookkeeping (handoff persistence, history append, timeout wrapping) that a generic helper either bloats or covers only the trivial 20%. Revisit when 3+ workflows independently grow the same shape.
-- **Generic run journal / persistence.** Each workflow manages its own files (autoralph already writes `.autoralph/<name>.{handoff,history}.json`). Revisit when a second case demands the same shape.
+- **Generic workflow-state persistence helper.** Distinct from the framework's observability log (§10): a generic API for workflows to save and resume their own structured state. Each workflow manages its own files for now (autoralph writes `.autoralph/<name>.{handoff,history}.json`; autopilot copies its design + plan into `ctx.workflowDir`). Revisit when a second workflow needs resumability or the same persistence shape.
 - **Contract tests** (shared scaffolding asserting "every workflow emits a report on every exit path"). With 2 workflows you can hand-audit; manual smoke testing during dev catches the obvious bug. Revisit at 4-5 workflows.
 - **Multiple-command workflows** (`/foo-status`, `/foo-pause`). v1 ships exactly `/<name>-start` + `/<name>-cancel`. Add an `extraCommands` knob if a real case appears.
 - **Declarative pipeline / DAG layer.** Explicit non-goal. We're library, not framework.
@@ -252,7 +260,8 @@ ctx.widget.setFooter(
 
 ```
 pi/agent/extensions/workflow-core/
-  README.md                        # design doc lifted from this file
+  README.md                        # user-focused intro (skim to decide if you want to use it)
+  INTEGRATION.md                   # extension-author reference (full API + patterns + gotchas)
   index.ts                         # Pi extension default export — no-op (registers no commands)
   api.ts                           # PUBLIC: registerWorkflow, types, Subagent/Widget interfaces
   render.ts                        # PUBLIC: widget render helpers (re-exports render/*)
@@ -263,6 +272,7 @@ pi/agent/extensions/workflow-core/
     subagent.ts + .test.ts         # Subagent implementation (wraps spawnSubagent)
     run.ts + .test.ts              # registerWorkflow + lifecycle + lock + detach + abort
     widget.ts + .test.ts           # Widget implementation (setters, tick, slot tracking)
+    log.ts + .test.ts              # RunLogger: events.jsonl + sidecars + run.json + retention (§10)
     parse.ts + .test.ts            # parseJsonReport (lifted from autopilot/lib/parse.ts)
     types.ts                       # shared types: DispatchSpec, RunContext, ToolEvent, SubagentSlot
 
@@ -316,6 +326,7 @@ import {
 - **Subagent.** Tagged-result conversion for every failure mode (dispatch / parse / schema / timeout / aborted). Retry policy: one retry on dispatch failure, no retry on aborted, no retry on parse, no retry when run signal already aborted. `parallel` fan-out + concurrency limit. Widget event forwarding.
 - **Widget.** Static vs function-form setter re-evaluation (fake timers). Subagent slot allocation/deallocation/event trim. Theme passthrough. Dispose semantics (tick stops, setters no-op).
 - **Run.** Single-active-run lock. Detach pattern (handler returns immediately even though run is still going). Abort plumbing (`/<name>-cancel` aborts the controller; signal propagates). `run` return value handling (`string[]` → emit; `null` → no emit). Backstop on throw. Widget setup/teardown around `run`.
+- **Log (`lib/log.ts`).** Events.jsonl line-by-line append with flush-per-line. Sidecar prompt/output write paths. Auto-prefix on workflow events (`ctx.log("foo", ...)` → `<name>.foo`). `run.json` shape on each outcome (success / cancelled / crashed). Retention policy: prunes siblings past `retainRuns` count. `Log:` line appended on report emission when `emitLogPath !== false`. Subagent retry logs as two starts with `parent_id`. `ctx.log` after `run()` returns is a silent no-op.
 
 **Anything that interacts with `AbortSignal` has a test that fires `controller.abort()` mid-operation.** Abort handling is the most common silent-regression surface in libraries like this.
 
@@ -333,23 +344,151 @@ The deletion side: `dispatch.ts`, `parse.ts`, `preflight.ts` (currently identica
 
 ---
 
+## §10. Logging
+
+Per-run observability artifact. Every workflow gets it for free.
+
+**Purpose:** post-hoc debugging by humans, plus ingestion by an LLM analyzing pain points / suggesting workflow improvements. Subagents are treated as black boxes — we log boundary in/out only, not their internal event streams. (Internal subagent observability is a separate future discussion.)
+
+### Run directory layout
+
+```
+~/.pi/workflow-runs/<workflow-name>/<ISO-timestamp>[-<sanitized-slug>]/
+  run.json              # framework: outcome summary, written at run end
+  events.jsonl          # framework: append-only event spine
+  final-report.txt      # framework: mirror of the emitted report (if any)
+  prompts/              # framework: subagent input sidecars
+    001-plan.txt
+    002-implement-task-1.txt
+    ...
+  outputs/              # framework: subagent parsed output sidecars (when ok)
+    001-plan.json
+    002-implement-task-1.json
+    ...
+  workflow/             # workflow's playground; framework never writes here
+    <whatever the workflow writes via ctx.workflowDir>
+```
+
+The framework owns the top level and the `prompts/` and `outputs/` subdirectories. The workflow writes only inside `workflow/`, exposed via `ctx.workflowDir`. This split prevents accidental clobbering of framework files by construction.
+
+**Slug.** Optional `runSlug: (args, preflight) => string` on the workflow definition. Framework prepends an ISO-8601 UTC timestamp; sanitizes the workflow's slug to `[a-z0-9-]`. If absent, the directory is timestamp-only.
+
+**Retention.** Per-workflow, default `retainRuns: 20` (overrideable per workflow). On run start, framework lists siblings under `~/.pi/workflow-runs/<name>/`, sorts by mtime, deletes everything past the keep count.
+
+### `events.jsonl` schema
+
+One JSON object per line. Every event has `{ts, type, workflow}`. `ts` is ISO-8601 UTC. Lines are flushed on write so every flushed line is a complete valid JSON object — the file is crash-safe.
+
+**Framework events** (auto-emitted):
+
+- `run.start` — `{cwd, args, preflight}` — preflight result is included so post-hoc readers can see what the workflow was given.
+- `run.end` — `{outcome, elapsed_ms, error?}` where `outcome ∈ {success, cancelled, crashed, preflight_failed}`. The framework infers outcome from how `run()` terminated; "conceptual" success/failure of the workflow's work lives in the report content, not here.
+- `subagent.start` — `{id, intent, schema, tools, extensions, model?, thinking?, timeoutMs?, retry?, prompt_path, parent_id?}`. The full prompt lives in `prompts/<NNN>-<intent>.txt` referenced by `prompt_path`.
+- `subagent.end` — `{id, ok, duration_ms, output_path?, reason?, error?, token_usage?}`. On success, `output_path` references the parsed JSON output sidecar; on failure, `reason` is one of `dispatch | parse | schema | timeout | aborted` and `error` carries the message. `token_usage` captured if Pi exposes it via `dispatchResult`.
+
+**Workflow events** (via `ctx.log`):
+
+The framework auto-prefixes the workflow name. A workflow author writes:
+
+```ts
+ctx.log("task.complete", { task_id: 3, sha: "abc1234" });
+ctx.log("decision.skip_reviewer", { reviewer: "security" });
+```
+
+…and the events.jsonl line gets `type: "<name>.task.complete"`, etc. This eliminates collision with framework `run.*` / `subagent.*` events and makes provenance grep-friendly (`grep ^autopilot\.` filters to autopilot's own events).
+
+`ctx.log` payloads are `Record<string, unknown>` — anything JSON-serializable. The framework wraps each call in a single `write()` syscall ending in `\n`, so concurrent calls (from parallel subagents) never interleave lines. Writes are synchronous from the caller's perspective; the framework serializes them via a single write stream.
+
+`ctx.log` calls after `run()` returns are silently dropped. Framework seals the events.jsonl stream when emitting `run.end`.
+
+### Subagent retry handling
+
+A retry-on-dispatch produces **two** `subagent.start` events. The retry's start event has `parent_id` referencing the failed attempt's id. Each attempt has its own `prompts/<NNN>-*.txt` and `outputs/<NNN>-*.json` files (1:1 with start events). This keeps the schema uniform: every `subagent.start` is exactly one subprocess invocation.
+
+```jsonl
+{"type":"subagent.start","id":1,"intent":"Plan","prompt_path":"prompts/001-plan.txt",...}
+{"type":"subagent.end","id":1,"ok":false,"reason":"dispatch","error":"..."}
+{"type":"subagent.start","id":2,"intent":"Plan (retry)","parent_id":1,"prompt_path":"prompts/002-plan.txt",...}
+{"type":"subagent.end","id":2,"ok":true,"output_path":"outputs/002-plan.json",...}
+```
+
+### `run.json`
+
+Written by the framework when `run()` terminates. Enough to answer "what kind of run was this and how did it go?" without parsing events.jsonl.
+
+```json
+{
+  "workflow": "autopilot",
+  "slug": "rate-limiter",
+  "started_at": "2026-04-25T14:23:05.123Z",
+  "ended_at": "2026-04-25T14:35:42.456Z",
+  "elapsed_ms": 757333,
+  "outcome": "success",
+  "args": { "designPath": ".designs/2026-04-12-rate-limiter.md" },
+  "subagent_count": 12,
+  "subagent_retries": 1,
+  "log_path": "events.jsonl",
+  "report_path": "final-report.txt",
+  "error": null
+}
+```
+
+### Surfacing to the user
+
+Framework appends `Log: <run-dir>` as the last line of the emitted report at the `pi.sendMessage` call site. Workflow's returned report array is unchanged — the append happens once at the framework boundary.
+
+Opt-out via `emitLogPath: false` on the workflow definition. If `run()` returns `null` (no report), the log line is also skipped — don't emit a one-line "log only" message into the transcript.
+
+### What's not in v1
+
+- **Subagent internals** (the `subagent.event` fat lines from the prior autopilot design). Treating subagents as black boxes for now. Future flag for opt-in stdout preservation when actively debugging a specific dispatch.
+- **Run resumability.** No mechanism to resume a partially-completed run from its log. Crash leaves the directory with partial events.jsonl and no `run.json` — that's diagnostic enough for v1.
+- **Redaction.** Prompts and outputs are written verbatim. Same trust boundary as the source the workflow is editing — local files only. No redaction.
+- **Schema versioning of events.jsonl.** If we need to evolve the schema later, we'll do it then.
+
+### Pre-run failures
+
+`parseArgs` and `preflight` failures happen before the run directory is created. They do not produce a log on disk. The user sees the notify message; nothing is written. Rationale: preflight failures are user-error noise (missing file, dirty tree); a dir per failed invocation would balloon retention churn for no real diagnostic value.
+
+---
+
+## §11. Documentation deliverables
+
+Three documents, three audiences:
+
+- **`.designs/2026-04-25-workflow-core.md`** (this file). Design rationale: why we built it this way, what we considered and rejected. One-time read; archival. Future maintainers ask "why is the widget set up like this?" — answer lives here.
+- **`pi/agent/extensions/workflow-core/README.md`**. User-focused intro for an extension author skimming to decide _whether to use it_. Mental model in one paragraph, the four primitives in one sentence each, a 15-line "hello-world workflow" example, links out to INTEGRATION.md and this design doc. Always-on reference for "what is this."
+- **`pi/agent/extensions/workflow-core/INTEGRATION.md`**. Reference manual for an extension author actively building a workflow. Organized **by API user's perspective**, not by design rationale: walkthrough of building a minimal workflow end-to-end; per-primitive API reference; helper module reference; common patterns (preflight composition, sequential vs. parallel subagents, capped fix loops written inline since v1 has no pattern helpers); gotchas with workflow-author framing — the detach pattern, function-form widget setters, the `ctx.log` workflow-name auto-prefix, framework ownership of run-dir top level; testing your workflow.
+
+INTEGRATION.md is best written iteratively as workflows migrate onto the core, not as a single upfront pass. Patterns and gotchas worth documenting are the ones that surface from actually using the API — porting autoralph first will reveal things a from-scratch write-up would miss.
+
+---
+
 ## Key design decisions (settled)
 
-| Decision                | Choice                                                | Reasoning                                                                                          |
-| ----------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Library vs. framework   | Library                                               | Workflows stay TS functions; any control flow works without new step kinds                         |
-| Atomic unit             | Subagent dispatch, not "step"                         | Framework stays out of executor role                                                               |
-| Subagent failure        | Tagged result, not throw                              | Failure policy is per-call-site; same primitive, different policy per workflow                     |
-| Run report              | Return value (`string[] \| null`), not callback       | Type-checked exhaustive paths; one report per run                                                  |
-| Run on throw            | Backstop (framework emits stub)                       | `run` is expected not to throw; backstop is for bugs                                               |
-| Run lock scope          | Per-workflow name                                     | `/autopilot` and `/pr-review` can run concurrently                                                 |
-| Commands                | `/<name>-start` + `/<name>-cancel` only in v1         | Don't overengineer                                                                                 |
-| Widget shape            | Three setters (`T \| () => T`), no structured data    | Don't bake in "linear list of past + current + upcoming" — too rigid for non-list-shaped workflows |
-| Subagent rendering      | Framework captures, helper renders, workflow composes | Consistent with "framework owns plumbing, workflow owns rendering"                                 |
-| Report builder          | None — workflow returns lines directly                | Don't bake in `header → rows → sections → knownIssues` shape                                       |
-| Banners on cancel/fail  | Workflow owns                                         | Helper makes it a one-liner; flexibility is real                                                   |
-| Pattern helpers         | Skip in v1                                            | Inline loops are ~10 lines; revisit at 3+ workflows                                                |
-| Persistence             | Per-workflow                                          | Revisit when a second case appears                                                                 |
-| Contract tests          | Skip in v1                                            | Hand-audit at N=2; revisit at N=4+                                                                 |
-| `task-list` integration | Stays as its own sibling extension                    | Orthogonal concerns (subagents vs work items); autoralph proves task-list isn't universal          |
-| Naming                  | `workflow-core`                                       | Library, not framework                                                                             |
+| Decision                 | Choice                                                | Reasoning                                                                                          |
+| ------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Library vs. framework    | Library                                               | Workflows stay TS functions; any control flow works without new step kinds                         |
+| Atomic unit              | Subagent dispatch, not "step"                         | Framework stays out of executor role                                                               |
+| Subagent failure         | Tagged result, not throw                              | Failure policy is per-call-site; same primitive, different policy per workflow                     |
+| Run report               | Return value (`string[] \| null`), not callback       | Type-checked exhaustive paths; one report per run                                                  |
+| Run on throw             | Backstop (framework emits stub)                       | `run` is expected not to throw; backstop is for bugs                                               |
+| Run lock scope           | Per-workflow name                                     | `/autopilot` and `/pr-review` can run concurrently                                                 |
+| Commands                 | `/<name>-start` + `/<name>-cancel` only in v1         | Don't overengineer                                                                                 |
+| Widget shape             | Three setters (`T \| () => T`), no structured data    | Don't bake in "linear list of past + current + upcoming" — too rigid for non-list-shaped workflows |
+| Subagent rendering       | Framework captures, helper renders, workflow composes | Consistent with "framework owns plumbing, workflow owns rendering"                                 |
+| Report builder           | None — workflow returns lines directly                | Don't bake in `header → rows → sections → knownIssues` shape                                       |
+| Banners on cancel/fail   | Workflow owns                                         | Helper makes it a one-liner; flexibility is real                                                   |
+| Pattern helpers          | Skip in v1                                            | Inline loops are ~10 lines; revisit at 3+ workflows                                                |
+| Persistence              | Per-workflow                                          | Revisit when a second case appears                                                                 |
+| Contract tests           | Skip in v1                                            | Hand-audit at N=2; revisit at N=4+                                                                 |
+| `task-list` integration  | Stays as its own sibling extension                    | Orthogonal concerns (subagents vs work items); autoralph proves task-list isn't universal          |
+| Logging                  | Framework-emitted, every workflow gets it for free    | Free post-hoc debugging + LLM-ingestible log without per-workflow opt-in                           |
+| Subagent log granularity | Boundary in/out only (black-box subagents) in v1      | Internal subagent observability is a separate future discussion                                    |
+| Log fat data             | Sidecar files (`prompts/`, `outputs/`)                | Keeps events.jsonl grep-friendly; LLMs can selectively pull what they need                         |
+| Workflow event names     | Auto-prefixed with workflow name                      | Provenance in the type string; eliminates collision with `run.*` / `subagent.*`                    |
+| Run dir collision safety | Workflow writes only inside `ctx.workflowDir` subdir  | Prevents accidental clobbering of framework files by construction                                  |
+| Log path surfacing       | Framework appends `Log:` line to report (opt-out)     | Consistent UX; opt-out via `emitLogPath: false` for workflows that don't want it                   |
+| Outcome enum             | Runtime states only (success/cancelled/crashed)       | "Conceptual" failure lives in the report; keeps the Run API unchanged                              |
+| Documentation            | README (skim) + INTEGRATION (build) + design doc      | Different audiences, different read patterns; INTEGRATION written iteratively post-implementation  |
+| Naming                   | `workflow-core`                                       | Library, not framework                                                                             |
