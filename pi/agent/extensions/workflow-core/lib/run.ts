@@ -1,4 +1,7 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { SpawnInvocation, SpawnOutcome } from "../../subagents/api.ts";
+import { createSubagent } from "./subagent.ts";
+import { createWidget, type WidgetUi } from "./widget.ts";
 
 export interface WorkflowDefinition<Args, Pre = unknown> {
   name: string;
@@ -20,7 +23,8 @@ export interface WorkflowDefinition<Args, Pre = unknown> {
 }
 
 export interface RegisterWorkflowOpts {
-  // (test seams added in later tasks)
+  spawn?: (inv: SpawnInvocation) => Promise<SpawnOutcome>;
+  widgetUi?: WidgetUi;
 }
 
 interface ActiveRun {
@@ -31,7 +35,7 @@ interface ActiveRun {
 export function registerWorkflow<Args, Pre>(
   pi: ExtensionAPI,
   def: WorkflowDefinition<Args, Pre>,
-  _testOpts: RegisterWorkflowOpts = {},
+  testOpts: RegisterWorkflowOpts = {},
 ): void {
   let active: ActiveRun | null = null;
 
@@ -92,6 +96,42 @@ export function registerWorkflow<Args, Pre>(
       }
 
       const pipeline = async () => {
+        const piAny = pi as any;
+        const widgetUi: WidgetUi =
+          testOpts.widgetUi ??
+          (piAny.hasUI && typeof piAny.setWidget === "function"
+            ? {
+                setWidget: (key: string, lines: string[] | undefined) =>
+                  piAny.setWidget(key, lines),
+              }
+            : { setWidget: () => {} });
+        const widget = createWidget({
+          key: def.name,
+          ui: widgetUi,
+          theme: piAny.hasUI ? piAny.ui?.theme : undefined,
+        });
+        const subagent = createSubagent({
+          cwd: process.cwd(),
+          spawn: testOpts.spawn,
+          signal: controller.signal,
+          onSubagentEvent: (id, ev) =>
+            widget._emitSubagentLifecycle({
+              kind: "event",
+              id,
+              event: ev,
+            }),
+          onSubagentLifecycle: (e) => {
+            if (e.kind === "start") {
+              widget._emitSubagentLifecycle({
+                kind: "start",
+                id: e.id,
+                intent: e.spec.intent,
+              });
+            } else {
+              widget._emitSubagentLifecycle({ kind: "end", id: e.id });
+            }
+          },
+        });
         try {
           await def.run({
             args: parsed.args,
@@ -100,8 +140,11 @@ export function registerWorkflow<Args, Pre>(
             cwd: process.cwd(),
             ui: pi,
             startedAt,
+            subagent,
+            widget,
           });
         } finally {
+          widget.dispose();
           active = null;
         }
       };

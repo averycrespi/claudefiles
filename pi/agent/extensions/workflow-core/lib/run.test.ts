@@ -196,3 +196,82 @@ describe("registerWorkflow — abort", () => {
     await new Promise((r) => setTimeout(r, 10));
   });
 });
+
+describe("registerWorkflow — RunContext wiring", () => {
+  test("dispatch through ctx.subagent allocates and frees a widget slot", async () => {
+    const pi = fakePi();
+    const seenSlots: any[][] = [];
+    const fakeSpawn = async () => ({
+      ok: true,
+      aborted: false,
+      stdout: `{}`,
+      stderr: "",
+      exitCode: 0,
+      signal: null,
+    });
+    const { Type } = await import("@sinclair/typebox");
+    const Schema = Type.Object({});
+    registerWorkflow(
+      pi as any,
+      {
+        name: "d",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          const dispatchPromise = ctx.subagent.dispatch({
+            intent: "Plan",
+            prompt: "x",
+            schema: Schema,
+            tools: [],
+          });
+          // Capture mid-flight slot state
+          await new Promise((r) => setTimeout(r, 5));
+          seenSlots.push([...ctx.widget.subagents]);
+          await dispatchPromise;
+          seenSlots.push([...ctx.widget.subagents]);
+          return null;
+        },
+      },
+      { spawn: fakeSpawn as any },
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 50));
+    // First snapshot: a slot was allocated (may already be finished if spawn was instant)
+    assert.ok(seenSlots[0].length >= 1);
+    // Second snapshot: the slot is finished
+    assert.equal(
+      seenSlots[1].every((s) => s.status === "finished"),
+      true,
+    );
+  });
+
+  test("ctx exposes subagent and widget", async () => {
+    const pi = fakePi();
+    let seenSubagent: any = null;
+    let seenWidget: any = null;
+    registerWorkflow(pi as any, {
+      name: "d",
+      description: "",
+      parseArgs: () => ({ ok: true, args: {} }),
+      run: async (ctx: any) => {
+        seenSubagent = ctx.subagent;
+        seenWidget = ctx.widget;
+        return null;
+      },
+    });
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("d-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 30));
+    assert.ok(seenSubagent);
+    assert.ok(seenWidget);
+    assert.equal(typeof seenSubagent.dispatch, "function");
+    assert.equal(typeof seenWidget.setBody, "function");
+  });
+});
