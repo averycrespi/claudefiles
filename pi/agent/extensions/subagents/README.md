@@ -34,14 +34,14 @@ Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. Th
 
 The built-in types:
 
-| Type       | Tools                   | Extensions | Model        | Thinking |
-| ---------- | ----------------------- | ---------- | ------------ | -------- |
-| `explore`  | read                    | —          | gpt-5.4-mini | medium   |
-| `review`   | read                    | —          | gpt-5.4      | high     |
-| `research` | read                    | web        | gpt-5.4      | high     |
-| `code`     | read, bash, edit, write | autoformat | gpt-5.4      | medium   |
+| Type       | Tools                   | Extensions   | Model        | Thinking |
+| ---------- | ----------------------- | ------------ | ------------ | -------- |
+| `explore`  | read, ls, find, grep    | —            | gpt-5.4-mini | medium   |
+| `review`   | read, ls, find, grep    | —            | gpt-5.4      | high     |
+| `research` | read, ls, find, grep    | `web-access` | gpt-5.4      | high     |
+| `code`     | read, bash, edit, write | `autoformat` | gpt-5.4      | medium   |
 
-`explore` and `review` are read-only. `research` adds web search and fetch via the `web` extension. `code` has full write access including shell.
+`explore`, `review`, and `research` are read-only. `research` adds web search and fetch via the `web-access` extension. `code` has full write access including shell.
 
 **Returns** the subagent's final assistant message on success, or a formatted error on failure including exit code and stderr.
 
@@ -116,13 +116,13 @@ Each spawn:
 4. Streams JSONL events from the child process to track phase, active tool, and current command
 5. Returns the child's final assistant message, or a formatted failure message on non-zero exit
 
-Recursion is capped: each spawn sets `PI_SUBAGENT_DEPTH` in the child environment, and a depth ≥ 5 causes an immediate error before spawning. Aborting the parent tool call sends SIGTERM to child processes with a 2-second grace period before SIGKILL.
+Recursion is blocked by default. Each spawn sets `PI_SUBAGENT_DEPTH` in the child environment (`currentDepth + 1`). The `spawn_agent` and `spawn_agents` tools call `spawnSubagent` without specifying `maxDepth`, which defaults to `1` — so a subagent (running at depth 1) cannot spawn another subagent. The `MAX_SUBAGENT_DEPTH = 5` constant in `types.ts` is an absolute ceiling, reachable only by direct callers of the programmatic `spawnSubagent` API that explicitly pass a higher `maxDepth`. Aborting the parent tool call sends SIGTERM to child processes with a 2-second grace period before SIGKILL.
 
 ## Notes
 
 - `intent` is required for every call and drives activity titles — keep it short and descriptive
 - Each subagent starts with a fresh context; session inheritance is not supported
-- `research` requires the `web` extension to be installed and discoverable by the name `web`
+- `research` requires the `web-access` extension to be installed and discoverable by the name `web-access`
 - `code` skills and prompt templates are enabled; all other agent types disable them
 - `spawn_agents` runs all agents concurrently; result order matches input order
 
