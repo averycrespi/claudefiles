@@ -1,6 +1,6 @@
 # subagents
 
-Pi extension that provides tools for delegating work to child Pi processes as focused subagents.
+Pi extension that exposes a single tool, `spawn_agents`, for delegating work to child Pi processes as focused subagents.
 
 ## Public API
 
@@ -11,24 +11,24 @@ import { spawnSubagent, formatSpawnFailure } from "../subagents/api.ts";
 import type { SpawnInvocation, SpawnOutcome } from "../subagents/api.ts";
 ```
 
-- `spawnSubagent(options: SpawnInvocation): Promise<SpawnOutcome>` — low-level child-process spawn that backs `spawn_agent`. Use when you need to run a Pi subagent from extension code without going through the LLM tool interface. Honors `signal` for cancellation.
-- `formatSpawnFailure(outcome: SpawnOutcome): string` — canonical error formatter for a failed `SpawnOutcome`. Produces the same error text rendered by the `spawn_agent` tool.
+- `spawnSubagent(options: SpawnInvocation): Promise<SpawnOutcome>` — low-level child-process spawn used by `spawn_agents` under the hood. Use when you need to run a Pi subagent from extension code without going through the LLM tool interface. Honors `signal` for cancellation.
+- `formatSpawnFailure(outcome: SpawnOutcome): string` — canonical error formatter for a failed `SpawnOutcome`. Produces the same error text rendered when an agent within `spawn_agents` fails.
 - `SpawnInvocation`, `SpawnOutcome` — input/output types for `spawnSubagent`.
 
-## Tools
+## Tool
 
-### `spawn_agent`
+### `spawn_agents`
 
-Launch a subagent to handle a task autonomously. The subagent runs in its own context window with a fixed tool set determined by the agent type.
+Launch one or more subagents in parallel. Each runs independently in its own context window with a fixed tool set determined by the agent type. Pass a single agent when delegating one task; pass multiple when you have independent tasks that can run concurrently. Results are returned as a combined document once all agents complete.
 
 **Parameters:**
 
-| Parameter       | Type    | Required | Description                                                     |
-| --------------- | ------- | -------- | --------------------------------------------------------------- |
-| `agent`         | string  | yes      | Agent type: `explore`, `review`, `research`, or `code`          |
-| `intent`        | string  | yes      | Short label shown in activity titles (3–6 words)                |
-| `prompt`        | string  | yes      | Full task — brief the agent like a colleague who just walked in |
-| `show_activity` | boolean | no       | Show live progress updates (default: true)                      |
+| Parameter         | Type   | Required | Description                                                     |
+| ----------------- | ------ | -------- | --------------------------------------------------------------- |
+| `agents`          | array  | yes      | List of agents to run concurrently (minimum 1)                  |
+| `agents[].agent`  | string | yes      | Agent type: `explore`, `review`, `research`, or `code`          |
+| `agents[].intent` | string | yes      | Short label shown in activity titles (3–6 words)                |
+| `agents[].prompt` | string | yes      | Full task — brief the agent like a colleague who just walked in |
 
 Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. The built-in types are defined in `pi/agent/agents/` in this repo and symlinked via `make stow`. Custom agents can be added by dropping additional `.md` files in that directory — no code changes required.
 
@@ -43,45 +43,11 @@ The built-in types:
 
 `explore`, `review`, and `research` are read-only. `research` adds web search and fetch via the `web-access` extension. `code` has full write access including shell.
 
-**Returns** the subagent's final assistant message on success, or a formatted error on failure including exit code and stderr.
-
----
-
-### `spawn_agents`
-
-Launch multiple subagents in parallel. Each runs independently in its own context window. Results are returned as a combined document once all agents complete.
-
-**Parameters:**
-
-| Parameter         | Type   | Required | Description                                    |
-| ----------------- | ------ | -------- | ---------------------------------------------- |
-| `agents`          | array  | yes      | List of agents to run concurrently (minimum 1) |
-| `agents[].agent`  | string | yes      | Agent type (same options as `spawn_agent`)     |
-| `agents[].intent` | string | yes      | Short label for this agent                     |
-| `agents[].prompt` | string | yes      | Task for this agent                            |
-
-**Returns** a single document with each agent's result under a `## <type> · <intent>` heading, separated by `---`.
+**Returns** a single document with each agent's result under a `## <type> · <intent>` heading, separated by `---`. On failure, the agent's section contains a formatted error including exit code and stderr.
 
 ## UI behavior
 
-**`spawn_agent`** — while running, shows recent tool events and a running status line:
-
-```
- **Explore agent** Find auth flows
- - read: src/auth/middleware.ts
- Running: 4 tool uses (14s)
-```
-
-On completion:
-
-```
- **Explore agent** Find auth flows
- Done: 5 tool uses · 20.3k tokens · 20s
-```
-
-On error, the error message is shown inline. Pass `show_activity: false` to suppress live updates.
-
-**`spawn_agents`** — shows each agent as a section separated by blank lines:
+While running, `spawn_agents` shows each agent as a section separated by blank lines, with recent tool events and a running status line:
 
 ```
  **Spawn agents** Find auth flows, Run tests, Check config
@@ -98,13 +64,13 @@ On error, the error message is shown inline. Pass `show_activity: false` to supp
  Running: 1 tool use (3s)
 ```
 
-Each agent shows its type, intent, recent tool events, and a Running/Done status line. On failure, a header `N of M agents failed` is shown above the agent sections.
+Each agent shows its type, intent, recent tool events, and a Running/Done status line. On failure, the agent's section displays an error line and a path to the persisted log file.
 
 Activity widgets are removed when all subagents finish, error, or are aborted.
 
 ## System prompt injection
 
-When loaded, the extension hooks `before_agent_start` to append delegation guidance to the system prompt — when to delegate, when to use `spawn_agents` for parallel work, and the list of available agent types with their descriptions. This means the guidance only appears when the extension is actually active; it is not hardcoded in `AGENTS.md`.
+When loaded, the extension hooks `before_agent_start` to append delegation guidance to the system prompt — when to delegate, the shape of `spawn_agents` (single call covers both single-task and parallel-task cases), and the list of available agent types with their descriptions. This means the guidance only appears when the extension is actually active; it is not hardcoded in `AGENTS.md`.
 
 ## How it works
 
@@ -116,15 +82,15 @@ Each spawn:
 4. Streams JSONL events from the child process to track phase, active tool, and current command
 5. Returns the child's final assistant message, or a formatted failure message on non-zero exit
 
-Recursion is blocked by default. Each spawn sets `PI_SUBAGENT_DEPTH` in the child environment (`currentDepth + 1`). The `spawn_agent` and `spawn_agents` tools call `spawnSubagent` without specifying `maxDepth`, which defaults to `1` — so a subagent (running at depth 1) cannot spawn another subagent. The `MAX_SUBAGENT_DEPTH = 5` constant in `types.ts` is an absolute ceiling, reachable only by direct callers of the programmatic `spawnSubagent` API that explicitly pass a higher `maxDepth`. Aborting the parent tool call sends SIGTERM to child processes with a 2-second grace period before SIGKILL.
+Recursion is blocked by default. Each spawn sets `PI_SUBAGENT_DEPTH` in the child environment (`currentDepth + 1`). The `spawn_agents` tool calls `spawnSubagent` without specifying `maxDepth`, which defaults to `1` — so a subagent (running at depth 1) cannot spawn another subagent. The `MAX_SUBAGENT_DEPTH = 5` constant in `types.ts` is an absolute ceiling, reachable only by direct callers of the programmatic `spawnSubagent` API that explicitly pass a higher `maxDepth`. Aborting the parent tool call sends SIGTERM to child processes with a 2-second grace period before SIGKILL.
 
 ## Notes
 
-- `intent` is required for every call and drives activity titles — keep it short and descriptive
+- `intent` is required for every agent and drives activity titles — keep it short and descriptive
 - Each subagent starts with a fresh context; session inheritance is not supported
 - `research` requires the `web-access` extension to be installed and discoverable by the name `web-access`
 - `code` skills and prompt templates are enabled; all other agent types disable them
-- `spawn_agents` runs all agents concurrently; result order matches input order
+- All agents in a single `spawn_agents` call run concurrently; result order matches input order
 
 ## Agent file format
 
@@ -155,7 +121,8 @@ Fields: `name` (defaults to filename without extension), `description` (shown in
 
 ## File layout
 
-- `index.ts` — tool registrations and execution orchestration
+- `index.ts` — tool registration and execution orchestration
+- `render.ts` — TUI rendering and rendering-adjacent formatters
 - `api.ts` — public surface re-exported for other extensions (see **Public API** above)
 - `loader.ts` — agent discovery and frontmatter parsing
 - `spawn.ts` — child process spawning, CLI argument construction, and result handling

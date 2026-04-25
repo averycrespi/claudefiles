@@ -1,10 +1,8 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import {
-  buildSpawnAgentParams,
   buildSpawnAgentsParams,
   type AgentDefinition,
   type SpawnAgentItem,
-  type SpawnAgentParams,
   type SpawnAgentsParams,
   type SubagentRunState,
 } from "./types.ts";
@@ -14,13 +12,7 @@ import {
 } from "./activity.ts";
 import { formatSpawnFailure, spawnSubagent } from "./spawn.ts";
 import { loadAgents } from "./loader.ts";
-import {
-  getActivity,
-  renderAgentCall,
-  renderAgentResult,
-  renderAgentsCall,
-  renderAgentsResult,
-} from "./render.ts";
+import { getActivity, renderAgentsCall, renderAgentsResult } from "./render.ts";
 
 const text = (value: string) => [{ type: "text" as const, text: value }];
 
@@ -78,7 +70,6 @@ async function runSpawn(
   agent: AgentDefinition,
   intent: string,
   prompt: string,
-  showActivity: boolean,
   ctx: SpawnCtx,
   toolCallId: string,
   onUpdate?: OnUpdate,
@@ -91,7 +82,7 @@ async function runSpawn(
     roleLabel:
       agent.name.charAt(0).toUpperCase() + agent.name.slice(1) + " agent",
     intent,
-    showActivity,
+    showActivity: true,
     hasUI: ctx.hasUI,
     ui: ctx.hasUI
       ? {
@@ -190,7 +181,6 @@ async function runParallelSpawn(
         agent,
         normalizeIntent(spec.intent),
         spec.prompt,
-        true,
         ctx,
         `${toolCallId}:${i}`,
         (event) => {
@@ -253,50 +243,8 @@ export default function (pi: ExtensionAPI) {
     const agentList = agents
       .map((a) => `${a.name}: ${a.description}`)
       .join("; ");
-    const guidance = `\n\n## Subagent delegation\nUse spawn_agent to delegate tasks to a focused subagent when a task would generate large output, require iterative searching, or benefit from isolation. Use spawn_agents when multiple independent tasks can run concurrently — pass all agents in one call rather than sequential calls. Brief each agent thoroughly — subagents have no access to the current conversation. Available agent types: ${agentList}.`;
+    const guidance = `\n\n## Subagent delegation\nUse spawn_agents to delegate tasks to focused subagents when a task would generate large output, require iterative searching, or benefit from isolation. Pass all agents you want to run in a single call — they execute in parallel, and a single-agent call is the right shape for delegating one task. Brief each agent thoroughly — subagents have no access to the current conversation. Available agent types: ${agentList}.`;
     return { systemPrompt: event.systemPrompt + guidance };
-  });
-
-  pi.registerTool({
-    name: "spawn_agent",
-    label: "Spawn Agent",
-    description:
-      "Launch a subagent to handle a task autonomously in its own context window. Brief the agent like a colleague who just walked in — provide all necessary context in the prompt.",
-    parameters: buildSpawnAgentParams(agentDescription),
-    async execute(toolCallId, params: SpawnAgentParams, signal, onUpdate, ctx) {
-      const agent = agentMap.get(params.agent);
-      if (!agent) {
-        return {
-          content: text(
-            `Error: unknown agent type "${params.agent}". Available types: ${agents.map((a) => a.name).join(", ")}`,
-          ),
-          details: {},
-        };
-      }
-      return await runSpawn(
-        pi,
-        agent,
-        normalizeIntent(params.intent),
-        params.prompt,
-        params.show_activity ?? true,
-        {
-          cwd: ctx.cwd,
-          signal,
-          model: ctx.model as any,
-          sessionManager: ctx.sessionManager,
-          hasUI: ctx.hasUI,
-          ui: ctx.ui,
-        },
-        toolCallId,
-        onUpdate,
-      );
-    },
-    renderCall(args, theme, context) {
-      return renderAgentCall(args, theme, context);
-    },
-    renderResult(result, options, theme, context) {
-      return renderAgentResult(result, options, theme, context);
-    },
   });
 
   pi.registerTool({

@@ -20,13 +20,6 @@ export interface AgentDefinition {
   disablePromptTemplates: boolean;
 }
 
-export interface SpawnAgentParams {
-  agent: string;
-  intent: string;
-  prompt: string;
-  show_activity?: boolean;
-}
-
 export interface SpawnAgentItem {
   agent: string;
   intent: string;
@@ -59,25 +52,6 @@ export interface SubagentRunState {
   logFile?: string;
   startedAt: number;
   lastUpdateAt: number;
-}
-
-export function buildSpawnAgentParams(agentDescription: string) {
-  return Type.Object({
-    agent: Type.String({ description: agentDescription }),
-    intent: Type.String({
-      minLength: 1,
-      description: "Short label shown in activity titles (3–6 words)",
-    }),
-    prompt: Type.String({
-      description:
-        "Full task — brief the agent like a colleague who just walked in",
-    }),
-    show_activity: Type.Optional(
-      Type.Boolean({
-        description: "Show live progress updates (default: true)",
-      }),
-    ),
-  });
 }
 
 export function buildSpawnAgentsParams(agentDescription: string) {

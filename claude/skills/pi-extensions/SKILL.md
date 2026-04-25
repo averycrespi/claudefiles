@@ -103,21 +103,26 @@ pi.registerTool({
 **Dynamic parameter schemas.** `parameters` is a regular value — compose it at registration time when the schema depends on load-time config:
 
 ```typescript
-function buildSpawnParams(agentDescription: string) {
+function buildSpawnAgentsParams(agentDescription: string) {
   return Type.Object({
-    agent: Type.String({ description: agentDescription }),
-    prompt: Type.String(),
+    agents: Type.Array(
+      Type.Object({
+        agent: Type.String({ description: agentDescription }),
+        prompt: Type.String(),
+      }),
+      { minItems: 1 },
+    ),
   });
 }
 
 pi.registerTool({
-  name: "spawn_agent",
-  parameters: buildSpawnParams(buildAgentDescription(loadAgents())),
-  async execute(id, params: SpawnAgentParams, ...) { /* ... */ },
+  name: "spawn_agents",
+  parameters: buildSpawnAgentsParams(buildAgentDescription(loadAgents())),
+  async execute(id, params: SpawnAgentsParams, ...) { /* ... */ },
 });
 ```
 
-Typical use: surfacing discovered configuration (available agent types, registered providers) in a parameter's description so the model sees it. When `parameters` is built by a function, `Static<typeof params>` doesn't work directly — declare an explicit `SpawnAgentParams` interface and use it for `execute`'s `params` type.
+Typical use: surfacing discovered configuration (available agent types, registered providers) in a parameter's description so the model sees it. When `parameters` is built by a function, `Static<typeof params>` doesn't work directly — declare an explicit `SpawnAgentsParams` interface and use it for `execute`'s `params` type.
 
 **Tool override:** register with the same name as a built-in (`"read"`, `"edit"`, `"write"`, `"bash"`, `"grep"`) to replace it. The original built-in renderer is reused if you don't provide `renderCall`/`renderResult`.
 
