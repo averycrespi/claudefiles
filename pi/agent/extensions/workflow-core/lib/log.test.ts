@@ -138,3 +138,49 @@ describe("createRunLogger — events.jsonl", () => {
     rmSync(root, { recursive: true });
   });
 });
+
+describe("createRunLogger — workflow events", () => {
+  test("logWorkflow auto-prefixes type with workflow name", async () => {
+    const root = makeRoot();
+    const logger = await createRunLogger({
+      baseDir: root,
+      workflow: "autopilot",
+      slug: null,
+      args: {},
+      preflight: {},
+    });
+    logger.logWorkflow("task.complete", { id: 3 });
+    await logger.close({ outcome: "success", error: null });
+    const content = readFileSync(join(logger.runDir, "events.jsonl"), "utf8");
+    const lines = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    const evt = lines.find((l: any) => l.type === "autopilot.task.complete");
+    assert.ok(evt, "expected prefixed event in log");
+    assert.equal((evt as any).id, 3);
+    rmSync(root, { recursive: true });
+  });
+
+  test("logEvent / logWorkflow after close are silently dropped", async () => {
+    const root = makeRoot();
+    const logger = await createRunLogger({
+      baseDir: root,
+      workflow: "wf",
+      slug: null,
+      args: {},
+      preflight: {},
+    });
+    await logger.close({ outcome: "success", error: null });
+    logger.logWorkflow("late", {});
+    logger.logEvent({ type: "later" });
+    const content = readFileSync(join(logger.runDir, "events.jsonl"), "utf8");
+    const lines = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    assert.ok(!lines.some((l: any) => l.type === "wf.late"));
+    assert.ok(!lines.some((l: any) => l.type === "later"));
+    rmSync(root, { recursive: true });
+  });
+});

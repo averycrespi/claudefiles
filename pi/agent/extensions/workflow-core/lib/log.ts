@@ -24,6 +24,7 @@ export interface RunLogger {
   promptsDir: string;
   outputsDir: string;
   logEvent(opts: { type: string; payload?: Record<string, unknown> }): void;
+  logWorkflow(type: string, payload?: Record<string, unknown>): void;
   writePrompt(filename: string, content: string): void;
   writeOutput(filename: string, content: string): void;
   writeFinalReport(text: string): void;
@@ -94,6 +95,15 @@ export async function createRunLogger(init: RunLoggerInit): Promise<RunLogger> {
     writeLine({ ts: tsString(), type: o.type, ...(o.payload ?? {}) });
   }
 
+  function logWorkflow(type: string, payload?: Record<string, unknown>): void {
+    if (sealed) return;
+    writeLine({
+      ts: tsString(),
+      type: `${init.workflow}.${type}`,
+      ...(payload ?? {}),
+    });
+  }
+
   function writePrompt(filename: string, content: string): void {
     writeFileSync(join(promptsDir, filename), content);
   }
@@ -151,6 +161,7 @@ export async function createRunLogger(init: RunLoggerInit): Promise<RunLogger> {
     promptsDir,
     outputsDir,
     logEvent,
+    logWorkflow,
     writePrompt,
     writeOutput,
     writeFinalReport,
