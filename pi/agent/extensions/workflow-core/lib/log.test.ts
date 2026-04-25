@@ -184,3 +184,148 @@ describe("createRunLogger — workflow events", () => {
     rmSync(root, { recursive: true });
   });
 });
+
+describe("createRunLogger — subagent lifecycle", () => {
+  test("recordSubagentStart writes prompt sidecar and emits start event with prompt_path", async () => {
+    const root = makeRoot();
+    const logger = await createRunLogger({
+      baseDir: root,
+      workflow: "wf",
+      slug: null,
+      args: {},
+      preflight: {},
+    });
+    logger.recordSubagentStart({
+      id: 1,
+      intent: "Plan",
+      schema: "PlanReport",
+      tools: ["read"],
+      extensions: [],
+      prompt: "do the plan",
+    });
+    await logger.close({ outcome: "success", error: null });
+    const content = readFileSync(join(logger.runDir, "events.jsonl"), "utf8");
+    const lines = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    const start = lines.find((l: any) => l.type === "subagent.start");
+    assert.ok(start);
+    assert.equal((start as any).id, 1);
+    assert.match((start as any).prompt_path, /^prompts\/0*1-plan\.txt$/);
+    const promptText = readFileSync(
+      join(logger.promptsDir, "001-plan.txt"),
+      "utf8",
+    );
+    assert.equal(promptText, "do the plan");
+    rmSync(root, { recursive: true });
+  });
+
+  test("recordSubagentEnd writes output sidecar on success and emits end event", async () => {
+    const root = makeRoot();
+    const logger = await createRunLogger({
+      baseDir: root,
+      workflow: "wf",
+      slug: null,
+      args: {},
+      preflight: {},
+    });
+    logger.recordSubagentStart({
+      id: 1,
+      intent: "Plan",
+      schema: "PlanReport",
+      tools: [],
+      extensions: [],
+      prompt: "x",
+    });
+    logger.recordSubagentEnd({
+      id: 1,
+      ok: true,
+      durationMs: 1234,
+      output: { hello: "world" },
+    });
+    await logger.close({ outcome: "success", error: null });
+    const content = readFileSync(join(logger.runDir, "events.jsonl"), "utf8");
+    const lines = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    const end = lines.find((l: any) => l.type === "subagent.end");
+    assert.equal((end as any).ok, true);
+    assert.equal((end as any).duration_ms, 1234);
+    assert.match((end as any).output_path, /^outputs\/0*1-plan\.json$/);
+    const outputJson = readFileSync(
+      join(logger.outputsDir, "001-plan.json"),
+      "utf8",
+    );
+    assert.deepEqual(JSON.parse(outputJson), { hello: "world" });
+    rmSync(root, { recursive: true });
+  });
+
+  test("recordSubagentEnd on failure emits reason+error and no output sidecar", async () => {
+    const root = makeRoot();
+    const logger = await createRunLogger({
+      baseDir: root,
+      workflow: "wf",
+      slug: null,
+      args: {},
+      preflight: {},
+    });
+    logger.recordSubagentStart({
+      id: 1,
+      intent: "x",
+      schema: "X",
+      tools: [],
+      extensions: [],
+      prompt: "p",
+    });
+    logger.recordSubagentEnd({
+      id: 1,
+      ok: false,
+      durationMs: 500,
+      reason: "parse",
+      error: "bad json",
+    });
+    await logger.close({ outcome: "success", error: null });
+    const content = readFileSync(join(logger.runDir, "events.jsonl"), "utf8");
+    const lines = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    const end = lines.find((l: any) => l.type === "subagent.end");
+    assert.equal((end as any).ok, false);
+    assert.equal((end as any).reason, "parse");
+    assert.equal((end as any).error, "bad json");
+    assert.equal((end as any).output_path, undefined);
+    rmSync(root, { recursive: true });
+  });
+
+  test("recordSubagentStart / recordSubagentEnd after close are silently dropped", async () => {
+    const root = makeRoot();
+    const logger = await createRunLogger({
+      baseDir: root,
+      workflow: "wf",
+      slug: null,
+      args: {},
+      preflight: {},
+    });
+    await logger.close({ outcome: "success", error: null });
+    logger.recordSubagentStart({
+      id: 9,
+      intent: "late",
+      schema: "X",
+      tools: [],
+      extensions: [],
+      prompt: "p",
+    });
+    logger.recordSubagentEnd({ id: 9, ok: true, durationMs: 1, output: {} });
+    const content = readFileSync(join(logger.runDir, "events.jsonl"), "utf8");
+    const lines = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    assert.ok(!lines.some((l: any) => l.type === "subagent.start"));
+    assert.ok(!lines.some((l: any) => l.type === "subagent.end"));
+    rmSync(root, { recursive: true });
+  });
+});

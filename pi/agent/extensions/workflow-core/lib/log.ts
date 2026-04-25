@@ -25,6 +25,27 @@ export interface RunLogger {
   outputsDir: string;
   logEvent(opts: { type: string; payload?: Record<string, unknown> }): void;
   logWorkflow(type: string, payload?: Record<string, unknown>): void;
+  recordSubagentStart(o: {
+    id: number;
+    intent: string;
+    schema: string;
+    tools: ReadonlyArray<string>;
+    extensions: ReadonlyArray<string>;
+    prompt: string;
+    parentId?: number;
+    model?: string;
+    thinking?: string;
+    timeoutMs?: number;
+    retry?: string;
+  }): void;
+  recordSubagentEnd(o: {
+    id: number;
+    ok: boolean;
+    durationMs: number;
+    output?: unknown;
+    reason?: "dispatch" | "parse" | "schema" | "timeout" | "aborted";
+    error?: string;
+  }): void;
   writePrompt(filename: string, content: string): void;
   writeOutput(filename: string, content: string): void;
   writeFinalReport(text: string): void;
@@ -34,6 +55,14 @@ export interface RunLogger {
     subagentCount?: number;
     subagentRetries?: number;
   }): Promise<void>;
+}
+
+function sidecarBase(id: number, intent: string): string {
+  const intentSlug = intent
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${id.toString().padStart(3, "0")}-${intentSlug || "subagent"}`;
 }
 
 function isoTs(ms: number): string {
@@ -104,6 +133,75 @@ export async function createRunLogger(init: RunLoggerInit): Promise<RunLogger> {
     });
   }
 
+  const intentById = new Map<number, string>();
+
+  function recordSubagentStart(o: {
+    id: number;
+    intent: string;
+    schema: string;
+    tools: ReadonlyArray<string>;
+    extensions: ReadonlyArray<string>;
+    prompt: string;
+    parentId?: number;
+    model?: string;
+    thinking?: string;
+    timeoutMs?: number;
+    retry?: string;
+  }): void {
+    if (sealed) return;
+    intentById.set(o.id, o.intent);
+    const base = sidecarBase(o.id, o.intent);
+    const promptFile = `${base}.txt`;
+    writeFileSync(join(promptsDir, promptFile), o.prompt);
+    writeLine({
+      ts: tsString(),
+      type: "subagent.start",
+      id: o.id,
+      intent: o.intent,
+      schema: o.schema,
+      tools: o.tools,
+      extensions: o.extensions,
+      model: o.model,
+      thinking: o.thinking,
+      timeout_ms: o.timeoutMs,
+      retry: o.retry,
+      parent_id: o.parentId,
+      prompt_path: `prompts/${promptFile}`,
+    });
+  }
+
+  function recordSubagentEnd(o: {
+    id: number;
+    ok: boolean;
+    durationMs: number;
+    output?: unknown;
+    reason?: "dispatch" | "parse" | "schema" | "timeout" | "aborted";
+    error?: string;
+  }): void {
+    if (sealed) return;
+    const intent = intentById.get(o.id) ?? "subagent";
+    const base = sidecarBase(o.id, intent);
+    let outputPath: string | undefined;
+    if (o.ok && o.output !== undefined) {
+      const outFile = `${base}.json`;
+      writeFileSync(
+        join(outputsDir, outFile),
+        JSON.stringify(o.output, null, 2),
+      );
+      outputPath = `outputs/${outFile}`;
+    }
+    writeLine({
+      ts: tsString(),
+      type: "subagent.end",
+      id: o.id,
+      ok: o.ok,
+      duration_ms: o.durationMs,
+      reason: o.reason,
+      error: o.error,
+      output_path: outputPath,
+    });
+  }
+
   function writePrompt(filename: string, content: string): void {
     writeFileSync(join(promptsDir, filename), content);
   }
@@ -162,6 +260,8 @@ export async function createRunLogger(init: RunLoggerInit): Promise<RunLogger> {
     outputsDir,
     logEvent,
     logWorkflow,
+    recordSubagentStart,
+    recordSubagentEnd,
     writePrompt,
     writeOutput,
     writeFinalReport,
