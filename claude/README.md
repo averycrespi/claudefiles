@@ -116,10 +116,10 @@ The `sandbox/` directory provides overrides for Claude Code's [sandbox mode](htt
 
 These hooks are only active in the sandbox (configured in `sandbox/settings.json`):
 
-| Hook                         | Event      | Matcher | Description                                                       |
-| ---------------------------- | ---------- | ------- | ----------------------------------------------------------------- |
-| `deny-gh-cli-in-sandbox`     | PreToolUse | Bash    | Blocks `gh` CLI commands; directs to MCP tools instead            |
-| `deny-git-remote-in-sandbox` | PreToolUse | Bash    | Blocks `git push/pull/fetch/remote`; directs to MCP tools instead |
+| Hook                         | Event      | Matcher | Description                                                                |
+| ---------------------------- | ---------- | ------- | -------------------------------------------------------------------------- |
+| `hint-gh-cli-in-sandbox`     | PreToolUse | Bash    | Allows `gh` CLI commands but injects a hint to prefer MCP tools instead    |
+| `hint-git-remote-in-sandbox` | PreToolUse | Bash    | Allows `git push/pull/fetch/remote` but injects a hint to prefer MCP tools |
 
 The sandbox also inherits `scan-secrets-before-commit` and `format-on-write` from the main hooks.
 

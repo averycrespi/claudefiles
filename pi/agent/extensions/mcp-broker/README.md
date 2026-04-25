@@ -5,8 +5,8 @@ Pi extension that exposes the MCP broker to the agent via three meta-tools (`mcp
 ## What it does
 
 - **Meta-tools** — registers `mcp_search`, `mcp_describe`, and `mcp_call`, which share one long-lived MCP client connection to the broker. The agent discovers tools with `mcp_search`, inspects their schemas with `mcp_describe`, and invokes them with `mcp_call`. The upstream broker tool set stays out of the agent's tool list, so the prompt cache prefix stays stable regardless of how many broker tools are discovered.
-- **Namespace hint** — on `session_start` the extension pre-fetches the broker's tool list and caches the unique namespace prefixes (e.g. `git`, `github`). `before_agent_start` injects a one-line hint into the system prompt so the agent knows which providers exist without having to probe.
-- **Guard** — blocks direct `gh` and remote git (`push`, `pull`, `fetch`, `ls-remote`, `remote`) in bash and steers the agent to use `mcp_call` instead. Local git is unaffected.
+- **Tool menu in the system prompt** — on `session_start` the extension pre-fetches the broker's tool list. `before_agent_start` injects a per-namespace menu (e.g. `git: git_push, git_pull, …` / `github: gh_list_prs, gh_view_pr, …`) plus a short decision rule into the system prompt. The agent can pick a tool and call `mcp_call` directly without an `mcp_search` round-trip.
+- **Guard** — when bash is invoked with direct `gh` or remote git (`push`, `pull`, `fetch`, `ls-remote`, `remote`), the bash still runs but a hint is prepended to its result naming likely broker tools to use next time. Local git is unaffected. Detection is a heuristic; false positives are harmless because nothing is blocked.
 
 ## Usage
 
@@ -31,18 +31,20 @@ If either variable is missing, the meta-tools are still registered, but any call
 
 When `gh ...` or a remote git operation is detected in bash:
 
-1. The bash call is blocked with a short reason.
-2. A steering message tells the agent to use `mcp_search` / `mcp_describe` / `mcp_call` with the appropriate provider namespace.
-3. A UI notification appears once per turn.
+1. Bash runs as the agent requested — nothing is blocked.
+2. After the bash result lands, a steering message is queued for the agent. It names up to three likely broker tools (fuzzy-matched from the cached tool list against the bash subcommand) and reminds the agent to use `mcp_call`. One steer per turn at most, so back-to-back matches don't pile up.
+3. A UI notification surfaces the hint to the user.
 
-The guard also appends short broker guidance to the system prompt on each turn.
+The steer is delivered via `pi.sendMessage` rather than `tool_result` content rewriting because Pi discards `tool_result` content modifications when the underlying tool reports an error — and auth failures (the most common trigger) are exactly that case.
+
+If the broker is unreachable (no cached tool list), the hint falls back to suggesting `mcp_search`. Detection strips quoted substrings before matching, so `git commit -m "fix gh issue"` does not trigger.
 
 ## File layout
 
-- `index.ts` — entry point, instantiates `BrokerClient`, wires up tools, guard, and namespace-hint hook
+- `index.ts` — entry point, instantiates `BrokerClient`, wires up tools, guard, and the broker tool menu in the system prompt
 - `client.ts` — `BrokerClient` wrapping `@modelcontextprotocol/sdk`'s `StreamableHTTPClientTransport`
 - `tools.ts` — `mcp_search`, `mcp_describe`, `mcp_call` definitions
-- `guard.ts` — bash interception and steering logic
+- `guard.ts` — bash detection and `tool_result` hint injection
 
 ## Inspiration
 
