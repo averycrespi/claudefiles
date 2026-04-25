@@ -16,10 +16,9 @@ import {
 } from "@mariozechner/pi-tui";
 import { Type, type Static } from "@sinclair/typebox";
 import { firstLine, getResultText } from "../_shared/render.ts";
+import { OTHER_LABEL, validateAskParams } from "./validate.ts";
 
-const OTHER_LABEL = "Type something.";
 const RECOMMENDED_SUFFIX = " (Recommended)";
-const RESERVED_LABELS = new Set(["other", OTHER_LABEL.toLowerCase()]);
 
 const askOption = Type.Object({
   label: Type.String({
@@ -115,31 +114,8 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      // Validate options
-      const labels = new Set<string>();
-      for (const option of params.options) {
-        const label = option.label.trim();
-        if (!label) return validationError("Option labels must be non-empty.");
-        const normalized = label.toLowerCase();
-        if (RESERVED_LABELS.has(normalized)) {
-          return validationError(
-            "Options must not include an 'Other' label; it is added automatically.",
-          );
-        }
-        if (labels.has(normalized)) {
-          return validationError("Option labels must be unique.");
-        }
-        labels.add(normalized);
-      }
-
-      if (
-        params.recommended != null &&
-        params.recommended >= params.options.length
-      ) {
-        return validationError(
-          "recommended must point to a valid option index.",
-        );
-      }
+      const validationMessage = validateAskParams(params);
+      if (validationMessage) return validationError(validationMessage);
 
       const allOptions: DisplayOption[] = [
         ...params.options.map((o) => ({ ...o, label: o.label.trim() })),
