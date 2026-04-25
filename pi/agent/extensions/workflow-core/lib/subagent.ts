@@ -11,6 +11,10 @@ export interface Subagent {
   dispatch<S extends TSchema>(
     spec: DispatchSpec<S>,
   ): Promise<DispatchResult<S>>;
+  parallel<S extends TSchema>(
+    specs: DispatchSpec<S>[],
+    opts?: { concurrency?: number },
+  ): Promise<DispatchResult<S>[]>;
 }
 
 export interface CreateSubagentOpts {
@@ -89,20 +93,39 @@ export function createSubagent(opts: CreateSubagentOpts): Subagent {
     return result;
   }
 
-  return {
-    dispatch: async (spec) => {
-      const policy = spec.retry ?? "one-retry-on-dispatch";
-      const first = await dispatchOne(spec);
-      if (policy === "none") return first;
-      if (first.ok) return first;
-      if (first.reason !== "dispatch") return first;
-      if (opts.signal?.aborted) return first;
-      return dispatchOne(
-        { ...spec, intent: `${spec.intent} (retry)` },
-        // parent_id wiring: we use the running id counter; the previous
-        // dispatch reserved nextId-1.
-        nextId,
-      );
-    },
+  const dispatchWithRetry = async <S extends TSchema>(
+    spec: DispatchSpec<S>,
+  ): Promise<DispatchResult<S>> => {
+    const policy = spec.retry ?? "one-retry-on-dispatch";
+    const first = await dispatchOne(spec);
+    if (policy === "none" || first.ok || first.reason !== "dispatch")
+      return first;
+    if (opts.signal?.aborted) return first;
+    return dispatchOne({ ...spec, intent: `${spec.intent} (retry)` }, nextId);
   };
+
+  const parallel = async <S extends TSchema>(
+    specs: DispatchSpec<S>[],
+    parOpts?: { concurrency?: number },
+  ): Promise<DispatchResult<S>[]> => {
+    const concurrency = parOpts?.concurrency ?? specs.length;
+    const results = new Array<DispatchResult<S>>(specs.length);
+    let cursor = 0;
+    const worker = async () => {
+      while (true) {
+        const i = cursor++;
+        if (i >= specs.length) return;
+        results[i] = await dispatchWithRetry(specs[i]);
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.max(1, Math.min(concurrency, specs.length)) },
+        () => worker(),
+      ),
+    );
+    return results;
+  };
+
+  return { dispatch: dispatchWithRetry, parallel };
 }

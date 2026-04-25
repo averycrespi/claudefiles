@@ -294,3 +294,60 @@ describe("Subagent.dispatch — retry policy", () => {
     assert.deepEqual(intents, ["Plan", "Plan (retry)"]);
   });
 });
+
+describe("Subagent.parallel", () => {
+  test("dispatches all specs concurrently and returns results in order", async () => {
+    const order: string[] = [];
+    const spawn = async (inv: any) => {
+      order.push(`start:${inv.prompt}`);
+      await new Promise((r) => setTimeout(r, inv.prompt === "fast" ? 5 : 50));
+      order.push(`end:${inv.prompt}`);
+      return {
+        ok: true,
+        aborted: false,
+        stdout: `{"outcome":"x","n":1}`,
+        stderr: "",
+        exitCode: 0,
+        signal: null,
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    const results = await sub.parallel([
+      { intent: "a", prompt: "slow", schema: Schema, tools: [] },
+      { intent: "b", prompt: "fast", schema: Schema, tools: [] },
+    ]);
+    assert.equal(results.length, 2);
+    // both started before either ended
+    assert.equal(order[0].startsWith("start:"), true);
+    assert.equal(order[1].startsWith("start:"), true);
+    // fast finished first
+    assert.equal(order[2], "end:fast");
+  });
+
+  test("concurrency=1 serializes dispatches", async () => {
+    const order: string[] = [];
+    const spawn = async (inv: any) => {
+      order.push(`s:${inv.prompt}`);
+      await new Promise((r) => setTimeout(r, 5));
+      order.push(`e:${inv.prompt}`);
+      return {
+        ok: true,
+        aborted: false,
+        stdout: `{"outcome":"x","n":1}`,
+        stderr: "",
+        exitCode: 0,
+        signal: null,
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    await sub.parallel(
+      [
+        { intent: "a", prompt: "1", schema: Schema, tools: [] },
+        { intent: "b", prompt: "2", schema: Schema, tools: [] },
+      ],
+      { concurrency: 1 },
+    );
+    // each dispatch fully completes before the next starts
+    assert.deepEqual(order, ["s:1", "e:1", "s:2", "e:2"]);
+  });
+});
