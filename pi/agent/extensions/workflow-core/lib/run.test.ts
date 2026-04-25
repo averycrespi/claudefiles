@@ -456,3 +456,54 @@ describe("registerWorkflow — report emission", () => {
     rmSync(tmpRoot, { recursive: true });
   });
 });
+
+describe("registerWorkflow — subagent log integration", () => {
+  test("subagent dispatch produces a subagent.start + subagent.end pair in events.jsonl", async () => {
+    const pi = fakePi();
+    pi.sendMessage = () => {};
+    const tmpRoot = mkdtempSync(join(tmpdir(), "wc-rw-"));
+    const fakeSpawn = async () => ({
+      ok: true as const,
+      aborted: false,
+      stdout: `{}`,
+      stderr: "",
+      exitCode: 0,
+      signal: null,
+    });
+    const { Type } = await import("@sinclair/typebox");
+    let runDir = "";
+    registerWorkflow(
+      pi as any,
+      {
+        name: "wf",
+        description: "",
+        parseArgs: () => ({ ok: true, args: {} }),
+        run: async (ctx: any) => {
+          runDir = ctx.workflowDir.replace(/\/workflow$/, "");
+          await ctx.subagent.dispatch({
+            intent: "Plan",
+            prompt: "p",
+            schema: Type.Object({}),
+            tools: [],
+          });
+          return null;
+        },
+      },
+      { spawn: fakeSpawn as any, logBaseDir: tmpRoot } as any,
+    );
+    const ctx: any = {
+      waitForIdle: () => {},
+      ui: { notify: () => {}, theme: undefined },
+    };
+    await pi.commands.get("wf-start")!.handler("", ctx);
+    await new Promise((r) => setTimeout(r, 50));
+    const content = readFileSync(join(runDir, "events.jsonl"), "utf8");
+    const lines = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    assert.ok(lines.find((l: any) => l.type === "subagent.start"));
+    assert.ok(lines.find((l: any) => l.type === "subagent.end"));
+    rmSync(tmpRoot, { recursive: true });
+  });
+});

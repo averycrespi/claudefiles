@@ -143,8 +143,29 @@ export function registerWorkflow<Args, Pre>(
                 id: e.id,
                 intent: e.spec.intent,
               });
+              logger.recordSubagentStart({
+                id: e.id,
+                intent: e.spec.intent,
+                schema: e.spec.schemaName ?? "<anonymous>",
+                tools: e.spec.tools,
+                extensions: e.spec.extensions ?? [],
+                prompt: e.spec.prompt,
+                parentId: e.parentId,
+                model: e.spec.model,
+                thinking: e.spec.thinking,
+                timeoutMs: e.spec.timeoutMs,
+                retry: e.spec.retry,
+              });
             } else {
               widget._emitSubagentLifecycle({ kind: "end", id: e.id });
+              logger.recordSubagentEnd({
+                id: e.id,
+                ok: e.result.ok,
+                durationMs: e.durationMs,
+                output: e.result.ok ? e.result.data : undefined,
+                reason: e.result.ok ? undefined : e.result.reason,
+                error: e.result.ok ? undefined : e.result.error,
+              });
             }
           },
         });
