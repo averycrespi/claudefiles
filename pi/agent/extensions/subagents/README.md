@@ -50,8 +50,6 @@ The built-in types:
 While running, `spawn_agents` shows each agent as a section separated by blank lines, with recent tool events and a running status line:
 
 ```
- **Spawn agents** Find auth flows, Run tests, Check config
-
  **Explore agent** Find auth flows
  - read: src/auth.ts
  Running: 4 tool uses (14s)
@@ -64,7 +62,7 @@ While running, `spawn_agents` shows each agent as a section separated by blank l
  Running: 1 tool use (3s)
 ```
 
-Each agent shows its type, intent, recent tool events, and a Running/Done status line. On failure, the agent's section displays an error line and a path to the persisted log file.
+The tool-call line itself is intentionally suppressed — its content would just repeat the intents already shown in each agent's block. Each agent shows its type, intent, recent tool events, and a Running/Done status line. On failure, the agent's section displays an error line and a path to the persisted log file.
 
 Activity widgets are removed when all subagents finish, error, or are aborted.
 

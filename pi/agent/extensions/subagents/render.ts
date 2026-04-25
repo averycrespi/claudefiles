@@ -84,25 +84,16 @@ function renderEventLine(
   return `${prefix}${theme.fg("muted", event.text)}`;
 }
 
+// The call line would just repeat the intents already shown in renderAgentsResult's
+// per-agent blocks, so suppress it. Pi still gets a (blank) call component so the
+// usual component lifecycle is preserved.
 export function renderAgentsCall(
-  args: { agents?: unknown[] },
-  theme: any,
+  _args: { agents?: unknown[] },
+  _theme: any,
   context: any,
 ) {
   const t = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-  const agents = Array.isArray(args.agents) ? args.agents : [];
-  const intents = agents
-    .map((a: any) => (typeof a?.intent === "string" ? a.intent.trim() : ""))
-    .filter(Boolean);
-  const label =
-    intents.length > 0
-      ? intents.slice(0, 3).join(", ") +
-        (intents.length > 3 ? `, +${intents.length - 3} more` : "")
-      : `${agents.length} agents`;
-  t.setText(
-    theme.fg("toolTitle", theme.bold("Spawn agents ")) +
-      theme.fg("muted", label),
-  );
+  t.setText("");
   return t;
 }
 
@@ -172,7 +163,7 @@ export function renderAgentsResult(
     for (let i = 0; i < agents.length; i++) {
       lines.push(agentProgressLine(agents[i], i === agents.length - 1, theme));
     }
-    t.setText("\n" + lines.join("\n\n"));
+    t.setText(lines.join("\n\n"));
     return t;
   }
 
