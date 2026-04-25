@@ -25,7 +25,7 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | Extension        | Purpose                                                         |
 | ---------------- | --------------------------------------------------------------- |
 | `ask-user`       | Improved TUI for user questions                                 |
-| `autoformat`     | Run `gofmt` / `prettier` after write and edit                   |
+| `autoformat`     | Format files after write and edit                               |
 | `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc |
 | `compact-tools`  | Compact rendering for read and bash                             |
 | `mcp-broker`     | Broker CLI skill + guard for remote operations                  |

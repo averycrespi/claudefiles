@@ -1,13 +1,8 @@
 /**
  * autoformat extension for Pi.
  *
- * After a successful built-in `write` or `edit` tool result, runs a
- * formatter against the file:
- *   - `.go` files → `gofmt -w`
- *   - everything Prettier understands → `prettier --write --ignore-unknown`
- *
- * Extracted from `code-feedback` after that extension was archived; the
- * formatting half was kept, the LSP half was dropped.
+ * After a successful built-in `write` or `edit`, runs gofmt (.go) or
+ * prettier (everything else Prettier understands) against the file.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
