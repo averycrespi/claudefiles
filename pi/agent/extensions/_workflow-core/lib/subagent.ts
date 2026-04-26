@@ -73,6 +73,7 @@ export function createSubagent(opts: CreateSubagentOpts): Subagent {
         cwd: opts.cwd,
         signal: childCtl.signal,
         onEvent: (e) => opts.onSubagentEvent?.(id, e),
+        env: spec.env,
       });
       if (!outcome.ok) {
         const reason = timedOut

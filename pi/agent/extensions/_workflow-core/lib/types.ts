@@ -22,6 +22,8 @@ export interface DispatchSpec<S extends TSchema> {
   thinking?: "low" | "medium" | "high";
   timeoutMs?: number;
   retry?: RetryPolicy;
+  /** Extra environment variables forwarded to the subagent process. */
+  env?: Record<string, string>;
 }
 
 export type DispatchResult<S extends TSchema> =

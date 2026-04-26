@@ -15,6 +15,8 @@ export interface DispatchOptions {
   intent?: string;
   /** Raw event stream forwarded from the Pi subagent process. */
   onEvent?: (event: unknown) => void;
+  /** Extra environment variables forwarded to the subagent process. */
+  env?: Record<string, string>;
 }
 
 export interface DispatchResult {
@@ -35,6 +37,7 @@ export async function dispatch(opts: DispatchOptions): Promise<DispatchResult> {
     cwd: opts.cwd,
     signal: opts.signal,
     onEvent: opts.onEvent,
+    env: opts.env,
   });
   if (!outcome.ok) {
     return {

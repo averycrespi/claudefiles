@@ -383,3 +383,29 @@ describe("Subagent.dispatch — timeout", () => {
     if (!r.ok) assert.equal(r.reason, "timeout");
   });
 });
+
+describe("Subagent.dispatch — env forwarding", () => {
+  test("env from DispatchSpec reaches the spawn invocation", async () => {
+    let capturedEnv: Record<string, string> | undefined;
+    const spawn = async (inv: any): Promise<any> => {
+      capturedEnv = inv.env;
+      return {
+        ok: true,
+        aborted: false,
+        stdout: `{"outcome":"ok","n":1}`,
+        stderr: "",
+        exitCode: 0,
+        signal: null,
+      };
+    };
+    const sub = createSubagent({ spawn: spawn as any, cwd: "/tmp" });
+    await sub.dispatch({
+      intent: "x",
+      prompt: "y",
+      schema: Schema,
+      tools: [],
+      env: { FOO: "bar" },
+    });
+    assert.equal(capturedEnv?.FOO, "bar");
+  });
+});
