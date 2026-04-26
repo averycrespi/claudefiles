@@ -175,7 +175,7 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
       prompt: fixerPrompt,
       schema: FixerReportSchema,
       tools: ["read", "edit", "write", "bash"],
-      extensions: ["autoformat"],
+      extensions: ["format"],
       retry: "none",
     });
 

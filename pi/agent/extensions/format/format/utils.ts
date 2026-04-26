@@ -28,6 +28,6 @@ export function logFormattingIssue(ctx: NotifyContext, message: string): void {
   if (ctx.hasUI) {
     ctx.ui.notify(message, "warning");
   } else {
-    console.error(`[autoformat] ${message}`);
+    console.error(`[format] ${message}`);
   }
 }

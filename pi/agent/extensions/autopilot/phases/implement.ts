@@ -80,7 +80,7 @@ export async function runImplement(
         prompt,
         schema: ImplementReportSchema,
         tools: ["read", "edit", "write", "bash"],
-        extensions: ["autoformat"],
+        extensions: ["format"],
       });
     } finally {
       clearInterval(heartbeat);

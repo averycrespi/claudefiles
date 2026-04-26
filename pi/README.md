@@ -25,10 +25,10 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | Extension        | Purpose                                                            |
 | ---------------- | ------------------------------------------------------------------ |
 | `ask-user`       | Improved TUI for user questions                                    |
-| `autoformat`     | Format files after write and edit                                  |
 | `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc    |
 | `autoralph`      | Autonomous agent-driven Ralph-style loop from a design doc         |
 | `compact-tools`  | Compact rendering for read and bash                                |
+| `format`         | Format files after write and edit                                  |
 | `mcp-broker`     | Broker CLI skill + guard for remote operations                     |
 | `provider-usage` | Provider rate-limit quota in the footer                            |
 | `subagents`      | Dynamic subagent loading and dispatch                              |

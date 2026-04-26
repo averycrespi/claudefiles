@@ -271,7 +271,7 @@ test("runImplement passes correct tools and intent to subagent.dispatch", async 
   assert.ok(capturedSpec.tools.includes("write"));
   assert.ok(capturedSpec.tools.includes("bash"));
   assert.ok(
-    (capturedSpec.extensions ?? []).includes("autoformat"),
-    "autoformat extension must be requested",
+    (capturedSpec.extensions ?? []).includes("format"),
+    "format extension must be requested",
   );
 });

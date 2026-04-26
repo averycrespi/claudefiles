@@ -138,7 +138,7 @@ Output ONLY this JSON object (no prose, no fences):
 
 1. Build prompt with current iteration number, reflection flag, prior handoff.
 2. Capture `HEAD` SHA before dispatch.
-3. Dispatch subagent (tools: `read`/`write`/`edit`/`bash`; extensions: `autoformat`) with the iteration-timeout abort timer wrapped around the run-level signal.
+3. Dispatch subagent (tools: `read`/`write`/`edit`/`bash`; extensions: `format`) with the iteration-timeout abort timer wrapped around the run-level signal.
 4. Parse JSON report via `parseJsonReport` (same helper autopilot uses).
 5. Append `{iteration, outcome, summary, headBefore, headAfter, durationMs}` to `history.json`.
 6. Write `handoff` to `<design-basename>.handoff.json` for the next iteration to read.

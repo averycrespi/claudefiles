@@ -1,4 +1,4 @@
-# autoformat
+# format
 
 Pi extension that formats files after every successful `write` or `edit`.
 

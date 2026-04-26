@@ -83,7 +83,7 @@ export async function runIteration(
     dispatchResult = await args.dispatch({
       prompt,
       tools: ["read", "write", "edit", "bash"],
-      extensions: ["autoformat"],
+      extensions: ["format"],
       cwd: args.cwd,
       intent: `Iteration ${args.iteration}${args.isReflection ? " (reflection)" : ""}`,
       signal: controller.signal,

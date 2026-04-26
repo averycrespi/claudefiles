@@ -1,5 +1,5 @@
 /**
- * autoformat extension for Pi.
+ * format extension for Pi.
  *
  * After a successful built-in `write` or `edit`, runs gofmt (.go) or
  * prettier (everything else Prettier understands) against the file.
@@ -17,10 +17,7 @@ import {
   logFormattingIssue,
 } from "./format/utils.ts";
 
-async function autoformatFile(
-  filePath: string,
-  ctx: NotifyContext,
-): Promise<void> {
+async function formatFile(filePath: string, ctx: NotifyContext): Promise<void> {
   const signal = ctx.signal ?? new AbortController().signal;
 
   await withFileMutationQueue(filePath, async () => {
@@ -59,11 +56,11 @@ export default function (pi: ExtensionAPI) {
     };
 
     try {
-      await autoformatFile(absPath, notifyCtx);
+      await formatFile(absPath, notifyCtx);
     } catch (error) {
       logFormattingIssue(
         notifyCtx,
-        `Autoformat failed for ${path}: ${
+        `Format failed for ${path}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
