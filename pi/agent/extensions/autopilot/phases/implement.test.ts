@@ -67,10 +67,7 @@ test("runImplement marks task completed on success + real commit", async () => {
 });
 
 test("runImplement marks task failed and breaks on failure report", async () => {
-  taskList.create([
-    { title: "a" },
-    { title: "b" },
-  ]);
+  taskList.create([{ title: "a" }, { title: "b" }]);
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
@@ -132,10 +129,7 @@ test("runImplement treats schema/parse dispatch failure as failure", async () =>
 });
 
 test("runImplement marks task failed and breaks after dispatch failure", async () => {
-  taskList.create([
-    { title: "a" },
-    { title: "b" },
-  ]);
+  taskList.create([{ title: "a" }, { title: "b" }]);
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
@@ -238,10 +232,7 @@ test("runImplement does not retry phantom success (HEAD unchanged)", async () =>
 });
 
 test("runImplement skips non-pending tasks", async () => {
-  taskList.create([
-    { title: "a" },
-    { title: "b" },
-  ]);
+  taskList.create([{ title: "a" }, { title: "b" }]);
   // Pre-complete task 1.
   taskList.start(1);
   taskList.complete(1, "already done");
@@ -268,6 +259,42 @@ test("runImplement skips non-pending tasks", async () => {
   assert.equal(taskList.get(1)?.status, "completed");
   assert.equal(taskList.get(1)?.summary, "already done");
   assert.equal(taskList.get(2)?.status, "completed");
+});
+
+test("runImplement throws when planContext is missing entry for task id", async () => {
+  taskList.create([{ title: "lonely" }]);
+  let dispatched = false;
+  await assert.rejects(
+    async () =>
+      runImplement({
+        archNotes: "notes",
+        subagent: makeSubagent(async () => {
+          dispatched = true;
+          return {
+            ok: true,
+            data: successData,
+            raw: JSON.stringify(successData),
+          };
+        }),
+        getHead: makeHeadSeq(["sha0", "sha1"]),
+        // Empty planContext — task id 1 is not in the map.
+        planContext: new Map(),
+      }),
+    (err: Error) => {
+      const msg = err.message;
+      assert.ok(msg.includes("1"), `error should mention task id 1: ${msg}`);
+      assert.ok(
+        msg.includes("lonely"),
+        `error should mention task title: ${msg}`,
+      );
+      assert.ok(
+        msg.includes("contract violation"),
+        `error should mention contract violation: ${msg}`,
+      );
+      return true;
+    },
+  );
+  assert.equal(dispatched, false, "subagent should not be dispatched");
 });
 
 test("runImplement passes correct tools and intent to subagent.dispatch", async () => {

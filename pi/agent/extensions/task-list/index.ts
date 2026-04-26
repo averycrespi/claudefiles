@@ -25,7 +25,7 @@ export default function (pi: ExtensionAPI) {
   // ExtensionAPI interface — access it via cast, same pattern as run.ts.
   const piAny = pi as any;
   const setWidget = (content: string[] | undefined) => {
-    if (typeof piAny.setWidget === "function") {
+    if (piAny.hasUI && typeof piAny.setWidget === "function") {
       piAny.setWidget(WIDGET_KEY, content, { placement: "belowEditor" });
     }
   };
