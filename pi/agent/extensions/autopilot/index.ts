@@ -149,7 +149,6 @@ export default function (
             );
           }
 
-          taskList.clear();
           const createdTasks = taskList.create(
             plan.data.tasks.map((t: { title: string }) => ({ title: t.title })),
           );

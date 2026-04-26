@@ -272,3 +272,61 @@ test("autopilot smoke: full plan → implement → verify produces populated log
       rmSync(designDir, { recursive: true, force: true });
   }
 });
+
+test("autopilot smoke: surfaces error when task list has live tasks", async () => {
+  const repoDir = makeTempRepo();
+  const designPath = makeDesignFile();
+  const logRoot = mkdtempSync(join(tmpdir(), "autopilot-logroot-"));
+
+  // Seed the task list with a live (pending) task — simulates a prior interrupted run.
+  taskList.clear();
+  taskList.create([{ title: "unfinished task" }]);
+
+  try {
+    const pi = fakePi();
+    const fakeSpawn = async (_inv: SpawnInvocation) =>
+      makeOkOutcome(PLAN_RESPONSE);
+
+    const { default: autopilot } = await import("./index.ts");
+    autopilot(pi as any, {
+      spawn: fakeSpawn as any,
+      logBaseDir: logRoot,
+      cwd: repoDir,
+    });
+
+    const ctx = {
+      waitForIdle: async () => {},
+      ui: {
+        notify(_m: string, _l: string) {},
+        theme: undefined as any,
+      },
+    };
+
+    const startCmd = pi.commands.get("autopilot-start")!;
+    await startCmd.handler(designPath, ctx as any);
+
+    // Give detached pipeline time to settle.
+    await new Promise((r) => setTimeout(r, 500));
+
+    // The pre-flight guardrail (create() throwing) should surface as a
+    // notification error — not a successful report.
+    const errorNotifications = pi.notifications.filter(
+      (n) => n.level === "error",
+    );
+    assert.ok(
+      errorNotifications.length > 0 ||
+        pi.messages.some((m) => {
+          const text: string = m?.content?.[0]?.text ?? "";
+          return text.includes("live task") || text.includes("task-list-clear");
+        }),
+      `expected an error notification or report mentioning live tasks; notifications: ${JSON.stringify(pi.notifications)}, messages: ${JSON.stringify(pi.messages.map((m: any) => m?.content?.[0]?.text?.slice(0, 200)))}`,
+    );
+  } finally {
+    taskList.clear();
+    rmSync(repoDir, { recursive: true, force: true });
+    rmSync(logRoot, { recursive: true, force: true });
+    const designDir = designPath.replace(/\/my-design\.md$/, "");
+    if (existsSync(designDir))
+      rmSync(designDir, { recursive: true, force: true });
+  }
+});

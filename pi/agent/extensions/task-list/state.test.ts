@@ -46,6 +46,41 @@ test("create on list with in_progress task throws", () => {
   assert.throws(() => store.create([{ title: "b" }]));
 });
 
+test("create() conflict error names live counts and recovery paths", () => {
+  const store = createStore();
+  // 1 pending + 1 in_progress = 2 live tasks
+  store.create([{ title: "a" }, { title: "b" }]);
+  store.start(1);
+  assert.throws(
+    () => store.create([{ title: "c" }]),
+    (err: unknown) => {
+      assert.ok(err instanceof Error, "throws an Error");
+      const msg = err.message;
+      assert.ok(
+        msg.includes("2 live task"),
+        `message includes '2 live task': ${msg}`,
+      );
+      assert.ok(
+        msg.includes("1 pending"),
+        `message includes '1 pending': ${msg}`,
+      );
+      assert.ok(
+        msg.includes("1 in_progress"),
+        `message includes '1 in_progress': ${msg}`,
+      );
+      assert.ok(
+        msg.includes("/task-list-clear"),
+        `message includes '/task-list-clear': ${msg}`,
+      );
+      assert.ok(
+        msg.includes("task_list_set"),
+        `message includes 'task_list_set': ${msg}`,
+      );
+      return true;
+    },
+  );
+});
+
 test("add appends a new pending task with next id", () => {
   const store = createStore();
   store.create([{ title: "a" }]);

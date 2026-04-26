@@ -78,8 +78,16 @@ export function createStore(): TaskStore {
       if (state.tasks.length > 0) {
         const allTerminal = state.tasks.every((t) => TERMINAL.has(t.status));
         if (!allTerminal) {
+          const pending = state.tasks.filter(
+            (t) => t.status === "pending",
+          ).length;
+          const inProgress = state.tasks.filter(
+            (t) => t.status === "in_progress",
+          ).length;
+          const live = pending + inProgress;
+          const taskWord = live === 1 ? "task" : "tasks";
           throw new Error(
-            "Cannot create: existing list has pending or in_progress tasks",
+            `Task list has ${live} live ${taskWord} (${pending} pending, ${inProgress} in_progress). Complete or fail them via task_list_set, or run /task-list-clear to drop them.`,
           );
         }
         // Auto-clear terminal list.
