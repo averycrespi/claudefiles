@@ -95,11 +95,7 @@ export async function callBrokerTool(
       });
       return { content, details: { name: params.name, brokerError } };
     }
-    const spill = await spillIfNeeded(
-      content as any,
-      toolCallId,
-      ...(dir !== undefined ? [dir] : []),
-    );
+    const spill = await spillIfNeeded(content as any, toolCallId, dir);
     if (spill.spilled) {
       return {
         content: spill.content as AgentToolResult<unknown>["content"],
@@ -148,7 +144,7 @@ export async function callBrokerTool(
         const retriedSpill = await spillIfNeeded(
           retriedContent as any,
           toolCallId,
-          ...(dir !== undefined ? [dir] : []),
+          dir,
         );
         if (retriedSpill.spilled) {
           return {

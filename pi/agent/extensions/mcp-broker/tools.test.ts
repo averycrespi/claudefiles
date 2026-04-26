@@ -176,4 +176,123 @@ test("summarize omits the dash when description is whitespace-only", () => {
     );
     assert.ok(!hasEnvelope, "error responses should not contain envelope");
   });
+
+  test("mcp_call retry path spills oversize content", async () => {
+    const bigText = "r".repeat(30_000);
+    let firstCall = true;
+    const client = {
+      callTool: async () => {
+        if (firstCall) {
+          firstCall = false;
+          throw new Error("session expired");
+        }
+        return { content: [{ type: "text", text: bigText }], isError: false };
+      },
+      reset: noop,
+      listTools: async () => [],
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "test.retry-spill", arguments: {} },
+      "retry-spill-id",
+      makeSignal(),
+      scratchDir,
+    );
+    const details = result.details as Record<string, unknown>;
+    assert.equal(details.retried, true, "details.retried should be true");
+    assert.equal(details.spilled, true, "details.spilled should be true");
+    assert.equal(
+      typeof details.spillFilePath,
+      "string",
+      "spillFilePath should be a string",
+    );
+    assert.ok(
+      (details.spillFilePath as string).startsWith(scratchDir),
+      "spillFilePath should be inside scratchDir",
+    );
+    const texts = result.content.filter((c: any) => c.type === "text");
+    assert.equal(
+      texts.length,
+      1,
+      "should have exactly one envelope text block",
+    );
+    assert.ok(
+      (texts[0] as any).text.includes("<persisted-output>"),
+      "content should contain envelope wrapper",
+    );
+  });
+
+  test("mcp_call retry path passes through under-threshold content", async () => {
+    const smallText = "s".repeat(5_000);
+    let firstCall = true;
+    const client = {
+      callTool: async () => {
+        if (firstCall) {
+          firstCall = false;
+          throw new Error("session expired");
+        }
+        return { content: [{ type: "text", text: smallText }], isError: false };
+      },
+      reset: noop,
+      listTools: async () => [],
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "test.retry-small", arguments: {} },
+      "retry-small-id",
+      makeSignal(),
+      scratchDir,
+    );
+    const details = result.details as Record<string, unknown>;
+    assert.equal(details.retried, true, "details.retried should be true");
+    assert.ok(!("spilled" in details), "details should not contain spilled");
+    assert.ok(
+      !("spillFilePath" in details),
+      "details should not contain spillFilePath",
+    );
+    assert.ok(
+      !("originalSize" in details),
+      "details should not contain originalSize",
+    );
+    assert.equal(result.content.length, 1);
+    assert.equal((result.content[0] as any).text, smallText);
+  });
+
+  test("mcp_call retry path does not spill error responses", async () => {
+    const bigText = "e".repeat(30_000);
+    let firstCall = true;
+    const client = {
+      callTool: async () => {
+        if (firstCall) {
+          firstCall = false;
+          throw new Error("session expired");
+        }
+        return { content: [{ type: "text", text: bigText }], isError: true };
+      },
+      reset: noop,
+      listTools: async () => [],
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "test.retry-err", arguments: {} },
+      "retry-err-id",
+      makeSignal(),
+      scratchDir,
+    );
+    const details = result.details as Record<string, unknown>;
+    assert.equal(details.retried, true, "details.retried should be true");
+    assert.ok(
+      !("spilled" in details),
+      "error details should not contain spilled",
+    );
+    assert.ok(
+      !("spillFilePath" in details),
+      "error details should not contain spillFilePath",
+    );
+    // First content block is the broker error marker
+    assert.ok(
+      (result.content[0] as any).text.includes("[mcp_call: broker tool"),
+      "first block should be error marker",
+    );
+  });
 }

@@ -33,7 +33,7 @@ When an `mcp_call` result exceeds **25,000 characters** of joined text, the exte
 
 ```
 <persisted-output>
-Output too large (47.3 KB / 47312 chars). Full output saved to: `/tmp/pi-mcp-broker/call_abc123.txt`
+Output too large (46.2 KB / 47312 chars). Full output saved to: `/tmp/pi-mcp-broker/call_abc123.txt`
 
 Preview (first 2 KB):
 …

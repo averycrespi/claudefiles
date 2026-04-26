@@ -104,25 +104,16 @@ export async function spillIfNeeded(
   const envelope = buildEnvelope({ filePath, originalSize, joinedText });
 
   // Replace all text blocks with a single envelope block at the position of
-  // the first text block; image blocks pass through unchanged.
-  const imageBlocks = content.filter((b) => b.type !== "text");
+  // the first text block; non-text blocks pass through unchanged.
   const firstTextIdx = content.findIndex((b) => b.type === "text");
   const envelopeBlock: ContentBlock = { type: "text", text: envelope };
-
-  let newContent: ContentBlock[];
-  if (firstTextIdx === -1) {
-    // No text blocks (shouldn't reach here given length check above, but be safe)
-    newContent = [...imageBlocks, envelopeBlock];
-  } else {
-    // Reconstruct: blocks before first text + envelope + remaining non-text blocks
-    const before = content
-      .slice(0, firstTextIdx)
-      .filter((b) => b.type !== "text");
-    const after = content
-      .slice(firstTextIdx + 1)
-      .filter((b) => b.type !== "text");
-    newContent = [...before, envelopeBlock, ...after];
-  }
+  const before = content
+    .slice(0, firstTextIdx)
+    .filter((b) => b.type !== "text");
+  const after = content
+    .slice(firstTextIdx + 1)
+    .filter((b) => b.type !== "text");
+  const newContent: ContentBlock[] = [...before, envelopeBlock, ...after];
 
   return { spilled: true, content: newContent, filePath, originalSize };
 }
