@@ -55,4 +55,3 @@ If your extension just registers a static command that runs synchronously, you d
 ## Documentation
 
 - [INTEGRATION.md](./INTEGRATION.md) — full reference for building workflows: per-primitive API, helper modules, common patterns, gotchas, testing.
-- [`.designs/2026-04-25-workflow-core.md`](../../../../.designs/2026-04-25-workflow-core.md) — design rationale: why we built it this way, what we considered and rejected.

@@ -1,6 +1,6 @@
 # Building workflows on workflow-core
 
-> Reference for extension authors building a new workflow on top of `workflow-core`. Organized by API user's perspective. For design rationale see [`.designs/2026-04-25-workflow-core.md`](../../../../.designs/2026-04-25-workflow-core.md).
+> Reference for extension authors building a new workflow on top of `workflow-core`. Organized by API user's perspective.
 
 ## Walkthrough: a minimal workflow end-to-end
 
