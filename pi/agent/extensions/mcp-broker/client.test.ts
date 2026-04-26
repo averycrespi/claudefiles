@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { extractProviders, type BrokerTool } from "./client.ts";
+import {
+  extractProviders,
+  filterReadOnly,
+  isReadOnly,
+  type BrokerTool,
+} from "./client.ts";
 
 function tool(name: string): BrokerTool {
   return { name };
@@ -48,4 +53,84 @@ test("extractProviders handles an empty tool list", () => {
 
 test("extractProviders uses only the prefix before the first '.'", () => {
   assert.deepEqual(extractProviders([tool("ns.sub.deep_tool")]), ["ns"]);
+});
+
+// --- isReadOnly ---
+
+test("isReadOnly returns true only when readOnlyHint is strictly true", () => {
+  assert.equal(
+    isReadOnly({ name: "t", annotations: { readOnlyHint: true } }),
+    true,
+  );
+});
+
+test("isReadOnly returns false when readOnlyHint is false", () => {
+  assert.equal(
+    isReadOnly({ name: "t", annotations: { readOnlyHint: false } }),
+    false,
+  );
+});
+
+test("isReadOnly returns false when readOnlyHint is the string 'true'", () => {
+  assert.equal(
+    isReadOnly({
+      name: "t",
+      annotations: { readOnlyHint: "true" as unknown as boolean },
+    }),
+    false,
+  );
+});
+
+test("isReadOnly returns false when annotations is present but readOnlyHint is absent", () => {
+  assert.equal(isReadOnly({ name: "t", annotations: {} }), false);
+});
+
+test("isReadOnly returns false when annotations is absent", () => {
+  assert.equal(isReadOnly({ name: "t" }), false);
+});
+
+// --- filterReadOnly ---
+
+test("filterReadOnly keeps only tools with readOnlyHint === true", () => {
+  const tools: BrokerTool[] = [
+    { name: "read.a", annotations: { readOnlyHint: true } },
+    { name: "write.b", annotations: { readOnlyHint: false } },
+    { name: "write.c", annotations: {} },
+    { name: "write.d" },
+    {
+      name: "write.e",
+      annotations: { readOnlyHint: "true" as unknown as boolean },
+    },
+  ];
+  assert.deepEqual(filterReadOnly(tools), [
+    { name: "read.a", annotations: { readOnlyHint: true } },
+  ]);
+});
+
+test("filterReadOnly returns all tools when all have readOnlyHint === true", () => {
+  const tools: BrokerTool[] = [
+    { name: "a.read", annotations: { readOnlyHint: true } },
+    { name: "b.read", annotations: { readOnlyHint: true } },
+  ];
+  assert.deepEqual(filterReadOnly(tools), tools);
+});
+
+test("filterReadOnly returns empty array when no tools pass", () => {
+  const tools: BrokerTool[] = [
+    { name: "write.a" },
+    { name: "write.b", annotations: { readOnlyHint: false } },
+  ];
+  assert.deepEqual(filterReadOnly(tools), []);
+});
+
+test("filterReadOnly preserves annotations on kept tools", () => {
+  const tool: BrokerTool = {
+    name: "search.query",
+    annotations: { readOnlyHint: true, idempotentHint: true },
+  };
+  const result = filterReadOnly([tool]);
+  assert.deepEqual(result[0]?.annotations, {
+    readOnlyHint: true,
+    idempotentHint: true,
+  });
 });

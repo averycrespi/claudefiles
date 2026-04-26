@@ -16,13 +16,29 @@ export type BrokerTool = {
   name: string;
   description?: string;
   inputSchema?: unknown;
+  annotations?: { readOnlyHint?: boolean; [k: string]: unknown };
 };
+
+// Strict: only readOnlyHint === true counts as read-only.
+// Missing annotation, missing hint, or hint=false is treated as write.
+export function isReadOnly(tool: BrokerTool): boolean {
+  return tool.annotations?.readOnlyHint === true;
+}
+
+export function filterReadOnly(tools: BrokerTool[]): BrokerTool[] {
+  return tools.filter(isReadOnly);
+}
 
 export class BrokerClient {
   private client: Client | null = null;
   private connecting: Promise<Client> | null = null;
   private cachedTools: BrokerTool[] | null = null;
   private cachedProviders: string[] | null = null;
+  private readOnly: boolean;
+
+  constructor(opts: { readOnly?: boolean } = {}) {
+    this.readOnly = opts.readOnly ?? false;
+  }
 
   private async getClient(): Promise<Client> {
     if (this.client) return this.client;
@@ -64,11 +80,13 @@ export class BrokerClient {
   async listTools(): Promise<BrokerTool[]> {
     const client = await this.getClient();
     const result = await client.listTools();
-    const tools: BrokerTool[] = (result.tools ?? []).map((t) => ({
+    const all: BrokerTool[] = (result.tools ?? []).map((t) => ({
       name: t.name,
       description: t.description,
       inputSchema: t.inputSchema,
+      annotations: t.annotations,
     }));
+    const tools = this.readOnly ? filterReadOnly(all) : all;
     this.cachedTools = tools;
     this.cachedProviders = extractProviders(tools);
     return tools;
