@@ -3,7 +3,6 @@ export type TaskStatus = "pending" | "in_progress" | "completed" | "failed";
 export interface Task {
   id: number; // 1-based, assigned on create
   title: string;
-  description: string;
   status: TaskStatus;
   startedAt?: number; // epoch ms
   completedAt?: number;
@@ -31,8 +30,8 @@ export const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 const TERMINAL: ReadonlySet<TaskStatus> = new Set(["completed", "failed"]);
 
 export interface TaskStore {
-  create(tasks: Omit<Task, "id" | "status">[]): Task[];
-  add(title: string, description: string): Task;
+  create(tasks: { title: string }[]): Task[];
+  add(title: string): Task;
   start(id: number): void;
   complete(id: number, summary: string): void;
   fail(id: number, reason: string): void;
@@ -90,7 +89,6 @@ export function createStore(): TaskStore {
       const created: Task[] = tasks.map((t) => ({
         id: nextId++,
         title: t.title,
-        description: t.description,
         status: "pending" as TaskStatus,
       }));
       state.tasks.push(...created);
@@ -98,11 +96,10 @@ export function createStore(): TaskStore {
       return created;
     },
 
-    add(title, description) {
+    add(title) {
       const task: Task = {
         id: nextId++,
         title,
-        description,
         status: "pending",
       };
       state.tasks.push(task);

@@ -4,7 +4,7 @@ import type { Task } from "../../task-list/api.ts";
 import { taskWindow, renderTaskWindowLines } from "./widget-tasks.ts";
 
 function mkTask(id: number, status: Task["status"], title = `task${id}`): Task {
-  return { id, title, description: "", status };
+  return { id, title, status };
 }
 
 // --- taskWindow anchor selection ---

@@ -49,7 +49,7 @@ function makeHeadSeq(shas: string[]) {
 }
 
 test("runImplement marks task completed on success + real commit", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
+  taskList.create([{ title: "a" }]);
   const result = await runImplement({
     archNotes: "notes",
     subagent: makeSubagent(async () => ({
@@ -68,8 +68,8 @@ test("runImplement marks task completed on success + real commit", async () => {
 
 test("runImplement marks task failed and breaks on failure report", async () => {
   taskList.create([
-    { title: "a", description: "aa" },
-    { title: "b", description: "bb" },
+    { title: "a" },
+    { title: "b" },
   ]);
   let dispatchCount = 0;
   const result = await runImplement({
@@ -94,7 +94,7 @@ test("runImplement marks task failed and breaks on failure report", async () => 
 });
 
 test("runImplement treats phantom success (HEAD unchanged) as failure", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
+  taskList.create([{ title: "a" }]);
   const result = await runImplement({
     archNotes: "notes",
     subagent: makeSubagent(async () => ({
@@ -113,7 +113,7 @@ test("runImplement treats phantom success (HEAD unchanged) as failure", async ()
 });
 
 test("runImplement treats schema/parse dispatch failure as failure", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
+  taskList.create([{ title: "a" }]);
   const result = await runImplement({
     archNotes: "notes",
     subagent: makeSubagent(async () => ({
@@ -133,8 +133,8 @@ test("runImplement treats schema/parse dispatch failure as failure", async () =>
 
 test("runImplement marks task failed and breaks after dispatch failure", async () => {
   taskList.create([
-    { title: "a", description: "aa" },
-    { title: "b", description: "bb" },
+    { title: "a" },
+    { title: "b" },
   ]);
   let dispatchCount = 0;
   const result = await runImplement({
@@ -164,7 +164,7 @@ test("runImplement marks task failed and breaks after dispatch failure", async (
 });
 
 test("runImplement handles aborted dispatch result as failure", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
+  taskList.create([{ title: "a" }]);
   const result = await runImplement({
     archNotes: "notes",
     subagent: makeSubagent(async () => ({
@@ -179,7 +179,7 @@ test("runImplement handles aborted dispatch result as failure", async () => {
 });
 
 test("runImplement handles timeout dispatch result as failure", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
+  taskList.create([{ title: "a" }]);
   const result = await runImplement({
     archNotes: "notes",
     subagent: makeSubagent(async () => ({
@@ -194,7 +194,7 @@ test("runImplement handles timeout dispatch result as failure", async () => {
 });
 
 test("runImplement does not retry on outcome: failure (semantic, not transient)", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
+  taskList.create([{ title: "a" }]);
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
@@ -214,7 +214,7 @@ test("runImplement does not retry on outcome: failure (semantic, not transient)"
 });
 
 test("runImplement does not retry phantom success (HEAD unchanged)", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
+  taskList.create([{ title: "a" }]);
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
@@ -239,8 +239,8 @@ test("runImplement does not retry phantom success (HEAD unchanged)", async () =>
 
 test("runImplement skips non-pending tasks", async () => {
   taskList.create([
-    { title: "a", description: "aa" },
-    { title: "b", description: "bb" },
+    { title: "a" },
+    { title: "b" },
   ]);
   // Pre-complete task 1.
   taskList.start(1);
@@ -271,7 +271,7 @@ test("runImplement skips non-pending tasks", async () => {
 });
 
 test("runImplement passes correct tools and intent to subagent.dispatch", async () => {
-  taskList.create([{ title: "my-task", description: "do the thing" }]);
+  taskList.create([{ title: "my-task" }]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let capturedSpec: any = null;
   const result = await runImplement({

@@ -150,7 +150,9 @@ export default function (
           }
 
           taskList.clear();
-          const createdTasks = taskList.create(plan.data.tasks);
+          const createdTasks = taskList.create(
+            plan.data.tasks.map((t: { title: string }) => ({ title: t.title })),
+          );
           const planContext = new Map<number, string>(
             createdTasks.map((t, i) => [t.id, plan.data.tasks[i].description]),
           );

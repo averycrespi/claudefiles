@@ -13,7 +13,6 @@ function mkTask(
   return {
     id,
     title,
-    description: `desc ${id}`,
     status,
     ...extra,
   };
