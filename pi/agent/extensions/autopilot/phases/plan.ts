@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { PlanReportSchema, type PlanReport } from "../lib/schemas.ts";
-import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type { Subagent } from "../../_workflow-core/lib/subagent.ts";
 
 const PROMPT_PATH = new URL("../prompts/plan.md", import.meta.url);
 

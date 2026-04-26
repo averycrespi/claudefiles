@@ -5,7 +5,7 @@ import {
   type ReviewerReport,
   type ValidationReport,
 } from "../lib/schemas.ts";
-import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type { Subagent } from "../../_workflow-core/lib/subagent.ts";
 import { runValidation } from "./validate.ts";
 import {
   runReviewers,

@@ -2,11 +2,11 @@ import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { runImplement } from "./implement.ts";
 import { taskList } from "../../task-list/api.ts";
-import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type { Subagent } from "../../_workflow-core/lib/subagent.ts";
 import type {
   DispatchSpec,
   DispatchResult,
-} from "../../workflow-core/lib/types.ts";
+} from "../../_workflow-core/lib/types.ts";
 import type { TSchema } from "@sinclair/typebox";
 
 beforeEach(() => {

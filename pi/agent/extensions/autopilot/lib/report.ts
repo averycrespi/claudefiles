@@ -4,7 +4,7 @@ import {
   formatHeader,
   formatCancelledBanner,
   formatLabelValueRow,
-} from "../../workflow-core/report.ts";
+} from "../../_workflow-core/report.ts";
 
 export type { RunVerifyResult } from "../phases/verify.ts";
 import type { RunVerifyResult } from "../phases/verify.ts";

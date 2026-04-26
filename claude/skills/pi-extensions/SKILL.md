@@ -70,6 +70,8 @@ Two things to know about cross-extension imports:
 - **Singletons share via module caching.** `task-list/api.ts` does `export const taskList = createStore()`. Because Node caches imported modules, every extension that imports `taskList` sees the same store — that's how the autopilot pipeline drives the task list that `task-list` renders.
 - **Cross-extension imports create a load-order dependency.** If `autopilot` imports from `task-list`, it silently requires `task-list` to be installed. Consider whether the coupling is worth it; if the helper is general-purpose, `_shared/` is the better home.
 
+When a library outgrows `_shared/` — its own subtree, types, a curated public API — promote it to a top-level underscore-prefixed directory with its own `api.ts`. `_workflow-core/` is the worked example: no `index.ts` (loader skips it), an `api.ts` that re-exports the stable surface, and nested `lib/`, `render/`, `report/` for internals. Sibling extensions import via `../_workflow-core/api.ts` like any other cross-extension public surface. Use this when the code has its own conceptual identity beyond "shared helpers"; otherwise stay in `_shared/`.
+
 ## Registering tools
 
 ```typescript

@@ -298,9 +298,9 @@ Autopilot does not push, does not open PRs, and does not switch branches. Review
 
 ## Architecture
 
-Autopilot is built on the `workflow-core` shared library. The framework handles slash-command registration (`/autopilot-start` / `/autopilot-cancel`), the single-active-run lock, abort plumbing, widget lifecycle, per-run log directory creation, and the `Log:` line appended to every report. Autopilot owns the pipeline logic: pre-flight checks, phase sequencing, task-list management, and the Tasks / Verify report sections.
+Autopilot is built on the `_workflow-core` shared library. The framework handles slash-command registration (`/autopilot-start` / `/autopilot-cancel`), the single-active-run lock, abort plumbing, widget lifecycle, per-run log directory creation, and the `Log:` line appended to every report. Autopilot owns the pipeline logic: pre-flight checks, phase sequencing, task-list management, and the Tasks / Verify report sections.
 
-For the full framework API reference — `registerWorkflow`, `ctx.subagent`, `ctx.widget`, `ctx.log`, `render.ts` helpers, `report.ts` helpers, `preflight.ts`, and testing patterns — see [`../workflow-core/INTEGRATION.md`](../workflow-core/INTEGRATION.md).
+For the full framework API reference — `registerWorkflow`, `ctx.subagent`, `ctx.widget`, `ctx.log`, `render.ts` helpers, `report.ts` helpers, `preflight.ts`, and testing patterns — see [`../_workflow-core/INTEGRATION.md`](../_workflow-core/INTEGRATION.md).
 
 ## Inspiration
 

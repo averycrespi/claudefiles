@@ -4,7 +4,7 @@ import {
   type Finding,
   type ReviewerReport,
 } from "../lib/schemas.ts";
-import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type { Subagent } from "../../_workflow-core/lib/subagent.ts";
 
 export type ReviewerName = "plan-completeness" | "integration" | "security";
 

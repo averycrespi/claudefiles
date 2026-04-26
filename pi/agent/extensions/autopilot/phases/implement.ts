@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { taskList } from "../../task-list/api.ts";
 import { ImplementReportSchema, type ImplementReport } from "../lib/schemas.ts";
-import type { Subagent } from "../../workflow-core/lib/subagent.ts";
-import type { DispatchResult } from "../../workflow-core/lib/types.ts";
+import type { Subagent } from "../../_workflow-core/lib/subagent.ts";
+import type { DispatchResult } from "../../_workflow-core/lib/types.ts";
 
 const PROMPT_PATH = new URL("../prompts/implement.md", import.meta.url);
 

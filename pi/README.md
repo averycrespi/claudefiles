@@ -22,18 +22,24 @@ Running `make stow-pi` creates symlinks from `pi/agent/` into `~/.pi/agent/`. Ed
 
 TypeScript modules that customize the Pi agent. Type-check with `make typecheck`.
 
-| Extension        | Purpose                                                            |
+| Extension        | Purpose                                                         |
+| ---------------- | --------------------------------------------------------------- |
+| `ask-user`       | Improved TUI for user questions                                 |
+| `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc |
+| `autoralph`      | Autonomous agent-driven Ralph-style loop from a design doc      |
+| `compact-tools`  | Compact rendering for read and bash                             |
+| `format`         | Format files after write and edit                               |
+| `mcp-broker`     | Broker CLI skill + guard for remote operations                  |
+| `provider-usage` | Provider rate-limit quota in the footer                         |
+| `subagents`      | Dynamic subagent loading and dispatch                           |
+| `task-list`      | Session-scoped task tracking with rich inline TUI rendering     |
+| `web-access`     | Web search, fetch, GitHub, and PDF tools                        |
+
+Underscore-prefixed directories are libraries imported by sibling extensions, not extensions themselves — pi's extension loader skips them because they have no `index.ts`.
+
+| Library          | Purpose                                                            |
 | ---------------- | ------------------------------------------------------------------ |
-| `ask-user`       | Improved TUI for user questions                                    |
-| `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc    |
-| `autoralph`      | Autonomous agent-driven Ralph-style loop from a design doc         |
-| `compact-tools`  | Compact rendering for read and bash                                |
-| `format`         | Format files after write and edit                                  |
-| `mcp-broker`     | Broker CLI skill + guard for remote operations                     |
-| `provider-usage` | Provider rate-limit quota in the footer                            |
-| `subagents`      | Dynamic subagent loading and dispatch                              |
-| `task-list`      | Session-scoped task tracking with rich inline TUI rendering        |
-| `web-access`     | Web search, fetch, GitHub, and PDF tools                           |
-| `workflow-core`  | Primitives for structured-state-machine-around-subagents workflows |
+| `_shared`        | Stateless helpers shared across extensions                         |
+| `_workflow-core` | Primitives for structured-state-machine-around-subagents workflows |
 
 See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.

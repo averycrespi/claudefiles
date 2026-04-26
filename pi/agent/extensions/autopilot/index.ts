@@ -6,12 +6,12 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import {
   registerWorkflow,
   type RegisterWorkflowOpts,
-} from "../workflow-core/api.ts";
+} from "../_workflow-core/api.ts";
 import {
   requireFile,
   requireCleanTree,
   captureHead,
-} from "../workflow-core/preflight.ts";
+} from "../_workflow-core/preflight.ts";
 import { setupAutopilotWidget } from "./lib/widget-body.ts";
 import { formatAutopilotReport } from "./lib/report.ts";
 import { runPlan } from "./phases/plan.ts";
@@ -99,7 +99,7 @@ export default function (
         // Copy the design doc into the run dir so the run is self-contained.
         await copyFile(designPath, join(ctx.workflowDir, "design.md"));
 
-        // Per-task SHA capture (autopilot-specific; lives here, not in workflow-core).
+        // Per-task SHA capture (autopilot-specific; lives here, not in _workflow-core).
         const commitShas: Record<number, string> = {};
         const captured = new Set<number>();
         const unsub = taskList.subscribe((s) => {

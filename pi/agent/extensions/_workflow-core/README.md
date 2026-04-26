@@ -1,6 +1,6 @@
 # workflow-core
 
-Pi extension that provides primitives for building structured-state-machine-around-subagents workflows. Sibling extensions (autopilot, autoralph, and others) consume it as a library.
+Library that provides primitives for building structured-state-machine-around-subagents workflows. Sibling extensions (autopilot, autoralph, and others) consume it directly via relative imports. The directory is named `_workflow-core/` (underscore-prefixed) so pi's extension loader skips it — it has no `index.ts` because it registers nothing of its own.
 
 ## What it gives you
 
@@ -16,7 +16,7 @@ Plus opt-in helpers in `render.ts` (clock, breadcrumb, counter, subagents), `rep
 ## Hello world
 
 ```ts
-import { registerWorkflow } from "../workflow-core/api.ts";
+import { registerWorkflow } from "../_workflow-core/api.ts";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi) {

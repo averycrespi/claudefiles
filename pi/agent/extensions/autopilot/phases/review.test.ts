@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runReviewers, synthesizeFindings } from "./review.ts";
-import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type { Subagent } from "../../_workflow-core/lib/subagent.ts";
 import type {
   DispatchSpec,
   DispatchResult,
-} from "../../workflow-core/lib/types.ts";
+} from "../../_workflow-core/lib/types.ts";
 import type { TSchema } from "@sinclair/typebox";
 import type { Finding } from "../lib/schemas.ts";
 
