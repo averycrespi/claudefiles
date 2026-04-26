@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Task } from "../../task-list/state.ts";
 import type { Finding, ValidationReport } from "./schemas.ts";
-import { formatReport, type RunVerifyResult } from "./report.ts";
+import { formatAutopilotReport, type RunVerifyResult } from "./report.ts";
 
 function mkTask(
   id: number,
@@ -53,14 +53,14 @@ test("full success report matches design layout", () => {
     fixed: ["blocker fixed", "important fixed"],
     skippedReviewers: [],
   });
-  const text = formatReport({
+  const text = formatAutopilotReport({
     designPath: ".designs/2026-04-12-rate-limiter.md",
     branchName: "workflow",
     commitsAhead: 2,
     tasks,
     verify,
     commitShas: { 1: "abc1234aaaa", 2: "def5678bbbb" },
-  });
+  }).join("\n");
 
   const lines = text.split("\n");
   assert.equal(lines[0], "━━━ Autopilot Report ━━━");
@@ -93,14 +93,14 @@ test("implement failure marks N/T and uses pending glyph for remaining", () => {
     mkTask(3, "Third task", "pending"),
     mkTask(4, "Fourth task", "pending"),
   ];
-  const text = formatReport({
+  const text = formatAutopilotReport({
     designPath: "foo.md",
     branchName: "br",
     commitsAhead: 1,
     tasks,
     verify: null,
     commitShas: { 1: "aaaaaaabbbb" },
-  });
+  }).join("\n");
 
   assert.ok(text.includes("Tasks (1/4):"), "completed/total count");
   assert.ok(text.includes("✔ 1. First task"));
@@ -130,14 +130,14 @@ test("verify partial lists findings as known issues", () => {
     knownIssues: [finding],
     skippedReviewers: ["security"],
   });
-  const text = formatReport({
+  const text = formatAutopilotReport({
     designPath: "d.md",
     branchName: "workflow",
     commitsAhead: 1,
     tasks,
     verify,
     commitShas: { 1: "abcdefg1234" },
-  });
+  }).join("\n");
 
   assert.ok(text.includes("Known issues:      1 suggestion"), "count line");
   assert.ok(
@@ -156,7 +156,7 @@ test("cancelled run shows cancelled banner and replaces verify with cancelled re
     mkTask(2, "Task two", "in_progress"),
     mkTask(3, "Task three", "pending"),
   ];
-  const text = formatReport({
+  const text = formatAutopilotReport({
     designPath: "design.md",
     branchName: "feat/foo",
     commitsAhead: 1,
@@ -164,7 +164,7 @@ test("cancelled run shows cancelled banner and replaces verify with cancelled re
     verify: null,
     commitShas: { 1: "abc1234" },
     cancelled: { elapsedMs: 6 * 60_000 + 18_000 },
-  });
+  }).join("\n");
   assert.ok(
     text.includes("Cancelled by user at 06:18"),
     "cancelled banner with elapsed time",
@@ -188,14 +188,14 @@ test("validation still failing is flagged as known issue", () => {
     validationReport: failingValidation,
     knownIssues: ["test failed (bun test): boom line one"],
   });
-  const text = formatReport({
+  const text = formatAutopilotReport({
     designPath: "d.md",
     branchName: "b",
     commitsAhead: 1,
     tasks,
     verify,
     commitShas: { 1: "12345678" },
-  });
+  }).join("\n");
 
   assert.ok(
     text.includes("Automated checks:  ✗ tests  ✔ lint  ⊘ typecheck"),

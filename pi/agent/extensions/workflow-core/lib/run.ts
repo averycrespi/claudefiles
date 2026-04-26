@@ -76,14 +76,12 @@ export function registerWorkflow<Args, Pre>(
       const startedAt = Date.now();
       active = { controller, startedAt };
 
+      const cwd = testOpts.cwd ?? process.cwd();
+
       let preflightData: any = {};
       if (def.preflight) {
         try {
-          const pre = await def.preflight(
-            process.cwd(),
-            parsed.args,
-            controller.signal,
-          );
+          const pre = await def.preflight(cwd, parsed.args, controller.signal);
           if (!pre.ok) {
             ctx.ui.notify(`/${def.name}-start: ${pre.error}`, "error");
             active = null;
@@ -102,7 +100,6 @@ export function registerWorkflow<Args, Pre>(
 
       const logBaseDir =
         testOpts.logBaseDir ?? join(homedir(), ".pi", "workflow-runs");
-      const cwd = testOpts.cwd ?? process.cwd();
       const slug = def.runSlug?.(parsed.args, preflightData) ?? null;
 
       const pipeline = async () => {

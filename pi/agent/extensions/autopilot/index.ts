@@ -1,51 +1,36 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { copyFile, readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { taskList } from "../task-list/api.ts";
-import { formatReport } from "./lib/report.ts";
-import { createStatusWidget, type StatusWidget } from "./lib/status-widget.ts";
-import { createSubagent } from "../workflow-core/lib/subagent.ts";
-import { runImplement } from "./phases/implement.ts";
+import {
+  registerWorkflow,
+  type RegisterWorkflowOpts,
+} from "../workflow-core/api.ts";
+import {
+  requireFile,
+  requireCleanTree,
+  captureHead,
+} from "../workflow-core/preflight.ts";
+import { setupAutopilotWidget } from "./lib/widget-body.ts";
+import { formatAutopilotReport } from "./lib/report.ts";
 import { runPlan } from "./phases/plan.ts";
-import { runVerify, type RunVerifyResult } from "./phases/verify.ts";
-import { preflight } from "./preflight.ts";
+import { runImplement } from "./phases/implement.ts";
+import { runVerify } from "./phases/verify.ts";
+import { taskList } from "../task-list/api.ts";
 
 const execFileP = promisify(execFile);
 
-interface ActiveRun {
-  controller: AbortController;
-  startedAt: number;
-}
-let activeRun: ActiveRun | null = null;
-
-function makeGetHead(cwd: string): () => Promise<string> {
-  return async () => {
-    const { stdout } = await execFileP("git", ["rev-parse", "HEAD"], { cwd });
-    return stdout.trim();
-  };
+async function getHead(cwd: string): Promise<string> {
+  const { stdout } = await execFileP("git", ["rev-parse", "HEAD"], { cwd });
+  return stdout.trim();
 }
 
-function makeCommitTracker(getHead: () => Promise<string>): {
-  map: Record<number, string>;
-  unsubscribe: () => void;
-} {
-  const map: Record<number, string> = {};
-  const captured = new Set<number>();
-  const unsubscribe = taskList.subscribe((state) => {
-    for (const t of state.tasks) {
-      if (t.status === "completed" && !captured.has(t.id)) {
-        captured.add(t.id);
-        getHead()
-          .then((sha) => {
-            map[t.id] = sha;
-          })
-          .catch(() => {
-            /* ignore */
-          });
-      }
-    }
+async function diffSince(cwd: string, baseSha: string): Promise<string> {
+  const { stdout } = await execFileP("git", ["diff", `${baseSha}...HEAD`], {
+    cwd,
   });
-  return { map, unsubscribe };
+  return stdout;
 }
 
 async function resolveBranch(cwd: string): Promise<string> {
@@ -75,263 +60,141 @@ async function resolveCommitsAhead(
   }
 }
 
-interface EmitReportArgs {
-  pi: ExtensionAPI;
-  designPath: string;
-  cwd: string;
-  baseSha: string;
-  verify: RunVerifyResult | null;
-  commitShas: Record<number, string>;
-  cancelled?: { elapsedMs: number };
+function summarize(tasks: { status: string; title: string }[]): string {
+  return tasks.map((t) => `[${t.status}] ${t.title}`).join("\n");
 }
 
-async function emitReport(args: EmitReportArgs): Promise<void> {
-  const [branchName, commitsAhead] = await Promise.all([
-    resolveBranch(args.cwd),
-    resolveCommitsAhead(args.cwd, args.baseSha),
-  ]);
-  const text = formatReport({
-    designPath: args.designPath,
-    branchName,
-    commitsAhead,
-    tasks: taskList.all(),
-    verify: args.verify,
-    commitShas: args.commitShas,
-    cancelled: args.cancelled,
-  });
-  args.pi.sendMessage({
-    customType: "autopilot-report",
-    content: [{ type: "text", text }],
-    display: true,
-    details: {},
-  });
-}
+export default function (
+  pi: ExtensionAPI,
+  testOpts: RegisterWorkflowOpts = {},
+) {
+  registerWorkflow(
+    pi,
+    {
+      name: "autopilot",
+      description:
+        "Run the autonomous plan → implement → verify pipeline on a design document.",
+      parseArgs: (raw) => {
+        const path = raw.trim();
+        if (!path) return { ok: false, error: "requires a design file path" };
+        return { ok: true, args: { designPath: path } };
+      },
+      preflight: async (cwd, args) => {
+        const f = await requireFile(args.designPath);
+        if (!f.ok) return f;
+        const text = await readFile(args.designPath, "utf8");
+        if (text.trim().length === 0)
+          return { ok: false, error: "design file is empty" };
+        const c = await requireCleanTree(cwd);
+        if (!c.ok) return c;
+        const baseSha = await captureHead(cwd);
+        return { ok: true, data: { baseSha } };
+      },
+      runSlug: (args) => basename(args.designPath, ".md"),
+      run: async (ctx) => {
+        const { designPath } = ctx.args as { designPath: string };
+        const { baseSha } = ctx.preflight as { baseSha: string };
+        const widget = setupAutopilotWidget(ctx.widget);
 
-export default function (pi: ExtensionAPI) {
-  pi.registerCommand("autopilot-cancel", {
-    description: "Cancel the currently running /autopilot pipeline.",
-    handler: async (_args, ctx) => {
-      if (!activeRun) {
-        ctx.ui.notify("/autopilot-cancel: no autopilot run is active", "info");
-        return;
-      }
-      ctx.ui.notify(
-        "/autopilot-cancel: cancelling — will stop after current step",
-        "warning",
-      );
-      activeRun.controller.abort();
-    },
-  });
+        // Copy the design doc into the run dir so the run is self-contained.
+        await copyFile(designPath, join(ctx.workflowDir, "design.md"));
 
-  pi.registerCommand("autopilot", {
-    description:
-      "Run the autonomous plan → implement → verify pipeline on a design document.",
-    handler: async (args, ctx) => {
-      await ctx.waitForIdle();
-
-      const designPath = args.trim();
-      if (!designPath) {
-        ctx.ui.notify(
-          "/autopilot requires a design file path (usage: /autopilot <path>)",
-          "error",
-        );
-        return;
-      }
-
-      if (activeRun) {
-        ctx.ui.notify(
-          "/autopilot: a run is already active — use /autopilot-cancel to stop it first",
-          "error",
-        );
-        return;
-      }
-
-      const pre = await preflight({ designPath, cwd: process.cwd() });
-      if (!pre.ok) {
-        ctx.ui.notify(`/autopilot: ${pre.reason}`, "error");
-        return;
-      }
-
-      const cwd = process.cwd();
-      const getHead = makeGetHead(cwd);
-      const controller = new AbortController();
-      const startedAt = Date.now();
-      activeRun = { controller, startedAt };
-
-      const widget = createStatusWidget({
-        ui: ctx.hasUI ? ctx.ui : undefined,
-        theme: ctx.hasUI ? ctx.ui.theme : undefined,
-      });
-      const widgetHandles = new Map<
-        number,
-        ReturnType<StatusWidget["subagent"]>
-      >();
-      const subagent = createSubagent({
-        cwd,
-        signal: controller.signal,
-        onSubagentLifecycle: (event) => {
-          if (event.kind === "start") {
-            const handle = widget.subagent(event.spec.intent);
-            widgetHandles.set(event.id, handle);
-          } else {
-            widgetHandles.get(event.id)?.finish();
-            widgetHandles.delete(event.id);
+        // Per-task SHA capture (autopilot-specific; lives here, not in workflow-core).
+        const commitShas: Record<number, string> = {};
+        const captured = new Set<number>();
+        const unsub = taskList.subscribe((s) => {
+          for (const t of s.tasks) {
+            if (t.status === "completed" && !captured.has(t.id)) {
+              captured.add(t.id);
+              getHead(ctx.cwd)
+                .then((sha) => {
+                  commitShas[t.id] = sha;
+                })
+                .catch(() => {
+                  /* ignore */
+                });
+            }
           }
-        },
-        onSubagentEvent: (id, event) => {
-          widgetHandles.get(id)?.onEvent(event);
-        },
-      });
-      const commitTracker = makeCommitTracker(getHead);
+        });
 
-      const isCancelled = () => controller.signal.aborted;
-      const cancelledInfo = (): { elapsedMs: number } => ({
-        elapsedMs: Date.now() - startedAt,
-      });
-
-      ctx.ui.notify(
-        `/autopilot: started (base ${pre.baseSha.slice(0, 7)})`,
-        "info",
-      );
-
-      // Detach the pipeline so the command handler returns immediately.
-      // Pi's interactive loop awaits each command handler before reading the
-      // next user input — if we awaited the pipeline here, `/autopilot-cancel`
-      // could never be dispatched.
-      const pipeline = async () => {
-        try {
-          widget.setStage("plan");
-          const plan = await runPlan({
+        async function buildReport(
+          verify: Awaited<ReturnType<typeof runVerify>> | null,
+          cancelled?: { elapsedMs: number },
+        ) {
+          const [branchName, commitsAhead] = await Promise.all([
+            resolveBranch(ctx.cwd),
+            resolveCommitsAhead(ctx.cwd, baseSha),
+          ]);
+          return formatAutopilotReport({
             designPath,
-            subagent,
+            branchName,
+            commitsAhead,
+            tasks: taskList.all(),
+            commitShas,
+            verify,
+            cancelled,
           });
+        }
 
-          if (isCancelled()) {
-            await emitReport({
-              pi,
-              designPath,
-              cwd,
-              baseSha: pre.baseSha,
-              verify: null,
-              commitShas: {},
-              cancelled: cancelledInfo(),
-            });
-            return;
-          }
+        try {
+          // --- Plan ---
+          widget.setStage("plan");
+          const plan = await runPlan({ designPath, subagent: ctx.subagent });
           if (!plan.ok) {
-            ctx.ui.notify(`/autopilot: plan failed — ${plan.error}`, "error");
-            await emitReport({
-              pi,
-              designPath,
-              cwd,
-              baseSha: pre.baseSha,
-              verify: null,
-              commitShas: {},
-            });
-            return;
+            return buildReport(
+              null,
+              ctx.signal.aborted
+                ? { elapsedMs: ctx.widget.elapsedMs() }
+                : undefined,
+            );
           }
 
           taskList.clear();
           taskList.create(plan.data.tasks);
+          ctx.log("plan-tasks", {
+            count: plan.data.tasks.length,
+            titles: plan.data.tasks.map((t: { title: string }) => t.title),
+          });
 
+          // --- Implement ---
           widget.setStage("implement");
-          const implementResult = await runImplement({
+          const impl = await runImplement({
             archNotes: plan.data.architecture_notes,
-            subagent,
-            getHead,
+            subagent: ctx.subagent,
+            getHead: () => getHead(ctx.cwd),
+            log: ctx.log,
           });
-
-          if (isCancelled()) {
-            await emitReport({
-              pi,
-              designPath,
-              cwd,
-              baseSha: pre.baseSha,
-              verify: null,
-              commitShas: commitTracker.map,
-              cancelled: cancelledInfo(),
-            });
-            return;
-          }
-
-          if (!implementResult.ok) {
-            ctx.ui.notify(
-              `/autopilot: implement halted at task ${implementResult.haltedAtTaskId ?? "?"}`,
-              "error",
+          if (!impl.ok || ctx.signal.aborted) {
+            return buildReport(
+              null,
+              ctx.signal.aborted
+                ? { elapsedMs: ctx.widget.elapsedMs() }
+                : undefined,
             );
-            await emitReport({
-              pi,
-              designPath,
-              cwd,
-              baseSha: pre.baseSha,
-              verify: null,
-              commitShas: commitTracker.map,
-            });
-            return;
           }
 
+          // --- Verify ---
           widget.setStage("verify");
-          const taskListSummary = taskList
-            .all()
-            .map((t) => `[${t.status}] ${t.title}`)
-            .join("\n");
-          const verifyResult = await runVerify({
-            subagent,
-            getDiff: async () => {
-              const { stdout } = await execFileP(
-                "git",
-                ["diff", `${pre.baseSha}...HEAD`],
-                { cwd },
-              );
-              return stdout;
-            },
+          const verify = await runVerify({
+            subagent: ctx.subagent,
+            getDiff: () => diffSince(ctx.cwd, baseSha),
             archNotes: plan.data.architecture_notes,
-            taskListSummary,
+            taskListSummary: summarize(taskList.all()),
+            log: ctx.log,
           });
 
-          if (isCancelled()) {
-            await emitReport({
-              pi,
-              designPath,
-              cwd,
-              baseSha: pre.baseSha,
-              verify: verifyResult,
-              commitShas: commitTracker.map,
-              cancelled: cancelledInfo(),
-            });
-            return;
-          }
-
-          await emitReport({
-            pi,
-            designPath,
-            cwd,
-            baseSha: pre.baseSha,
-            verify: verifyResult,
-            commitShas: commitTracker.map,
-          });
+          return buildReport(
+            verify,
+            ctx.signal.aborted
+              ? { elapsedMs: ctx.widget.elapsedMs() }
+              : undefined,
+          );
         } finally {
+          unsub();
           widget.dispose();
-          commitTracker.unsubscribe();
-          activeRun = null;
         }
-      };
-
-      // In interactive mode we detach the pipeline so Pi's input loop unblocks
-      // and `/autopilot-cancel` can be accepted. In headless / print mode there
-      // is no input loop and no way to cancel — if we detached, Pi would exit
-      // as soon as the handler returned, killing the pipeline. Await instead.
-      const run = pipeline().catch((err) => {
-        ctx.ui.notify(
-          `/autopilot: pipeline crashed — ${err instanceof Error ? err.message : String(err)}`,
-          "error",
-        );
-      });
-      if (!ctx.hasUI) {
-        await run;
-      } else {
-        void run;
-      }
+      },
     },
-  });
+    testOpts,
+  );
 }

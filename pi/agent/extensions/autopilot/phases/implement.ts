@@ -29,6 +29,8 @@ export interface RunImplementArgs {
   getHead: () => Promise<string>;
   /** Run-level abort signal; prevents retry after /autopilot-cancel. */
   signal?: AbortSignal;
+  /** Optional structured logger; receives per-task start/end events. */
+  log?: (type: string, payload?: Record<string, unknown>) => void;
 }
 
 export interface RunImplementResult {
@@ -59,6 +61,7 @@ export async function runImplement(
       .replace("{TASK_DESCRIPTION}", task.description);
 
     const startedAt = Date.now();
+    args.log?.("implement-task-start", { id: task.id, title: task.title });
     const heartbeat = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
       try {
@@ -111,6 +114,12 @@ export async function runImplement(
     }
 
     taskList.complete(task.id, dispatchResult.data.summary);
+    args.log?.("implement-task-end", {
+      id: task.id,
+      title: task.title,
+      durationMs: Date.now() - startedAt,
+      sha: headAfter,
+    });
   }
 
   return { ok: true };

@@ -34,6 +34,8 @@ export interface RunVerifyArgs {
   taskListSummary: string;
   /** Max fixer-review rounds. Default 2. */
   maxFixRounds?: number;
+  /** Optional structured logger; receives verify-phase events. */
+  log?: (type: string, payload?: Record<string, unknown>) => void;
 }
 
 export interface RunVerifyResult {
@@ -123,6 +125,11 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
     initialValidationKeys.add(validationKey(s));
     knownIssues.push(s);
   }
+  args.log?.("verify-validation", {
+    test: initialValidation.report?.test.status ?? "skipped",
+    lint: initialValidation.report?.lint.status ?? "skipped",
+    typecheck: initialValidation.report?.typecheck.status ?? "skipped",
+  });
 
   // --- Step 2: initial reviewers + synthesize ----------------------
   const initialDiff = await args.getDiff();
@@ -137,6 +144,10 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
   for (const s of initialSynth.knownIssues) {
     knownIssues.push(s);
   }
+  args.log?.("verify-findings-synth", {
+    auto: initialSynth.auto.length,
+    knownIssues: initialSynth.knownIssues.length,
+  });
 
   // --- Step 3: early exit when no auto-fixable findings ------------
   let auto: Finding[] = initialSynth.auto;
@@ -182,6 +193,10 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
     }
 
     fixed.push(...fixerResult.data.fixed);
+    args.log?.("verify-fix-round", {
+      round: round + 1,
+      fixed: fixerResult.data.fixed,
+    });
 
     // 4c. Re-run validation to catch regressions. Single-shot: we
     // only want a regression signal here, not another nested fix loop.
