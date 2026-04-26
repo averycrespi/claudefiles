@@ -27,6 +27,12 @@ export interface RunImplementArgs {
    * git repo.
    */
   getHead: () => Promise<string>;
+  /**
+   * Maps task id → plan-step description text. The only source of
+   * {TASK_DESCRIPTION} content for the implement prompt template.
+   * Missing entries are a workflow-internal contract violation and will throw.
+   */
+  planContext: Map<number, string>;
   /** Run-level abort signal; prevents retry after /autopilot-cancel. */
   signal?: AbortSignal;
   /** Optional structured logger; receives per-task start/end events. */
@@ -55,10 +61,16 @@ export async function runImplement(
     taskList.start(task.id);
     taskList.setActivity(task.id, "dispatching subagent…");
 
+    const taskDescription = args.planContext.get(task.id);
+    if (taskDescription === undefined) {
+      throw new Error(
+        `planContext missing entry for task id ${task.id} ("${task.title}") — workflow-internal contract violation`,
+      );
+    }
     const prompt = template
       .replace("{ARCHITECTURE_NOTES}", args.archNotes)
       .replace("{TASK_TITLE}", task.title)
-      .replace("{TASK_DESCRIPTION}", task.description);
+      .replace("{TASK_DESCRIPTION}", taskDescription);
 
     const startedAt = Date.now();
     args.log?.("implement-task-start", { id: task.id, title: task.title });

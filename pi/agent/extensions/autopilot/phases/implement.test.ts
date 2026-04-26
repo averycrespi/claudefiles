@@ -58,6 +58,7 @@ test("runImplement marks task completed on success + real commit", async () => {
       raw: JSON.stringify(successData),
     })),
     getHead: makeHeadSeq(["sha0", "sha1"]),
+    planContext: new Map([[1, "aa"]]),
   });
   assert.equal(result.ok, true);
   const t = taskList.get(1);
@@ -78,6 +79,10 @@ test("runImplement marks task failed and breaks on failure report", async () => 
       return { ok: true, data: failureData, raw: JSON.stringify(failureData) };
     }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([
+      [1, "aa"],
+      [2, "bb"],
+    ]),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
@@ -98,6 +103,7 @@ test("runImplement treats phantom success (HEAD unchanged) as failure", async ()
       raw: JSON.stringify(successData),
     })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([[1, "aa"]]),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
@@ -117,6 +123,7 @@ test("runImplement treats schema/parse dispatch failure as failure", async () =>
       raw: "not json at all",
     })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([[1, "aa"]]),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
@@ -141,6 +148,10 @@ test("runImplement marks task failed and breaks after dispatch failure", async (
       };
     }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([
+      [1, "aa"],
+      [2, "bb"],
+    ]),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
@@ -162,6 +173,7 @@ test("runImplement handles aborted dispatch result as failure", async () => {
       error: "aborted",
     })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([[1, "aa"]]),
   });
   assert.equal(result.ok, false);
 });
@@ -176,6 +188,7 @@ test("runImplement handles timeout dispatch result as failure", async () => {
       error: "timed out",
     })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([[1, "aa"]]),
   });
   assert.equal(result.ok, false);
 });
@@ -194,6 +207,7 @@ test("runImplement does not retry on outcome: failure (semantic, not transient)"
       };
     }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([[1, "aa"]]),
   });
   assert.equal(result.ok, false);
   assert.equal(dispatchCount, 1, "semantic failure is not retried");
@@ -213,6 +227,7 @@ test("runImplement does not retry phantom success (HEAD unchanged)", async () =>
       };
     }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
+    planContext: new Map([[1, "aa"]]),
   });
   assert.equal(result.ok, false);
   assert.equal(
@@ -243,6 +258,10 @@ test("runImplement skips non-pending tasks", async () => {
       };
     }),
     getHead: makeHeadSeq(["sha0", "sha1"]),
+    planContext: new Map([
+      [1, "aa"],
+      [2, "bb"],
+    ]),
   });
   assert.equal(result.ok, true);
   assert.equal(dispatchCount, 1, "only pending task dispatched");
@@ -262,6 +281,7 @@ test("runImplement passes correct tools and intent to subagent.dispatch", async 
       return { ok: true, data: successData, raw: JSON.stringify(successData) };
     }),
     getHead: makeHeadSeq(["sha0", "sha1"]),
+    planContext: new Map([[1, "do the thing"]]),
   });
   assert.equal(result.ok, true);
   assert.ok(capturedSpec);

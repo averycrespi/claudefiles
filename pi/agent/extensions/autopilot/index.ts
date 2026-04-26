@@ -150,7 +150,10 @@ export default function (
           }
 
           taskList.clear();
-          taskList.create(plan.data.tasks);
+          const createdTasks = taskList.create(plan.data.tasks);
+          const planContext = new Map<number, string>(
+            createdTasks.map((t, i) => [t.id, plan.data.tasks[i].description]),
+          );
           ctx.log("plan-tasks", {
             count: plan.data.tasks.length,
             titles: plan.data.tasks.map((t: { title: string }) => t.title),
@@ -162,6 +165,7 @@ export default function (
             archNotes: plan.data.architecture_notes,
             subagent: ctx.subagent,
             getHead: () => getHead(ctx.cwd),
+            planContext,
             log: ctx.log,
           });
           if (!impl.ok || ctx.signal.aborted) {
