@@ -13,6 +13,7 @@ export interface Widget {
   setTitle(content: string | (() => string)): void;
   setBody(content: string[] | (() => string[])): void;
   setFooter(content: string | (() => string)): void;
+  invalidate(): void;
   readonly subagents: ReadonlyArray<SubagentSlot>;
   elapsedMs(): number;
   readonly theme?: WidgetTheme;
@@ -77,6 +78,9 @@ export function createWidget(opts: CreateWidgetOpts): Widget {
     },
     setFooter(c) {
       footer = c;
+      render();
+    },
+    invalidate() {
       render();
     },
     get subagents() {

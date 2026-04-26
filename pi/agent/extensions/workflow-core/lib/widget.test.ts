@@ -77,6 +77,38 @@ describe("Widget — subagent slot lifecycle", () => {
   });
 });
 
+describe("Widget — invalidate", () => {
+  test("invalidate re-evaluates function-form setBody exactly once outside the tick", () => {
+    const ui = fakeUi();
+    let evalCount = 0;
+    const w = createWidget({ key: "test", ui, now: () => 0, tickMs: 10_000 });
+    w.setBody(() => {
+      evalCount++;
+      return [`eval=${evalCount}`];
+    });
+    // setBody itself calls render once (evalCount === 1); reset baseline
+    const countAfterSet = evalCount;
+    const callsAfterSet = ui.calls.length;
+
+    w.invalidate();
+
+    assert.equal(
+      evalCount,
+      countAfterSet + 1,
+      "body function evaluated exactly once more",
+    );
+    assert.equal(
+      ui.calls.length,
+      callsAfterSet + 1,
+      "exactly one additional render",
+    );
+    assert.deepEqual(ui.calls[ui.calls.length - 1].lines, [
+      `eval=${evalCount}`,
+    ]);
+    w.dispose();
+  });
+});
+
 describe("Widget — dispose", () => {
   test("dispose stops the tick and clears the widget", () => {
     const ui = fakeUi();

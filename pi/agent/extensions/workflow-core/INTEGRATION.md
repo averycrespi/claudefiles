@@ -24,6 +24,8 @@ Typed dispatch with retries. See [`api.ts`](./api.ts) for the full type signatur
 
 `ctx.widget.setTitle / setBody / setFooter` accept `string | () => string` (or `string[]`). Function form is re-evaluated on tick + on subagent events. Live data: `widget.subagents`, `widget.elapsedMs()`, `widget.theme`.
 
+`widget.invalidate()` triggers a single immediate re-render outside the normal tick cadence. Use it when your workflow's underlying state mutates (e.g. a task list changes) and you want the widget to reflect the new state right away rather than waiting for the next tick. It calls the same internal `render()` path as `setTitle`/`setBody`/`setFooter`, so function-form setters are re-evaluated exactly once.
+
 ### Report
 
 The framework appends `Log: <path>` after the workflow's lines (opt-out via `emitLogPath: false`). Workflow owns its banners on cancel/failure — use `formatCancelledBanner` / `formatFailureBanner` from `report.ts`.
