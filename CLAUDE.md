@@ -48,6 +48,12 @@ Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This 
 - **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)
 - **Reference skills** (provide information/context): use nouns (e.g., `playwright-cli`, `tdd`)
 
+## Pi Extension API
+
+- **`setWidget` cast pattern.** The typed signature lives at `pi.ui.setWidget` (on `ExtensionUIContext`), but the in-repo convention — used by both `_workflow-core/lib/run.ts` and `task-list/index.ts` — is to call `(pi as any).setWidget(...)` at the top level, gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this pattern when adding sticky widgets in new extensions.
+- **Agent tool schema naming.** Typebox schemas exposed to the agent use snake_case (e.g. `failure_reason`); internal task/state fields stay camelCase (`failureReason`). Map between them in the tool's `execute` body.
+- **Atomic agent-tool mutations.** When an agent tool mutates shared state (e.g. `task_list_set`'s `reconcile`), collect ALL validation errors before rejecting, apply changes atomically with a single `notify()` on success, and return errors as tool result text (not `throw`) so the agent can read and recover from them.
+
 ## Modifying This Repository
 
 - Edit Claude Code files in `claude/` directory
