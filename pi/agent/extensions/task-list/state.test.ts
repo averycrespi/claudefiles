@@ -131,16 +131,13 @@ test("in_progress to failed with reason sets completedAt", () => {
   assert.equal(typeof t.completedAt, "number");
 });
 
-test("failed to pending is valid (retry path)", () => {
+test("failed to in_progress is valid (retry path via start)", () => {
+  // Note: failed->pending is allowed by VALID_TRANSITIONS but has no direct
+  // public mutator (start() goes to in_progress). The failed->pending edge
+  // is exercised through reconcile() and via the create() auto-clear path.
   const store = createStore();
   store.create([{ title: "a" }]);
   store.fail(1, "blocked");
-  // Using start would skip pending; we need a way to reset. Emulate via start from failed? Spec says failed->pending is valid.
-  // The API does not have an explicit "reset" mutator; the only way to land in pending from failed is... we need some method.
-  // Re-read spec: VALID_TRANSITIONS should allow failed->pending. The store's start() goes to in_progress.
-  // The test verifies the transition rule via VALID_TRANSITIONS. Since there's no public reset mutator in the listed API,
-  // this transition is exercised by the create() auto-clear path (which replaces tasks entirely).
-  // Instead, verify failed->in_progress directly (start from failed) per spec.
   store.start(1);
   assert.equal(store.get(1)?.status, "in_progress");
 });
@@ -211,6 +208,7 @@ test("title is immutable after creation", () => {
     "create",
     "fail",
     "get",
+    "reconcile",
     "setActivity",
     "start",
     "subscribe",
@@ -305,4 +303,312 @@ test("all() reflects current tasks", () => {
   assert.equal(all.length, 2);
   assert.equal(all[0].id, 1);
   assert.equal(all[1].id, 2);
+});
+
+// ── reconcile ─────────────────────────────────────────────────────────
+
+test("reconcile: empty payload against empty store returns ok with empty list", () => {
+  const store = createStore();
+  const result = store.reconcile([]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  assert.deepEqual(result.tasks, []);
+});
+
+test("reconcile: empty payload against all-terminal store drops tasks and returns ok", () => {
+  const store = createStore();
+  store.create([{ title: "a" }, { title: "b" }]);
+  store.start(1);
+  store.complete(1, "done");
+  store.start(2);
+  store.fail(2, "broke");
+  const result = store.reconcile([]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  assert.deepEqual(result.tasks, []);
+  assert.equal(store.all().length, 0);
+});
+
+test("reconcile: empty payload against live tasks returns error mentioning each live task", () => {
+  const store = createStore();
+  store.create([{ title: "Alpha" }, { title: "Beta" }]);
+  store.start(1);
+  // task 1 is in_progress, task 2 is pending — both are live
+  const result = store.reconcile([]);
+  assert.ok(!result.ok);
+  if (result.ok) throw new Error("unreachable");
+  assert.ok(result.errors.length > 0);
+  const combined = result.errors.join(" ");
+  assert.ok(combined.includes("1"), `mentions id 1: ${combined}`);
+  assert.ok(combined.includes("Alpha"), `mentions title Alpha: ${combined}`);
+  assert.ok(combined.includes("2"), `mentions id 2: ${combined}`);
+  assert.ok(combined.includes("Beta"), `mentions title Beta: ${combined}`);
+  // State must be unchanged
+  assert.equal(store.all().length, 2);
+});
+
+test("reconcile: in_progress → completed with summary stamps completedAt", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  store.start(1);
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "completed", summary: "All done" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  const t = store.get(1)!;
+  assert.equal(t.status, "completed");
+  assert.equal(t.summary, "All done");
+  assert.equal(typeof t.completedAt, "number");
+});
+
+test("reconcile: completed → pending is rejected (sticky completion)", () => {
+  const store = createStore();
+  store.create([{ title: "done task" }]);
+  store.start(1);
+  store.complete(1, "done");
+  const result = store.reconcile([
+    { id: 1, title: "done task", status: "pending" },
+  ]);
+  assert.ok(!result.ok);
+  if (result.ok) throw new Error("unreachable");
+  const combined = result.errors.join(" ");
+  assert.ok(
+    combined.includes("completed") && combined.includes("pending"),
+    `error mentions completed→pending: ${combined}`,
+  );
+  // State must be unchanged
+  assert.equal(store.get(1)?.status, "completed");
+});
+
+test("reconcile: multiple errors in one call are all surfaced", () => {
+  const store = createStore();
+  store.create([{ title: "Alpha" }, { title: "Beta" }, { title: "Gamma" }]);
+  store.start(1);
+  store.complete(1, "done");
+  store.start(2);
+  // Task 3 is pending (live omission)
+  // Error 1: completed → pending is invalid for task 1
+  // Error 2: task 2 status "completed" but no summary
+  // Error 3: task 3 omitted and it's live (pending)
+  const result = store.reconcile([
+    { id: 1, title: "Alpha", status: "pending" }, // invalid transition
+    { id: 2, title: "Beta", status: "completed" }, // missing summary
+    // task 3 omitted — live
+  ]);
+  assert.ok(!result.ok);
+  if (result.ok) throw new Error("unreachable");
+  assert.ok(
+    result.errors.length >= 3,
+    `expected at least 3 errors, got ${result.errors.length}: ${JSON.stringify(result.errors)}`,
+  );
+});
+
+test("reconcile: new tasks without id are appended with ascending auto-ids after existing", () => {
+  const store = createStore();
+  store.create([{ title: "existing" }]);
+  store.start(1);
+  store.complete(1, "done");
+  const result = store.reconcile([
+    { id: 1, title: "existing", status: "completed", summary: "done" },
+    { title: "new task 1" },
+    { title: "new task 2" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  assert.equal(result.tasks.length, 3);
+  const newTasks = result.tasks.filter((t) => t.title !== "existing");
+  assert.equal(newTasks.length, 2);
+  // New tasks must have ids > max existing id (1), ascending
+  assert.equal(newTasks[0].id, 2);
+  assert.equal(newTasks[1].id, 3);
+  assert.equal(newTasks[0].title, "new task 1");
+  assert.equal(newTasks[1].title, "new task 2");
+  assert.ok(newTasks.every((t) => t.status === "pending"));
+});
+
+test("reconcile: carried task with unchanged status is a no-op (no error)", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  // task 1 is pending — carry it as pending (no-op)
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "pending" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  assert.equal(store.get(1)?.status, "pending");
+});
+
+test("reconcile: unknown id in payload is an error", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  const result = store.reconcile([
+    { id: 99, title: "ghost", status: "pending" },
+  ]);
+  assert.ok(!result.ok);
+  if (result.ok) throw new Error("unreachable");
+  const combined = result.errors.join(" ");
+  assert.ok(combined.includes("99"), `error mentions id 99: ${combined}`);
+});
+
+test("reconcile: duplicate id in payload is an error", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }, { title: "task b" }]);
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "pending" },
+    { id: 1, title: "task a again", status: "pending" },
+  ]);
+  assert.ok(!result.ok);
+  if (result.ok) throw new Error("unreachable");
+  const combined = result.errors.join(" ");
+  assert.ok(
+    combined.includes("1"),
+    `error mentions duplicate id 1: ${combined}`,
+  );
+});
+
+test("reconcile: missing summary when status is completed is an error", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  store.start(1);
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "completed" },
+  ]);
+  assert.ok(!result.ok);
+  if (result.ok) throw new Error("unreachable");
+  const combined = result.errors.join(" ");
+  assert.ok(
+    combined.includes("summary"),
+    `error mentions summary: ${combined}`,
+  );
+});
+
+test("reconcile: missing failureReason when status is failed is an error", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  store.start(1);
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "failed" },
+  ]);
+  assert.ok(!result.ok);
+  if (result.ok) throw new Error("unreachable");
+  const combined = result.errors.join(" ");
+  assert.ok(
+    combined.includes("failureReason") ||
+      combined.includes("failure_reason") ||
+      combined.includes("reason"),
+    `error mentions failureReason: ${combined}`,
+  );
+});
+
+test("reconcile: startedAt is set on first transition to in_progress", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "in_progress" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  const t = store.get(1)!;
+  assert.equal(t.status, "in_progress");
+  assert.equal(typeof t.startedAt, "number");
+});
+
+test("reconcile: activity is cleared when leaving in_progress", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  store.start(1);
+  store.setActivity(1, "working hard");
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "failed", failureReason: "broke" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  assert.equal(store.get(1)?.activity, undefined);
+});
+
+test("reconcile: on error, no state mutation and no notify", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  let notifyCount = 0;
+  store.subscribe(() => notifyCount++);
+  const beforeCount = notifyCount;
+  // Invalid: unknown id
+  store.reconcile([{ id: 99, title: "ghost" }]);
+  assert.equal(notifyCount, beforeCount, "no notify on reconcile failure");
+  assert.equal(store.all().length, 1, "state unchanged");
+});
+
+test("reconcile: exactly one notify on success", () => {
+  const store = createStore();
+  store.create([{ title: "a" }, { title: "b" }]);
+  let notifyCount = 0;
+  store.subscribe(() => notifyCount++);
+  const before = notifyCount;
+  store.reconcile([
+    { id: 1, title: "a", status: "in_progress" },
+    { id: 2, title: "b", status: "pending" },
+  ]);
+  assert.equal(notifyCount, before + 1, "exactly one notify on success");
+});
+
+test("reconcile: carrying an already-completed task does not mutate completedAt", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  store.start(1);
+  store.complete(1, "original summary");
+  const before = store.get(1)!;
+  const originalCompletedAt = before.completedAt;
+  const originalSummary = before.summary;
+  assert.equal(typeof originalCompletedAt, "number");
+  // Carry the same completed task as a no-op (status unchanged).
+  const result = store.reconcile([
+    {
+      id: 1,
+      title: "task a",
+      status: "completed",
+      summary: originalSummary,
+    },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  const after = store.get(1)!;
+  assert.equal(after.completedAt, originalCompletedAt);
+  assert.equal(after.summary, originalSummary);
+});
+
+test("reconcile: carrying an already-failed task does not mutate completedAt", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  store.start(1);
+  store.fail(1, "original reason");
+  const before = store.get(1)!;
+  const originalCompletedAt = before.completedAt;
+  const originalReason = before.failureReason;
+  assert.equal(typeof originalCompletedAt, "number");
+  const result = store.reconcile([
+    {
+      id: 1,
+      title: "task a",
+      status: "failed",
+      failureReason: originalReason,
+    },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  const after = store.get(1)!;
+  assert.equal(after.completedAt, originalCompletedAt);
+  assert.equal(after.failureReason, originalReason);
+});
+
+test("reconcile: failed task transition to in_progress is valid", () => {
+  const store = createStore();
+  store.create([{ title: "task a" }]);
+  store.fail(1, "network error");
+  const result = store.reconcile([
+    { id: 1, title: "task a", status: "in_progress" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  assert.equal(store.get(1)?.status, "in_progress");
 });

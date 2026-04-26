@@ -29,6 +29,18 @@ export const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 
 const TERMINAL: ReadonlySet<TaskStatus> = new Set(["completed", "failed"]);
 
+export type ReconcilePayload = Array<{
+  id?: number;
+  title: string;
+  status?: TaskStatus;
+  summary?: string;
+  failureReason?: string;
+}>;
+
+export type ReconcileResult =
+  | { ok: true; tasks: Task[] }
+  | { ok: false; errors: string[] };
+
 export interface TaskStore {
   create(tasks: { title: string }[]): Task[];
   add(title: string): Task;
@@ -40,6 +52,7 @@ export interface TaskStore {
   all(): Task[];
   clear(): void;
   subscribe(fn: (state: TaskListState) => void): () => void;
+  reconcile(payload: ReconcilePayload): ReconcileResult;
 }
 
 export function createStore(): TaskStore {
@@ -176,6 +189,151 @@ export function createStore(): TaskStore {
       return () => {
         subscribers.delete(fn);
       };
+    },
+
+    reconcile(payload) {
+      const errors: string[] = [];
+
+      // --- Step 1: Validate payload items up front (collect all errors) ---
+
+      // Detect duplicate ids in payload
+      const seenIds = new Set<number>();
+      for (const item of payload) {
+        if (item.id !== undefined) {
+          if (seenIds.has(item.id)) {
+            errors.push(`Duplicate id ${item.id} in payload`);
+          } else {
+            seenIds.add(item.id);
+          }
+        }
+      }
+
+      for (const item of payload) {
+        if (item.id !== undefined) {
+          // Unknown id
+          const existing = state.tasks.find((t) => t.id === item.id);
+          if (!existing) {
+            errors.push(`Task id ${item.id} not found in store`);
+            continue; // can't validate transition without a task
+          }
+
+          // Validate transition (only when status is specified and different)
+          const targetStatus = item.status ?? existing.status;
+          if (targetStatus !== existing.status) {
+            const allowed = VALID_TRANSITIONS[existing.status];
+            if (!allowed.includes(targetStatus)) {
+              errors.push(
+                `Task ${item.id} ("${existing.title}"): cannot transition ${existing.status} → ${targetStatus}`,
+              );
+            }
+          }
+        }
+
+        // Missing summary when completed
+        if (item.status === "completed" && !item.summary) {
+          const label =
+            item.id !== undefined ? `Task ${item.id}` : `"${item.title}"`;
+          errors.push(`${label}: status is "completed" but summary is missing`);
+        }
+
+        // Missing failureReason when failed
+        if (item.status === "failed" && !item.failureReason) {
+          const label =
+            item.id !== undefined ? `Task ${item.id}` : `"${item.title}"`;
+          errors.push(
+            `${label}: status is "failed" but failureReason is missing`,
+          );
+        }
+      }
+
+      // --- Step 2: Compute omitted tasks ---
+
+      const payloadIds = new Set(
+        payload.filter((i) => i.id !== undefined).map((i) => i.id as number),
+      );
+      const omitted = state.tasks.filter((t) => !payloadIds.has(t.id));
+      const liveOmissions = omitted.filter((t) => !TERMINAL.has(t.status));
+      const terminalOmissions = omitted.filter((t) => TERMINAL.has(t.status));
+
+      if (liveOmissions.length > 0) {
+        const list = liveOmissions
+          .map((t) => `${t.id} ("${t.title}")`)
+          .join(", ");
+        errors.push(`Live tasks omitted from payload: ${list}`);
+      }
+
+      // --- Step 3: Reject if any errors ---
+
+      if (errors.length > 0) {
+        return { ok: false, errors };
+      }
+
+      // --- Step 4: Apply changes atomically ---
+
+      // Drop terminal omissions
+      const terminalOmissionIds = new Set(terminalOmissions.map((t) => t.id));
+      state = {
+        ...state,
+        tasks: state.tasks.filter((t) => !terminalOmissionIds.has(t.id)),
+      };
+
+      // Apply transitions and field updates to carried tasks
+      for (const item of payload) {
+        if (item.id === undefined) continue;
+        const task = state.tasks.find((t) => t.id === item.id)!;
+        const oldStatus = task.status;
+        const targetStatus = item.status ?? task.status;
+
+        if (targetStatus !== oldStatus) {
+          // Clear activity when leaving in_progress
+          if (oldStatus === "in_progress") {
+            task.activity = undefined;
+          }
+          task.status = targetStatus;
+
+          if (targetStatus === "in_progress" && task.startedAt === undefined) {
+            task.startedAt = Date.now();
+          }
+
+          if (targetStatus === "completed") {
+            task.summary = item.summary;
+            task.completedAt = Date.now();
+          }
+
+          if (targetStatus === "failed") {
+            task.failureReason = item.failureReason;
+            task.completedAt = Date.now();
+          }
+        }
+      }
+
+      // Append new tasks (no id in payload) with auto-assigned ids
+      const maxId = state.tasks.reduce(
+        (max, t) => Math.max(max, t.id),
+        nextId - 1,
+      );
+      let assignId = maxId + 1;
+      for (const item of payload) {
+        if (item.id !== undefined) continue;
+        const newTask: Task = {
+          id: assignId++,
+          title: item.title,
+          status: item.status ?? "pending",
+        };
+        if (newTask.status === "completed") {
+          newTask.summary = item.summary;
+          newTask.completedAt = Date.now();
+        }
+        if (newTask.status === "failed") {
+          newTask.failureReason = item.failureReason;
+          newTask.completedAt = Date.now();
+        }
+        state.tasks.push(newTask);
+        nextId = assignId;
+      }
+
+      notify();
+      return { ok: true, tasks: state.tasks };
     },
   };
 

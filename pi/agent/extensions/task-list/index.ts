@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { taskList } from "./api.ts";
 import { renderTaskListMessage, summarizeCounts } from "./render.ts";
 import type { TaskListState } from "./state.ts";
+import { registerTools } from "./tools.ts";
 
 const CUSTOM_TYPE = "task-list";
 const DEBOUNCE_MS = 100;
@@ -14,6 +15,8 @@ const DEBOUNCE_MS = 100;
  * NOTES in the accompanying README).
  */
 export default function (pi: ExtensionAPI) {
+  registerTools(pi);
+
   pi.registerMessageRenderer<TaskListState>(
     CUSTOM_TYPE,
     (message, _options, theme) => {
