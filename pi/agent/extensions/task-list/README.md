@@ -1,6 +1,6 @@
 # task-list
 
-Pi extension providing session-scoped task tracking with a rich inline TUI rendering.
+Pi extension providing session-scoped task tracking with agent tools and a sticky TUI widget.
 
 ## Public API
 
@@ -13,13 +13,13 @@ import { taskList } from "../task-list/api.ts";
 - `taskList` — the singleton store described below.
 - Types: `Task`, `TaskStatus`, `TaskListState`, `TaskStore` (re-exported from `state.ts`).
 
-### `taskList.create(tasks: Omit<Task, "id" | "status">[]): Task[]`
+### `taskList.create(tasks: { title: string }[]): Task[]`
 
 Replace the list with a new set of pending tasks and return them with assigned ids (1-based). Throws if the existing list still has pending or in-progress tasks; if every existing task is terminal (`completed` or `failed`), the old list is auto-cleared first.
 
-### `taskList.add(title: string, description: string): Task`
+### `taskList.add(title: string): Task`
 
-Append a single pending task to the end of the list and return it. Used when the agent discovers work mid-run that wasn't in the original plan.
+Append a single pending task to the end of the list and return it. Used when the agent or a workflow discovers work mid-run that wasn't in the original plan.
 
 ### `taskList.start(id: number): void`
 
@@ -51,7 +51,11 @@ Remove all tasks and reset the id counter. Called on `session_shutdown` and usab
 
 ### `taskList.subscribe(fn: (state: TaskListState) => void): () => void`
 
-Register a listener that fires after every mutation. Returns an unsubscribe function. The extension itself subscribes to drive inline re-renders.
+Register a listener that fires after every mutation. Returns an unsubscribe function. The extension itself subscribes to drive sticky-widget re-renders.
+
+### `taskList.reconcile(payload: ReconcilePayload): ReconcileResult`
+
+Internal method used by `task_list_set`. Atomically validates and applies a bulk task-list replacement. Prefer the `task_list_set` agent tool for agent use; use the individual mutation methods (`start`, `complete`, `fail`) for extension-to-extension calls.
 
 ## State model
 
@@ -76,9 +80,84 @@ stateDiagram-v2
 
 **Completion is sticky** — once a task reaches `completed` there is no edge back out. This is the anti-perfectionism nudge: the agent cannot re-open work to polish it further, so "good enough to mark done" becomes a one-way commitment and the pipeline actually finishes.
 
-## TUI rendering
+## Agent tools
 
-When the store mutates, the extension publishes a `task-list` custom message that Pi draws inline. The renderer produces a header counting statuses, one line per kept task, and an optional `+N more` line when the list is truncated.
+The agent interacts with the task list exclusively through two tools registered by this extension.
+
+### `task_list_set`
+
+Atomically replace the task list. Pass the complete desired list — the system reconciles additions, updates, and removals in one step.
+
+**Parameters:**
+
+```ts
+{
+  tasks: Array<{
+    id?: number; // id of an existing task to update; omit for new tasks
+    title: string; // required; for existing tasks, the stored title is authoritative
+    status?: "pending" | "in_progress" | "completed" | "failed"; // default: "pending"
+    summary?: string; // required when status is "completed"
+    failure_reason?: string; // required when status is "failed"
+  }>;
+}
+```
+
+**Reconciliation rules:**
+
+- Tasks in the payload with no `id` are appended as new tasks with auto-assigned ids.
+- Tasks in the payload with an `id` are carried over; a `status` change is validated against `VALID_TRANSITIONS`.
+- Tasks currently in the store that are **omitted** from the payload: dropped if `completed`/`failed`; the whole call is rejected if any are `pending`/`in_progress`.
+- All validation errors are collected before rejecting — no partial writes.
+
+**Success result text:**
+
+```
+5 tasks (2 completed, 1 in_progress, 2 pending)
+
+1. Bug fix — completed (summary: "Fixed the off-by-one in pagination")
+2. Add docs — completed (summary: "Added README section on task ids")
+3. Refactor utils — in_progress
+4. Wire CI — pending
+5. Add benchmarks — pending
+```
+
+**Error result text:**
+
+```
+task_list_set rejected — fix all of these and retry:
+
+- Task 3 ("Add tests"): cannot transition completed → pending (completion is sticky)
+- Task 5 ("Refactor utils"): status is "completed" but summary is missing
+- Live tasks omitted from payload: 2 ("Bug fix"), 4 ("Add docs")
+
+Current list (unchanged):
+1. Bug fix — in_progress
+2. Add docs — pending
+3. Add tests — completed
+...
+```
+
+On error the store is left unchanged and the full error list is returned so the agent can fix all issues in a single follow-up call.
+
+### `task_list_get`
+
+Read the current task list with no side effects. Returns the same compact format as `task_list_set`'s success result text. Use this before calling `task_list_set` to inspect current task ids and statuses.
+
+**Parameters:** none.
+
+## Slash command
+
+### `/task-list-clear`
+
+Drop all tasks from the task list immediately, without confirmation. Calls `taskList.clear()` and emits an info notification. This is the user's escape hatch when the workflow conflict gate fires (`create()` throws because live tasks are present).
+
+## Sticky widget
+
+The extension renders the task list as a sticky widget placed `belowEditor` (key `"task-list"`). The widget is mounted via `pi.setWidget(key, content, { placement: "belowEditor" })` and updated in place on every store mutation.
+
+**Auto-show / auto-hide:** when the store transitions from empty to non-empty the widget appears; when it transitions from non-empty to empty the widget is dismissed (`setWidget(key, undefined)`). On `session_shutdown` the store is cleared and the widget is removed.
+
+**Layout:**
 
 ```
 5 tasks (2 done, 1 in progress, 2 open)
@@ -91,9 +170,9 @@ When the store mutates, the extension publishes a `task-list` custom message tha
 
 Glyphs: `◻` pending, `◼` in progress, `✔` completed, `✗` failed. Completed rows are struck through in the success color; in-progress rows are bold in the accent color; pending rows are dimmed; failed rows are bold red with their failure reason appended after a `·`.
 
-While a task is `in_progress`, `setActivity(id, text)` appends a dim `· <text>` after the title so viewers can see current sub-step progress. Activity is cleared automatically on transition out of `in_progress`.
+While a task is `in_progress`, `setActivity(id, text)` appends a dim `· <text>` after the title so viewers can see the current sub-step. Activity is cleared automatically on transition out of `in_progress`.
 
-Rows are budgeted by terminal height: `min(10, max(3, rows - 14))`. When there are more tasks than the budget, `truncateWithPriority` keeps the most interesting ones in this order:
+**10-line cap:** Pi enforces `MAX_WIDGET_LINES = 10` for string-array widgets. The budget is 1 header line + up to 9 task rows. When more rows would be needed, `truncateWithPriority` keeps the most interesting ones in this order:
 
 1. Recently completed (within the last 30s) — a grace window so the user sees the `in_progress → completed` transition before the row scrolls away.
 2. In-progress tasks.
@@ -101,21 +180,18 @@ Rows are budgeted by terminal height: `min(10, max(3, rows - 14))`. When there a
 4. Older completed tasks.
 5. Failed tasks.
 
-Dropped tasks are summarized as a trailing `+N more` line. Order within each bucket is preserved.
-
-The widget auto-hides on `session_shutdown`: the store is cleared and the subscription is torn down.
+Dropped tasks are summarised as a trailing `+N more` line. Order within each bucket is preserved.
 
 ## Consumers
 
-The `autopilot` extension (same repo) is the first consumer — its orchestrator calls `create` once the plan is parsed, then drives `start` / `setActivity` / `complete` / `fail` as each task runs. The API is deliberately public so other extensions (and user skills loaded at runtime) can share the same task-list UI without each one inventing its own renderer.
+The `autopilot` extension (same repo) is the primary consumer — its orchestrator calls `create` once the plan is parsed, then drives `start` / `setActivity` / `complete` / `fail` as each task runs. The task-list extension owns all rendering (sticky widget below the editor); autopilot's widget shows phase, subagent, clock, and breadcrumb only. The API is deliberately public so other extensions (and user skills loaded at runtime) can share the same task-list surface without each one inventing its own renderer.
 
 ## How it works
 
 - `createStore()` in `state.ts` returns a fresh `TaskStore` closure; `api.ts` instantiates one module-level singleton so every import of `../task-list/api.js` sees the same tasks.
 - Every mutating method calls an internal `notify()` that fans out to every registered subscriber.
-- `index.ts` registers a message renderer for the `task-list` custom type and subscribes to the store. Each notification snapshots the state, debounces for 100ms, then calls `pi.sendMessage` with the snapshot as `details`. The renderer in `render.ts` turns that snapshot into a `pi-tui` `Text` component.
-- Inline custom-type messages are the only rendering strategy in v1. A footer/status-bar fallback was considered but deferred: the renderer has no access to `ExtensionContext`, so there is no clean way to call `ctx.ui.setStatus` from the subscribe path.
-- On `session_shutdown` the extension clears the debounce timer, unsubscribes, and clears the store so a follow-on session starts fresh.
+- `index.ts` registers the `task_list_set` and `task_list_get` agent tools, the `/task-list-clear` slash command, and subscribes to the store. Each notification snapshots the state and calls `pi.setWidget` with the rendered string array (or `undefined` to dismiss).
+- On `session_shutdown` the extension unsubscribes, clears the store, and dismisses the widget so a follow-on session starts fresh.
 
 ## Inspiration
 
@@ -125,7 +201,8 @@ The `autopilot` extension (same repo) is the first consumer — its orchestrator
 
 ## File layout
 
-- `state.ts` — `Task`, `TaskStatus`, `TaskListState` types, the `VALID_TRANSITIONS` table, and the `createStore()` factory.
+- `state.ts` — `Task`, `TaskStatus`, `TaskListState` types, the `VALID_TRANSITIONS` table, the `reconcile` implementation, and the `createStore()` factory.
 - `api.ts` — instantiates the `taskList` singleton.
-- `render.ts` — pure helpers (`glyphFor`, `styleFor`, `summarizeCounts`, `truncateWithPriority`) and the `renderTaskListMessage` component builder.
-- `index.ts` — extension entry point: registers the custom-message renderer, subscribes to the store, debounces, and wires `session_shutdown` cleanup.
+- `render.ts` — pure helpers (`glyphFor`, `styleFor`, `summarizeCounts`, `truncateWithPriority`) and `renderWidgetLines` which produces the `string[]` body for the sticky widget.
+- `tools.ts` — registers the `task_list_set` and `task_list_get` agent tools.
+- `index.ts` — extension entry point: registers tools, the `/task-list-clear` command, and the store subscriber that drives the sticky widget.

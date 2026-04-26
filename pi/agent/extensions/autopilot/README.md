@@ -18,7 +18,7 @@ If no run is active, the command is a no-op with an informational notification.
 
 ## Status widget
 
-While a run is active, a sticky widget is rendered above the editor (key `autopilot`). It updates in place on every subagent event and every task-list transition.
+While a run is active, a sticky widget is rendered above the editor (key `autopilot`). It updates in place on every subagent event.
 
 Layout:
 
@@ -28,22 +28,14 @@ autopilot · plan › implement › verify · MM:SS
      - <recent tool event>
      - <recent tool event>
      - <recent tool event>
-  N tasks (D done, A in progress, O open)
-    … K earlier
-    ✔ 3. <recently completed task>
-    ✔ 4. <recently completed task>
-    ◼ 5. <in-progress task title>
-    ◻ 6. <upcoming task>
-    ◻ 7. <upcoming task>
-    … K more
 type /autopilot-cancel to stop
 ```
 
-The task window shows up to two recently completed tasks, the in-progress task, and up to two upcoming tasks. Tasks outside the window are summarised as `… K earlier` / `… K more` lines.
-
 The header is a stage breadcrumb: `plan › implement › verify`. The currently-running stage is rendered bold+accent; the others are muted. Before the plan subagent dispatches, no stage is highlighted. Sub-phases (task index, validation vs. reviewers vs. fix rounds) are not surfaced in the header — the `↳` subagent line already names the active unit of work.
 
-The widget is torn down when the run ends (success, implement failure, or cancel). The inline task-list messages emitted by the `task-list` extension remain in scrollback so there's a permanent record of the run.
+Task rows are not rendered inside the autopilot widget. The `task-list` extension renders the task list in its own sticky widget below the editor; the autopilot widget shows phase, subagent, clock, and breadcrumb only. Both widgets are visible simultaneously during a run.
+
+The autopilot widget is torn down when the run ends (success, implement failure, or cancel).
 
 **Pre-flight checks** (run before any subagent is dispatched):
 
