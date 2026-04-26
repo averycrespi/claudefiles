@@ -2,10 +2,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { taskList } from "../task-list/api.ts";
-import { dispatch as rawDispatch } from "./lib/dispatch.ts";
-import type { DispatchOptions, DispatchResult } from "./lib/dispatch.ts";
 import { formatReport } from "./lib/report.ts";
 import { createStatusWidget, type StatusWidget } from "./lib/status-widget.ts";
+import { createSubagent } from "../workflow-core/lib/subagent.ts";
 import { runImplement } from "./phases/implement.ts";
 import { runPlan } from "./phases/plan.ts";
 import { runVerify, type RunVerifyResult } from "./phases/verify.ts";
@@ -108,34 +107,6 @@ async function emitReport(args: EmitReportArgs): Promise<void> {
   });
 }
 
-/**
- * Wraps `rawDispatch` so every subagent call:
- *   1. Inherits the run-level abort signal (unless the caller supplies one).
- *   2. Creates a live subagent handle on the status widget and forwards
- *      Pi subagent events to it.
- */
-function makeWrappedDispatch(
-  widget: StatusWidget,
-  signal: AbortSignal,
-): (opts: DispatchOptions) => Promise<DispatchResult> {
-  return async (opts) => {
-    const intent = opts.intent ?? "subagent";
-    const handle = widget.subagent(intent);
-    try {
-      return await rawDispatch({
-        ...opts,
-        signal: opts.signal ?? signal,
-        onEvent: (event) => {
-          opts.onEvent?.(event);
-          handle.onEvent(event);
-        },
-      });
-    } finally {
-      handle.finish();
-    }
-  };
-}
-
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("autopilot-cancel", {
     description: "Cancel the currently running /autopilot pipeline.",
@@ -191,7 +162,26 @@ export default function (pi: ExtensionAPI) {
         ui: ctx.hasUI ? ctx.ui : undefined,
         theme: ctx.hasUI ? ctx.ui.theme : undefined,
       });
-      const dispatch = makeWrappedDispatch(widget, controller.signal);
+      const widgetHandles = new Map<
+        number,
+        ReturnType<StatusWidget["subagent"]>
+      >();
+      const subagent = createSubagent({
+        cwd,
+        signal: controller.signal,
+        onSubagentLifecycle: (event) => {
+          if (event.kind === "start") {
+            const handle = widget.subagent(event.spec.intent);
+            widgetHandles.set(event.id, handle);
+          } else {
+            widgetHandles.get(event.id)?.finish();
+            widgetHandles.delete(event.id);
+          }
+        },
+        onSubagentEvent: (id, event) => {
+          widgetHandles.get(id)?.onEvent(event);
+        },
+      });
       const commitTracker = makeCommitTracker(getHead);
 
       const isCancelled = () => controller.signal.aborted;
@@ -213,9 +203,7 @@ export default function (pi: ExtensionAPI) {
           widget.setStage("plan");
           const plan = await runPlan({
             designPath,
-            dispatch,
-            cwd,
-            signal: controller.signal,
+            subagent,
           });
 
           if (isCancelled()) {
@@ -249,10 +237,8 @@ export default function (pi: ExtensionAPI) {
           widget.setStage("implement");
           const implementResult = await runImplement({
             archNotes: plan.data.architecture_notes,
-            dispatch,
+            subagent,
             getHead,
-            cwd,
-            signal: controller.signal,
           });
 
           if (isCancelled()) {
@@ -290,7 +276,7 @@ export default function (pi: ExtensionAPI) {
             .map((t) => `[${t.status}] ${t.title}`)
             .join("\n");
           const verifyResult = await runVerify({
-            dispatch,
+            subagent,
             getDiff: async () => {
               const { stdout } = await execFileP(
                 "git",
@@ -301,7 +287,6 @@ export default function (pi: ExtensionAPI) {
             },
             archNotes: plan.data.architecture_notes,
             taskListSummary,
-            cwd,
           });
 
           if (isCancelled()) {

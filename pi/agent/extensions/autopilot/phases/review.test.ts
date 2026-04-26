@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runReviewers, synthesizeFindings } from "./review.ts";
-import type { DispatchOptions, DispatchResult } from "../lib/dispatch.ts";
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type {
+  DispatchSpec,
+  DispatchResult,
+} from "../../workflow-core/lib/types.ts";
+import type { TSchema } from "@sinclair/typebox";
 import type { Finding } from "../lib/schemas.ts";
 
 test("synthesizeFindings: drops findings below confidence 80", () => {
@@ -165,90 +170,123 @@ test("synthesizeFindings: dedupe keeps highest across 3 reviewers; far-apart fin
   assert.equal(far?.severity, "important");
 });
 
-/** Dispatch mock that returns stdouts keyed by prompt-substring match. */
-function scopedDispatch(
-  byScope: Record<
-    "plan-completeness" | "integration" | "security",
-    DispatchResult
-  >,
-) {
-  const calls: DispatchOptions[] = [];
-  const dispatch = async (opts: DispatchOptions): Promise<DispatchResult> => {
-    calls.push(opts);
-    if (opts.prompt.includes("every task from the task list")) {
+type ReviewerKey = "plan-completeness" | "integration" | "security";
+
+/** Subagent mock that routes parallel specs by prompt-substring match. */
+function scopedSubagent(byScope: Record<ReviewerKey, DispatchResult<TSchema>>) {
+  const capturedSpecs: DispatchSpec<TSchema>[] = [];
+
+  function routeSpec(spec: DispatchSpec<TSchema>): DispatchResult<TSchema> {
+    capturedSpecs.push(spec);
+    if (spec.prompt.includes("every task from the task list")) {
       return byScope["plan-completeness"];
     }
-    if (opts.prompt.includes("tasks wire together")) {
+    if (spec.prompt.includes("tasks wire together")) {
       return byScope.integration;
     }
-    if (opts.prompt.includes("input validation, auth, secrets, injection")) {
+    if (spec.prompt.includes("input validation, auth, secrets, injection")) {
       return byScope.security;
     }
-    throw new Error("unexpected prompt");
+    throw new Error(`unexpected prompt: ${spec.prompt.slice(0, 80)}`);
+  }
+
+  const subagent: Subagent = {
+    dispatch: async (spec) => routeSpec(spec as DispatchSpec<TSchema>) as any,
+    parallel: async (specs) =>
+      specs.map((s) => routeSpec(s as DispatchSpec<TSchema>)) as any,
   };
-  return { dispatch, calls };
+
+  return { subagent, getCapturedSpecs: () => capturedSpecs };
 }
 
 test("runReviewers: dispatches 3 reviewers in parallel and records parse failures as skipped", async () => {
-  const goodIntegration = JSON.stringify({
+  const goodIntegrationData = {
     findings: [
       {
         file: "a.ts",
         line: 1,
-        severity: "important",
+        severity: "important" as const,
         confidence: 90,
         description: "contract mismatch",
       },
     ],
-  });
-  const goodSecurity = JSON.stringify({ findings: [] });
-  const { dispatch, calls } = scopedDispatch({
-    "plan-completeness": { ok: true, stdout: "not-json" },
-    integration: { ok: true, stdout: goodIntegration },
-    security: { ok: true, stdout: goodSecurity },
+  };
+  const goodSecurityData = { findings: [] };
+
+  const { subagent, getCapturedSpecs } = scopedSubagent({
+    "plan-completeness": {
+      ok: false,
+      reason: "parse" as const,
+      error: "JSON parse error",
+      raw: "not-json",
+    },
+    integration: {
+      ok: true,
+      data: goodIntegrationData,
+      raw: JSON.stringify(goodIntegrationData),
+    },
+    security: {
+      ok: true,
+      data: goodSecurityData,
+      raw: JSON.stringify(goodSecurityData),
+    },
   });
 
   const result = await runReviewers({
-    dispatch,
+    subagent,
     diff: "diff --git a/a b/a",
     archNotes: "notes",
     taskListSummary: "1. do thing",
-    cwd: "/tmp",
   });
 
-  assert.equal(calls.length, 3, "three dispatches");
+  const specs = getCapturedSpecs();
+  assert.equal(specs.length, 3, "three dispatches");
   assert.deepEqual(result.skippedReviewers, ["plan-completeness"]);
   assert.deepEqual(result.reports["plan-completeness"], { findings: [] });
   assert.equal(result.reports.integration.findings.length, 1);
   assert.equal(result.reports.security.findings.length, 0);
 
   // Placeholder substitution sanity: diff/archNotes/taskListSummary interpolated.
-  for (const c of calls) {
-    assert.ok(c.prompt.includes("diff --git a/a b/a"));
-    assert.ok(c.prompt.includes("notes"));
-    assert.ok(c.prompt.includes("1. do thing"));
-    assert.ok(!c.prompt.includes("{DIFF}"));
-    assert.ok(!c.prompt.includes("{ARCHITECTURE_NOTES}"));
-    assert.ok(!c.prompt.includes("{TASK_LIST}"));
+  for (const s of specs) {
+    assert.ok(s.prompt.includes("diff --git a/a b/a"));
+    assert.ok(s.prompt.includes("notes"));
+    assert.ok(s.prompt.includes("1. do thing"));
+    assert.ok(!s.prompt.includes("{DIFF}"));
+    assert.ok(!s.prompt.includes("{ARCHITECTURE_NOTES}"));
+    assert.ok(!s.prompt.includes("{TASK_LIST}"));
     // Reviewers must NOT have write/edit/bash tools.
-    assert.ok(!c.tools.includes("write" as any));
-    assert.ok(!c.tools.includes("edit" as any));
-    assert.ok(!c.tools.includes("bash" as any));
+    assert.ok(!s.tools.includes("write" as any));
+    assert.ok(!s.tools.includes("edit" as any));
+    assert.ok(!s.tools.includes("bash" as any));
+    // All reviewer specs must use retry: none.
+    assert.equal(s.retry, "none");
   }
 });
 
 test("runReviewers: dispatch failure also marks that reviewer as skipped", async () => {
-  const { dispatch } = scopedDispatch({
-    "plan-completeness": { ok: false, stdout: "", error: "boom" },
-    integration: { ok: true, stdout: JSON.stringify({ findings: [] }) },
-    security: { ok: true, stdout: JSON.stringify({ findings: [] }) },
+  const emptyData = { findings: [] };
+  const { subagent } = scopedSubagent({
+    "plan-completeness": {
+      ok: false,
+      reason: "dispatch" as const,
+      error: "boom",
+    },
+    integration: {
+      ok: true,
+      data: emptyData,
+      raw: JSON.stringify(emptyData),
+    },
+    security: {
+      ok: true,
+      data: emptyData,
+      raw: JSON.stringify(emptyData),
+    },
   });
   const result = await runReviewers({
-    dispatch,
+    subagent,
     diff: "",
     archNotes: "",
     taskListSummary: "",
-    cwd: "/tmp",
   });
   assert.ok(result.skippedReviewers.includes("plan-completeness"));
   assert.deepEqual(result.reports["plan-completeness"], { findings: [] });

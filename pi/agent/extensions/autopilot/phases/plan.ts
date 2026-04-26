@@ -1,30 +1,23 @@
 import { readFile } from "node:fs/promises";
-import { parseJsonReport } from "../lib/parse.ts";
 import { PlanReportSchema, type PlanReport } from "../lib/schemas.ts";
-import { dispatchWithOneRetry, type DispatchFn } from "../lib/dispatch.ts";
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
 
 const PROMPT_PATH = new URL("../prompts/plan.md", import.meta.url);
 
 export async function runPlan(args: {
   designPath: string;
-  dispatch: DispatchFn;
-  cwd?: string;
-  signal?: AbortSignal;
+  subagent: Subagent;
 }) {
   const template = await readFile(PROMPT_PATH, "utf8");
   const prompt = template.replace("{DESIGN_PATH}", args.designPath);
-  const r = await dispatchWithOneRetry(
-    args.dispatch,
-    {
-      prompt,
-      tools: ["read", "ls", "find", "grep"],
-      cwd: args.cwd ?? process.cwd(),
-      intent: "Plan",
-    },
-    args.signal,
-  );
-  if (!r.ok) return { ok: false as const, error: r.error ?? "dispatch failed" };
-  return parseJsonReport(r.stdout, PlanReportSchema);
+  const r = await args.subagent.dispatch({
+    intent: "Plan",
+    prompt,
+    schema: PlanReportSchema,
+    tools: ["read", "ls", "find", "grep"],
+  });
+  if (!r.ok) return { ok: false as const, error: r.error };
+  return { ok: true as const, data: r.data };
 }
 
 export type { PlanReport };

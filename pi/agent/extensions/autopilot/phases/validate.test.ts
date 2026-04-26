@@ -1,57 +1,65 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runValidation } from "./validate.ts";
-import type { DispatchOptions, DispatchResult } from "../lib/dispatch.ts";
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type {
+  DispatchSpec,
+  DispatchResult,
+} from "../../workflow-core/lib/types.ts";
+import type { TSchema } from "@sinclair/typebox";
 
-const allPassJson = JSON.stringify({
-  test: { status: "pass", command: "bun test", output: "" },
-  lint: { status: "pass", command: "bun run lint", output: "" },
-  typecheck: { status: "skipped", command: "", output: "" },
-});
+const allPassData = {
+  test: { status: "pass" as const, command: "bun test", output: "" },
+  lint: { status: "pass" as const, command: "bun run lint", output: "" },
+  typecheck: { status: "skipped" as const, command: "", output: "" },
+};
 
-const testFailJson = JSON.stringify({
+const testFailData = {
   test: {
-    status: "fail",
+    status: "fail" as const,
     command: "bun test",
     output: "FAIL: expected 1 to equal 2",
   },
-  lint: { status: "pass", command: "bun run lint", output: "" },
-  typecheck: { status: "skipped", command: "", output: "" },
-});
+  lint: { status: "pass" as const, command: "bun run lint", output: "" },
+  typecheck: { status: "skipped" as const, command: "", output: "" },
+};
 
-const fixerSuccessJson = JSON.stringify({
-  outcome: "success",
+const fixerSuccessData = {
+  outcome: "success" as const,
   commit: "fix1234",
   fixed: ["test: expected 1 to equal 2"],
   unresolved: [],
-});
+};
 
-const fixerFailureJson = JSON.stringify({
-  outcome: "failure",
+const fixerFailureData = {
+  outcome: "failure" as const,
   commit: null,
   fixed: [],
   unresolved: ["test: expected 1 to equal 2"],
-});
+};
 
-/** Dispatch mock that returns results from an ordered sequence. */
-function sequenceDispatch(stdouts: string[]) {
+/** Builds a Subagent that returns results from an ordered sequence of data objects. */
+function sequenceSubagent(results: DispatchResult<TSchema>[]) {
   let i = 0;
-  const calls: DispatchOptions[] = [];
-  const dispatch = async (opts: DispatchOptions): Promise<DispatchResult> => {
-    calls.push(opts);
-    const stdout = stdouts[Math.min(i, stdouts.length - 1)];
-    i++;
-    return { ok: true, stdout };
+  const calls: DispatchSpec<TSchema>[] = [];
+  const subagent: Subagent = {
+    dispatch: async (spec) => {
+      calls.push(spec as DispatchSpec<TSchema>);
+      const result = results[Math.min(i, results.length - 1)];
+      i++;
+      return result as any;
+    },
+    parallel: async (specs) =>
+      Promise.all(specs.map((s) => subagent.dispatch(s))) as any,
   };
-  return { dispatch, calls, getCallCount: () => i };
+  return { subagent, calls, getCallCount: () => i };
 }
 
 test("runValidation: pass path — first validation all pass", async () => {
-  const { dispatch, getCallCount } = sequenceDispatch([allPassJson]);
-  const result = await runValidation({
-    dispatch,
-    cwd: process.cwd(),
-  });
+  const { subagent, getCallCount } = sequenceSubagent([
+    { ok: true, data: allPassData, raw: JSON.stringify(allPassData) },
+  ]);
+  const result = await runValidation({ subagent });
   assert.equal(result.ok, true);
   assert.equal(result.rounds, 1);
   assert.deepEqual(result.knownIssues, []);
@@ -61,22 +69,19 @@ test("runValidation: pass path — first validation all pass", async () => {
 });
 
 test("runValidation: fix + re-pass — fail, fixer success, pass", async () => {
-  const { dispatch, calls, getCallCount } = sequenceDispatch([
-    testFailJson,
-    fixerSuccessJson,
-    allPassJson,
+  const { subagent, calls, getCallCount } = sequenceSubagent([
+    { ok: true, data: testFailData, raw: JSON.stringify(testFailData) },
+    { ok: true, data: fixerSuccessData, raw: JSON.stringify(fixerSuccessData) },
+    { ok: true, data: allPassData, raw: JSON.stringify(allPassData) },
   ]);
-  const result = await runValidation({
-    dispatch,
-    cwd: process.cwd(),
-  });
+  const result = await runValidation({ subagent });
   assert.equal(result.ok, true);
   assert.equal(result.rounds, 2);
   assert.deepEqual(result.knownIssues, []);
   assert.ok(result.report);
   assert.equal(result.report?.test.status, "pass");
   assert.equal(getCallCount(), 3, "validation + fixer + validation");
-  // Fixer dispatch (call #2) must not have edit/write tools withheld — it needs them.
+  // Fixer dispatch (call #2) must have edit/write tools.
   const fixerCall = calls[1];
   assert.ok(fixerCall.tools.includes("edit"), "fixer must have edit tool");
   assert.ok(fixerCall.tools.includes("write"), "fixer must have write tool");
@@ -93,17 +98,12 @@ test("runValidation: fix + re-pass — fail, fixer success, pass", async () => {
 });
 
 test("runValidation: fix cap — both rounds fail, returns knownIssues", async () => {
-  // Sequence: validation fail → fixer fail → validation fail → (cap hit, knownIssues)
-  const { dispatch } = sequenceDispatch([
-    testFailJson,
-    fixerFailureJson,
-    testFailJson,
+  const { subagent } = sequenceSubagent([
+    { ok: true, data: testFailData, raw: JSON.stringify(testFailData) },
+    { ok: true, data: fixerFailureData, raw: JSON.stringify(fixerFailureData) },
+    { ok: true, data: testFailData, raw: JSON.stringify(testFailData) },
   ]);
-  const result = await runValidation({
-    dispatch,
-    cwd: process.cwd(),
-    maxFixRounds: 2,
-  });
+  const result = await runValidation({ subagent, maxFixRounds: 2 });
   assert.equal(result.ok, true);
   assert.ok(result.knownIssues.length > 0, "knownIssues must be nonempty");
   assert.ok(
@@ -113,15 +113,14 @@ test("runValidation: fix cap — both rounds fail, returns knownIssues", async (
 });
 
 test("runValidation: validation dispatch failure → knownIssues inconclusive", async () => {
-  const dispatch = async (): Promise<DispatchResult> => ({
-    ok: false,
-    stdout: "",
-    error: "boom",
-  });
-  const result = await runValidation({
-    dispatch,
-    cwd: process.cwd(),
-  });
+  const { subagent } = sequenceSubagent([
+    {
+      ok: false,
+      reason: "dispatch" as const,
+      error: "boom",
+    },
+  ]);
+  const result = await runValidation({ subagent });
   assert.equal(result.ok, true);
   assert.equal(result.report, null);
   assert.ok(
@@ -132,19 +131,26 @@ test("runValidation: validation dispatch failure → knownIssues inconclusive", 
 
 test("runValidation: fixer dispatch failure → knownIssues mentions fixer, loop terminates", async () => {
   let callIdx = 0;
-  const dispatch = async (): Promise<DispatchResult> => {
-    callIdx++;
-    if (callIdx === 1) {
-      // First validation fails.
-      return { ok: true, stdout: testFailJson };
-    }
-    // Fixer dispatch fails.
-    return { ok: false, stdout: "", error: "fixer blew up" };
+  const subagent: Subagent = {
+    dispatch: async () => {
+      callIdx++;
+      if (callIdx === 1) {
+        return {
+          ok: true,
+          data: testFailData,
+          raw: JSON.stringify(testFailData),
+        } as any;
+      }
+      return {
+        ok: false,
+        reason: "dispatch" as const,
+        error: "fixer blew up",
+      } as any;
+    },
+    parallel: async (specs) =>
+      Promise.all(specs.map((s) => subagent.dispatch(s))) as any,
   };
-  const result = await runValidation({
-    dispatch,
-    cwd: process.cwd(),
-  });
+  const result = await runValidation({ subagent });
   assert.equal(result.ok, true);
   assert.ok(
     result.knownIssues.some((s) => /fixer dispatch failed/i.test(s)),
@@ -154,11 +160,15 @@ test("runValidation: fixer dispatch failure → knownIssues mentions fixer, loop
 });
 
 test("runValidation: parse failure on validation → knownIssues inconclusive", async () => {
-  const { dispatch } = sequenceDispatch(["not json at all"]);
-  const result = await runValidation({
-    dispatch,
-    cwd: process.cwd(),
-  });
+  const { subagent } = sequenceSubagent([
+    {
+      ok: false,
+      reason: "parse" as const,
+      error: "JSON parse error: unexpected token",
+      raw: "not json at all",
+    },
+  ]);
+  const result = await runValidation({ subagent });
   assert.equal(result.ok, true);
   assert.equal(result.report, null);
   assert.equal(result.rounds, 1);
@@ -166,4 +176,32 @@ test("runValidation: parse failure on validation → knownIssues inconclusive", 
     result.knownIssues.some((s) => /inconclusive/i.test(s)),
     `knownIssues should mention inconclusive, got: ${JSON.stringify(result.knownIssues)}`,
   );
+  // Must embed the parse error directly (not "dispatch failed") so
+  // transport failures and unparseable-output failures are distinguishable.
+  assert.ok(
+    result.knownIssues.some((s) =>
+      s.includes("JSON parse error: unexpected token"),
+    ),
+    `knownIssues should embed parse error text, got: ${JSON.stringify(result.knownIssues)}`,
+  );
+  assert.ok(
+    !result.knownIssues.some((s) => /dispatch failed/i.test(s)),
+    `knownIssues must not say "dispatch failed" for a parse error, got: ${JSON.stringify(result.knownIssues)}`,
+  );
+});
+
+test("runValidation: all dispatches use retry: none", async () => {
+  const { subagent, calls } = sequenceSubagent([
+    { ok: true, data: testFailData, raw: JSON.stringify(testFailData) },
+    { ok: true, data: fixerSuccessData, raw: JSON.stringify(fixerSuccessData) },
+    { ok: true, data: allPassData, raw: JSON.stringify(allPassData) },
+  ]);
+  await runValidation({ subagent });
+  for (const call of calls) {
+    assert.equal(
+      call.retry,
+      "none",
+      `expected retry: none on call with intent "${call.intent}"`,
+    );
+  }
 });

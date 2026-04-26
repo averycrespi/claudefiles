@@ -1,12 +1,11 @@
 import { readFile } from "node:fs/promises";
-import { parseJsonReport } from "../lib/parse.ts";
 import {
   FixerReportSchema,
   ValidationReportSchema,
   type ValidationCategory,
   type ValidationReport,
 } from "../lib/schemas.ts";
-import type { DispatchOptions, DispatchResult } from "../lib/dispatch.ts";
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
 
 const VALIDATION_PROMPT_PATH = new URL(
   "../prompts/validation.md",
@@ -16,8 +15,6 @@ const FIXER_PROMPT_PATH = new URL(
   "../prompts/fixer-validation.md",
   import.meta.url,
 );
-
-type Dispatch = (opts: DispatchOptions) => Promise<DispatchResult>;
 
 let cachedValidationPrompt: string | null = null;
 let cachedFixerPrompt: string | null = null;
@@ -37,8 +34,7 @@ async function loadFixerPrompt(): Promise<string> {
 }
 
 export interface RunValidationArgs {
-  dispatch: Dispatch;
-  cwd: string;
+  subagent: Subagent;
   /** Max number of fixer rounds allowed. Default 2. */
   maxFixRounds?: number;
 }
@@ -129,46 +125,37 @@ export async function runValidation(
   while (rounds < maxFixRounds) {
     rounds++;
 
-    const validationDispatch = await args.dispatch({
-      prompt: validationPrompt,
-      tools: ["read", "bash"],
-      cwd: args.cwd,
+    const validationResult = await args.subagent.dispatch({
       intent:
         rounds === 1
           ? "Validate: tests + lint + typecheck"
           : `Re-validate (round ${rounds})`,
+      prompt: validationPrompt,
+      schema: ValidationReportSchema,
+      tools: ["read", "bash"],
+      retry: "none",
     });
 
-    if (!validationDispatch.ok) {
+    if (!validationResult.ok) {
+      const inconclusiveMsg =
+        validationResult.reason === "parse" ||
+        validationResult.reason === "schema"
+          ? `validation inconclusive: ${validationResult.error}`
+          : `validation inconclusive: dispatch failed (${validationResult.error ?? "unknown error"})`;
       return {
         ok: true,
         report: lastReport,
         rounds,
-        knownIssues: [
-          `validation inconclusive: dispatch failed (${validationDispatch.error ?? "unknown error"})`,
-        ],
+        knownIssues: [inconclusiveMsg],
       };
     }
 
-    const parsed = parseJsonReport(
-      validationDispatch.stdout,
-      ValidationReportSchema,
-    );
-    if (!parsed.ok) {
+    lastReport = validationResult.data;
+
+    if (allPassing(validationResult.data)) {
       return {
         ok: true,
-        report: lastReport,
-        rounds,
-        knownIssues: [`validation inconclusive: ${parsed.error}`],
-      };
-    }
-
-    lastReport = parsed.data;
-
-    if (allPassing(parsed.data)) {
-      return {
-        ok: true,
-        report: parsed.data,
+        report: validationResult.data,
         rounds,
         knownIssues: [],
       };
@@ -179,42 +166,42 @@ export async function runValidation(
     if (rounds >= maxFixRounds) {
       return {
         ok: true,
-        report: parsed.data,
+        report: validationResult.data,
         rounds,
-        knownIssues: summarizeFailures(parsed.data),
+        knownIssues: summarizeFailures(validationResult.data),
       };
     }
 
     // Dispatch fixer with the formatted failures.
-    const failures = formatFailures(parsed.data);
+    const failures = formatFailures(validationResult.data);
     const fixerPrompt = fixerTemplate.replace("{FAILURES}", failures);
-    const fixerDispatch = await args.dispatch({
+    const fixerResult = await args.subagent.dispatch({
+      intent: `Fix validation failures (round ${rounds})`,
       prompt: fixerPrompt,
+      schema: FixerReportSchema,
       tools: ["read", "edit", "write", "bash"],
       extensions: ["autoformat"],
-      cwd: args.cwd,
-      intent: `Fix validation failures (round ${rounds})`,
+      retry: "none",
     });
 
-    if (!fixerDispatch.ok) {
+    if (!fixerResult.ok) {
       // Fixer dispatch itself failed; surface failures as knownIssues
       // and stop (we can't make progress without a fixer).
+      const fixerMsg =
+        fixerResult.reason === "parse" || fixerResult.reason === "schema"
+          ? `fixer inconclusive: ${fixerResult.error}`
+          : `fixer dispatch failed: ${fixerResult.error ?? "unknown error"}`;
       return {
         ok: true,
-        report: parsed.data,
+        report: lastReport,
         rounds,
-        knownIssues: [
-          `fixer dispatch failed: ${fixerDispatch.error ?? "unknown error"}`,
-          ...summarizeFailures(parsed.data),
-        ],
+        knownIssues: [fixerMsg, ...summarizeFailures(lastReport!)],
       };
     }
 
-    // Parse the fixer report. We don't hard-fail on parse error; we
-    // loop again and let the next validation reveal whether code
-    // improved.
-    parseJsonReport(fixerDispatch.stdout, FixerReportSchema);
-    // Fall through to the next iteration (validation).
+    // Fixer ran successfully; fall through to the next iteration (validation).
+    // We don't need to inspect fixer.data further here.
+    void fixerResult.data;
   }
 
   // Unreachable in practice — the loop exits via an explicit return.

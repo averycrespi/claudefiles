@@ -1,20 +1,17 @@
 import { readFile } from "node:fs/promises";
-import { parseJsonReport } from "../lib/parse.ts";
 import {
   FixerReportSchema,
   type Finding,
   type ReviewerReport,
   type ValidationReport,
 } from "../lib/schemas.ts";
-import type { DispatchOptions, DispatchResult } from "../lib/dispatch.ts";
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
 import { runValidation } from "./validate.ts";
 import {
   runReviewers,
   synthesizeFindings,
   type ReviewerName,
 } from "./review.ts";
-
-type Dispatch = (opts: DispatchOptions) => Promise<DispatchResult>;
 
 const FIXER_REVIEW_PROMPT_PATH = new URL(
   "../prompts/fixer-review.md",
@@ -30,12 +27,11 @@ async function loadFixerReviewPrompt(): Promise<string> {
 }
 
 export interface RunVerifyArgs {
-  dispatch: Dispatch;
+  subagent: Subagent;
   /** Resolves the full diff since the pipeline's base SHA. */
   getDiff: () => Promise<string>;
   archNotes: string;
   taskListSummary: string;
-  cwd: string;
   /** Max fixer-review rounds. Default 2. */
   maxFixRounds?: number;
 }
@@ -119,8 +115,7 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
 
   // --- Step 1: initial validation ----------------------------------
   const initialValidation = await runValidation({
-    dispatch: args.dispatch,
-    cwd: args.cwd,
+    subagent: args.subagent,
   });
   let validationReport: ValidationReport | null = initialValidation.report;
   const initialValidationKeys = new Set<string>();
@@ -132,11 +127,10 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
   // --- Step 2: initial reviewers + synthesize ----------------------
   const initialDiff = await args.getDiff();
   const { reports: initialReports, skippedReviewers } = await runReviewers({
-    dispatch: args.dispatch,
+    subagent: args.subagent,
     diff: initialDiff,
     archNotes: args.archNotes,
     taskListSummary: args.taskListSummary,
-    cwd: args.cwd,
   });
   let reviewerReports: Record<ReviewerName, ReviewerReport> = initialReports;
   const initialSynth = synthesizeFindings(initialReports);
@@ -165,38 +159,34 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
       "{FINDINGS}",
       formatFindings(auto),
     );
-    const fixerDispatch = await args.dispatch({
+    const fixerResult = await args.subagent.dispatch({
+      intent: `Fix ${auto.length} finding${auto.length === 1 ? "" : "s"}`,
       prompt: fixerPrompt,
+      schema: FixerReportSchema,
       tools: ["read", "edit", "write", "bash"],
       extensions: ["autoformat"],
-      cwd: args.cwd,
-      intent: `Fix ${auto.length} finding${auto.length === 1 ? "" : "s"}`,
+      retry: "none",
     });
 
-    if (!fixerDispatch.ok) {
-      knownIssues.push(
-        `verify fixer dispatch failed: ${fixerDispatch.error ?? "unknown error"}`,
-      );
+    if (!fixerResult.ok) {
+      if (fixerResult.reason === "parse" || fixerResult.reason === "schema") {
+        knownIssues.push(
+          `verify fixer round ${round + 1} unproductive: ${fixerResult.error}`,
+        );
+      } else {
+        knownIssues.push(
+          `verify fixer dispatch failed: ${fixerResult.error ?? "unknown error"}`,
+        );
+      }
       break;
     }
 
-    const parsedFixer = parseJsonReport(
-      fixerDispatch.stdout,
-      FixerReportSchema,
-    );
-    if (!parsedFixer.ok) {
-      knownIssues.push(
-        `verify fixer round ${round + 1} unproductive: ${parsedFixer.error}`,
-      );
-      break;
-    }
-    fixed.push(...parsedFixer.data.fixed);
+    fixed.push(...fixerResult.data.fixed);
 
     // 4c. Re-run validation to catch regressions. Single-shot: we
     // only want a regression signal here, not another nested fix loop.
     const postValidation = await runValidation({
-      dispatch: args.dispatch,
-      cwd: args.cwd,
+      subagent: args.subagent,
       maxFixRounds: 1,
     });
     validationReport = postValidation.report ?? validationReport;
@@ -213,11 +203,10 @@ export async function runVerify(args: RunVerifyArgs): Promise<RunVerifyResult> {
     // 4d. Re-run reviewers on the updated diff.
     const roundDiff = await args.getDiff();
     const { reports: roundReports } = await runReviewers({
-      dispatch: args.dispatch,
+      subagent: args.subagent,
       diff: roundDiff,
       archNotes: args.archNotes,
       taskListSummary: args.taskListSummary,
-      cwd: args.cwd,
     });
     reviewerReports = roundReports;
     const roundSynth = synthesizeFindings(roundReports);

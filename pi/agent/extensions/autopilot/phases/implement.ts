@@ -1,12 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { taskList } from "../../task-list/api.ts";
-import { parseJsonReport } from "../lib/parse.ts";
-import { ImplementReportSchema } from "../lib/schemas.ts";
-import {
-  dispatchWithOneRetry,
-  type DispatchFn,
-  type DispatchResult,
-} from "../lib/dispatch.ts";
+import { ImplementReportSchema, type ImplementReport } from "../lib/schemas.ts";
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type { DispatchResult } from "../../workflow-core/lib/types.ts";
 
 const PROMPT_PATH = new URL("../prompts/implement.md", import.meta.url);
 
@@ -23,7 +19,7 @@ async function loadTemplate(): Promise<string> {
 
 export interface RunImplementArgs {
   archNotes: string;
-  dispatch: DispatchFn;
+  subagent: Subagent;
   /**
    * Resolves the current HEAD SHA. Called before and after each task
    * dispatch; a task is considered to have produced a commit iff HEAD
@@ -31,7 +27,6 @@ export interface RunImplementArgs {
    * git repo.
    */
   getHead: () => Promise<string>;
-  cwd: string;
   /** Run-level abort signal; prevents retry after /autopilot-cancel. */
   signal?: AbortSignal;
 }
@@ -73,46 +68,34 @@ export async function runImplement(
       }
     }, 5000);
 
-    let dispatchResult: DispatchResult;
     let headBefore: string;
+    let dispatchResult: DispatchResult<typeof ImplementReportSchema>;
     try {
       headBefore = await args.getHead();
-      dispatchResult = await dispatchWithOneRetry(
-        args.dispatch,
-        {
-          prompt,
-          tools: ["read", "edit", "write", "bash"],
-          extensions: ["autoformat"],
-          cwd: args.cwd,
-          intent: `Implement: ${task.title}`,
-        },
-        args.signal,
-      );
+      dispatchResult = await args.subagent.dispatch({
+        intent: `Implement: ${task.title}`,
+        prompt,
+        schema: ImplementReportSchema,
+        tools: ["read", "edit", "write", "bash"],
+        extensions: ["autoformat"],
+      });
     } finally {
       clearInterval(heartbeat);
     }
 
     if (!dispatchResult.ok) {
-      taskList.fail(
-        task.id,
-        `dispatch failed: ${dispatchResult.error ?? "unknown error"}`,
-      );
+      const msg =
+        dispatchResult.reason === "parse" || dispatchResult.reason === "schema"
+          ? `invalid subagent report: ${dispatchResult.error}`
+          : `dispatch failed: ${dispatchResult.error ?? "unknown error"}`;
+      taskList.fail(task.id, msg);
       return { ok: false, haltedAtTaskId: task.id };
     }
 
-    const parsed = parseJsonReport(
-      dispatchResult.stdout,
-      ImplementReportSchema,
-    );
-    if (!parsed.ok) {
-      taskList.fail(task.id, `invalid subagent report: ${parsed.error}`);
-      return { ok: false, haltedAtTaskId: task.id };
-    }
-
-    if (parsed.data.outcome === "failure") {
+    if (dispatchResult.data.outcome === "failure") {
       taskList.fail(
         task.id,
-        `subagent reported failure: ${parsed.data.summary}`,
+        `subagent reported failure: ${dispatchResult.data.summary}`,
       );
       return { ok: false, haltedAtTaskId: task.id };
     }
@@ -127,7 +110,7 @@ export async function runImplement(
       return { ok: false, haltedAtTaskId: task.id };
     }
 
-    taskList.complete(task.id, parsed.data.summary);
+    taskList.complete(task.id, dispatchResult.data.summary);
   }
 
   return { ok: true };

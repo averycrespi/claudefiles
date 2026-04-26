@@ -2,6 +2,12 @@ import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { runImplement } from "./implement.ts";
 import { taskList } from "../../task-list/api.ts";
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
+import type {
+  DispatchSpec,
+  DispatchResult,
+} from "../../workflow-core/lib/types.ts";
+import type { TSchema } from "@sinclair/typebox";
 
 beforeEach(() => {
   taskList.clear();
@@ -11,17 +17,27 @@ afterEach(() => {
   taskList.clear();
 });
 
-const successJson = JSON.stringify({
-  outcome: "success",
+const successData = {
+  outcome: "success" as const,
   commit: "abc1234",
   summary: "did it",
-});
+};
 
-const failureJson = JSON.stringify({
-  outcome: "failure",
+const failureData = {
+  outcome: "failure" as const,
   commit: null,
   summary: "blocked: missing dep",
-});
+};
+
+function makeSubagent(
+  dispatchFn: (spec: DispatchSpec<TSchema>) => Promise<DispatchResult<TSchema>>,
+): Subagent {
+  return {
+    dispatch: dispatchFn as Subagent["dispatch"],
+    parallel: async (specs) =>
+      Promise.all(specs.map((s) => dispatchFn(s))) as any,
+  };
+}
 
 function makeHeadSeq(shas: string[]) {
   let i = 0;
@@ -36,10 +52,12 @@ test("runImplement marks task completed on success + real commit", async () => {
   taskList.create([{ title: "a", description: "aa" }]);
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => ({ ok: true, stdout: successJson }),
-    // Before dispatch: sha0, after dispatch: sha1 → HEAD moved → commit made.
+    subagent: makeSubagent(async () => ({
+      ok: true,
+      data: successData,
+      raw: JSON.stringify(successData),
+    })),
     getHead: makeHeadSeq(["sha0", "sha1"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, true);
   const t = taskList.get(1);
@@ -55,12 +73,11 @@ test("runImplement marks task failed and breaks on failure report", async () => 
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => {
+    subagent: makeSubagent(async () => {
       dispatchCount++;
-      return { ok: true, stdout: failureJson };
-    },
+      return { ok: true, data: failureData, raw: JSON.stringify(failureData) };
+    }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
@@ -75,10 +92,12 @@ test("runImplement treats phantom success (HEAD unchanged) as failure", async ()
   taskList.create([{ title: "a", description: "aa" }]);
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => ({ ok: true, stdout: successJson }),
-    // HEAD never moves → phantom success.
+    subagent: makeSubagent(async () => ({
+      ok: true,
+      data: successData,
+      raw: JSON.stringify(successData),
+    })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
@@ -87,13 +106,17 @@ test("runImplement treats phantom success (HEAD unchanged) as failure", async ()
   assert.match(t?.failureReason ?? "", /no new commit/i);
 });
 
-test("runImplement treats unparseable subagent output as failure", async () => {
+test("runImplement treats schema/parse dispatch failure as failure", async () => {
   taskList.create([{ title: "a", description: "aa" }]);
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => ({ ok: true, stdout: "not json at all" }),
+    subagent: makeSubagent(async () => ({
+      ok: false as const,
+      reason: "parse" as const,
+      error: "JSON parse error: unexpected token",
+      raw: "not json at all",
+    })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
@@ -101,7 +124,7 @@ test("runImplement treats unparseable subagent output as failure", async () => {
   assert.equal(t?.status, "failed");
 });
 
-test("runImplement marks task failed and breaks after dispatch retry exhausted", async () => {
+test("runImplement marks task failed and breaks after dispatch failure", async () => {
   taskList.create([
     { title: "a", description: "aa" },
     { title: "b", description: "bb" },
@@ -109,20 +132,19 @@ test("runImplement marks task failed and breaks after dispatch retry exhausted",
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => {
+    subagent: makeSubagent(async () => {
       dispatchCount++;
-      return { ok: false, stdout: "", error: "dispatch failed" };
-    },
+      return {
+        ok: false as const,
+        reason: "dispatch" as const,
+        error: "dispatch failed",
+      };
+    }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, false);
   assert.equal(result.haltedAtTaskId, 1);
-  assert.equal(
-    dispatchCount,
-    2,
-    "task should be retried exactly once before failing",
-  );
+  assert.equal(dispatchCount, 1);
   const t1 = taskList.get(1);
   assert.equal(t1?.status, "failed");
   assert.match(t1?.failureReason ?? "", /dispatch/i);
@@ -130,64 +152,32 @@ test("runImplement marks task failed and breaks after dispatch retry exhausted",
   assert.equal(t2?.status, "pending", "later tasks remain pending");
 });
 
-test("runImplement retries transient dispatch failure and recovers", async () => {
+test("runImplement handles aborted dispatch result as failure", async () => {
   taskList.create([{ title: "a", description: "aa" }]);
-  let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => {
-      dispatchCount++;
-      if (dispatchCount === 1) {
-        return { ok: false, stdout: "", error: "transient" };
-      }
-      return { ok: true, stdout: successJson };
-    },
-    // First dispatch "crashes" so HEAD is still sha0; retry succeeds → sha1.
-    getHead: makeHeadSeq(["sha0", "sha1"]),
-    cwd: process.cwd(),
-  });
-  assert.equal(result.ok, true);
-  assert.equal(dispatchCount, 2);
-  assert.equal(taskList.get(1)?.status, "completed");
-});
-
-test("runImplement does not retry a dispatch that reported aborted", async () => {
-  taskList.create([{ title: "a", description: "aa" }]);
-  let dispatchCount = 0;
-  const result = await runImplement({
-    archNotes: "notes",
-    dispatch: async () => {
-      dispatchCount++;
-      return { ok: false, stdout: "", error: "aborted", aborted: true };
-    },
+    subagent: makeSubagent(async () => ({
+      ok: false as const,
+      reason: "aborted" as const,
+      error: "aborted",
+    })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, false);
-  assert.equal(
-    dispatchCount,
-    1,
-    "aborted dispatch must not be retried — user cancelled",
-  );
 });
 
-test("runImplement does not retry when run signal is already aborted", async () => {
+test("runImplement handles timeout dispatch result as failure", async () => {
   taskList.create([{ title: "a", description: "aa" }]);
-  let dispatchCount = 0;
-  const controller = new AbortController();
-  controller.abort();
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => {
-      dispatchCount++;
-      return { ok: false, stdout: "", error: "boom" };
-    },
+    subagent: makeSubagent(async () => ({
+      ok: false as const,
+      reason: "timeout" as const,
+      error: "timed out",
+    })),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
-    signal: controller.signal,
   });
   assert.equal(result.ok, false);
-  assert.equal(dispatchCount, 1);
 });
 
 test("runImplement does not retry on outcome: failure (semantic, not transient)", async () => {
@@ -195,12 +185,15 @@ test("runImplement does not retry on outcome: failure (semantic, not transient)"
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => {
+    subagent: makeSubagent(async () => {
       dispatchCount++;
-      return { ok: true, stdout: failureJson };
-    },
+      return {
+        ok: true,
+        data: failureData,
+        raw: JSON.stringify(failureData),
+      };
+    }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, false);
   assert.equal(dispatchCount, 1, "semantic failure is not retried");
@@ -211,12 +204,15 @@ test("runImplement does not retry phantom success (HEAD unchanged)", async () =>
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => {
+    subagent: makeSubagent(async () => {
       dispatchCount++;
-      return { ok: true, stdout: successJson };
-    },
+      return {
+        ok: true,
+        data: successData,
+        raw: JSON.stringify(successData),
+      };
+    }),
     getHead: makeHeadSeq(["sha0", "sha0"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, false);
   assert.equal(
@@ -238,16 +234,44 @@ test("runImplement skips non-pending tasks", async () => {
   let dispatchCount = 0;
   const result = await runImplement({
     archNotes: "notes",
-    dispatch: async () => {
+    subagent: makeSubagent(async () => {
       dispatchCount++;
-      return { ok: true, stdout: successJson };
-    },
+      return {
+        ok: true,
+        data: successData,
+        raw: JSON.stringify(successData),
+      };
+    }),
     getHead: makeHeadSeq(["sha0", "sha1"]),
-    cwd: process.cwd(),
   });
   assert.equal(result.ok, true);
   assert.equal(dispatchCount, 1, "only pending task dispatched");
   assert.equal(taskList.get(1)?.status, "completed");
   assert.equal(taskList.get(1)?.summary, "already done");
   assert.equal(taskList.get(2)?.status, "completed");
+});
+
+test("runImplement passes correct tools and intent to subagent.dispatch", async () => {
+  taskList.create([{ title: "my-task", description: "do the thing" }]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let capturedSpec: any = null;
+  const result = await runImplement({
+    archNotes: "arch",
+    subagent: makeSubagent(async (spec) => {
+      capturedSpec = spec;
+      return { ok: true, data: successData, raw: JSON.stringify(successData) };
+    }),
+    getHead: makeHeadSeq(["sha0", "sha1"]),
+  });
+  assert.equal(result.ok, true);
+  assert.ok(capturedSpec);
+  assert.equal(capturedSpec.intent, "Implement: my-task");
+  assert.ok(capturedSpec.tools.includes("read"));
+  assert.ok(capturedSpec.tools.includes("edit"));
+  assert.ok(capturedSpec.tools.includes("write"));
+  assert.ok(capturedSpec.tools.includes("bash"));
+  assert.ok(
+    (capturedSpec.extensions ?? []).includes("autoformat"),
+    "autoformat extension must be requested",
+  );
 });

@@ -1,13 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { parseJsonReport } from "../lib/parse.ts";
 import {
   ReviewerReportSchema,
   type Finding,
   type ReviewerReport,
 } from "../lib/schemas.ts";
-import type { DispatchOptions, DispatchResult } from "../lib/dispatch.ts";
-
-type Dispatch = (opts: DispatchOptions) => Promise<DispatchResult>;
+import type { Subagent } from "../../workflow-core/lib/subagent.ts";
 
 export type ReviewerName = "plan-completeness" | "integration" | "security";
 
@@ -52,11 +49,10 @@ function fillPrompt(
 }
 
 export interface RunReviewersArgs {
-  dispatch: Dispatch;
+  subagent: Subagent;
   diff: string;
   archNotes: string;
   taskListSummary: string;
-  cwd: string;
 }
 
 export interface RunReviewersResult {
@@ -74,35 +70,24 @@ export interface RunReviewersResult {
 export async function runReviewers(
   args: RunReviewersArgs,
 ): Promise<RunReviewersResult> {
-  const outcomes = await Promise.all(
-    REVIEWER_NAMES.map(async (name) => {
-      const template = await loadPrompt(name);
-      const prompt = fillPrompt(
-        template,
-        args.diff,
-        args.archNotes,
-        args.taskListSummary,
-      );
-      const dispatchResult = await args.dispatch({
-        prompt,
-        tools: ["read", "ls", "find", "grep"],
-        cwd: args.cwd,
-        intent: `Review: ${name}`,
-      });
-      const emptyReport: ReviewerReport = { findings: [] };
-      if (!dispatchResult.ok) {
-        return { name, report: emptyReport, skipped: true };
-      }
-      const parsed = parseJsonReport(
-        dispatchResult.stdout,
-        ReviewerReportSchema,
-      );
-      if (!parsed.ok) {
-        return { name, report: emptyReport, skipped: true };
-      }
-      return { name, report: parsed.data, skipped: false };
-    }),
+  const templates = await Promise.all(
+    REVIEWER_NAMES.map((name) => loadPrompt(name)),
   );
+
+  const specs = REVIEWER_NAMES.map((name, i) => ({
+    intent: `Review: ${name}`,
+    prompt: fillPrompt(
+      templates[i],
+      args.diff,
+      args.archNotes,
+      args.taskListSummary,
+    ),
+    schema: ReviewerReportSchema,
+    tools: ["read", "ls", "find", "grep"] as const,
+    retry: "none" as const,
+  }));
+
+  const results = await args.subagent.parallel(specs);
 
   const reports = {
     "plan-completeness": { findings: [] },
@@ -110,10 +95,17 @@ export async function runReviewers(
     security: { findings: [] },
   } as Record<ReviewerName, ReviewerReport>;
   const skippedReviewers: string[] = [];
-  for (const o of outcomes) {
-    reports[o.name] = o.report;
-    if (o.skipped) skippedReviewers.push(o.name);
+
+  for (let i = 0; i < REVIEWER_NAMES.length; i++) {
+    const name = REVIEWER_NAMES[i];
+    const r = results[i];
+    if (!r.ok) {
+      skippedReviewers.push(name);
+    } else {
+      reports[name] = r.data;
+    }
   }
+
   return { reports, skippedReviewers };
 }
 
