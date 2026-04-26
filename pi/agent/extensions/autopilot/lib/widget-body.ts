@@ -4,8 +4,6 @@ import {
   renderStageBreadcrumb,
   renderSubagents,
 } from "../../_workflow-core/render.ts";
-import { taskList } from "../../task-list/api.ts";
-import { renderTaskWindowLines, type TaskWindowTheme } from "./widget-tasks.ts";
 
 const STAGES = ["plan", "implement", "verify"] as const;
 type Stage = (typeof STAGES)[number];
@@ -22,18 +20,14 @@ export function setupAutopilotWidget(widget: Widget): {
   );
   widget.setBody(() => [
     ...renderSubagents(widget.subagents, { theme: widget.theme }),
-    ...renderTaskWindowLines(taskList.all(), widget.theme as TaskWindowTheme),
   ]);
   widget.setFooter("type /autopilot-cancel to stop");
-
-  // Re-render on taskList mutations (_workflow-core only re-evals on tick + subagent events).
-  const unsub = taskList.subscribe(() => widget.invalidate());
 
   return {
     setStage(s: Stage | null) {
       stage = s;
       widget.invalidate();
     },
-    dispose: unsub,
+    dispose() {},
   };
 }
