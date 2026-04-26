@@ -1,9 +1,11 @@
-import { test } from "node:test";
+import { test, mock } from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import {
   buildArgs,
   formatSpawnFailure,
   spawnSubagent,
+  _spawn,
   type SpawnOutcome,
 } from "./spawn.ts";
 
@@ -307,5 +309,100 @@ test("spawnSubagent: aborted signal before spawn returns error without running",
   } finally {
     if (prev === undefined) delete process.env.PI_SUBAGENT_DEPTH;
     else process.env.PI_SUBAGENT_DEPTH = prev;
+  }
+});
+
+// ─── spawnSubagent env merge ──────────────────────────────────────────────────
+
+test("spawnSubagent env: options.env overrides process.env, PI_SUBAGENT_DEPTH always wins", async () => {
+  const prevDepth = process.env.PI_SUBAGENT_DEPTH;
+  const prevVar = process.env.MCP_BROKER_READONLY;
+
+  process.env.PI_SUBAGENT_DEPTH = "0";
+  process.env.MCP_BROKER_READONLY = "parent-value";
+
+  let capturedEnv: NodeJS.ProcessEnv | undefined;
+
+  const stub = mock.method(_spawn, "fn", (...args: unknown[]) => {
+    const opts = args[2] as { env?: NodeJS.ProcessEnv };
+    capturedEnv = opts?.env;
+
+    // Return a minimal fake ChildProcess that immediately emits close(0).
+    const child = new EventEmitter() as any;
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.stdout.setEncoding = () => {};
+    child.stderr.setEncoding = () => {};
+    // Emit close on the next tick so listeners are attached first.
+    setImmediate(() => child.emit("close", 0, null));
+    return child;
+  });
+
+  try {
+    await spawnSubagent({
+      prompt: "p",
+      toolAllowlist: [],
+      extensionAllowlist: [],
+      cwd: "/tmp",
+      env: {
+        MCP_BROKER_READONLY: "caller-value",
+        // Attempt to override PI_SUBAGENT_DEPTH — must be ignored.
+        PI_SUBAGENT_DEPTH: "99",
+      },
+    });
+
+    assert.ok(capturedEnv !== undefined, "spawn was called");
+    // options.env overrides process.env
+    assert.equal(capturedEnv!.MCP_BROKER_READONLY, "caller-value");
+    // PI_SUBAGENT_DEPTH must be the computed value (0 + 1 = 1), not caller's 99
+    assert.equal(capturedEnv!.PI_SUBAGENT_DEPTH, "1");
+  } finally {
+    stub.mock.restore();
+    if (prevDepth === undefined) delete process.env.PI_SUBAGENT_DEPTH;
+    else process.env.PI_SUBAGENT_DEPTH = prevDepth;
+    if (prevVar === undefined) delete process.env.MCP_BROKER_READONLY;
+    else process.env.MCP_BROKER_READONLY = prevVar;
+  }
+});
+
+test("spawnSubagent env: omitting options.env passes process.env through unchanged", async () => {
+  const prevDepth = process.env.PI_SUBAGENT_DEPTH;
+  const prevVar = process.env.MCP_BROKER_READONLY;
+
+  process.env.PI_SUBAGENT_DEPTH = "0";
+  process.env.MCP_BROKER_READONLY = "parent-value";
+
+  let capturedEnv: NodeJS.ProcessEnv | undefined;
+
+  const stub = mock.method(_spawn, "fn", (...args: unknown[]) => {
+    const opts = args[2] as { env?: NodeJS.ProcessEnv };
+    capturedEnv = opts?.env;
+
+    const child = new EventEmitter() as any;
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.stdout.setEncoding = () => {};
+    child.stderr.setEncoding = () => {};
+    setImmediate(() => child.emit("close", 0, null));
+    return child;
+  });
+
+  try {
+    await spawnSubagent({
+      prompt: "p",
+      toolAllowlist: [],
+      extensionAllowlist: [],
+      cwd: "/tmp",
+    });
+
+    assert.ok(capturedEnv !== undefined, "spawn was called");
+    assert.equal(capturedEnv!.MCP_BROKER_READONLY, "parent-value");
+    assert.equal(capturedEnv!.PI_SUBAGENT_DEPTH, "1");
+  } finally {
+    stub.mock.restore();
+    if (prevDepth === undefined) delete process.env.PI_SUBAGENT_DEPTH;
+    else process.env.PI_SUBAGENT_DEPTH = prevDepth;
+    if (prevVar === undefined) delete process.env.MCP_BROKER_READONLY;
+    else process.env.MCP_BROKER_READONLY = prevVar;
   }
 });

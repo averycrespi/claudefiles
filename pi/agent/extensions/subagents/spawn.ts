@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn as _nodeSpawn } from "node:child_process";
 import {
   createWriteStream,
   mkdirSync,
@@ -16,6 +16,11 @@ import { resolveExtensionAllowlist } from "./utils.ts";
 
 export const PI_BINARY = "pi";
 
+// Exported so tests can stub it without launching a real process.
+export const _spawn = {
+  fn: _nodeSpawn,
+};
+
 export interface SpawnInvocation {
   prompt: string;
   toolAllowlist: BuiltinTool[];
@@ -31,6 +36,7 @@ export interface SpawnInvocation {
   disablePromptTemplates?: boolean;
   logId?: string;
   cwd: string;
+  env?: Record<string, string>;
   signal?: AbortSignal;
   onEvent?: (event: unknown) => void;
 }
@@ -199,6 +205,7 @@ async function runSpawn(
   logId: string,
   signal?: AbortSignal,
   onEvent?: (event: unknown) => void,
+  extraEnv?: Record<string, string>,
 ): Promise<SpawnOutcome> {
   const log = createLogFile(logId);
   log.stream.write(
@@ -211,7 +218,7 @@ async function runSpawn(
     let stdoutBuffer = "";
     let stderrBuffer = "";
     let finalText = "";
-    let child: ReturnType<typeof spawn> | undefined;
+    let child: ReturnType<typeof _nodeSpawn> | undefined;
     let killTimer: NodeJS.Timeout | undefined;
 
     const finish = (outcome: SpawnOutcome) => {
@@ -248,10 +255,11 @@ async function runSpawn(
       });
     }
 
-    child = spawn(PI_BINARY, args, {
+    child = _spawn.fn(PI_BINARY, args, {
       cwd,
       env: {
         ...process.env,
+        ...extraEnv,
         PI_SUBAGENT_DEPTH: String(getCurrentDepth() + 1),
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -391,6 +399,7 @@ export async function spawnSubagent(
     logId,
     options.signal,
     options.onEvent,
+    options.env,
   );
 }
 
