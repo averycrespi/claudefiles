@@ -106,6 +106,7 @@ async function runSpawn(
     disablePromptTemplates: agent.disablePromptTemplates,
     logId: toolCallId,
     cwd: ctx.cwd,
+    env: agent.env,
     signal: ctx.signal,
     onEvent: (event) => tracker.handleEvent(event),
   });
