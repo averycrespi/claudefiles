@@ -17,6 +17,15 @@ const DEBOUNCE_MS = 100;
 export default function (pi: ExtensionAPI) {
   registerTools(pi);
 
+  pi.registerCommand("task-list-clear", {
+    description:
+      "Drop all tasks from the task list immediately, without confirmation.",
+    handler: async (_args, ctx) => {
+      taskList.clear();
+      ctx.ui.notify("/task-list-clear: task list cleared", "info");
+    },
+  });
+
   pi.registerMessageRenderer<TaskListState>(
     CUSTOM_TYPE,
     (message, _options, theme) => {
