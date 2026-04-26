@@ -612,3 +612,39 @@ test("reconcile: failed task transition to in_progress is valid", () => {
   if (!result.ok) throw new Error("unreachable");
   assert.equal(store.get(1)?.status, "in_progress");
 });
+
+test("reconcile then add: add() continues nextId from where reconcile left off", () => {
+  // reconcile() assigns ids 1–3 to 3 new tasks; add() must use id 4
+  const store = createStore();
+  const result = store.reconcile([
+    { title: "alpha" },
+    { title: "beta" },
+    { title: "gamma" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  assert.deepEqual(
+    result.tasks.map((t) => t.id),
+    [1, 2, 3],
+  );
+  const added = store.add("delta");
+  assert.equal(added.id, 4, `expected id 4, got ${added.id}`);
+});
+
+test("add then reconcile: reconcile() continues nextId from where add() left off", () => {
+  // add() uses id 1; reconcile() with 2 new tasks must use ids 2 and 3
+  const store = createStore();
+  const added = store.add("alpha");
+  assert.equal(added.id, 1);
+  const result = store.reconcile([
+    { id: 1, title: "alpha", status: "pending" },
+    { title: "beta" },
+    { title: "gamma" },
+  ]);
+  assert.ok(result.ok);
+  if (!result.ok) throw new Error("unreachable");
+  const newTasks = result.tasks.filter((t) => t.title !== "alpha");
+  assert.equal(newTasks.length, 2);
+  assert.equal(newTasks[0].id, 2, `expected id 2, got ${newTasks[0].id}`);
+  assert.equal(newTasks[1].id, 3, `expected id 3, got ${newTasks[1].id}`);
+});
