@@ -14,9 +14,10 @@ import initGuard from "./guard.ts";
 import { registerTools } from "./tools.ts";
 
 export default function (pi: ExtensionAPI) {
-  const client = new BrokerClient();
+  const readOnly = process.env.MCP_BROKER_READONLY === "1";
+  const client = new BrokerClient({ readOnly });
 
-  registerTools(pi, client);
+  registerTools(pi, client, readOnly);
   initGuard(pi, client);
 
   // Pre-fetch the tool list on session start so the broker prompt menu
@@ -40,23 +41,33 @@ export default function (pi: ExtensionAPI) {
       return undefined;
     }
     return {
-      systemPrompt: `${event.systemPrompt}\n\n${buildBrokerPrompt(tools)}`,
+      systemPrompt: `${event.systemPrompt}\n\n${buildBrokerPrompt(tools, readOnly)}`,
     };
   });
 }
 
-export function buildBrokerPrompt(tools: BrokerTool[]): string {
+export function buildBrokerPrompt(
+  tools: BrokerTool[],
+  readOnly: boolean = false,
+): string {
   const byNamespace = groupByNamespace(tools);
   const menu = Array.from(byNamespace.entries())
     .map(([ns, names]) => `- ${ns}: ${names.join(", ")}`)
     .join("\n");
-  return [
+  const base = [
     'MCP broker tools (call via mcp_call name="<namespace>.<tool>"):',
     menu,
     "",
     "Use mcp_describe for parameter schemas. Use mcp_search to discover tools by keyword.",
     "For remote git operations (push/pull/fetch/ls-remote/remote) and GitHub work, prefer these broker tools over bash gh/git — bash invocations of gh or remote git typically aren't authenticated in this environment.",
   ].join("\n");
+  if (readOnly) {
+    return (
+      base +
+      "\n\nRead-only mode: only listed tools are callable. Write tools (create/edit/merge/push/etc.) are not available."
+    );
+  }
+  return base;
 }
 
 function groupByNamespace(tools: BrokerTool[]): Map<string, string[]> {

@@ -41,6 +41,19 @@ test("buildBrokerPrompt sorts namespaces and tool names alphabetically", () => {
   assert.match(prompt, /^- zeta: alpha, thing_b$/m);
 });
 
+test("buildBrokerPrompt includes read-only suffix when readOnly is true", () => {
+  const prompt = buildBrokerPrompt(TOOLS, true);
+  assert.match(
+    prompt,
+    /Read-only mode: only listed tools are callable\. Write tools \(create\/edit\/merge\/push\/etc\.\) are not available\./,
+  );
+});
+
+test("buildBrokerPrompt omits read-only suffix when readOnly is false", () => {
+  const prompt = buildBrokerPrompt(TOOLS, false);
+  assert.doesNotMatch(prompt, /Read-only mode/);
+});
+
 test("buildBrokerPrompt skips tools without a namespace prefix", () => {
   const prompt = buildBrokerPrompt([
     ...TOOLS,

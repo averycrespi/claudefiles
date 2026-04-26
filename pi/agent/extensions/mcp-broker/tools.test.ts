@@ -258,6 +258,34 @@ test("summarize omits the dash when description is whitespace-only", () => {
     assert.equal((result.content[0] as any).text, smallText);
   });
 
+  test("mcp_call rejects write tool when readOnly and tool not in cached list", async () => {
+    const callTool = () => {
+      throw new Error("callTool must not be invoked in read-only mode");
+    };
+    const client = {
+      callTool,
+      reset: noop,
+      listTools: async () => [],
+      getCachedTools: () => [
+        { name: "git.git_pull", annotations: { readOnlyHint: true } },
+      ],
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "git.git_push", arguments: {} },
+      "readonly-test-id",
+      makeSignal(),
+      scratchDir,
+      true,
+    );
+    const texts = result.content.filter((c: any) => c.type === "text");
+    assert.equal(texts.length, 1);
+    assert.equal(
+      (texts[0] as any).text,
+      "mcp_call: tool 'git.git_push' is not available in read-only mode",
+    );
+  });
+
   test("mcp_call retry path does not spill error responses", async () => {
     const bigText = "e".repeat(30_000);
     let firstCall = true;

@@ -79,10 +79,19 @@ export async function callBrokerTool(
   toolCallId: string,
   signal: AbortSignal,
   dir?: string,
+  readOnly: boolean = false,
 ): Promise<{
   content: AgentToolResult<unknown>["content"];
   details: Record<string, unknown>;
 }> {
+  if (readOnly) {
+    const cached = client.getCachedTools();
+    if (cached !== null && !cached.some((t) => t.name === params.name)) {
+      return errorResult(
+        `mcp_call: tool '${params.name}' is not available in read-only mode`,
+      );
+    }
+  }
   try {
     const result = await client.callTool(params.name, params.arguments, signal);
     const content = (result.content ??
@@ -178,7 +187,11 @@ export async function callBrokerTool(
   }
 }
 
-export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
+export function registerTools(
+  pi: ExtensionAPI,
+  client: BrokerClient,
+  readOnly: boolean = false,
+): void {
   pi.registerTool({
     name: "mcp_search",
     label: "MCP Search",
@@ -333,7 +346,14 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
     parameters: CALL_PARAMS,
     async execute(toolCallId, params, signal, _onUpdate, _ctx) {
       const sig = signal ?? new AbortController().signal;
-      return callBrokerTool(client, params, toolCallId, sig);
+      return callBrokerTool(
+        client,
+        params,
+        toolCallId,
+        sig,
+        undefined,
+        readOnly,
+      );
     },
     renderCall(args, theme, _context) {
       const header = theme.fg("toolTitle", theme.bold("mcp_call"));
