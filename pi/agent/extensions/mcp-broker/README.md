@@ -27,6 +27,34 @@ Set these environment variables before starting Pi:
 
 If either variable is missing, the meta-tools are still registered, but any call returns a clear configuration error — Pi remains usable on machines without a broker.
 
+## Large output spillover
+
+When an `mcp_call` result exceeds **25,000 characters** of joined text, the extension writes the full output to a temporary file and returns a short envelope instead:
+
+```
+<persisted-output>
+Output too large (47.3 KB / 47312 chars). Full output saved to: `/tmp/pi-mcp-broker/call_abc123.txt`
+
+Preview (first 2 KB):
+…
+
+…45312 bytes truncated…
+
+Use the read tool on the path above to fetch the full content.
+</persisted-output>
+```
+
+File location: `${tmpdir()}/pi-mcp-broker/<toolCallId>.txt`. Files are written with the `wx` flag and left for OS temp-dir reaping; no active cleanup.
+
+**Scope and edge cases:**
+
+- Only `mcp_call` is affected. `mcp_search` and `mcp_describe` outputs are bounded by design and are never spilled.
+- Error responses are never spilled — they pass through inline regardless of size.
+- Multi-block results: all text blocks are joined and measured together; if the total exceeds the threshold, the joined text is spilled and image blocks are preserved inline.
+- Write failure (disk full, permissions): the extension logs a warning and falls back to returning the original content inline rather than failing the tool call.
+
+See `.designs/2026-04-26-mcp-broker-spillover.md` for the full design rationale, envelope format details, and decisions log.
+
 ## Guard behavior
 
 When `gh ...` or a remote git operation is detected in bash:
@@ -44,6 +72,7 @@ If the broker is unreachable (no cached tool list), the hint falls back to sugge
 - `index.ts` — entry point, instantiates `BrokerClient`, wires up tools, guard, and the broker tool menu in the system prompt
 - `client.ts` — `BrokerClient` wrapping `@modelcontextprotocol/sdk`'s `StreamableHTTPClientTransport`
 - `tools.ts` — `mcp_search`, `mcp_describe`, `mcp_call` definitions
+- `spillover.ts` — large-output spill-to-file logic (`joinText`, `buildEnvelope`, `spillIfNeeded`)
 - `guard.ts` — bash detection and `tool_result` hint injection
 
 ## Inspiration
