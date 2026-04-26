@@ -16,23 +16,63 @@ function parseList(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
+function stripQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
 function parseFrontmatter(content: string): {
   meta: Record<string, string>;
+  env?: Record<string, string>;
   body: string;
 } {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) return { meta: {}, body: content.trim() };
 
   const meta: Record<string, string> = {};
-  for (const line of match[1].split(/\r?\n/)) {
+  let env: Record<string, string> | undefined;
+  const lines = match[1].split(/\r?\n/);
+  let inEnvBlock = false;
+
+  for (const line of lines) {
+    if (inEnvBlock) {
+      if (/^\s/.test(line)) {
+        // Indented line — try to parse as key: value
+        const trimmed = line.trim();
+        const colonIdx = trimmed.indexOf(":");
+        if (colonIdx === -1) continue; // malformed — skip silently
+        const key = trimmed.slice(0, colonIdx).trim();
+        const value = trimmed.slice(colonIdx + 1).trim();
+        if (key) {
+          env ??= {};
+          env[key] = stripQuotes(value);
+        }
+        continue;
+      } else {
+        // Non-indented line ends the env block
+        inEnvBlock = false;
+      }
+    }
+
     const colonIdx = line.indexOf(":");
     if (colonIdx === -1) continue;
     const key = line.slice(0, colonIdx).trim();
     const value = line.slice(colonIdx + 1).trim();
-    if (key) meta[key] = value;
+    if (!key) continue;
+
+    if (key === "env" && value === "") {
+      inEnvBlock = true;
+    } else {
+      meta[key] = value;
+    }
   }
 
-  return { meta, body: match[2].trim() };
+  return { meta, env, body: match[2].trim() };
 }
 
 export function loadAgents(): AgentDefinition[] {
@@ -57,7 +97,7 @@ export function loadAgents(): AgentDefinition[] {
       continue;
     }
 
-    const { meta, body } = parseFrontmatter(content);
+    const { meta, env, body } = parseFrontmatter(content);
     if (!body) continue;
 
     const name = meta.name?.trim() || basename(entry, ".md");
@@ -70,6 +110,7 @@ export function loadAgents(): AgentDefinition[] {
       extensions: parseList(meta.extensions),
       model: meta.model?.trim() || undefined,
       thinking: meta.thinking?.trim() || undefined,
+      env,
       systemPrompt: body,
       disableSkills: parseBool(meta.disable_skills, false),
       disablePromptTemplates: parseBool(meta.disable_prompt_templates, false),

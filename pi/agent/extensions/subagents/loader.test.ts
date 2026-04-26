@@ -203,6 +203,111 @@ test("loadAgents: missing frontmatter falls back to full content as body", async
   );
 });
 
+test("loadAgents: env is undefined when no env block present", async () => {
+  await withAgentDir(
+    async (dir) => {
+      await writeFile(join(dir, "noenv.md"), `---\nname: noenv\n---\n\nbody`);
+    },
+    () => {
+      const a = loadAgents()[0];
+      assert.equal(a.env, undefined);
+    },
+  );
+});
+
+test("loadAgents: parses a single env key", async () => {
+  await withAgentDir(
+    async (dir) => {
+      await writeFile(
+        join(dir, "onekey.md"),
+        `---
+name: onekey
+env:
+  MCP_BROKER_READONLY: "1"
+---
+
+body`,
+      );
+    },
+    () => {
+      const a = loadAgents()[0];
+      assert.deepEqual(a.env, { MCP_BROKER_READONLY: "1" });
+    },
+  );
+});
+
+test("loadAgents: parses multiple env keys", async () => {
+  await withAgentDir(
+    async (dir) => {
+      await writeFile(
+        join(dir, "multienv.md"),
+        `---
+name: multienv
+env:
+  FIRST: alpha
+  SECOND: beta
+---
+
+body`,
+      );
+    },
+    () => {
+      const a = loadAgents()[0];
+      assert.deepEqual(a.env, { FIRST: "alpha", SECOND: "beta" });
+    },
+  );
+});
+
+test("loadAgents: strips double and single quotes from env values", async () => {
+  await withAgentDir(
+    async (dir) => {
+      await writeFile(
+        join(dir, "quotedenv.md"),
+        `---
+name: quotedenv
+env:
+  DOUBLE: "value with spaces"
+  SINGLE: 'another value'
+  UNQUOTED: plain
+---
+
+body`,
+      );
+    },
+    () => {
+      const a = loadAgents()[0];
+      assert.deepEqual(a.env, {
+        DOUBLE: "value with spaces",
+        SINGLE: "another value",
+        UNQUOTED: "plain",
+      });
+    },
+  );
+});
+
+test("loadAgents: malformed env lines (no colon) are skipped silently", async () => {
+  await withAgentDir(
+    async (dir) => {
+      await writeFile(
+        join(dir, "malformed.md"),
+        `---
+name: malformed
+env:
+  GOOD: ok
+  BADLINE
+  ALSO_GOOD: yes
+---
+
+body`,
+      );
+    },
+    () => {
+      const a = loadAgents()[0];
+      assert.deepEqual(a.env, { GOOD: "ok", ALSO_GOOD: "yes" });
+    },
+  );
+});
+
 test("loadAgents: trims whitespace in list values", async () => {
   await withAgentDir(
     async (dir) => {

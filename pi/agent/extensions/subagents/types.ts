@@ -15,6 +15,7 @@ export interface AgentDefinition {
   extensions: string[];
   model?: string;
   thinking?: string;
+  env?: Record<string, string>;
   systemPrompt: string;
   disableSkills: boolean;
   disablePromptTemplates: boolean;
