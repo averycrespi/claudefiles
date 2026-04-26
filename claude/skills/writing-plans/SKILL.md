@@ -1,13 +1,13 @@
 ---
 name: writing-plans
-description: Use when you have a spec or design document and need to break it into a detailed implementation plan with bite-sized tasks
+description: Use when you have a spec or design document and need to break it into a detailed implementation plan with right-sized tasks
 ---
 
 # Writing Plans
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan, with each task sized to a single self-contained unit of change. DRY. YAGNI. TDD. Frequent commits.
 
 Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
@@ -15,15 +15,25 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Save plans to:** `.plans/YYYY-MM-DD-<feature-name>.md`
 
-## Bite-Sized Task Granularity
+## Task Sizing
 
-**Each step is one action (2-5 minutes):**
+Each task is one self-contained, single-PR-scope unit of change — what would naturally land as a single commit and be reviewable on its own. Do not decompose tasks into atomic steps like "write the test" / "run the test" / "implement" — that level of choreography belongs to the implementer subagent, not the plan.
 
-- "Write the failing test" - step
-- "Run it to make sure it fails" - step
-- "Implement the minimal code to make the test pass" - step
-- "Run the tests and make sure they pass" - step
-- "Commit" - step
+A task is sized correctly when:
+
+- Its acceptance criteria fit in 1–3 specific, verifiable bullets
+- It changes one conceptual unit (one component, one feature slice, one refactor phase)
+- It produces one commit at the end
+
+**Vary task size by complexity:**
+
+- **Simple work** — renames, version bumps, doc updates, applying an existing pattern, one-line config changes. Bundle related simple work into a single task. Don't create separate tasks for "add the constant" and "use the constant" — that's one task.
+- **Standard work** — a new function with tests, a new endpoint following existing patterns, refactoring one module's internals, adding a config option. One task. This is the default size.
+- **Complex or risky work** — auth, security, or data-integrity changes; new abstractions; cross-cutting refactors; anything where you couldn't draft acceptance criteria without thinking hard. Keep tasks tight and split aggressively. Touching more than ~5 files or introducing a new abstraction is a signal to split.
+
+**When in doubt, size up.** The cost of treating something as more complex than it is = one extra review pass. The cost of bundling something risky with something simple = shipping a bug inside a too-large diff.
+
+No fixed cap on tasks per plan — let the plan be as long as the work is. But if a task's acceptance criteria don't fit in 1–3 bullets, it's too big — split it.
 
 ## Plan Document Header
 
@@ -46,50 +56,29 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 ## Task Structure
 
-**Each task must following this structure:**
+Each task must follow this structure:
 
 <task>
 ### Task N: [Component Name]
 
 **Files:**
 
-- Create: `exact/path/to/file.py`
-- Modify: `exact/path/to/existing.py:123-145`
-- Test: `tests/exact/path/to/test.py`
+- Create: `exact/path/to/file.ext`
+- Modify: `exact/path/to/existing.ext:123-145`
+- Test: `tests/exact/path/to/test.ext`
 
-**Step 1: Write the failing test**
+**Acceptance Criteria:**
 
-```python
-def test_specific_behavior():
-    result = function(input)
-    assert result == expected
-```
+- [Specific, verifiable bullet — e.g., "`function([])` returns `None` and does not raise"]
+- [...]
 
-**Step 2: Run test to verify it fails**
+**Notes:** [Non-obvious context, dependencies on prior tasks, gotchas]
 
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: FAIL with "function not defined"
-
-**Step 3: Write minimal implementation**
-
-```python
-def function(input):
-    return expected
-```
-
-**Step 4: Run test to verify it passes**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: PASS
-
-**Step 5: Commit**
-
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
+**Commit:** `<type>(<scope>): <description>`
 
 </task>
+
+The implementer subagent handles the red-green-refactor cycle internally — your job is to specify _what counts as done_, not _how to get there_.
 
 ## Documentation Task
 
