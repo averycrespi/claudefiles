@@ -55,3 +55,7 @@ If your extension just registers a static command that runs synchronously, you d
 ## Documentation
 
 - [INTEGRATION.md](./INTEGRATION.md) — full reference for building workflows: per-primitive API, helper modules, common patterns, gotchas, testing.
+
+## Prior art
+
+- [davidorex/pi-project-workflows](https://github.com/davidorex/pi-project-workflows/tree/main/packages/pi-workflows) — another take on structured Pi workflows.
