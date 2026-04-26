@@ -15,8 +15,15 @@ type CommandHandler = (
   ctx: { ui: { notify: (msg: string, level: string) => void } },
 ) => Promise<void>;
 
+interface WidgetCall {
+  key: string;
+  content: string[] | undefined;
+  options?: { placement?: string };
+}
+
 function makeStubPi() {
   const commands = new Map<string, CommandHandler>();
+  const widgetCalls: WidgetCall[] = [];
   const pi = {
     registerCommand(
       name: string,
@@ -25,15 +32,26 @@ function makeStubPi() {
       commands.set(name, def.handler);
     },
     registerTool() {},
-    registerMessageRenderer() {},
-    sendMessage() {},
     on() {},
+    // Exposed at top-level on pi (accessed via `(pi as any).setWidget`).
+    setWidget(
+      key: string,
+      content: string[] | undefined,
+      options?: { placement?: string },
+    ) {
+      widgetCalls.push({ key, content, options });
+    },
     _commands: commands,
+    _widgetCalls: widgetCalls,
   };
-  return pi as unknown as ExtensionAPI & { _commands: typeof commands };
+  return pi as unknown as ExtensionAPI & {
+    _commands: typeof commands;
+    _widgetCalls: typeof widgetCalls;
+  };
 }
 
 test("/task-list-clear: registered when extension loads", () => {
+  taskList.clear();
   const pi = makeStubPi();
   extensionDefault(pi);
   assert.ok(
@@ -96,4 +114,51 @@ test("/task-list-clear: emits a notification after clearing", async () => {
     `notification should mention 'cleared': ${notifications[0].msg}`,
   );
   taskList.clear();
+});
+
+// ── pi.setWidget integration ──────────────────────────────────────────
+
+test("store mutation calls pi.setWidget with key 'task-list' and non-empty lines", () => {
+  taskList.clear();
+  const pi = makeStubPi();
+  extensionDefault(pi);
+
+  const before = pi._widgetCalls.length;
+  taskList.create([{ title: "Alpha" }, { title: "Beta" }]);
+
+  const calls = pi._widgetCalls.slice(before);
+  assert.ok(calls.length >= 1, "should have called setWidget after create");
+
+  const last = calls[calls.length - 1];
+  assert.equal(last.key, "task-list");
+  assert.ok(Array.isArray(last.content), "content should be a string array");
+  assert.ok(
+    (last.content as string[]).length > 0,
+    "content should be non-empty",
+  );
+  assert.equal(last.options?.placement, "belowEditor");
+
+  taskList.clear();
+});
+
+test("clearing the store calls pi.setWidget with undefined (dismisses widget)", () => {
+  taskList.clear();
+  const pi = makeStubPi();
+  extensionDefault(pi);
+
+  taskList.create([{ title: "Temp" }]);
+
+  const before = pi._widgetCalls.length;
+  taskList.clear();
+
+  const calls = pi._widgetCalls.slice(before);
+  assert.ok(calls.length >= 1, "should have called setWidget after clear");
+
+  const last = calls[calls.length - 1];
+  assert.equal(last.key, "task-list");
+  assert.equal(
+    last.content,
+    undefined,
+    "content should be undefined to dismiss",
+  );
 });

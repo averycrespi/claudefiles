@@ -1,18 +1,13 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { taskList } from "./api.ts";
-import { renderTaskListMessage, summarizeCounts } from "./render.ts";
-import type { TaskListState } from "./state.ts";
+import { renderWidgetLines } from "./render.ts";
 import { registerTools } from "./tools.ts";
 
-const CUSTOM_TYPE = "task-list";
-const DEBOUNCE_MS = 100;
+const WIDGET_KEY = "task-list";
 
 /**
  * Task-list extension: persists a task list for the life of a session
- * and renders it as an inline custom message. Only inline rendering is
- * provided for v1 — the footer `ctx.ui.setStatus` hook is deferred
- * because the renderer has no access to `ExtensionContext` (see
- * NOTES in the accompanying README).
+ * and renders it as a sticky widget below the editor.
  */
 export default function (pi: ExtensionAPI) {
   registerTools(pi);
@@ -26,51 +21,27 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  pi.registerMessageRenderer<TaskListState>(
-    CUSTOM_TYPE,
-    (message, _options, theme) => {
-      const state = message.details;
-      if (!state) return undefined;
-      const rows =
-        typeof process.stdout.rows === "number" ? process.stdout.rows : 40;
-      return renderTaskListMessage(state, { rows }, theme);
-    },
-  );
-
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let latest: TaskListState | null = null;
-
-  const flush = () => {
-    debounceTimer = null;
-    if (!latest) return;
-    const snapshot = latest;
-    latest = null;
-    pi.sendMessage<TaskListState>({
-      customType: CUSTOM_TYPE,
-      content: [{ type: "text", text: summarizeCounts(snapshot.tasks) }],
-      display: true,
-      details: snapshot,
-    });
+  // `setWidget` is a runtime method on pi but not exposed in the typed
+  // ExtensionAPI interface — access it via cast, same pattern as run.ts.
+  const piAny = pi as any;
+  const setWidget = (content: string[] | undefined) => {
+    if (typeof piAny.setWidget === "function") {
+      piAny.setWidget(WIDGET_KEY, content, { placement: "belowEditor" });
+    }
   };
 
   const unsubscribe = taskList.subscribe((state) => {
-    // Snapshot the state so later mutations don't leak into the
-    // pending message payload.
-    latest = { tasks: [...state.tasks], createdAt: state.createdAt };
-    if (debounceTimer !== null) {
-      clearTimeout(debounceTimer);
+    const lines = renderWidgetLines(state);
+    if (lines.length === 0) {
+      setWidget(undefined);
+    } else {
+      setWidget(lines);
     }
-    debounceTimer = setTimeout(flush, DEBOUNCE_MS);
   });
 
   pi.on("session_shutdown", () => {
-    if (debounceTimer !== null) {
-      clearTimeout(debounceTimer);
-      debounceTimer = null;
-    }
+    setWidget(undefined);
+    taskList.clear();
     unsubscribe();
-    if (taskList.all().length > 0) {
-      taskList.clear();
-    }
   });
 }

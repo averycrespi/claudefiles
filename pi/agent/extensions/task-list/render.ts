@@ -2,15 +2,10 @@
  * Rendering for the task-list extension.
  *
  * Pure helpers (`glyphFor`, `styleFor`, `summarizeCounts`,
- * `truncateWithPriority`) are unit-tested in `render.test.ts`. The
- * impure bit is `renderTaskListMessage`, which produces a pi-tui
- * `Component` tree that Pi's interactive mode renders when a
- * `task-list` custom message is displayed.
+ * `truncateWithPriority`) are unit-tested in `render.test.ts`.
+ * `renderWidgetLines` produces a `string[]` body for `pi.ui.setWidget`.
  */
 
-import type { Theme } from "@mariozechner/pi-coding-agent";
-import type { Component } from "@mariozechner/pi-tui";
-import { Text } from "@mariozechner/pi-tui";
 import type { Task, TaskListState, TaskStatus } from "./state.ts";
 
 /**
@@ -122,61 +117,63 @@ export function truncateWithPriority(
 }
 
 /**
- * Apply a style to `text` using the theme. Theme colors are applied
- * last so ANSI reset sequences in bold/strikethrough don't clobber
- * the foreground color.
+ * Maximum number of lines Pi renders for a string-array widget
+ * (mirrors `InteractiveMode.MAX_WIDGET_LINES = 10`).
  */
-function applyStyle(theme: Theme, style: TaskStyle, text: string): string {
-  let out = text;
-  if (style.strikethrough) out = theme.strikethrough(out);
-  if (style.bold) out = theme.bold(out);
-  return theme.fg(style.color, out);
-}
+const MAX_WIDGET_LINES = 10;
 
-export interface RenderTaskListOptions {
+export interface RenderWidgetLinesOptions {
   rows?: number;
 }
 
 /**
- * Build the `Component` Pi draws for a `task-list` custom message.
+ * Build a `string[]` body for `pi.ui.setWidget("task-list", ...)`.
  *
  * Layout:
- *   - Header: `summarizeCounts(...)`
- *   - One line per truncated task: `glyph title [· activity]`
- *   - Trailing `+N more` line when tasks were dropped by the budget.
+ *   - Line 0: `summarizeCounts(...)` header.
+ *   - Lines 1–N: one line per truncated task (`glyph title [· detail]`).
+ *   - Optional trailing `+N more` when tasks were dropped.
  *
- * Budget: `min(10, max(3, rows - 14))`, leaving room for chrome
- * (header, footer, input, surrounding messages).
+ * Cap: `MAX_WIDGET_LINES` (10) — 1 header + up to 9 task rows, or
+ * 1 header + 8 rows + "+N more" when the total exceeds 9 tasks.
+ *
+ * Returns `[]` when the task list is empty (caller should dismiss the
+ * widget via `setWidget(key, undefined)`).
  */
-export function renderTaskListMessage(
+export function renderWidgetLines(
   state: TaskListState,
-  options: RenderTaskListOptions,
-  theme: Theme,
-): Component {
-  const rows = options.rows ?? 40;
-  const budget = Math.min(10, Math.max(3, rows - 14));
+  _opts: RenderWidgetLinesOptions = {},
+): string[] {
   const tasks = state.tasks;
+  if (tasks.length === 0) return [];
+
+  // Determine row budget (rows available for task lines, below the header).
+  const maxTaskRows = MAX_WIDGET_LINES - 1; // 9
+
+  const needsMore = tasks.length > maxTaskRows;
+  // If we need a "+N more" line, only show 8 task rows to leave room for it.
+  const budget = needsMore ? maxTaskRows - 1 : maxTaskRows;
+
   const kept = truncateWithPriority(tasks, budget, Date.now());
   const dropped = tasks.length - kept.length;
 
   const lines: string[] = [];
-  lines.push(theme.fg("muted", summarizeCounts(tasks)));
+  lines.push(summarizeCounts(tasks));
 
   for (const task of kept) {
-    const style = styleFor(task.status);
     const glyph = glyphFor(task.status);
-    let line = applyStyle(theme, style, `${glyph} ${task.title}`);
+    let line = `${glyph} ${task.title}`;
     if (task.status === "in_progress" && task.activity) {
-      line += " " + theme.fg("dim", `· ${task.activity}`);
+      line += ` · ${task.activity}`;
     } else if (task.status === "failed" && task.failureReason) {
-      line += " " + theme.fg("error", `· ${task.failureReason}`);
+      line += ` · ${task.failureReason}`;
     }
     lines.push(line);
   }
 
   if (dropped > 0) {
-    lines.push(theme.fg("muted", `+${dropped} more`));
+    lines.push(`+${dropped} more`);
   }
 
-  return new Text(lines.join("\n"), 0, 0);
+  return lines;
 }
