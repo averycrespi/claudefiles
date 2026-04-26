@@ -244,11 +244,11 @@ Mirrors `pi/agent/extensions/autopilot/` so the comparison code-reads the same w
 pi/agent/extensions/autoralph/
   README.md                      # full design doc, lifted from this file
   index.ts                       # command registration + run lifecycle (mirrors autopilot/index.ts)
-  preflight.ts                   # vendored from autopilot/preflight.ts
+  preflight.ts                   # vendored from autopilot's pre-workflow-core implementation
   preflight.test.ts
   lib/
-    dispatch.ts                  # vendored from autopilot/lib/dispatch.ts
-    parse.ts                     # vendored from autopilot/lib/parse.ts
+    dispatch.ts                  # vendored from autopilot's pre-workflow-core implementation
+    parse.ts                     # vendored from autopilot's pre-workflow-core implementation
     schemas.ts                   # IterationReportSchema (TypeBox)
     history.ts                   # append-only history.json reader/writer
     history.test.ts
@@ -266,7 +266,7 @@ pi/agent/extensions/autoralph/
     reflection-block.md          # the reflection-checkpoint sub-block injected on cadence
 ```
 
-**Vendored, not shared.** `dispatch.ts`, `parse.ts`, and `preflight.ts` are byte-for-byte the same logic as in `autopilot/`. We deliberately copy rather than re-export so autoralph can mutate independently without touching autopilot. Sharing internals would make the comparison harder to reason about ("did autoralph win, or did my refactor of `parse.ts` win?"). Dedupe later if it proves stable.
+**Vendored, not shared.** `dispatch.ts`, `parse.ts`, and `preflight.ts` are vendored from autopilot's pre-workflow-core implementation. We deliberately copy rather than re-export so autoralph can mutate independently without touching autopilot. Sharing internals would make the comparison harder to reason about ("did autoralph win, or did my refactor of `parse.ts` win?"). Autopilot has since migrated onto `workflow-core`; autoralph still uses these local copies. Migration of autoralph onto `workflow-core` is a separate future work item.
 
 ## Testing
 

@@ -1,6 +1,6 @@
 # workflow-core
 
-Pi extension that provides primitives for building structured-state-machine-around-subagents workflows. Sibling extensions (autopilot, autoralph, future PR-review / debug / triage / etc.) consume it as a library.
+Pi extension that provides primitives for building structured-state-machine-around-subagents workflows. Sibling extensions (autopilot, autoralph, and others) consume it as a library.
 
 ## What it gives you
 

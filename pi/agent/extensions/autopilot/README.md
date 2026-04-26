@@ -4,11 +4,11 @@ Pi extension that runs an autonomous plan → implement → verify pipeline from
 
 ## Command reference
 
-### `/autopilot <design-file>`
+### `/autopilot-start <design-file>`
 
 One positional argument: the path to a design document (typically `.designs/YYYY-MM-DD-<topic>.md`). No flags in v1.
 
-Only one autopilot run may be active at a time — invoking `/autopilot` while a run is in progress errors immediately. Use `/autopilot-cancel` to stop the active run first.
+Only one autopilot run may be active at a time — invoking `/autopilot-start` while a run is in progress errors immediately. Use `/autopilot-cancel` to stop the active run first.
 
 ### `/autopilot-cancel`
 
@@ -59,7 +59,7 @@ The orchestrator is a single `async` TypeScript function that sequences three ph
 
 ```mermaid
 flowchart TD
-    A[/autopilot <design.md>/] --> B{pre-flight}
+    A[/autopilot-start <design.md>/] --> B{pre-flight}
     B -->|fail| Z[abort + report]
     B -->|ok| P[plan subagent]
     P -->|parse fail| Z
@@ -227,7 +227,7 @@ Unified principle: **always terminate with a report. Never leave the user in a s
 | Verify automated checks still failing after 2 fix rounds | Pipeline still completes. Checks flagged as known issues in report. User gets branch.                      |
 | Reviewer subagent fails to run                           | Orchestrator skips that reviewer (no retry — reviewers are advisory). Skip noted in report.                |
 | Fix subagent breaks something that was passing           | Record as known issue. Do not roll back.                                                                   |
-| Dirty working tree at `/autopilot` invocation            | Abort immediately before plan phase.                                                                       |
+| Dirty working tree at `/autopilot-start` invocation      | Abort immediately before plan phase.                                                                       |
 | User runs `/autopilot-cancel` mid-run                    | Abort current subagent. Skip remaining phases and any pending retry. Emit report with cancelled banner.    |
 
 ### Retry policy
@@ -270,6 +270,8 @@ Verify:
   Fixed:             2 findings  (1 blocker, 1 important)
   Known issues:      1 suggestion
     └ src/middleware.ts:42 | suggestion | rate limit could be extracted to a helper
+
+Log: ~/.pi/workflow-runs/autopilot/20260412T143022-rate-limiter/
 ```
 
 Reading the blocks:
@@ -280,6 +282,7 @@ Reading the blocks:
 - **Verify → Reviewers** — which reviewers ran (a skipped reviewer is listed with a `(skipped)` suffix).
 - **Verify → Fixed** — what the post-reviewer fix loop resolved.
 - **Verify → Known issues** — everything the pipeline deliberately left for the human: low-severity suggestions, findings that survived the fix cap, validation failures that survived the fix cap, and regressions the fixer introduced.
+- **Log** — path to the per-run log directory under `~/.pi/workflow-runs/autopilot/`. Contains `run.json`, `events.jsonl`, `prompts/`, `outputs/`, `final-report.txt`, and `workflow/design.md` (a copy of the input design doc). Appended automatically by the framework.
 
 Autopilot does not push, does not open PRs, and does not switch branches. Review the branch and ship it yourself.
 
@@ -287,11 +290,17 @@ Autopilot does not push, does not open PRs, and does not switch branches. Review
 
 ## How it works
 
-- **Orchestrator is code, not an LLM.** `/autopilot` is implemented as an `async` TypeScript function that sequences subagent dispatches and state updates programmatically. Keeping the orchestrator deterministic means the pipeline's control flow — caps, failure routing, commit verification — is not itself subject to LLM drift.
+- **Orchestrator is code, not an LLM.** `/autopilot-start` is implemented as an `async` TypeScript function that sequences subagent dispatches and state updates programmatically. Keeping the orchestrator deterministic means the pipeline's control flow — caps, failure routing, commit verification — is not itself subject to LLM drift.
 - **One subagent per unit of work.** Each task gets its own fresh implement subagent with no shared context. This resets the perfectionism ratchet between tasks and exploits the instruction-literalist strength of GPT-5-class models: a single crisply-scoped task per fresh context.
 - **Sequential implement, parallel reviewers.** Implement runs one task at a time so each task's base SHA is predictable and concurrent subagents don't collide on merge conflicts. Reviewers run in parallel because they're read-only and independent — no shared write state, no ordering hazards.
 - **No loopback from verify.** Verify never re-opens the implement phase. A failing check after two fix rounds becomes a known issue and the pipeline still completes. The alternative — "keep going until verify is clean" — is the exact open-ended loop that GPT-5 thrashes in.
 - **Every commit sticks.** There is no rollback path. If the fixer breaks something that was passing, that's a known issue on the user's branch, not a revert. The user always gets _something_ to look at.
+
+## Architecture
+
+Autopilot is built on the `workflow-core` shared library. The framework handles slash-command registration (`/autopilot-start` / `/autopilot-cancel`), the single-active-run lock, abort plumbing, widget lifecycle, per-run log directory creation, and the `Log:` line appended to every report. Autopilot owns the pipeline logic: pre-flight checks, phase sequencing, task-list management, and the Tasks / Verify report sections.
+
+For the full framework API reference — `registerWorkflow`, `ctx.subagent`, `ctx.widget`, `ctx.log`, `render.ts` helpers, `report.ts` helpers, `preflight.ts`, and testing patterns — see [`../workflow-core/INTEGRATION.md`](../workflow-core/INTEGRATION.md).
 
 ## Inspiration
 

@@ -4,7 +4,7 @@
 
 ## Walkthrough: a minimal workflow end-to-end
 
-Walk a new author through building a small workflow step-by-step. _To be fleshed out as autoralph / autopilot migrate onto workflow-core._
+Walk a new author through building a small workflow step-by-step. For a real-world worked example of a full three-phase pipeline (plan → implement → verify), see `../autopilot/` — it is the first extension to migrate onto `workflow-core` and demonstrates all the major primitives in production use.
 
 ## API reference
 
@@ -105,4 +105,4 @@ while (rounds < 2 && !ctx.signal.aborted) {
 
 ## Testing your workflow
 
-_To be fleshed out as workflows migrate. The framework's `RegisterWorkflowOpts` accepts `spawn` and `logBaseDir` injection points for tests._
+The framework's `RegisterWorkflowOpts` accepts `spawn` and `logBaseDir` injection points for tests. Inject a fake spawner that returns canned JSON for each subagent dispatch and point `logBaseDir` at a temp directory. For a worked example, see `../autopilot/index.test.ts`, which drives the full plan → implement → verify pipeline using fake spawn and asserts that the run-log directory is populated and the final report contains the expected sections.

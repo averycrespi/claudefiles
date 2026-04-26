@@ -9,7 +9,7 @@ export type PreflightResult =
   | { ok: false; reason: string };
 
 /**
- * Pre-flight checks for the /autopilot command.
+ * Pre-flight checks for the /autoralph command.
  *
  * Fails fast on:
  *   1. missing or non-regular design file
@@ -63,7 +63,7 @@ export async function preflight(args: {
     return {
       ok: false,
       reason:
-        "working tree is dirty; commit or stash changes before /autopilot",
+        "working tree is dirty; commit or stash changes before /autoralph",
     };
   }
 

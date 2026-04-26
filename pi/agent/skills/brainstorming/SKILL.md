@@ -48,10 +48,10 @@ Start by understanding the current project context, then ask questions one at a 
 
 ```
 Design saved to .designs/YYYY-MM-DD-<topic>.md and committed.
-Ready to build? Run: /autopilot .designs/YYYY-MM-DD-<topic>.md
+Ready to build? Run: /autopilot-start .designs/YYYY-MM-DD-<topic>.md
 ```
 
-The user will invoke `/autopilot` directly to kick off planning and implementation.
+The user will invoke `/autopilot-start` directly to kick off planning and implementation.
 
 ## Key Principles
 
