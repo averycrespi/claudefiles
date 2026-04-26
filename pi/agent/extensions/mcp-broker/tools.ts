@@ -25,6 +25,7 @@ import {
 
 const CALL_HEAD_LINES = 3;
 import type { BrokerClient, BrokerTool } from "./client.ts";
+import { spillIfNeeded } from "./spillover.ts";
 
 const SEARCH_PARAMS = Type.Object({
   query: Type.String({
@@ -63,6 +64,122 @@ function errorResult(message: string) {
     content: [{ type: "text" as const, text: message }],
     details: {},
   };
+}
+
+type CallParams = { name: string; arguments: Record<string, unknown> };
+
+/**
+ * Core logic for the mcp_call tool. Exported for unit testing.
+ *
+ * @param dir - Override spill directory (test-only).
+ */
+export async function callBrokerTool(
+  client: BrokerClient,
+  params: CallParams,
+  toolCallId: string,
+  signal: AbortSignal,
+  dir?: string,
+): Promise<{
+  content: AgentToolResult<unknown>["content"];
+  details: Record<string, unknown>;
+}> {
+  try {
+    const result = await client.callTool(params.name, params.arguments, signal);
+    const content = (result.content ??
+      []) as AgentToolResult<unknown>["content"];
+    const brokerError = Boolean(result.isError);
+    if (brokerError) {
+      content.unshift({
+        type: "text" as const,
+        text: `[mcp_call: broker tool '${params.name}' reported an error]`,
+      });
+      return { content, details: { name: params.name, brokerError } };
+    }
+    const spill = await spillIfNeeded(
+      content as any,
+      toolCallId,
+      ...(dir !== undefined ? [dir] : []),
+    );
+    if (spill.spilled) {
+      return {
+        content: spill.content as AgentToolResult<unknown>["content"],
+        details: {
+          name: params.name,
+          brokerError,
+          spilled: true,
+          spillFilePath: spill.filePath,
+          originalSize: spill.originalSize,
+        },
+      };
+    }
+    return {
+      content: spill.content as AgentToolResult<unknown>["content"],
+      details: { name: params.name, brokerError },
+    };
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    const looksLikeSession = /session/i.test(message);
+    if (looksLikeSession) {
+      client.reset();
+      try {
+        const retried = await client.callTool(
+          params.name,
+          params.arguments,
+          signal,
+        );
+        const retriedContent = (retried.content ??
+          []) as AgentToolResult<unknown>["content"];
+        const retriedBrokerError = Boolean(retried.isError);
+        if (retriedBrokerError) {
+          retriedContent.unshift({
+            type: "text" as const,
+            text: `[mcp_call: broker tool '${params.name}' reported an error]`,
+          });
+          return {
+            content: retriedContent,
+            details: {
+              name: params.name,
+              brokerError: retriedBrokerError,
+              retried: true,
+            },
+          };
+        }
+        const retriedSpill = await spillIfNeeded(
+          retriedContent as any,
+          toolCallId,
+          ...(dir !== undefined ? [dir] : []),
+        );
+        if (retriedSpill.spilled) {
+          return {
+            content:
+              retriedSpill.content as AgentToolResult<unknown>["content"],
+            details: {
+              name: params.name,
+              brokerError: retriedBrokerError,
+              retried: true,
+              spilled: true,
+              spillFilePath: retriedSpill.filePath,
+              originalSize: retriedSpill.originalSize,
+            },
+          };
+        }
+        return {
+          content: retriedSpill.content as AgentToolResult<unknown>["content"],
+          details: {
+            name: params.name,
+            brokerError: retriedBrokerError,
+            retried: true,
+          },
+        };
+      } catch (retryErr) {
+        const retryMsg =
+          retryErr instanceof Error ? retryErr.message : String(retryErr);
+        return errorResult(`mcp_call failed after session retry: ${retryMsg}`);
+      }
+    }
+    return errorResult(`mcp_call failed: ${message}`);
+  }
 }
 
 export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
@@ -218,63 +335,9 @@ export function registerTools(pi: ExtensionAPI, client: BrokerClient): void {
     description:
       "Invoke a broker tool. Use mcp_describe to learn the input schema first. Calls that need human approval block for up to 10 minutes.",
     parameters: CALL_PARAMS,
-    async execute(_id, params, signal, _onUpdate, _ctx) {
+    async execute(toolCallId, params, signal, _onUpdate, _ctx) {
       const sig = signal ?? new AbortController().signal;
-      try {
-        const result = await client.callTool(
-          params.name,
-          params.arguments,
-          sig,
-        );
-        const content = (result.content ??
-          []) as AgentToolResult<unknown>["content"];
-        const brokerError = Boolean(result.isError);
-        if (brokerError) {
-          content.unshift({
-            type: "text" as const,
-            text: `[mcp_call: broker tool '${params.name}' reported an error]`,
-          });
-        }
-        return { content, details: { name: params.name, brokerError } };
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") throw err;
-        const message = err instanceof Error ? err.message : String(err);
-        const looksLikeSession = /session/i.test(message);
-        if (looksLikeSession) {
-          client.reset();
-          try {
-            const retried = await client.callTool(
-              params.name,
-              params.arguments,
-              sig,
-            );
-            const retriedContent = (retried.content ??
-              []) as AgentToolResult<unknown>["content"];
-            const retriedBrokerError = Boolean(retried.isError);
-            if (retriedBrokerError) {
-              retriedContent.unshift({
-                type: "text" as const,
-                text: `[mcp_call: broker tool '${params.name}' reported an error]`,
-              });
-            }
-            return {
-              content: retriedContent,
-              details: {
-                name: params.name,
-                brokerError: retriedBrokerError,
-                retried: true,
-              },
-            };
-          } catch (retryErr) {
-            const retryMsg =
-              retryErr instanceof Error ? retryErr.message : String(retryErr);
-            return errorResult(
-              `mcp_call failed after session retry: ${retryMsg}`,
-            );
-          }
-        }
-        return errorResult(`mcp_call failed: ${message}`);
-      }
+      return callBrokerTool(client, params, toolCallId, sig);
     },
     renderCall(args, theme, _context) {
       const header = theme.fg("toolTitle", theme.bold("mcp_call"));

@@ -1,6 +1,9 @@
-import { test } from "node:test";
+import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
-import { summarize } from "./tools.ts";
+import { mkdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { callBrokerTool, summarize } from "./tools.ts";
 
 test("summarize returns just the name when description is missing", () => {
   assert.equal(summarize({ name: "github.create_pr" }), "github.create_pr");
@@ -36,3 +39,141 @@ test("summarize omits the dash when description is whitespace-only", () => {
     "foo.bar",
   );
 });
+
+// ---------------------------------------------------------------------------
+// callBrokerTool — spillover integration
+// ---------------------------------------------------------------------------
+
+{
+  let scratchDir: string;
+
+  before(async () => {
+    scratchDir = join(
+      tmpdir(),
+      `tools-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
+    await mkdir(scratchDir, { recursive: true });
+  });
+
+  after(async () => {
+    await rm(scratchDir, { recursive: true, force: true });
+  });
+
+  const noop = () => {};
+  const makeSignal = () => new AbortController().signal;
+
+  test("mcp_call spills oversize content", async () => {
+    const bigText = "x".repeat(30_000);
+    const client = {
+      callTool: async () => ({
+        content: [{ type: "text", text: bigText }],
+        isError: false,
+      }),
+      reset: noop,
+      listTools: async () => [],
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "test.tool", arguments: {} },
+      "spill-test-id",
+      makeSignal(),
+      scratchDir,
+    );
+    const details = result.details as Record<string, unknown>;
+    assert.equal(details.spilled, true, "details.spilled should be true");
+    assert.equal(
+      typeof details.spillFilePath,
+      "string",
+      "spillFilePath should be a string",
+    );
+    assert.ok(
+      (details.spillFilePath as string).startsWith(scratchDir),
+      "spillFilePath should be inside scratchDir",
+    );
+    assert.equal(typeof details.originalSize, "number");
+    const texts = result.content.filter((c: any) => c.type === "text");
+    assert.equal(
+      texts.length,
+      1,
+      "should have exactly one envelope text block",
+    );
+    assert.ok(
+      (texts[0] as any).text.includes("<persisted-output>"),
+      "content should contain envelope wrapper",
+    );
+    assert.ok(
+      (texts[0] as any).text.includes(details.spillFilePath as string),
+      "envelope should reference the spill file path",
+    );
+  });
+
+  test("mcp_call passes through under-threshold content", async () => {
+    const smallText = "y".repeat(5_000);
+    const client = {
+      callTool: async () => ({
+        content: [{ type: "text", text: smallText }],
+        isError: false,
+      }),
+      reset: noop,
+      listTools: async () => [],
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "test.small", arguments: {} },
+      "small-test-id",
+      makeSignal(),
+      scratchDir,
+    );
+    const details = result.details as Record<string, unknown>;
+    assert.ok(!("spilled" in details), "details should not contain spilled");
+    assert.ok(
+      !("spillFilePath" in details),
+      "details should not contain spillFilePath",
+    );
+    assert.ok(
+      !("originalSize" in details),
+      "details should not contain originalSize",
+    );
+    assert.equal(result.content.length, 1);
+    assert.equal((result.content[0] as any).text, smallText);
+  });
+
+  test("mcp_call does not spill error responses", async () => {
+    const bigText = "z".repeat(30_000);
+    const client = {
+      callTool: async () => ({
+        content: [{ type: "text", text: bigText }],
+        isError: true,
+      }),
+      reset: noop,
+      listTools: async () => [],
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "test.err", arguments: {} },
+      "error-test-id",
+      makeSignal(),
+      scratchDir,
+    );
+    const details = result.details as Record<string, unknown>;
+    assert.ok(
+      !("spilled" in details),
+      "error details should not contain spilled",
+    );
+    assert.ok(
+      !("spillFilePath" in details),
+      "error details should not contain spillFilePath",
+    );
+    // First content block is the broker error marker
+    assert.ok(
+      (result.content[0] as any).text.includes("[mcp_call: broker tool"),
+      "first block should be error marker",
+    );
+    // No envelope in any block
+    const hasEnvelope = result.content.some(
+      (c: any) =>
+        typeof c.text === "string" && c.text.includes("<persisted-output>"),
+    );
+    assert.ok(!hasEnvelope, "error responses should not contain envelope");
+  });
+}
