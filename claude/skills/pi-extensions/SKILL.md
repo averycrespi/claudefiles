@@ -47,7 +47,7 @@ pi/agent/extensions/my-extension/
 
 Pi does support single-file top-level extensions (`extensions/name.ts`), but we don't use them in this repo — the loader treats every top-level `*.ts` as an extension entry point, so a co-located `name.test.ts` gets loaded as a broken extension and breaks Pi startup. Always use the subdirectory layout so you can add tests later without having to restructure.
 
-Larger extensions can nest further (`autopilot/` has `lib/`, `phases/`, `prompts/`; `format/` has `format/`). The only hard requirement is a top-level `index.ts` that exports the factory function.
+Larger extensions can nest further (`autopilot/` has `lib/`, `phases/`, `prompts/`). The only hard requirement is a top-level `index.ts` that exports the factory function.
 
 ## Sharing code across extensions
 

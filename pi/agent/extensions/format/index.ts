@@ -9,13 +9,13 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { withFileMutationQueue } from "@mariozechner/pi-coding-agent";
 import { extname, resolve } from "node:path";
 
-import { formatGoFile } from "./format/gofmt.ts";
-import { formatWithPrettier } from "./format/prettier.ts";
+import { formatGoFile } from "./gofmt.ts";
+import { formatWithPrettier } from "./prettier.ts";
 import {
   getToolPath,
   type NotifyContext,
   logFormattingIssue,
-} from "./format/utils.ts";
+} from "./utils.ts";
 
 async function formatFile(filePath: string, ctx: NotifyContext): Promise<void> {
   const signal = ctx.signal ?? new AbortController().signal;
