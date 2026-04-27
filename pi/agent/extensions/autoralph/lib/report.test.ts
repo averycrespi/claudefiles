@@ -23,7 +23,7 @@ const baseInput = {
   designPath: ".designs/2026-04-20-rate-limiter.md",
   branchName: "workflow",
   commitsAhead: 4,
-  taskFilePath: ".autoralph/2026-04-20-rate-limiter.md",
+  taskFilePath: "/run-dir/workflow/2026-04-20-rate-limiter.md",
   finalHandoff: "All checklist items complete; tests passing locally.",
   totalElapsedMs: 14 * 60_000 + 22_000,
 };

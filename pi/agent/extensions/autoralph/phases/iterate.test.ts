@@ -50,7 +50,7 @@ const BASE_ARGS = {
   iteration: 2,
   maxIterations: 50,
   designPath: "design.md",
-  taskFilePath: ".autoralph/design.md",
+  taskFilePath: "/run-dir/workflow/design.md",
   priorHandoff: "previous handoff",
   isReflection: false,
   timeoutMs: 60_000,
@@ -315,7 +315,7 @@ test("prompt substitution: task file path is substituted", async () => {
   let capturedPrompt = "";
   await runIteration({
     ...BASE_ARGS,
-    taskFilePath: ".autoralph/my-feature.md",
+    taskFilePath: "/run-dir/workflow/my-feature.md",
     subagent: makeSubagent(async (spec) => {
       capturedPrompt = spec.prompt;
       return {
@@ -326,7 +326,7 @@ test("prompt substitution: task file path is substituted", async () => {
     }),
     getHead: makeHeadSeq(["sha0", "sha1"]),
   });
-  assert.match(capturedPrompt, /\.autoralph\/my-feature\.md/);
+  assert.match(capturedPrompt, /\/run-dir\/workflow\/my-feature\.md/);
 });
 
 test("prompt substitution: bootstrap section on iteration 1 (priorHandoff null)", async () => {
