@@ -51,7 +51,7 @@ Identical to autopilot:
 2. Working tree is clean (`git status --porcelain` empty).
 3. Capture current `HEAD` SHA as the run's base SHA.
 
-Failing any check aborts before any subagent dispatches. No `.autoralph/` directory created.
+Failing any check aborts before any subagent dispatches. No `~/.pi/workflow-runs/autoralph/<run-id>/` directory created.
 
 ## Operational guardrails
 
@@ -194,7 +194,7 @@ Iterations (7):
   ✔  6. add tests for rate limiter                    (jkl3456)
   ✔  7. update README + handoff: complete             (mno7890)
 
-Final task file: .autoralph/2026-04-20-rate-limiter.md
+Final task file: ~/.pi/workflow-runs/autoralph/<run-id>/workflow/2026-04-20-rate-limiter.md
 Final handoff:   "All checklist items complete; tests passing locally."
 ```
 
@@ -214,7 +214,7 @@ Same unified principle: **always terminate with a report. Never leave the user i
 
 | Failure                                                   | Handling                                                                                                                                                                                  |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pre-flight check fails                                    | Abort before any subagent dispatches. Print short reason. No `.autoralph/` directory created.                                                                                             |
+| Pre-flight check fails                                    | Abort before any subagent dispatches. Print short reason. No `~/.pi/workflow-runs/autoralph/<run-id>/` directory created.                                                                 |
 | Iteration subagent dispatch crashes/times out (transport) | Retry once, intent suffixed with `(retry)`. Mirrors autopilot. If retry also fails → record as failed iteration, continue loop with prior state.                                          |
 | Iteration subagent returns invalid/unparseable JSON       | No retry — parse failures are systematic. Record as failed iteration with `summary: "invalid report: <error>"`, advance loop. Handoff lost; next iteration restarts from prior task file. |
 | Iteration subagent reports `outcome: "failed"`            | Loop halts immediately. Final report shows the failure summary.                                                                                                                           |
