@@ -14,7 +14,7 @@ import {
 } from "./lib/history.ts";
 import { isBootstrap, readHandoff, writeHandoff } from "./lib/handoff.ts";
 import { parseArgs, type ParsedArgs } from "./lib/args.ts";
-import { formatReport, type FinalOutcome } from "./lib/report.ts";
+import { formatAutoralphReport, type FinalOutcome } from "./lib/report.ts";
 import { createStatusWidget, type StatusWidget } from "./lib/status-widget.ts";
 import { runIteration } from "./phases/iterate.ts";
 import { preflight } from "./preflight.ts";
@@ -242,7 +242,7 @@ export default function (pi: ExtensionAPI) {
             resolveBranch(cwd),
             resolveCommitsAhead(cwd, pre.baseSha),
           ]);
-          const text = formatReport({
+          const text = formatAutoralphReport({
             designPath: parsed.designPath,
             branchName,
             commitsAhead,
@@ -251,7 +251,7 @@ export default function (pi: ExtensionAPI) {
             totalElapsedMs: Date.now() - startedAt,
             outcome,
             history,
-          });
+          }).join("\n");
           pi.sendMessage({
             customType: "autoralph-report",
             content: [{ type: "text", text }],
