@@ -32,7 +32,7 @@ Autoralph exists as a sibling to `/autopilot` so the same design doc can be run 
 ## Command surface
 
 ```
-/autoralph <design-file> [--reflect-every N] [--max-iterations N] [--iteration-timeout-mins N]
+/autoralph-start <design-file> [--reflect-every N] [--max-iterations N] [--iteration-timeout-mins N]
 /autoralph-cancel
 ```
 
@@ -41,7 +41,7 @@ Autoralph exists as a sibling to `/autopilot` so the same design doc can be run 
 - `--max-iterations N` — hard cap on iterations. Default `50`.
 - `--iteration-timeout-mins N` — wall-clock budget per iteration. Default `15`. Subagent gets aborted if exceeded.
 
-Single active run at a time. Invoking `/autoralph` while one is in progress errors immediately. `/autoralph-cancel` aborts via the run-level `AbortController` (same pattern as `/autopilot-cancel`).
+Single active run at a time. Invoking `/autoralph-start` while one is in progress errors immediately. `/autoralph-cancel` aborts via the run-level `AbortController` (same pattern as `/autopilot-cancel`).
 
 ## Pre-flight checks
 
@@ -51,7 +51,7 @@ Identical to autopilot:
 2. Working tree is clean (`git status --porcelain` empty).
 3. Capture current `HEAD` SHA as the run's base SHA.
 
-Failing any check aborts before any subagent dispatches. No `.autoralph/` directory created.
+Failing any check aborts before any subagent dispatches. No `~/.pi/workflow-runs/autoralph/<run-id>/` directory created.
 
 ## Operational guardrails
 
@@ -88,13 +88,13 @@ flowchart TD
 Created lazily on iteration 1:
 
 ```
-.autoralph/
-  <design-basename>.md             # the agent's working task file
-  <design-basename>.handoff.json   # last iteration's handoff blob
-  <design-basename>.history.json   # append-only iteration log
+~/.pi/workflow-runs/autoralph/<run-id>/workflow/
+  <slug>.md             # the agent's working task file
+  <slug>.handoff.json   # last iteration's handoff blob
+  <slug>.history.json   # append-only iteration log
 ```
 
-`<design-basename>` is derived from the design file path (e.g. `.designs/2026-04-20-rate-limiter.md` → `2026-04-20-rate-limiter`). All three files are gitignored by convention; `history.json` becomes the data the final report draws from.
+`<slug>` is derived from the design file path (e.g. `.designs/2026-04-20-rate-limiter.md` → `2026-04-20-rate-limiter`). `history.json` becomes the data the final report draws from.
 
 ## Iteration phase
 
@@ -194,7 +194,7 @@ Iterations (7):
   ✔  6. add tests for rate limiter                    (jkl3456)
   ✔  7. update README + handoff: complete             (mno7890)
 
-Final task file: .autoralph/2026-04-20-rate-limiter.md
+Final task file: ~/.pi/workflow-runs/autoralph/<run-id>/workflow/2026-04-20-rate-limiter.md
 Final handoff:   "All checklist items complete; tests passing locally."
 ```
 
@@ -214,7 +214,7 @@ Same unified principle: **always terminate with a report. Never leave the user i
 
 | Failure                                                   | Handling                                                                                                                                                                                  |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pre-flight check fails                                    | Abort before any subagent dispatches. Print short reason. No `.autoralph/` directory created.                                                                                             |
+| Pre-flight check fails                                    | Abort before any subagent dispatches. Print short reason. No `~/.pi/workflow-runs/autoralph/<run-id>/` directory created.                                                                 |
 | Iteration subagent dispatch crashes/times out (transport) | Retry once, intent suffixed with `(retry)`. Mirrors autopilot. If retry also fails → record as failed iteration, continue loop with prior state.                                          |
 | Iteration subagent returns invalid/unparseable JSON       | No retry — parse failures are systematic. Record as failed iteration with `summary: "invalid report: <error>"`, advance loop. Handoff lost; next iteration restarts from prior task file. |
 | Iteration subagent reports `outcome: "failed"`            | Loop halts immediately. Final report shows the failure summary.                                                                                                                           |
@@ -222,7 +222,7 @@ Same unified principle: **always terminate with a report. Never leave the user i
 | Wall-clock timeout (per-iteration)                        | Subagent aborted. Recorded as `outcome: "timeout"`. Handoff lost; next iteration uses prior handoff + current task file. Three consecutive timeouts halt the loop as `stuck`.             |
 | Hit `--max-iterations` cap                                | Loop ends. Final report → `Outcome: max-iterations`. Branch retains all commits that landed; no rollback.                                                                                 |
 | `/autoralph-cancel` mid-run                               | Abort current subagent. Skip any pending retry. Emit final report with `cancelled` banner and elapsed time.                                                                               |
-| User Ctrl-C / process dies                                | `.autoralph/<name>.{handoff,history}.json` are on disk — the user can inspect state. No automatic resume in v1.                                                                           |
+| User Ctrl-C / process dies                                | `~/.pi/workflow-runs/autoralph/<run-id>/workflow/<slug>.{handoff,history}.json` are on disk — the user can inspect state. No automatic resume in v1.                                      |
 
 ### Retry policy
 
@@ -242,31 +242,28 @@ Mirrors `pi/agent/extensions/autopilot/` so the comparison code-reads the same w
 
 ```
 pi/agent/extensions/autoralph/
-  README.md                      # full design doc, lifted from this file
-  index.ts                       # command registration + run lifecycle (mirrors autopilot/index.ts)
-  preflight.ts                   # vendored from autopilot's pre-workflow-core implementation
-  preflight.test.ts
+  README.md
+  index.ts
+  index.test.ts
   lib/
-    dispatch.ts                  # vendored from autopilot's pre-workflow-core implementation
-    parse.ts                     # vendored from autopilot's pre-workflow-core implementation
-    schemas.ts                   # IterationReportSchema (TypeBox)
-    history.ts                   # append-only history.json reader/writer
-    history.test.ts
-    handoff.ts                   # handoff.json reader/writer + bootstrap detection
-    handoff.test.ts
-    report.ts                    # final-report formatter
+    args.ts
+    args.test.ts
+    schemas.ts
+    state.ts
+    state.test.ts
+    report.ts
     report.test.ts
-    status-widget.ts             # iter N/MAX header + iteration-window body
-    status-widget.test.ts
+    widget-body.ts
+    widget-body.test.ts
   phases/
-    iterate.ts                   # the single phase: one iteration dispatch
+    iterate.ts
     iterate.test.ts
   prompts/
-    iterate.md                   # iteration prompt template (with {N}/{MAX}/{HANDOFF}/etc.)
-    reflection-block.md          # the reflection-checkpoint sub-block injected on cadence
+    iterate.md
+    reflection-block.md
 ```
 
-**Vendored, not shared.** `dispatch.ts`, `parse.ts`, and `preflight.ts` are vendored from autopilot's pre-workflow-core implementation. We deliberately copy rather than re-export so autoralph can mutate independently without touching autopilot. Sharing internals would make the comparison harder to reason about ("did autoralph win, or did my refactor of `parse.ts` win?"). Autopilot has since migrated onto `workflow-core`; autoralph still uses these local copies. Migration of autoralph onto `workflow-core` is a separate future work item.
+**Builds on `_workflow-core`.** Autoralph now mirrors autopilot's post-migration foundation: `_workflow-core/` provides `registerWorkflow`, `Subagent`, `Widget`, and report helpers; autoralph supplies its own iteration loop, history+handoff persistence (`lib/state.ts`), and iteration-aware widget body (`lib/widget-body.ts`).
 
 ## Testing
 

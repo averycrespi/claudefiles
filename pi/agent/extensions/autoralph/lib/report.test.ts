@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatReport } from "./report.ts";
-import type { IterationRecord } from "./history.ts";
+import { formatAutoralphReport } from "./report.ts";
+import type { IterationRecord } from "./state.ts";
 
 const rec = (
   n: number,
@@ -23,13 +23,13 @@ const baseInput = {
   designPath: ".designs/2026-04-20-rate-limiter.md",
   branchName: "workflow",
   commitsAhead: 4,
-  taskFilePath: ".autoralph/2026-04-20-rate-limiter.md",
+  taskFilePath: "/run-dir/workflow/2026-04-20-rate-limiter.md",
   finalHandoff: "All checklist items complete; tests passing locally.",
   totalElapsedMs: 14 * 60_000 + 22_000,
 };
 
 test("report: complete outcome lists all iterations + commits + handoff", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "complete",
     history: [
@@ -38,18 +38,31 @@ test("report: complete outcome lists all iterations + commits + handoff", () => 
       rec(3, "in_progress", false, "wire config into middleware"),
     ],
   });
-  assert.match(text, /Autoralph Report/);
-  assert.match(text, /Outcome: complete/);
-  assert.match(text, /after 3 iterations/);
-  assert.match(text, /14:22/);
-  assert.match(text, /1\. bootstrap/);
-  assert.match(text, /\(abc2234\)/);
-  assert.match(text, /Final handoff:/);
-  assert.match(text, /All checklist items complete/);
+  const text = lines.join("\n");
+
+  assert.equal(lines[0], "━━━ Autoralph Report ━━━");
+  assert.ok(text.includes("Autoralph Report"));
+  assert.ok(text.includes("Outcome: complete"));
+  assert.ok(text.includes("after 3 iterations"));
+  assert.ok(text.includes("14:22"));
+  assert.ok(text.includes("1. bootstrap"));
+  assert.ok(text.includes("(abc2234)"));
+  assert.ok(text.includes("Final handoff:"));
+  assert.ok(text.includes("All checklist items complete"));
+  // header is first line
+  const headerIdx = lines.findIndex((l) => l.includes("Autoralph Report"));
+  const designIdx = lines.findIndex((l) => l.includes("Design:"));
+  const branchIdx = lines.findIndex((l) => l.includes("Branch:"));
+  const outcomeIdx = lines.findIndex((l) => l.includes("Outcome:"));
+  const iterIdx = lines.findIndex((l) => l.includes("Iterations ("));
+  assert.ok(headerIdx < designIdx, "header before design");
+  assert.ok(designIdx < branchIdx, "design before branch");
+  assert.ok(branchIdx < outcomeIdx, "branch before outcome");
+  assert.ok(outcomeIdx < iterIdx, "outcome before iterations");
 });
 
 test("report: reflection iteration gets reflection glyph", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "complete",
     history: [
@@ -57,24 +70,25 @@ test("report: reflection iteration gets reflection glyph", () => {
       rec(2, "in_progress", true, "reflection: noted test gap"),
     ],
   });
-  const reflectionLine = text
-    .split("\n")
-    .find((l) => l.includes("2. reflection"));
-  assert.ok(reflectionLine);
-  assert.match(reflectionLine!, /🪞/);
+  const reflectionLine = lines.find((l) => l.includes("2. reflection"));
+  assert.ok(reflectionLine, "reflection line found");
+  assert.ok(reflectionLine!.includes("🪞"), "reflection glyph present");
 });
 
 test("report: max-iterations outcome", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "max-iterations",
     history: [rec(1, "in_progress"), rec(2, "in_progress")],
   });
-  assert.match(text, /Outcome: max-iterations/);
+  assert.ok(
+    lines.some((l) => l.includes("Outcome: max-iterations")),
+    "max-iterations outcome line",
+  );
 });
 
 test("report: failed outcome surfaces last summary", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "failed",
     history: [
@@ -82,12 +96,18 @@ test("report: failed outcome surfaces last summary", () => {
       rec(2, "failed", false, "blocked: missing rate-limiter package"),
     ],
   });
-  assert.match(text, /Outcome: failed/);
-  assert.match(text, /blocked: missing rate-limiter package/);
+  assert.ok(
+    lines.some((l) => l.includes("Outcome: failed")),
+    "failed outcome line",
+  );
+  assert.ok(
+    lines.some((l) => l.includes("blocked: missing rate-limiter package")),
+    "failure reason from last summary",
+  );
 });
 
 test("report: stuck outcome", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "stuck",
     history: [
@@ -97,20 +117,35 @@ test("report: stuck outcome", () => {
       rec(4, "timeout"),
     ],
   });
-  assert.match(text, /Outcome: stuck \(3 consecutive timeouts\)/);
+  assert.ok(
+    lines.some((l) => l.includes("Outcome: stuck (3 consecutive timeouts)")),
+    "stuck outcome line",
+  );
 });
 
-test("report: cancelled outcome shows elapsed", () => {
-  const text = formatReport({
+test("report: cancelled outcome shows cancelled banner", () => {
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "cancelled",
     history: [rec(1, "in_progress")],
   });
-  assert.match(text, /Outcome: cancelled/);
+  // formatCancelledBanner emits "Cancelled by user at MM:SS"
+  assert.ok(
+    lines.some((l) => l.includes("Cancelled by user at")),
+    "cancelled banner present",
+  );
+  assert.ok(
+    lines.some((l) => l.includes("Outcome: cancelled")),
+    "outcome line present",
+  );
+  // cancelled banner appears before the design row (near top)
+  const bannerIdx = lines.findIndex((l) => l.includes("Cancelled by user at"));
+  const designIdx = lines.findIndex((l) => l.includes("Design:"));
+  assert.ok(bannerIdx < designIdx, "cancelled banner before design row");
 });
 
 test("report: iteration without commit shows '(no commit)'", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "complete",
     history: [
@@ -120,27 +155,49 @@ test("report: iteration without commit shows '(no commit)'", () => {
       },
     ],
   });
-  const planningLine = text.split("\n").find((l) => l.includes("1. planning"));
-  assert.ok(planningLine);
-  assert.match(planningLine!, /\(no commit\)/);
+  const planningLine = lines.find((l) => l.includes("1. planning"));
+  assert.ok(planningLine, "planning line found");
+  assert.ok(planningLine!.includes("(no commit)"), "no commit suffix present");
 });
 
 test("report: failed outcome with empty history uses fallback summary", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     outcome: "failed",
     history: [],
   });
-  assert.match(text, /Outcome: failed/);
-  assert.match(text, /no summary available/);
+  assert.ok(
+    lines.some((l) => l.includes("Outcome: failed")),
+    "failed outcome line",
+  );
+  assert.ok(
+    lines.some((l) => l.includes("no summary available")),
+    "fallback summary",
+  );
 });
 
 test("report: zero commits ahead renders correctly", () => {
-  const text = formatReport({
+  const lines = formatAutoralphReport({
     ...baseInput,
     commitsAhead: 0,
     outcome: "complete",
     history: [rec(1, "in_progress")],
   });
-  assert.match(text, /\(0 commits ahead of main\)/);
+  assert.ok(
+    lines.some((l) => l.includes("0 commits ahead of main")),
+    "zero commits ahead",
+  );
+});
+
+test("report: commit SHA suffix truncated to 7 chars", () => {
+  const lines = formatAutoralphReport({
+    ...baseInput,
+    outcome: "complete",
+    history: [rec(2, "in_progress", false, "add rate limiter config + types")],
+  });
+  // rec(2, "in_progress") sets headAfter = "abc2234" (7 chars already)
+  assert.ok(
+    lines.some((l) => l.includes("(abc2234)")),
+    "sha suffix present",
+  );
 });
