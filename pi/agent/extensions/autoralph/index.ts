@@ -1,42 +1,36 @@
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { basename, extname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import {
-  appendHistory,
-  readHistory,
-  type IterationRecord,
-} from "./lib/history.ts";
-import { isBootstrap, readHandoff, writeHandoff } from "./lib/handoff.ts";
-import { parseArgs } from "./lib/args.ts";
+  registerWorkflow,
+  type RegisterWorkflowOpts,
+} from "../_workflow-core/api.ts";
+import {
+  requireFile,
+  requireCleanTree,
+  captureHead,
+} from "../_workflow-core/preflight.ts";
+import { setupAutoralphWidget } from "./lib/widget-body.ts";
+import { parseArgs, type ParsedArgs } from "./lib/args.ts";
 import { formatAutoralphReport, type FinalOutcome } from "./lib/report.ts";
 import {
-  createStatusWidget,
-  type SubagentHandle,
-} from "./lib/status-widget.ts";
-import {
-  createSubagent,
-  type CreateSubagentOpts,
-} from "../_workflow-core/api.ts";
+  readHandoff,
+  writeHandoff,
+  readHistory,
+  appendHistory,
+  type IterationRecord,
+} from "./lib/state.ts";
 import { runIteration } from "./phases/iterate.ts";
-import { preflight } from "./preflight.ts";
 
 const execFileP = promisify(execFile);
 
-const AUTORALPH_DIR = ".autoralph";
 const MAX_CONSECUTIVE_TIMEOUTS = 3;
 
-interface ActiveRun {
-  controller: AbortController;
-  startedAt: number;
-}
-let activeRun: ActiveRun | null = null;
-
-function makeGetHead(cwd: string): () => Promise<string> {
-  return async () => {
-    const { stdout } = await execFileP("git", ["rev-parse", "HEAD"], { cwd });
-    return stdout.trim();
-  };
+async function getHead(cwd: string): Promise<string> {
+  const { stdout } = await execFileP("git", ["rev-parse", "HEAD"], { cwd });
+  return stdout.trim();
 }
 
 async function resolveBranch(cwd: string): Promise<string> {
@@ -66,136 +60,74 @@ async function resolveCommitsAhead(
   }
 }
 
-function designBasename(designPath: string): string {
-  return basename(designPath, extname(designPath));
-}
+export default function (
+  pi: ExtensionAPI,
+  testOpts: RegisterWorkflowOpts = {},
+) {
+  registerWorkflow(
+    pi,
+    {
+      name: "autoralph",
+      description:
+        "Run the autonomous Ralph-style iteration loop on a design document.",
+      parseArgs: (raw) => {
+        const r = parseArgs(raw);
+        if (!r.ok) return { ok: false, error: r.error };
+        return { ok: true, args: r.args };
+      },
+      preflight: async (cwd, args) => {
+        const f = await requireFile(args.designPath);
+        if (!f.ok) return f;
+        const text = await readFile(args.designPath, "utf8");
+        if (text.trim().length === 0)
+          return { ok: false, error: "design file is empty" };
+        const c = await requireCleanTree(cwd);
+        if (!c.ok) return c;
+        const baseSha = await captureHead(cwd);
+        return { ok: true, data: { baseSha } };
+      },
+      runSlug: (args) => basename(args.designPath, extname(args.designPath)),
+      run: async (ctx) => {
+        const { designPath, reflectEvery, maxIterations, timeoutMins } =
+          ctx.args as ParsedArgs;
+        const { baseSha } = ctx.preflight as { baseSha: string };
+        const widget = setupAutoralphWidget(ctx.widget);
 
-export default function (pi: ExtensionAPI) {
-  pi.registerCommand("autoralph-cancel", {
-    description: "Cancel the currently running /autoralph loop.",
-    handler: async (_args, ctx) => {
-      if (!activeRun) {
-        ctx.ui.notify("/autoralph-cancel: no autoralph run is active", "info");
-        return;
-      }
-      ctx.ui.notify(
-        "/autoralph-cancel: cancelling — will stop after current iteration",
-        "warning",
-      );
-      activeRun.controller.abort();
-    },
-  });
+        const slug = basename(designPath, extname(designPath));
+        const taskFilePath = join(ctx.workflowDir, `${slug}.md`);
+        const handoffPath = join(ctx.workflowDir, `${slug}.handoff.json`);
+        const historyPath = join(ctx.workflowDir, `${slug}.history.json`);
 
-  pi.registerCommand("autoralph", {
-    description:
-      "Run the autonomous Ralph-style iteration loop on a design document.",
-    handler: async (args, ctx) => {
-      await ctx.waitForIdle();
-
-      const parsed = parseArgs(args);
-      if ("error" in parsed) {
-        ctx.ui.notify(
-          `/autoralph: ${parsed.error} (usage: /autoralph <design.md> [--reflect-every N] [--max-iterations N] [--iteration-timeout-mins N])`,
-          "error",
-        );
-        return;
-      }
-
-      if (activeRun) {
-        ctx.ui.notify(
-          "/autoralph: a run is already active — use /autoralph-cancel to stop it first",
-          "error",
-        );
-        return;
-      }
-
-      const cwd = process.cwd();
-      const pre = await preflight({ designPath: parsed.designPath, cwd });
-      if (!pre.ok) {
-        ctx.ui.notify(`/autoralph: ${pre.reason}`, "error");
-        return;
-      }
-
-      const controller = new AbortController();
-      const startedAt = Date.now();
-      activeRun = { controller, startedAt };
-
-      const widget = createStatusWidget({
-        ui: ctx.hasUI ? ctx.ui : undefined,
-        theme: ctx.hasUI ? ctx.ui.theme : undefined,
-      });
-      widget.setIteration(0, parsed.maxIterations);
-
-      // Slot-map: tracks the legacy widget.subagent(intent) handle per
-      // in-flight subagent id so lifecycle callbacks can drive it.
-      const slots = new Map<number, SubagentHandle>();
-
-      const subagent = createSubagent({
-        cwd,
-        signal: controller.signal,
-        onSubagentEvent: (id: number, ev: unknown) => {
-          slots.get(id)?.onEvent(ev);
-        },
-        onSubagentLifecycle: (
-          e: Parameters<
-            NonNullable<CreateSubagentOpts["onSubagentLifecycle"]>
-          >[0],
-        ) => {
-          if (e.kind === "start") {
-            const slot = widget.subagent(e.spec.intent);
-            slots.set(e.id, slot);
-          } else {
-            slots.get(e.id)?.finish();
-            slots.delete(e.id);
-          }
-        },
-      });
-
-      const getHead = makeGetHead(cwd);
-
-      const slug = designBasename(parsed.designPath);
-      const taskFilePath = join(cwd, AUTORALPH_DIR, `${slug}.md`);
-      const handoffPath = join(cwd, AUTORALPH_DIR, `${slug}.handoff.json`);
-      const historyPath = join(cwd, AUTORALPH_DIR, `${slug}.history.json`);
-
-      ctx.ui.notify(
-        `/autoralph: started (base ${pre.baseSha.slice(0, 7)})`,
-        "info",
-      );
-
-      const pipeline = async () => {
         let outcome: FinalOutcome = "max-iterations";
         let consecutiveTimeouts = 0;
-        let finalHandoff: string | null = await readHandoff(handoffPath);
+        let finalHandoff: string | null = null;
 
         try {
-          for (let i = 1; i <= parsed.maxIterations; i++) {
-            if (controller.signal.aborted) {
+          for (let i = 1; i <= maxIterations; i++) {
+            if (ctx.signal.aborted) {
               outcome = "cancelled";
               break;
             }
-            widget.setIteration(i, parsed.maxIterations);
+            widget.setIteration(i, maxIterations);
+            ctx.log("iteration-start", { iteration: i });
 
-            const bootstrap = await isBootstrap(handoffPath);
-            const priorHandoff = bootstrap
-              ? null
-              : await readHandoff(handoffPath);
+            const priorHandoff =
+              i === 1 ? null : await readHandoff(handoffPath);
             const isReflection =
-              parsed.reflectEvery > 0 &&
-              i > 1 &&
-              (i - 1) % parsed.reflectEvery === 0;
+              reflectEvery > 0 && i > 1 && (i - 1) % reflectEvery === 0;
 
             const result = await runIteration({
               iteration: i,
-              maxIterations: parsed.maxIterations,
-              designPath: parsed.designPath,
-              taskFilePath: taskFilePath,
+              maxIterations,
+              designPath,
+              taskFilePath,
               priorHandoff,
               isReflection,
-              timeoutMs: parsed.timeoutMins * 60_000,
-              cwd,
-              subagent,
-              getHead,
+              timeoutMs: timeoutMins * 60_000,
+              cwd: ctx.cwd,
+              subagent: ctx.subagent,
+              getHead: () => getHead(ctx.cwd),
+              log: ctx.log,
             });
 
             const record: IterationRecord = {
@@ -225,7 +157,7 @@ export default function (pi: ExtensionAPI) {
             }
             consecutiveTimeouts = 0;
 
-            if (controller.signal.aborted) {
+            if (ctx.signal.aborted) {
               outcome = "cancelled";
               break;
             }
@@ -242,39 +174,24 @@ export default function (pi: ExtensionAPI) {
 
           const history = await readHistory(historyPath);
           const [branchName, commitsAhead] = await Promise.all([
-            resolveBranch(cwd),
-            resolveCommitsAhead(cwd, pre.baseSha),
+            resolveBranch(ctx.cwd),
+            resolveCommitsAhead(ctx.cwd, baseSha),
           ]);
-          const text = formatAutoralphReport({
-            designPath: parsed.designPath,
+          return formatAutoralphReport({
+            designPath,
             branchName,
             commitsAhead,
             taskFilePath: resolve(taskFilePath),
             finalHandoff,
-            totalElapsedMs: Date.now() - startedAt,
+            totalElapsedMs: Date.now() - ctx.startedAt,
             outcome,
             history,
-          }).join("\n");
-          pi.sendMessage({
-            customType: "autoralph-report",
-            content: [{ type: "text", text }],
-            display: true,
-            details: {},
           });
         } finally {
           widget.dispose();
-          activeRun = null;
         }
-      };
-
-      const run = pipeline().catch((err) => {
-        ctx.ui.notify(
-          `/autoralph: pipeline crashed — ${err instanceof Error ? err.message : String(err)}`,
-          "error",
-        );
-      });
-      if (!ctx.hasUI) await run;
-      else void run;
+      },
     },
-  });
+    testOpts,
+  );
 }
