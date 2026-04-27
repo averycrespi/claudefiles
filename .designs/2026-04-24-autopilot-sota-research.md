@@ -29,6 +29,8 @@ The research used three parallel investigations:
 
 Sources cited inline; full bibliography in [§10](#10-sources).
 
+> **Citation audit (2026-04-26).** Four high-leverage citations were spot-checked against their primary sources. Three required corrections; the corrections are inlined in §5.2, §5.5, §6.1, §6.5, §6.7, and §6.10 below. The most consequential is §6.5 — the OpenAI GPT-5.2 prompting guide does **not** recommend per-phase `reasoning_effort` tuning; that table is the report author's synthesis. Treat the per-phase mapping as a hypothesis worth testing, not as vendor guidance.
+
 ---
 
 ## 2. Baseline — what autopilot does today
@@ -133,6 +135,7 @@ OpenAI's published guides for GPT-5, GPT-5.1, GPT-5.2, and GPT-5.4 are remarkabl
 - **Eagerness control via budget** — explicit tool-call budgets for context discovery; GPT-5.4 guidance: "default to implementing with reasonable assumptions" once intent is clear.
 - **Contradictory instructions are uniquely damaging.** Tighter instruction-following means conflicting directives ("never X" + "always X") cause the model to burn reasoning tokens reconciling rather than resolving. A real risk for orchestrators that compose system prompts from multiple skill files — worth a contradiction-linter pass.
 - **GPT-5.2 changes** — `<planning>` block (compaction-discardable); tighter scope discipline ("Implement EXACTLY and ONLY what the user requests"); strict JSON schemas explicitly recommended for every structured phase. Autopilot's existing JSON contracts are a very good fit for 5.2/5.4.
+- **GPT-5.2 specifics the original survey missed** (added in 2026-04-26 audit): explicit **scope-discipline blocks** ("no extra features", "implement EXACTLY and ONLY"); **`<user_updates_spec>`** wrapper for clamping verbosity on iterative spec updates; **`<long_context_handling>`** convention of re-stating constraints before answering when prior context is large; first-class **compaction via `/responses/compact`** for tool-heavy flows. The compaction and scope-discipline items are arguably more relevant to autopilot than reasoning_effort tuning — see §6.5 caveat.
 - **GPT-5.4 specifics** — "Bias to action" replaces 5.0's more cautious default. Explicitly recommends `reasoning_effort: low` or `none` for execution phases. Plans must reach _active closure_ — every plan item marked Done/Blocked/Cancelled before yielding.
 - **Self-rubric construction** — for "zero-to-one" tasks, instruct the model to construct an internal 5–7 category rubric _before_ building, then iterate against it. Free win for spec → code work.
 
@@ -159,12 +162,14 @@ Implication for autopilot: a dedicated **localization phase** before implementat
 
 ### 5.5 Long-horizon failure modes
 
-The April 2026 ["Long-Horizon Task Mirage"](https://arxiv.org/html/2604.11978v1) paper provides the cleanest taxonomy yet:
+The April 2026 ["Long-Horizon Task Mirage"](https://arxiv.org/html/2604.11978v1) paper provides the cleanest taxonomy yet (with caveats — see audit note below):
 
-- **Process-level (72.5%)**: Environment Error, Instruction Error, **Planning Error (subplanning)**, **History Error Accumulation**. The latter two dominate.
+- **Process-level (72.5%)**: Environment Error, Instruction Error, **Planning Error (subplanning)**, **History Error Accumulation** — all four categories combined.
 - **Design-level (27.5%)**: Catastrophic Forgetting (constraints erode despite remaining in context), Memory Limitation, False Assumption.
 
-Mitigations with strongest empirical support: hierarchical subplanning with explicit decomposition; **execution-time plan verification and repair**; memory mechanisms preserving long-range constraints. Independent industry data from [Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies) and [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions) reports ~65% of enterprise AI agent failures in 2025 trace to context drift / memory loss, _not_ context exhaustion. Compaction quality matters more than window size.
+The paper's "Actionable Steps" section (§5) proposes hierarchical subplanning, **execution-time plan verification and repair**, and memory mechanisms preserving long-range constraints as _future research directions_ — they are not empirically tested as mitigations in the paper. Independent industry data from [Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies) and [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions) reports ~65% of enterprise AI agent failures in 2025 trace to context drift / memory loss, _not_ context exhaustion. Compaction quality matters more than window size.
+
+> **Audit (2026-04-26).** The original draft of this section claimed "the latter two dominate" within the 72.5%; the paper does not break out per-category percentages within process-level risks. The 72.5% figure spans all four process categories. The paper studies four domains — **Web, OS, Embodied, Database — explicitly NOT coding/SWE** — though it cites coding in motivation. Treat its taxonomy as suggestive for coding agents, not validated. The mitigations are proposed, not measured.
 
 ### 5.6 Verification consensus
 
@@ -203,9 +208,9 @@ Production patterns _not_ in autopilot today:
 
 ### 6.1 Add an Acceptance-Criteria phase before plan
 
-**Highest leverage for ticket → PR.** Autopilot today consumes a design doc. Production ticket-to-PR pipelines all extract structured AC first and **thread them into every downstream phase** as the canonical rubric — planner, implementer, reviewers all see the same `{id, criterion, verifies_via}` list. Single change addressing the 72.5%-dominant process-error class from the [Long-Horizon Task Mirage](https://arxiv.org/html/2604.11978v1) paper.
+**Highest leverage for ticket → PR.** Autopilot today consumes a design doc. Production ticket-to-PR pipelines all extract structured AC first and **thread them into every downstream phase** as the canonical rubric — planner, implementer, reviewers all see the same `{id, criterion, verifies_via}` list. The strongest evidence is convergent industry adoption (Bitmovin, Kinde, the 70-Jira-tickets writeup); the [Long-Horizon Task Mirage](https://arxiv.org/html/2604.11978v1) paper's process-error taxonomy is suggestive but does not directly test AC threading as a mitigation (see §5.5 audit).
 
-Concrete: a `prompts/extract-ac.md` subagent that emits Gherkin or `{id, criterion, verifies_via}` JSON, written to `.autopilot/ac.json`, referenced by file path in every later prompt.
+Concrete: AC are surfaced during brainstorming and persisted as an `## Acceptance Criteria` section in the design doc. Autopilot's preflight rejects design docs without one. The orchestrator extracts AC into `<workflowDir>/ac.json` (the per-run workflow-core artifact dir, not a checked-in `.autopilot/`) and threads it into every later prompt by absolute path.
 
 ### 6.2 Add a Localization phase before plan
 
@@ -219,19 +224,23 @@ Between plan-emit and implement-loop, run a cheap subagent that re-validates the
 
 Use a different model family for reviewers vs. implementer. Self-preference bias is the most dangerous of the four LLM-judge biases in verify-loops; trivially cheap to mitigate by routing implementer through GPT-5.x and reviewers through Claude (or vice versa). The Pi `subagents` extension supports per-subagent provider/model selection — config change, not architecture change.
 
-### 6.5 Per-phase `reasoning_effort` tuning
+### 6.5 Per-phase `reasoning_effort` tuning (hypothesis, not vendor guidance)
 
-[OpenAI's GPT-5.4 guide](https://developers.openai.com/api/docs/guides/prompt-guidance) is explicit: `low`/`minimal` for execution, `medium`/`high` only for research/planning. Most pipelines set this once globally and overspend.
+> **Audit (2026-04-26).** The original draft of this section claimed OpenAI's prompting guides "explicitly recommend" per-phase tuning. They do not. The GPT-5.2 guide describes `reasoning_effort` only in a migration-mapping table (defaults: `none` for GPT-5.1/5.2). The per-phase split below is the report author's synthesis — a reasonable hypothesis, but treat it as something to A/B test, not as documented best practice.
 
-| Phase        | Suggested effort        |
-| ------------ | ----------------------- |
-| Localization | low                     |
-| Plan         | medium                  |
-| Plan-repair  | low                     |
-| Implement    | low (or minimal on 5.4) |
-| Validation   | low                     |
-| Reviewers    | medium                  |
-| Fixers       | low                     |
+OpenAI does document the knob and its cost/quality tradeoff. A defensible default: set `reasoning_effort` once per phase based on whether the phase is execution-heavy (low) or research/decision-heavy (medium). Most pipelines set it once globally and overspend.
+
+| Phase        | Suggested effort (untested) |
+| ------------ | --------------------------- |
+| Localization | low                         |
+| Plan         | medium                      |
+| Plan-repair  | low                         |
+| Implement    | low (or minimal on 5.4)     |
+| Validation   | low                         |
+| Reviewers    | medium                      |
+| Fixers       | low                         |
+
+**Higher-leverage GPT-5.2 recommendations the original survey missed** (see §5.2): scope-discipline blocks, `<long_context_handling>` re-statement of constraints, and first-class compaction via `/responses/compact` for tool-heavy flows. These are vendor-recommended; the per-phase reasoning_effort table is not.
 
 ### 6.6 Structured note-taking artifacts in the workspace
 
@@ -239,7 +248,7 @@ Use a different model family for reviewers vs. implementer. Self-preference bias
 
 ### 6.7 Diff-budget and idle-iteration guardrails on implement
 
-Hard cap on per-task diff (e.g., 500 lines added/changed) plus abort-if-no-file-delta-in-N-iterations. Cheap mechanical brakes that catch the "implementer wandered off" failure mode before fix-loops kick in. References: [Tests-First Agent Loop / diff budgets](https://medium.com/@Micheal-Lanham/stop-burning-tokens-the-tests-first-agent-loop-that-cuts-thrash-by-50-d66bd62a948e).
+Hard cap on per-task diff (e.g., 500 lines added/changed) plus abort-if-no-file-delta-in-N-iterations. Cheap mechanical brakes that catch the "implementer wandered off" failure mode before fix-loops kick in. The two are independently useful — diff caps physically reject oversize patches at apply time; idle-iteration kills are a separate thrash detector. Reference: [Tests-First Agent Loop / diff budgets](https://medium.com/@Micheal-Lanham/stop-burning-tokens-the-tests-first-agent-loop-that-cuts-thrash-by-50-d66bd62a948e). Caveat (2026-04-26 audit): the post's headline "50% thrash reduction" is a single anecdotal comparison (12 → 7 iterations on one task), not a measured benchmark; the post's primary advocacy is for _tests-first_ prompting, with diff budgets as a supporting guardrail.
 
 ### 6.8 Generate a `PR_BODY.md` artifact at the end
 
@@ -251,7 +260,7 @@ Even if autopilot doesn't push or open the PR, emit a PR description generated *
 
 ### 6.10 Validator information barrier
 
-`roach-pi`'s plan-validator is invoked with a **code-built prompt** that reads acceptance criteria directly from disk — the implementer agent's prose never reaches the validator. Anti-collusion. Trivial to add: have the verify subagent's prompt populated by the orchestrator from `.autopilot/ac.json`, not from any prior subagent's output.
+`roach-pi`'s plan-validator is invoked with a **code-built prompt** that reads acceptance criteria directly from disk — the implementer agent's prose never reaches the validator. Anti-collusion. Verified in the upstream repo: [`extensions/agentic-harness/agents/plan-validator.md`](https://github.com/tmdgusya/roach-pi/blob/main/extensions/agentic-harness/agents/plan-validator.md) carries an explicit "## Information Barrier" section ("You do NOT know what the worker did, what approach they took, or what their output was"); [`extensions/agentic-harness/validator-template.ts`](https://github.com/tmdgusya/roach-pi/blob/main/extensions/agentic-harness/validator-template.ts) is a 79-line code-built prompt that interpolates `task.acceptanceCriteria`, `task.files`, and `task.testCommands` from the parsed plan with no worker output. Note one nuance the original survey missed: roach-pi's validator runs **per task against the plan file**, not as a final-stage reviewer over the whole change. Trivial to adapt for autopilot: have the verify subagent's prompt populated by the orchestrator from `<workflowDir>/ac.json`, not from any prior subagent's output.
 
 ### 6.11 (Optional) Worktree per run
 
