@@ -1,4 +1,4 @@
-import type { IterationRecord } from "./history.ts";
+import type { IterationRecord } from "./state.ts";
 import {
   formatHeader,
   formatCancelledBanner,

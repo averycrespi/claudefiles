@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { formatAutoralphReport } from "./report.ts";
-import type { IterationRecord } from "./history.ts";
+import type { IterationRecord } from "./state.ts";
 
 const rec = (
   n: number,
