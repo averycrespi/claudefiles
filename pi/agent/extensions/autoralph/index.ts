@@ -3,19 +3,21 @@ import { basename, extname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import {
-  dispatch as rawDispatch,
-  type DispatchOptions,
-  type DispatchResult,
-} from "./lib/dispatch.ts";
-import {
   appendHistory,
   readHistory,
   type IterationRecord,
 } from "./lib/history.ts";
 import { isBootstrap, readHandoff, writeHandoff } from "./lib/handoff.ts";
-import { parseArgs, type ParsedArgs } from "./lib/args.ts";
+import { parseArgs } from "./lib/args.ts";
 import { formatAutoralphReport, type FinalOutcome } from "./lib/report.ts";
-import { createStatusWidget, type StatusWidget } from "./lib/status-widget.ts";
+import {
+  createStatusWidget,
+  type SubagentHandle,
+} from "./lib/status-widget.ts";
+import {
+  createSubagent,
+  type CreateSubagentOpts,
+} from "../_workflow-core/api.ts";
 import { runIteration } from "./phases/iterate.ts";
 import { preflight } from "./preflight.ts";
 
@@ -62,28 +64,6 @@ async function resolveCommitsAhead(
   } catch {
     return 0;
   }
-}
-
-function makeWrappedDispatch(
-  widget: StatusWidget,
-  signal: AbortSignal,
-): (opts: DispatchOptions) => Promise<DispatchResult> {
-  return async (opts) => {
-    const intent = opts.intent ?? "subagent";
-    const handle = widget.subagent(intent);
-    try {
-      return await rawDispatch({
-        ...opts,
-        signal: opts.signal ?? signal,
-        onEvent: (event) => {
-          opts.onEvent?.(event);
-          handle.onEvent(event);
-        },
-      });
-    } finally {
-      handle.finish();
-    }
-  };
 }
 
 function designBasename(designPath: string): string {
@@ -146,7 +126,31 @@ export default function (pi: ExtensionAPI) {
       });
       widget.setIteration(0, parsed.maxIterations);
 
-      const dispatch = makeWrappedDispatch(widget, controller.signal);
+      // Slot-map: tracks the legacy widget.subagent(intent) handle per
+      // in-flight subagent id so lifecycle callbacks can drive it.
+      const slots = new Map<number, SubagentHandle>();
+
+      const subagent = createSubagent({
+        cwd,
+        signal: controller.signal,
+        onSubagentEvent: (id: number, ev: unknown) => {
+          slots.get(id)?.onEvent(ev);
+        },
+        onSubagentLifecycle: (
+          e: Parameters<
+            NonNullable<CreateSubagentOpts["onSubagentLifecycle"]>
+          >[0],
+        ) => {
+          if (e.kind === "start") {
+            const slot = widget.subagent(e.spec.intent);
+            slots.set(e.id, slot);
+          } else {
+            slots.get(e.id)?.finish();
+            slots.delete(e.id);
+          }
+        },
+      });
+
       const getHead = makeGetHead(cwd);
 
       const slug = designBasename(parsed.designPath);
@@ -190,9 +194,8 @@ export default function (pi: ExtensionAPI) {
               isReflection,
               timeoutMs: parsed.timeoutMins * 60_000,
               cwd,
-              dispatch,
+              subagent,
               getHead,
-              signal: controller.signal,
             });
 
             const record: IterationRecord = {
