@@ -27,6 +27,24 @@ Set these environment variables before starting Pi:
 
 If either variable is missing, the meta-tools are still registered, but any call returns a clear configuration error — Pi remains usable on machines without a broker.
 
+## Read-only mode
+
+Set `MCP_BROKER_READONLY=1` (strict equality on `"1"`) to activate read-only mode. In this mode:
+
+- **Filtered tool list** — on `session_start`, only tools whose MCP `annotations.readOnlyHint === true` are fetched and cached. `mcp_search` and `mcp_describe` only see this filtered set.
+- **Defense-in-depth** — `mcp_call` checks the requested tool name against the cached list before forwarding. Any name not in the list is rejected immediately with the error `mcp_call: tool '<name>' is not available in read-only mode`. Because the list was already filtered at startup, this catches stale or injected names without a second network call.
+- **Bash guard** — the guard's fuzzy-match suggestions are drawn from the same cached list, so it naturally surfaces only read-only tools in this mode. No extra code is required.
+
+Subagents activate read-only mode via the `env:` block in their agent frontmatter:
+
+```markdown
+---
+extensions: mcp-broker
+env:
+  MCP_BROKER_READONLY: "1"
+---
+```
+
 ## Large output spillover
 
 When an `mcp_call` result exceeds **25,000 characters** of joined text, the extension writes the full output to a temporary file and returns a short envelope instead:

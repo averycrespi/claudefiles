@@ -34,14 +34,14 @@ Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. Th
 
 The built-in types:
 
-| Type       | Tools                   | Extensions   | Model        | Thinking |
-| ---------- | ----------------------- | ------------ | ------------ | -------- |
-| `explore`  | read, ls, find, grep    | —            | gpt-5.4-mini | medium   |
-| `review`   | read, ls, find, grep    | —            | gpt-5.4      | high     |
-| `research` | read, ls, find, grep    | `web-access` | gpt-5.4      | high     |
-| `code`     | read, bash, edit, write | `format`     | gpt-5.4      | medium   |
+| Type       | Tools                   | Extensions                 | Model        | Thinking |
+| ---------- | ----------------------- | -------------------------- | ------------ | -------- |
+| `explore`  | read, ls, find, grep    | —                          | gpt-5.4-mini | medium   |
+| `review`   | read, ls, find, grep    | `mcp-broker`               | gpt-5.4      | high     |
+| `research` | read, ls, find, grep    | `mcp-broker`, `web-access` | gpt-5.4      | high     |
+| `code`     | read, bash, edit, write | `format`                   | gpt-5.4      | medium   |
 
-`explore`, `review`, and `research` are read-only. `research` adds web search and fetch via the `web-access` extension. `code` has full write access including shell.
+`explore`, `review`, and `research` are read-only. `review` adds read-only broker access (MCP search, describe, and call restricted to tools annotated `readOnlyHint`). `research` builds on that with web search and fetch via the `web-access` extension. `code` has full write access including shell.
 
 **Returns** a single document with each agent's result under a `## <type> · <intent>` heading, separated by `---`. On failure, the agent's section contains a formatted error including exit code and stderr.
 
@@ -86,7 +86,7 @@ Recursion is blocked by default. Each spawn sets `PI_SUBAGENT_DEPTH` in the chil
 
 - `intent` is required for every agent and drives activity titles — keep it short and descriptive
 - Each subagent starts with a fresh context; session inheritance is not supported
-- `research` requires the `web-access` extension to be installed and discoverable by the name `web-access`
+- `review` and `research` require the `mcp-broker` extension to be installed and discoverable; if missing, extension resolution fails with "no matching extensions found". `research` additionally requires `web-access`
 - `code` skills and prompt templates are enabled; all other agent types disable them
 - All agents in a single `spawn_agents` call run concurrently; result order matches input order
 
@@ -109,7 +109,20 @@ disable_prompt_templates: true
 System prompt body...
 ```
 
-Fields: `name` (defaults to filename without extension), `description` (shown in the tool's agent list), `tools` (comma-separated), `extensions` (comma-separated, empty means none), `model` (inherits parent model if omitted), `thinking` (inherits parent thinking level if omitted), `disable_skills`, `disable_prompt_templates`.
+Fields: `name` (defaults to filename without extension), `description` (shown in the tool's agent list), `tools` (comma-separated), `extensions` (comma-separated, empty means none), `model` (inherits parent model if omitted), `thinking` (inherits parent thinking level if omitted), `disable_skills`, `disable_prompt_templates`, `env` (map of environment variables to inject into the child process — see example below).
+
+The `env` field accepts an indented key/value map:
+
+```markdown
+---
+name: review
+extensions: mcp-broker
+env:
+  MCP_BROKER_READONLY: "1"
+---
+```
+
+Variable values are always strings. The map is merged into the child's environment before launch; unset keys in the map leave the parent environment unchanged.
 
 ## Inspiration
 
