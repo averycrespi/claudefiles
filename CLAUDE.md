@@ -53,6 +53,7 @@ Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This 
 - **`setWidget` cast pattern.** The typed signature lives at `pi.ui.setWidget` (on `ExtensionUIContext`), but the in-repo convention — used by both `_workflow-core/lib/run.ts` and `task-list/index.ts` — is to call `(pi as any).setWidget(...)` at the top level, gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this pattern when adding sticky widgets in new extensions.
 - **Agent tool schema naming.** Typebox schemas exposed to the agent use snake_case (e.g. `failure_reason`); internal task/state fields stay camelCase (`failureReason`). Map between them in the tool's `execute` body.
 - **Atomic agent-tool mutations.** When an agent tool mutates shared state (e.g. `task_list_set`'s `reconcile`), collect ALL validation errors before rejecting, apply changes atomically with a single `notify()` on success, and return errors as tool result text (not `throw`) so the agent can read and recover from them.
+- **Stub Node built-ins via wrapper export.** `mock.method` from `node:test` can't replace ESM module exports — they're non-configurable bindings. To stub something like `child_process.spawn`, wrap the call in an exported holder (`export const _spawn = { fn: _nodeSpawn }`) and call through `_spawn.fn(...)`. Tests then `mock.method(_spawn, "fn", stub)`. See `subagents/spawn.ts:19-22` for the reference pattern.
 
 ## Modifying This Repository
 
