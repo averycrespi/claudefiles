@@ -37,11 +37,20 @@ Start by understanding the current project context, then ask questions one at a 
 - Cover: architecture, components, data flow, error handling, testing
 - Be ready to go back and clarify if something doesn't make sense
 
+**Defining acceptance criteria:**
+
+- After the design is validated, surface 3-7 testable acceptance criteria
+- Use Gherkin (`Given/When/Then`) or structured items (`AC-1: ...` with a `Verifies via:` line each)
+- Each criterion must be observable — a test, a command output, or a file/UI state — not a feeling
+- Validate the list with the user the same way as design sections: one round of confirmation, willing to revise
+- These become the canonical rubric `autopilot` threads into the implementer (as constraints) and reviewers (as the verification rubric)
+
 ## After the Design
 
 **Documentation:**
 
 - Write the validated design to `.designs/YYYY-MM-DD-<topic>.md` in the project root
+- The doc must include an `## Acceptance Criteria` section containing the validated AC list — `/autopilot-start` rejects design docs without it
 - Commit the design document to git
 
 **Handoff:**

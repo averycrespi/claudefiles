@@ -64,6 +64,24 @@ function summarize(tasks: { status: string; title: string }[]): string {
   return tasks.map((t) => `[${t.status}] ${t.title}`).join("\n");
 }
 
+function extractAcSection(designText: string): string | null {
+  const lines = designText.split("\n");
+  let inSection = false;
+  const collected: string[] = [];
+  for (const line of lines) {
+    const isAcHeading = /^##\s+acceptance criteria\s*$/i.test(line);
+    const isOtherH2 = !isAcHeading && /^##\s+\S/.test(line);
+    if (isAcHeading) {
+      inSection = true;
+      continue;
+    }
+    if (inSection && isOtherH2) break;
+    if (inSection) collected.push(line);
+  }
+  if (!inSection) return null;
+  return collected.join("\n").trim() || null;
+}
+
 export default function (
   pi: ExtensionAPI,
   testOpts: RegisterWorkflowOpts = {},
@@ -85,6 +103,13 @@ export default function (
         const text = await readFile(args.designPath, "utf8");
         if (text.trim().length === 0)
           return { ok: false, error: "design file is empty" };
+        const ac = extractAcSection(text);
+        if (!ac)
+          return {
+            ok: false,
+            error:
+              "design file is missing an '## Acceptance Criteria' section (run /brainstorming to add one)",
+          };
         const c = await requireCleanTree(cwd);
         if (!c.ok) return c;
         const baseSha = await captureHead(cwd);

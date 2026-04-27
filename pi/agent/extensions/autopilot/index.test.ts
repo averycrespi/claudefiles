@@ -71,7 +71,10 @@ function makeDesignFile(): string {
   // Keep the design file outside the repo so the working tree stays clean.
   const designDir = mkdtempSync(join(tmpdir(), "autopilot-design-"));
   const designPath = join(designDir, "my-design.md");
-  writeFileSync(designPath, "# My Design\n\nSome content.\n");
+  writeFileSync(
+    designPath,
+    "# My Design\n\nSome content.\n\n## Acceptance Criteria\n\n- AC-1: foo works\n",
+  );
   return designPath;
 }
 
