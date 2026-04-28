@@ -1,26 +1,35 @@
 # Agent Config
 
-My configuration for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/).
+My configuration for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/). Paired with the [agent-tools](https://github.com/averycrespi/agent-tools) toolkit for sandboxing, worktrees, and MCP brokering.
 
 This repo is opinionated. It provides a structured development workflow, security-first hooks, and reusable skills that turn a general-purpose coding agent into a reliable development partner. Use it as-is, fork it, or cherry-pick the parts that fit your setup.
 
-## Highlights
+## What's Included
 
-**Structured development workflow** — A pipeline for turning ideas into pull requests, adapted from [superpowers](https://github.com/obra/superpowers):
+### [Claude Code](claude/README.md) → `~/.claude/`
 
-```
-/brainstorming → /writing-plans → /executing-plans → /verifying-work → /completing-work
-```
+- **Structured development workflow** — `/brainstorming → /writing-plans → /executing-plans → /verifying-work → /completing-work`, a pipeline of skills (adapted from [superpowers](https://github.com/obra/superpowers)) that turns ideas into pull requests with subagent-isolated implementation and parallel reviewers
+- **Reference skills** — TDD discipline, PR review, browser automation (Playwright), Jira ticket creation, frontend design, incident troubleshooting, agent engineering, and more
+- **Security and quality hooks** — Pre-commit secret scanning with [gitleaks](https://github.com/gitleaks/gitleaks); auto-formatting on every write via Prettier, gofmt, rustfmt, or shfmt
+- **Sandbox mode** — Locked-down config for headless or remote environments that redirects `gh` and remote git to MCP tools
+- **Custom status line** — Powerline-style display showing model, branch, context window usage, and session rate-limit usage
 
-Each stage is a skill that can be used independently. Plans are executed via subagent dispatch to keep context clean. Verification runs parallel reviewers across correctness, security, design, code quality, and performance.
+### [Pi](pi/README.md) → `~/.pi/agent/`
 
-**Security hooks** — Pre-commit secret scanning with [gitleaks](https://github.com/gitleaks/gitleaks). Sandbox mode locks down remote operations and redirects to MCP tools.
+- **Extensions** — TypeScript modules that add capabilities to the Pi agent: subagent dispatch, structured-workflow primitives, MCP brokering, web access, formatting, and more
+- **Skills** — A subset of the Claude skills, ported with Pi-platform and GPT-5.x prose tweaks
+- **Custom subagents and prompts** — Definitions for delegated exploration, research, and review
 
-**Auto-formatting on write** — A PostToolUse hook that formats files after every edit using Prettier, gofmt, rustfmt, or shfmt based on file extension. No manual formatting steps.
+See each directory's README for the full list, including authoring guidance.
 
-**Reusable skills** — From PR review to browser automation (Playwright) to incident response to Jira ticket creation. See the full list below.
+## Companion: [agent-tools](https://github.com/averycrespi/agent-tools)
 
-**Pi extensions** — TypeScript modules adding web search, subagent dispatch, auto-formatting, broker-backed auth, and more to the Pi agent.
+`agent-config` configures the agent; [`agent-tools`](https://github.com/averycrespi/agent-tools) provides the environment it runs in. Two of its tools are explicit integration points for this repo:
+
+- **MCP broker** — credentials-holding proxy that lets sandboxed agents use external tools without ever holding the secrets themselves. Pairs with the `mcp-broker` Pi extension and Claude's sandbox-mode `gh`/git redirection hooks
+- **Sandbox manager (`sb`)** — provisions and manages a Lima-based Linux VM for isolated agent runs. Pairs with the overrides in `claude/sandbox/`
+
+The two repos are designed to be used together but stand on their own.
 
 ## Structure
 
@@ -28,8 +37,6 @@ Each stage is a skill that can be used independently. Plans are executed via sub
 | ----------------------------- | -------------------------------------------- | -------------- |
 | [`claude/`](claude/README.md) | Skills, hooks, settings, agents, status line | `~/.claude/`   |
 | [`pi/agent/`](pi/README.md)   | Extensions, agents, skills, settings         | `~/.pi/agent/` |
-
-See each directory's README for the full list of skills, hooks, and extensions.
 
 ## Design Decisions
 
@@ -65,10 +72,6 @@ make install-dev # install Pi dev dependencies
 make typecheck   # type-check Pi extension TypeScript files
 make test        # run Pi extension unit tests
 ```
-
-## Related
-
-- [agent-tools](https://github.com/averycrespi/agent-tools) — Tools that reduce the friction of working with AI coding agents
 
 ## License
 
