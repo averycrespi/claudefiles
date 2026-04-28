@@ -1,6 +1,6 @@
 # Agent Config
 
-My configuration for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/). Paired with the [agent-tools](https://github.com/averycrespi/agent-tools) toolkit for sandboxing, worktrees, and MCP brokering.
+My configuration for working with AI coding agents — currently [Claude Code](https://www.anthropic.com/claude-code) and [Pi](https://pi.dev/). Pairs well with my [agent-tools](https://github.com/averycrespi/agent-tools).
 
 This repo is opinionated. It provides a structured development workflow, security-first hooks, and reusable skills that turn a general-purpose coding agent into a reliable development partner. Use it as-is, fork it, or cherry-pick the parts that fit your setup.
 
