@@ -17,33 +17,15 @@ This repo is opinionated. It provides a structured development workflow, securit
 ### [Pi](pi/README.md) → `~/.pi/agent/`
 
 - **Extensions** — TypeScript modules that add capabilities to the Pi agent: subagent dispatch, structured-workflow primitives, MCP brokering, web access, formatting, and more
-- **Skills** — A subset of the Claude skills, ported with Pi-platform and GPT-5.x prose tweaks
+- **Skills** — Reusable workflows and reference guides, tuned for Pi platform conventions and GPT-5.x prose
 - **Custom subagents and prompts** — Definitions for delegated exploration, research, and review
-
-See each directory's README for the full list, including authoring guidance.
 
 ## Companion: [agent-tools](https://github.com/averycrespi/agent-tools)
 
-`agent-config` configures the agent; [`agent-tools`](https://github.com/averycrespi/agent-tools) provides the environment it runs in. Two of its tools are explicit integration points for this repo:
+`agent-config` configures the agent; [`agent-tools`](https://github.com/averycrespi/agent-tools) provides tools for working with AI agents. Two of its tools are explicit integration points for this repo:
 
 - **MCP broker** — credentials-holding proxy that lets sandboxed agents use external tools without ever holding the secrets themselves. Pairs with the `mcp-broker` Pi extension and Claude's sandbox-mode `gh`/git redirection hooks
 - **Sandbox manager (`sb`)** — provisions and manages a Lima-based Linux VM for isolated agent runs. Pairs with the overrides in `claude/sandbox/`
-
-The two repos are designed to be used together but stand on their own.
-
-## Structure
-
-| Directory                     | Purpose                                      | Stow target    |
-| ----------------------------- | -------------------------------------------- | -------------- |
-| [`claude/`](claude/README.md) | Skills, hooks, settings, agents, status line | `~/.claude/`   |
-| [`pi/agent/`](pi/README.md)   | Extensions, agents, skills, settings         | `~/.pi/agent/` |
-
-## Design Decisions
-
-- **Subagent isolation** — Long-running tasks (plan execution, PR review) dispatch subagents so the main context window stays clean and responsive
-- **TDD-first plans** — Implementation plans are structured around test-driven development: write the test, make it pass, then refactor
-- **Security by default** — Secret scanning runs on every commit, not as an opt-in. Sandbox mode restricts remote operations to MCP tools
-- **Stow for symlinks** — Config lives in a git repo, gets symlinked to `~/.claude/` and `~/.pi/agent/`. Edit once, take effect everywhere
 
 ## Quick Start
 
