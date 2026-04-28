@@ -43,3 +43,19 @@ Underscore-prefixed directories are libraries imported by sibling extensions, no
 | `_workflow-core` | Primitives for structured-state-machine-around-subagents workflows |
 
 See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
+
+## Skills
+
+Markdown skill packages that load on demand via progressive disclosure — only the `name` and `description` are pre-registered; the body of `SKILL.md` and any bundled `references/` files load only when the skill activates.
+
+| Skill                     | Use when                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `agent-engineering`       | Designing, building, debugging, or reviewing AI coding agent harnesses and multi-phase workflows  |
+| `brainstorming`           | Designing a significant feature that needs requirements exploration and upfront design            |
+| `creating-jira-tickets`   | Drafting and creating a Jira ticket via the `mcp-broker` extension's Atlassian namespace          |
+| `frontend-design`         | Building web components, pages, or applications that need distinctive, production-grade frontends |
+| `playwright-cli`          | Driving a browser for testing, form filling, screenshots, or data extraction                      |
+| `skill-creator`           | Creating a new skill or updating an existing one                                                  |
+| `test-driven-development` | Implementing a feature or bugfix that involves writing meaningful application logic               |
+
+Most skills are mirrored from `claude/skills/` with Pi-platform adjustments (tool name swaps, mcp-broker meta-tools for MCP calls, GPT-5.x-friendly prose). See the [skill-creator](../pi/agent/skills/skill-creator/SKILL.md) skill when adding new ones.
