@@ -1,9 +1,21 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { taskList } from "./api.ts";
 import { renderWidgetLines } from "./render.ts";
+import type { TaskListState } from "./state.ts";
 import { registerTools } from "./tools.ts";
 
 const WIDGET_KEY = "task-list";
+
+function renderWidget(ctx: ExtensionContext, state: TaskListState) {
+  if (!ctx.hasUI) return;
+  const lines = renderWidgetLines(state);
+  ctx.ui.setWidget(WIDGET_KEY, lines.length === 0 ? undefined : lines, {
+    placement: "belowEditor",
+  });
+}
 
 /**
  * Task-list extension: persists a task list for the life of a session
@@ -21,27 +33,22 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  // `setWidget` is a runtime method on pi but not exposed in the typed
-  // ExtensionAPI interface — access it via cast, same pattern as run.ts.
-  const piAny = pi as any;
-  const setWidget = (content: string[] | undefined) => {
-    if (piAny.hasUI && typeof piAny.setWidget === "function") {
-      piAny.setWidget(WIDGET_KEY, content, { placement: "belowEditor" });
-    }
-  };
+  let unsubscribe: (() => void) | undefined;
 
-  const unsubscribe = taskList.subscribe((state) => {
-    const lines = renderWidgetLines(state);
-    if (lines.length === 0) {
-      setWidget(undefined);
-    } else {
-      setWidget(lines);
-    }
+  pi.on("session_start", (_event, ctx) => {
+    unsubscribe?.();
+    unsubscribe = taskList.subscribe((state) => {
+      renderWidget(ctx, state as TaskListState);
+    });
+    renderWidget(ctx, { tasks: [...taskList.all()], createdAt: Date.now() });
   });
 
-  pi.on("session_shutdown", () => {
-    setWidget(undefined);
+  pi.on("session_shutdown", (_event, ctx) => {
+    unsubscribe?.();
+    unsubscribe = undefined;
+    if (ctx.hasUI) {
+      ctx.ui.setWidget(WIDGET_KEY, undefined, { placement: "belowEditor" });
+    }
     taskList.clear();
-    unsubscribe();
   });
 }

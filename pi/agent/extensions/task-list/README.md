@@ -153,7 +153,7 @@ Drop all tasks from the task list immediately, without confirmation. Calls `task
 
 ## Sticky widget
 
-The extension renders the task list as a sticky widget placed `belowEditor` (key `"task-list"`). The widget is mounted via `pi.setWidget(key, content, { placement: "belowEditor" })` and updated in place on every store mutation.
+The extension renders the task list as a sticky widget placed `belowEditor` (key `"task-list"`). On `session_start`, it subscribes to the store and mounts the widget via `ctx.ui.setWidget(key, content, { placement: "belowEditor" })`. Each later store mutation updates that same widget in place.
 
 **Auto-show / auto-hide:** when the store transitions from empty to non-empty the widget appears; when it transitions from non-empty to empty the widget is dismissed (`setWidget(key, undefined)`). On `session_shutdown` the store is cleared and the widget is removed.
 
@@ -190,7 +190,7 @@ The `autopilot` extension (same repo) is the primary consumer — its orchestrat
 
 - `createStore()` in `state.ts` returns a fresh `TaskStore` closure; `api.ts` instantiates one module-level singleton so every import of `../task-list/api.js` sees the same tasks.
 - Every mutating method calls an internal `notify()` that fans out to every registered subscriber.
-- `index.ts` registers the `task_list_set` and `task_list_get` agent tools, the `/task-list-clear` slash command, and subscribes to the store. Each notification snapshots the state and calls `pi.setWidget` with the rendered string array (or `undefined` to dismiss).
+- `index.ts` registers the `task_list_set` and `task_list_get` agent tools plus the `/task-list-clear` slash command. On `session_start` it subscribes to the store, and each notification calls `ctx.ui.setWidget` with the rendered string array (or `undefined` to dismiss). On `session_shutdown` it unsubscribes, dismisses the widget, and clears the store.
 - On `session_shutdown` the extension unsubscribes, clears the store, and dismisses the widget so a follow-on session starts fresh.
 
 ## Inspiration
