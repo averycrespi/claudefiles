@@ -17,28 +17,27 @@ test("glyphFor maps each status to the right symbol", () => {
   assert.equal(glyphFor("failed"), "✗");
 });
 
-test("summarizeCounts formats '<n> tasks (<done> done, <active> in progress, <pending> pending, <failed> failed)'", () => {
+test("summarizeCounts formats '<n> tasks (<done> done, <failed> failed, <active> in progress, <pending> pending)'", () => {
   const counts = summarizeCounts([
     { status: "completed" },
     { status: "completed" },
+    { status: "failed" },
     { status: "in_progress" },
     { status: "pending" },
     { status: "pending" },
-    { status: "failed" },
   ] as any);
-  assert.equal(counts, "6 tasks (2 done, 1 in progress, 2 pending, 1 failed)");
+  assert.equal(counts, "6 tasks (2 done, 1 failed, 1 in progress, 2 pending)");
 });
 
 test("truncateWithPriority keeps recently-completed (< 30s) above older completed", () => {
   const now = Date.now();
   const tasks = [
-    { id: 1, status: "completed", completedAt: now - 60_000 }, // old
-    { id: 2, status: "completed", completedAt: now - 1_000 }, // recent
+    { id: 1, status: "completed", completedAt: now - 60_000 },
+    { id: 2, status: "completed", completedAt: now - 1_000 },
     { id: 3, status: "in_progress" },
     { id: 4, status: "pending" },
   ] as any;
   const kept = truncateWithPriority(tasks, 3, now);
-  // Priority: recently-completed → in_progress → pending → older-completed
   assert.deepEqual(
     kept.map((t: any) => t.id),
     [2, 3, 4],
@@ -74,7 +73,6 @@ test("truncateWithPriority returns all tasks when budget exceeds task count", ()
   ] as any;
   const kept = truncateWithPriority(tasks, 10, now);
   assert.equal(kept.length, 3);
-  // Priority ordering: recently-completed (3), in_progress (2), pending (1).
   assert.deepEqual(
     kept.map((t: any) => t.id),
     [3, 2, 1],
@@ -84,11 +82,11 @@ test("truncateWithPriority returns all tasks when budget exceeds task count", ()
 test("summarizeCounts handles empty lists", () => {
   assert.equal(
     summarizeCounts([]),
-    "0 tasks (0 done, 0 in progress, 0 pending, 0 failed)",
+    "0 tasks (0 done, 0 failed, 0 in progress, 0 pending)",
   );
 });
 
-test("summarizeCounts includes failed tasks explicitly", () => {
+test("summarizeCounts includes failed tasks explicitly in second position", () => {
   const counts = summarizeCounts([
     { status: "completed" },
     { status: "in_progress" },
@@ -96,10 +94,8 @@ test("summarizeCounts includes failed tasks explicitly", () => {
     { status: "failed" },
     { status: "failed" },
   ] as any);
-  assert.equal(counts, "5 tasks (1 done, 1 in progress, 1 pending, 2 failed)");
+  assert.equal(counts, "5 tasks (1 done, 2 failed, 1 in progress, 1 pending)");
 });
-
-// ── renderWidgetLines ─────────────────────────────────────────────────────────
 
 function makeState(
   tasks: Partial<TaskListState["tasks"][number]>[],
@@ -120,173 +116,158 @@ test("renderWidgetLines: empty list returns []", () => {
   assert.deepEqual(lines, []);
 });
 
-test("renderWidgetLines: header counts appear on line 0", () => {
+test("renderWidgetLines: header counts use done, failed, in progress, pending order", () => {
   const state = makeState([
-    { status: "completed", completedAt: Date.now() - 1000 },
-    { status: "in_progress" },
-    { status: "pending" },
+    { title: "Done", status: "completed", completedAt: Date.now() - 1_000 },
+    { title: "Failed", status: "failed", completedAt: Date.now() - 500 },
+    { title: "Active", status: "in_progress" },
+    { title: "Queued", status: "pending" },
   ]);
   const lines = renderWidgetLines(state);
-  assert.ok(lines.length >= 1);
-  assert.ok(
-    lines[0].includes("3 tasks"),
-    `header should include task count: ${lines[0]}`,
-  );
-  assert.ok(
-    lines[0].includes("1 done"),
-    `header should include done count: ${lines[0]}`,
-  );
-  assert.ok(
-    lines[0].includes("1 in progress"),
-    `header should include in_progress count: ${lines[0]}`,
-  );
-  assert.ok(
-    lines[0].includes("1 pending"),
-    `header should include pending count: ${lines[0]}`,
-  );
-  assert.ok(
-    lines[0].includes("0 failed"),
-    `header should include failed count: ${lines[0]}`,
+  assert.equal(
+    lines[0],
+    "4 tasks (1 done, 1 failed, 1 in progress, 1 pending)",
   );
 });
 
-test("renderWidgetLines: one line per task (3 tasks → 4 lines total)", () => {
+test("renderWidgetLines: always uses sectioned rendering, even when all tasks fit", () => {
   const state = makeState([
-    { status: "pending" },
-    { status: "in_progress" },
-    { status: "completed", completedAt: Date.now() - 1000 },
+    { title: "Done", status: "completed", completedAt: Date.now() - 1_000 },
+    { title: "Active", status: "in_progress", activity: "compiling..." },
+    { title: "Queued", status: "pending" },
   ]);
   const lines = renderWidgetLines(state);
-  // header + 3 task rows
+  const prefixWidth = "in progress: ".length;
   assert.equal(lines.length, 4);
+  assert.equal(lines[1], `${"done: ".padEnd(prefixWidth)}✔ Done`);
+  assert.equal(
+    lines[2],
+    `${"in progress: ".padEnd(prefixWidth)}◼ Active · compiling...`,
+  );
+  assert.equal(lines[3], `${"pending: ".padEnd(prefixWidth)}◻ Queued`);
 });
 
-test("renderWidgetLines: each task row begins with a tab and the correct glyph", () => {
-  const state = makeState([
-    { title: "P task", status: "pending" },
-    { title: "IP task", status: "in_progress" },
-    { title: "C task", status: "completed", completedAt: Date.now() - 1000 },
-    { title: "F task", status: "failed" },
-  ]);
-  const lines = renderWidgetLines(state);
-  // lines[0] is the header; tasks are reordered by priority
-  const taskLines = lines.slice(1);
-  // After priority sort: recently-completed → in_progress → pending → failed
-  assert.ok(
-    taskLines[0].startsWith("\t✔"),
-    `expected completed first: ${taskLines[0]}`,
-  );
-  assert.ok(
-    taskLines[1].startsWith("\t◼"),
-    `expected in_progress second: ${taskLines[1]}`,
-  );
-  assert.ok(
-    taskLines[2].startsWith("\t◻"),
-    `expected pending third: ${taskLines[2]}`,
-  );
-  assert.ok(
-    taskLines[3].startsWith("\t✗"),
-    `expected failed fourth: ${taskLines[3]}`,
-  );
-});
-
-test("renderWidgetLines: 6 tasks fit without +N more (cap = 6 task rows)", () => {
-  const state = makeState(
-    Array.from({ length: 6 }, () => ({ status: "pending" as const })),
-  );
-  const lines = renderWidgetLines(state);
-  // 1 header + 6 rows = 7 total, no "+N more"
-  assert.equal(lines.length, 7);
-  assert.ok(
-    !lines[lines.length - 1].includes("more"),
-    "should not have +N more line",
-  );
-});
-
-test("renderWidgetLines: 10 tasks → 5 rows + tabbed '+5 more' (total 7 lines)", () => {
-  const state = makeState(
-    Array.from({ length: 10 }, () => ({ status: "pending" as const })),
-  );
-  const lines = renderWidgetLines(state);
-  // 1 header + 5 rows + "+5 more" = 7 total
-  assert.equal(lines.length, 7);
-  assert.equal(lines[lines.length - 1], "\t+5 more");
-});
-
-test("renderWidgetLines: 15 tasks → 5 rows + tabbed '+10 more' (total 7 lines)", () => {
-  const state = makeState(
-    Array.from({ length: 15 }, () => ({ status: "pending" as const })),
-  );
-  const lines = renderWidgetLines(state);
-  assert.equal(lines.length, 7);
-  assert.equal(lines[lines.length - 1], "\t+10 more");
-});
-
-test("renderWidgetLines: truncation priority under 6-row budget (recently-completed → in_progress → pending → older-completed → failed)", () => {
+test("renderWidgetLines: balanced 4-section layout gives one row per terminal section and extra rows to active/upcoming work", () => {
   const now = Date.now();
-  // Build 11 tasks across buckets — only 5 should be kept (need +N more)
   const state: TaskListState = {
     tasks: [
-      // recently-completed (2)
-      { id: 1, title: "RC1", status: "completed", completedAt: now - 1_000 },
-      { id: 2, title: "RC2", status: "completed", completedAt: now - 5_000 },
-      // in_progress (2)
-      { id: 3, title: "IP1", status: "in_progress" },
-      { id: 4, title: "IP2", status: "in_progress" },
-      // pending (3)
-      { id: 5, title: "PD1", status: "pending" },
-      { id: 6, title: "PD2", status: "pending" },
-      { id: 7, title: "PD3", status: "pending" },
-      // older-completed (2)
-      { id: 8, title: "OC1", status: "completed", completedAt: now - 60_000 },
-      { id: 9, title: "OC2", status: "completed", completedAt: now - 90_000 },
-      // failed (2)
-      { id: 10, title: "FA1", status: "failed" },
-      { id: 11, title: "FA2", status: "failed" },
+      {
+        id: 1,
+        title: "Done recent",
+        status: "completed",
+        completedAt: now - 500,
+      },
+      {
+        id: 2,
+        title: "Done old",
+        status: "completed",
+        completedAt: now - 60_000,
+      },
+      {
+        id: 3,
+        title: "Failed recent",
+        status: "failed",
+        failureReason: "boom",
+        completedAt: now - 250,
+      },
+      {
+        id: 4,
+        title: "Failed old",
+        status: "failed",
+        failureReason: "stale",
+        completedAt: now - 90_000,
+      },
+      { id: 5, title: "IP1", status: "in_progress", activity: "watching logs" },
+      { id: 6, title: "IP2", status: "in_progress", activity: "writing tests" },
+      { id: 7, title: "IP3", status: "in_progress" },
+      { id: 8, title: "PD1", status: "pending" },
+      { id: 9, title: "PD2", status: "pending" },
+      { id: 10, title: "PD3", status: "pending" },
     ],
     createdAt: now,
   };
 
   const lines = renderWidgetLines(state);
-  // 11 tasks > 6 rows → 5 rows + "+6 more"
+  const prefixWidth = "in progress (+1 more): ".length;
   assert.equal(lines.length, 7);
-  assert.equal(lines[lines.length - 1], "\t+6 more");
-
-  // The 5 kept tasks follow priority order: RC1, RC2, IP1, IP2, PD1
-  const taskLines = lines.slice(1, -1); // remove header and "+N more"
-  assert.equal(taskLines.length, 5);
-  assert.ok(taskLines[0].includes("RC1"), `[0] should be RC1: ${taskLines[0]}`);
-  assert.ok(taskLines[1].includes("RC2"), `[1] should be RC2: ${taskLines[1]}`);
-  assert.ok(taskLines[2].includes("IP1"), `[2] should be IP1: ${taskLines[2]}`);
-  assert.ok(taskLines[3].includes("IP2"), `[3] should be IP2: ${taskLines[3]}`);
-  assert.ok(taskLines[4].includes("PD1"), `[4] should be PD1: ${taskLines[4]}`);
-});
-
-test("renderWidgetLines: in_progress task includes activity detail", () => {
-  const state = makeState([
-    { title: "Build", status: "in_progress", activity: "compiling..." },
-  ]);
-  const lines = renderWidgetLines(state);
-  assert.ok(
-    lines[1].includes("compiling..."),
-    `task row should include activity: ${lines[1]}`,
+  assert.equal(
+    lines[0],
+    "10 tasks (2 done, 2 failed, 3 in progress, 3 pending)",
   );
-});
-
-test("renderWidgetLines: failed task includes failureReason", () => {
-  const state = makeState([
-    { title: "Deploy", status: "failed", failureReason: "timeout" },
-  ]);
-  const lines = renderWidgetLines(state);
-  assert.ok(
-    lines[1].includes("timeout"),
-    `task row should include failureReason: ${lines[1]}`,
+  assert.equal(
+    lines[1],
+    `${"done (+1 more): ".padEnd(prefixWidth)}✔ Done recent`,
   );
+  assert.equal(
+    lines[2],
+    `${"failed (+1 more): ".padEnd(prefixWidth)}✗ Failed recent · boom`,
+  );
+  assert.equal(
+    lines[3],
+    `${"in progress (+1 more): ".padEnd(prefixWidth)}◼ IP1 · watching logs`,
+  );
+  assert.equal(lines[4], `${" ".repeat(prefixWidth)}◼ IP2 · writing tests`);
+  assert.equal(lines[5], `${"pending (+1 more): ".padEnd(prefixWidth)}◻ PD1`);
+  assert.equal(lines[6], `${" ".repeat(prefixWidth)}◻ PD2`);
 });
 
-test("renderStyledWidgetLines: completed task uses muted strikethrough text and tab indentation", () => {
+test("renderWidgetLines: done section keeps recent items before older ones", () => {
+  const now = Date.now();
+  const state: TaskListState = {
+    tasks: [
+      { id: 1, title: "RD1", status: "completed", completedAt: now - 500 },
+      { id: 2, title: "RD2", status: "completed", completedAt: now - 1_000 },
+      { id: 3, title: "RD3", status: "completed", completedAt: now - 2_000 },
+      { id: 4, title: "OD1", status: "completed", completedAt: now - 60_000 },
+      { id: 5, title: "OD2", status: "completed", completedAt: now - 90_000 },
+      { id: 6, title: "OD3", status: "completed", completedAt: now - 120_000 },
+      { id: 7, title: "OD4", status: "completed", completedAt: now - 150_000 },
+      { id: 8, title: "OD5", status: "completed", completedAt: now - 180_000 },
+    ],
+    createdAt: now,
+  };
+
+  const lines = renderWidgetLines(state);
+  const prefixWidth = "done (+2 more): ".length;
+  assert.equal(lines.length, 7);
+  assert.equal(lines[1], "done (+2 more): ✔ RD1");
+  assert.equal(lines[2], `${" ".repeat(prefixWidth)}✔ RD2`);
+  assert.equal(lines[3], `${" ".repeat(prefixWidth)}✔ RD3`);
+  assert.equal(lines[4], `${" ".repeat(prefixWidth)}✔ OD1`);
+  assert.equal(lines[5], `${" ".repeat(prefixWidth)}✔ OD2`);
+  assert.equal(lines[6], `${" ".repeat(prefixWidth)}✔ OD3`);
+});
+
+test("renderWidgetLines: failed section keeps recent items before older ones", () => {
+  const now = Date.now();
+  const state: TaskListState = {
+    tasks: [
+      { id: 1, title: "RF1", status: "failed", completedAt: now - 500 },
+      { id: 2, title: "RF2", status: "failed", completedAt: now - 1_000 },
+      { id: 3, title: "RF3", status: "failed", completedAt: now - 2_000 },
+      { id: 4, title: "OF1", status: "failed", completedAt: now - 60_000 },
+      { id: 5, title: "OF2", status: "failed", completedAt: now - 90_000 },
+      { id: 6, title: "OF3", status: "failed", completedAt: now - 120_000 },
+      { id: 7, title: "OF4", status: "failed", completedAt: now - 150_000 },
+      { id: 8, title: "OF5", status: "failed", completedAt: now - 180_000 },
+    ],
+    createdAt: now,
+  };
+
+  const lines = renderWidgetLines(state);
+  const prefixWidth = "failed (+2 more): ".length;
+  assert.equal(lines.length, 7);
+  assert.equal(lines[1], "failed (+2 more): ✗ RF1");
+  assert.equal(lines[2], `${" ".repeat(prefixWidth)}✗ RF2`);
+  assert.equal(lines[3], `${" ".repeat(prefixWidth)}✗ RF3`);
+  assert.equal(lines[4], `${" ".repeat(prefixWidth)}✗ OF1`);
+  assert.equal(lines[5], `${" ".repeat(prefixWidth)}✗ OF2`);
+  assert.equal(lines[6], `${" ".repeat(prefixWidth)}✗ OF3`);
+});
+
+test("renderStyledWidgetLines: completed task uses muted strikethrough text with no left indent", () => {
   const state = makeState([
-    { title: "Ship it", status: "completed", completedAt: Date.now() - 1000 },
+    { title: "Ship it", status: "completed", completedAt: Date.now() - 1_000 },
   ]);
   const theme = {
     fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
@@ -297,11 +278,71 @@ test("renderStyledWidgetLines: completed task uses muted strikethrough text and 
   const lines = renderStyledWidgetLines(state, theme);
   assert.equal(
     lines[1],
-    "\t<success>✔ </success><muted><s>Ship it</s></muted>",
+    "done: <success>✔ </success><muted><s>Ship it</s></muted>",
   );
 });
 
-test("renderStyledWidgetLines: failed task is styled with the error theme and tab indentation", () => {
+test("renderStyledWidgetLines: balanced 4-section layout keeps aligned section prefixes and status styling", () => {
+  const now = Date.now();
+  const state: TaskListState = {
+    tasks: [
+      { id: 1, title: "Done", status: "completed", completedAt: now - 500 },
+      {
+        id: 2,
+        title: "Failed",
+        status: "failed",
+        failureReason: "timeout",
+        completedAt: now - 250,
+      },
+      {
+        id: 3,
+        title: "Build",
+        status: "in_progress",
+        activity: "compiling...",
+      },
+      { id: 4, title: "Review", status: "in_progress" },
+      { id: 5, title: "Queue 1", status: "pending" },
+      { id: 6, title: "Queue 2", status: "pending" },
+      { id: 7, title: "Queue 3", status: "pending" },
+    ],
+    createdAt: now,
+  };
+  const theme = {
+    fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+    bold: (text: string) => `<b>${text}</b>`,
+    strikethrough: (text: string) => `<s>${text}</s>`,
+  };
+
+  const lines = renderStyledWidgetLines(state, theme);
+  const prefixWidth = "pending (+1 more): ".length;
+  assert.equal(lines.length, 7);
+  assert.equal(
+    lines[1],
+    `${"done: ".padEnd(prefixWidth)}<success>✔ </success><muted><s>Done</s></muted>`,
+  );
+  assert.equal(
+    lines[2],
+    `${"failed: ".padEnd(prefixWidth)}<error><b>✗ Failed · timeout</b></error>`,
+  );
+  assert.equal(
+    lines[3],
+    `${"in progress: ".padEnd(prefixWidth)}<accent>◼ </accent><accent><b>Build</b></accent><muted> · compiling...</muted>`,
+  );
+  assert.equal(
+    lines[4],
+    `${" ".repeat(prefixWidth)}<accent>◼ </accent><accent><b>Review</b></accent>`,
+  );
+  assert.equal(
+    lines[5],
+    `${"pending (+1 more): ".padEnd(prefixWidth)}<muted>◻ </muted><dim>Queue 1</dim>`,
+  );
+  assert.equal(
+    lines[6],
+    `${" ".repeat(prefixWidth)}<muted>◻ </muted><dim>Queue 2</dim>`,
+  );
+});
+
+test("renderStyledWidgetLines: failed task is styled with the error theme and no left indent", () => {
   const state = makeState([
     { title: "Deploy", status: "failed", failureReason: "timeout" },
   ]);
@@ -312,5 +353,5 @@ test("renderStyledWidgetLines: failed task is styled with the error theme and ta
   };
 
   const lines = renderStyledWidgetLines(state, theme);
-  assert.equal(lines[1], "\t<error><b>✗ Deploy · timeout</b></error>");
+  assert.equal(lines[1], "failed: <error><b>✗ Deploy · timeout</b></error>");
 });

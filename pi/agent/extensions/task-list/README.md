@@ -35,7 +35,7 @@ Transition task `id` to `failed` from either `pending` or `in_progress`. `reason
 
 ### `taskList.setActivity(id: number, text: string): void`
 
-Set the dim second-line text shown under an `in_progress` task (e.g. `"editing src/foo.ts"`). Throws if the task is not `in_progress`. Cleared automatically when the task leaves `in_progress`.
+Set the dim inline activity text shown after an `in_progress` task title (e.g. `"editing src/foo.ts"`). Throws if the task is not `in_progress`. Cleared automatically when the task leaves `in_progress`.
 
 ### `taskList.get(id: number): Task | undefined`
 
@@ -112,7 +112,7 @@ Atomically replace the task list. Pass the complete desired list — the system 
 **Success result text:**
 
 ```
-5 tasks (2 completed, 1 in_progress, 2 pending)
+5 tasks (2 done, 0 failed, 1 in progress, 2 pending)
 
 1. Bug fix — completed (summary: "Fixed the off-by-one in pagination")
 2. Add docs — completed (summary: "Added README section on task ids")
@@ -160,27 +160,37 @@ The extension renders the task list as a sticky widget placed `belowEditor` (key
 **Layout:**
 
 ```
-5 tasks (2 done, 1 in progress, 2 open)
-✔ Draft rate limiter config
-✔ Wire config into middleware
-◼ Add tests for rate limiter · running bun test src/rate-limit.test.ts
-◻ Add IP-based rate limit key
-◻ Update README
+5 tasks (1 done, 1 failed, 1 in progress, 2 pending)
+done:        ✔ Draft rate limiter config
+failed:      ✗ Wire config into middleware · missing env var
+in progress: ◼ Add tests for rate limiter · running bun test src/rate-limit.test.ts
+pending:     ◻ Add IP-based rate limit key
+             ◻ Update README
 ```
 
 Glyphs: `◻` pending, `◼` in progress, `✔` completed, `✗` failed. Completed rows are struck through in the success color; in-progress rows are bold in the accent color; pending rows are dimmed; failed rows are bold red with their failure reason appended after a `·`.
 
 While a task is `in_progress`, `setActivity(id, text)` appends a dim `· <text>` after the title so viewers can see the current sub-step. Activity is cleared automatically on transition out of `in_progress`.
 
-**Compact 7-line cap:** although Pi can render more, this widget intentionally caps itself at 7 lines total. The budget is 1 header line + up to 6 task rows, or 1 header + 5 rows + `+N more` when the list overflows. When more rows would be needed, `truncateWithPriority` keeps the most interesting ones in this order:
+**Compact 7-line cap:** although Pi can render more, this widget intentionally caps itself at 7 lines total: 1 header line + up to 6 content rows.
 
-1. Recently completed (within the last 30s) — a grace window so the user sees the `in_progress → completed` transition before the row scrolls away.
-2. In-progress tasks.
-3. Pending tasks.
-4. Older completed tasks.
-5. Failed tasks.
+The widget always uses the same sectioned layout, even when the list is small. Visible sections appear in this order and disappear when empty:
 
-Dropped tasks are summarised as a trailing `+N more` line. Order within each bucket is preserved.
+1. `done`
+2. `failed`
+3. `in progress`
+4. `pending`
+
+`done` and `failed` each keep recent items (completed within the last 30s) ahead of older items so fresh outcomes remain visible for a short grace window.
+
+Row allocation is section-aware:
+
+1. Give each non-empty section 1 visible row.
+2. Borrow remaining rows in this order: `in progress` → `pending` → `failed` → `done`.
+
+When a section hides tasks, its first visible row shows a local hidden count like `done (+2 more):` or `pending (+1 more):`. There is no global `+N more` row.
+
+Section prefixes are padded to a shared width so task glyphs and titles align horizontally across sections, and widget rows no longer have a leading left tab.
 
 ## Consumers
 

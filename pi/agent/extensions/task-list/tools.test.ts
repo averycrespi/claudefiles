@@ -15,7 +15,7 @@ test("formatList: single pending task", () => {
   const out = formatList(tasks);
   assert.ok(out.includes("1 task"), `header: ${out}`);
   assert.ok(
-    out.includes("0 done, 0 in progress, 1 pending, 0 failed"),
+    out.includes("0 done, 0 failed, 0 in progress, 1 pending"),
     `count: ${out}`,
   );
   assert.ok(out.includes("1. Do something — pending"), `row: ${out}`);
@@ -42,7 +42,7 @@ test("formatList: failed task includes reason", () => {
   assert.ok(out.includes('reason: "CI timeout"'), `reason: ${out}`);
 });
 
-test("formatList: multiple tasks header includes done, in progress, pending, and failed counts", () => {
+test("formatList: multiple tasks header includes done, failed, in progress, and pending counts", () => {
   const tasks: Task[] = [
     { id: 1, title: "A", status: "completed", summary: "done" },
     { id: 2, title: "B", status: "in_progress" },
@@ -52,7 +52,7 @@ test("formatList: multiple tasks header includes done, in progress, pending, and
   const out = formatList(tasks);
   assert.ok(out.startsWith("4 tasks"), `header: ${out}`);
   assert.ok(
-    out.includes("1 done, 1 in progress, 1 pending, 1 failed"),
+    out.includes("1 done, 1 failed, 1 in progress, 1 pending"),
     `counts: ${out}`,
   );
 });

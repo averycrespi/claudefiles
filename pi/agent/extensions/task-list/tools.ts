@@ -12,16 +12,16 @@ import type { Task } from "./state.ts";
 
 function statusCounts(tasks: Task[]): string {
   let done = 0;
+  let failed = 0;
   let active = 0;
   let pending = 0;
-  let failed = 0;
   for (const t of tasks) {
     if (t.status === "completed") done++;
+    else if (t.status === "failed") failed++;
     else if (t.status === "in_progress") active++;
     else if (t.status === "pending") pending++;
-    else if (t.status === "failed") failed++;
   }
-  return `${done} done, ${active} in progress, ${pending} pending, ${failed} failed`;
+  return `${done} done, ${failed} failed, ${active} in progress, ${pending} pending`;
 }
 
 export function formatList(tasks: Task[]): string {
