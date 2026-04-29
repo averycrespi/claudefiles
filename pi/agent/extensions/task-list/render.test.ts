@@ -17,15 +17,16 @@ test("glyphFor maps each status to the right symbol", () => {
   assert.equal(glyphFor("failed"), "✗");
 });
 
-test("summarizeCounts formats '<n> tasks (<done> done, <active> in progress, <open> open)'", () => {
+test("summarizeCounts formats '<n> tasks (<done> done, <active> in progress, <pending> pending, <failed> failed)'", () => {
   const counts = summarizeCounts([
     { status: "completed" },
     { status: "completed" },
     { status: "in_progress" },
     { status: "pending" },
     { status: "pending" },
+    { status: "failed" },
   ] as any);
-  assert.equal(counts, "5 tasks (2 done, 1 in progress, 2 open)");
+  assert.equal(counts, "6 tasks (2 done, 1 in progress, 2 pending, 1 failed)");
 });
 
 test("truncateWithPriority keeps recently-completed (< 30s) above older completed", () => {
@@ -81,10 +82,13 @@ test("truncateWithPriority returns all tasks when budget exceeds task count", ()
 });
 
 test("summarizeCounts handles empty lists", () => {
-  assert.equal(summarizeCounts([]), "0 tasks (0 done, 0 in progress, 0 open)");
+  assert.equal(
+    summarizeCounts([]),
+    "0 tasks (0 done, 0 in progress, 0 pending, 0 failed)",
+  );
 });
 
-test("summarizeCounts excludes failed tasks from done/open/in-progress buckets", () => {
+test("summarizeCounts includes failed tasks explicitly", () => {
   const counts = summarizeCounts([
     { status: "completed" },
     { status: "in_progress" },
@@ -92,7 +96,7 @@ test("summarizeCounts excludes failed tasks from done/open/in-progress buckets",
     { status: "failed" },
     { status: "failed" },
   ] as any);
-  assert.equal(counts, "5 tasks (1 done, 1 in progress, 1 open)");
+  assert.equal(counts, "5 tasks (1 done, 1 in progress, 1 pending, 2 failed)");
 });
 
 // ── renderWidgetLines ─────────────────────────────────────────────────────────
@@ -137,8 +141,12 @@ test("renderWidgetLines: header counts appear on line 0", () => {
     `header should include in_progress count: ${lines[0]}`,
   );
   assert.ok(
-    lines[0].includes("1 open"),
-    `header should include open count: ${lines[0]}`,
+    lines[0].includes("1 pending"),
+    `header should include pending count: ${lines[0]}`,
+  );
+  assert.ok(
+    lines[0].includes("0 failed"),
+    `header should include failed count: ${lines[0]}`,
   );
 });
 

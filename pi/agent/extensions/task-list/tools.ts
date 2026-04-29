@@ -6,28 +6,22 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { taskList } from "./api.ts";
-import type { Task, TaskStatus } from "./state.ts";
+import type { Task } from "./state.ts";
 
 // ── Result-text helpers ───────────────────────────────────────────────
 
-// keep in sync with TaskStatus union
-const STATUS_DISPLAY_ORDER: TaskStatus[] = [
-  "completed",
-  "in_progress",
-  "pending",
-  "failed",
-];
-
 function statusCounts(tasks: Task[]): string {
-  const counts: Record<string, number> = {};
+  let done = 0;
+  let active = 0;
+  let pending = 0;
+  let failed = 0;
   for (const t of tasks) {
-    counts[t.status] = (counts[t.status] ?? 0) + 1;
+    if (t.status === "completed") done++;
+    else if (t.status === "in_progress") active++;
+    else if (t.status === "pending") pending++;
+    else if (t.status === "failed") failed++;
   }
-  const parts: string[] = [];
-  for (const status of STATUS_DISPLAY_ORDER) {
-    if (counts[status]) parts.push(`${counts[status]} ${status}`);
-  }
-  return parts.join(", ");
+  return `${done} done, ${active} in progress, ${pending} pending, ${failed} failed`;
 }
 
 export function formatList(tasks: Task[]): string {

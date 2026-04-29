@@ -65,13 +65,15 @@ export function styleFor(status: TaskStatus): TaskStyle {
 export function summarizeCounts(tasks: { status: TaskStatus }[]): string {
   let done = 0;
   let active = 0;
-  let open = 0;
+  let pending = 0;
+  let failed = 0;
   for (const t of tasks) {
     if (t.status === "completed") done++;
     else if (t.status === "in_progress") active++;
-    else if (t.status === "pending") open++;
+    else if (t.status === "pending") pending++;
+    else if (t.status === "failed") failed++;
   }
-  return `${tasks.length} tasks (${done} done, ${active} in progress, ${open} open)`;
+  return `${tasks.length} tasks (${done} done, ${active} in progress, ${pending} pending, ${failed} failed)`;
 }
 
 /**
