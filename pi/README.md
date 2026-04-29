@@ -8,7 +8,7 @@ This directory manages [Pi](https://pi.dev/) coding agent configuration files.
 pi/agent/
 ├── AGENTS.md       # Agent instructions (task approach, git rules, style)
 ├── settings.json   # Provider, model, and thinking settings
-├── agents/         # Subagent definitions (code, explore, research, review)
+├── agents/         # Subagent definitions (code, explore, research, deep-research, review)
 ├── extensions/     # TypeScript extensions
 ├── prompts/        # Custom prompt templates
 └── skills/         # Custom skills

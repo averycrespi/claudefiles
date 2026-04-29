@@ -18,7 +18,7 @@ This repo is opinionated. It provides a structured development workflow, securit
 
 - **Extensions** — TypeScript modules that add capabilities to the Pi agent: subagent dispatch, structured-workflow primitives, MCP brokering, web access, formatting, and more
 - **Skills** — Reusable workflows and reference guides, tuned for Pi platform conventions and GPT-5.x prose
-- **Custom subagents and prompts** — Definitions for delegated exploration, research, and review
+- **Custom subagents and prompts** — Definitions for delegated exploration, fast research, deep research, and review
 
 ## Companion: [agent-tools](https://github.com/averycrespi/agent-tools)
 
