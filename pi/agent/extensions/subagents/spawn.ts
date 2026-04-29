@@ -15,10 +15,16 @@ import {
 import { resolveExtensionAllowlist } from "./utils.ts";
 
 export const PI_BINARY = "pi";
+export const POST_AGENT_END_GRACE_MS = 5_000;
 
 // Exported so tests can stub it without launching a real process.
 export const _spawn = {
   fn: _nodeSpawn,
+};
+
+export const _timers = {
+  setTimeout,
+  clearTimeout,
 };
 
 export interface SpawnInvocation {
@@ -218,14 +224,17 @@ async function runSpawn(
     let stdoutBuffer = "";
     let stderrBuffer = "";
     let finalText = "";
+    let sawAgentEnd = false;
     let child: ReturnType<typeof _nodeSpawn> | undefined;
     let killTimer: NodeJS.Timeout | undefined;
+    let postAgentEndTimer: NodeJS.Timeout | undefined;
 
     const finish = (outcome: SpawnOutcome) => {
       if (finished) return;
       finished = true;
       signal?.removeEventListener("abort", onAbort);
-      if (killTimer) clearTimeout(killTimer);
+      if (killTimer) _timers.clearTimeout(killTimer);
+      if (postAgentEndTimer) _timers.clearTimeout(postAgentEndTimer);
       log.stream.end();
       if (outcome.ok) {
         removeLogFile(log.path);
@@ -235,12 +244,37 @@ async function runSpawn(
       resolve(outcome);
     };
 
-    const onAbort = () => {
-      aborted = true;
+    const startKillSequence = () => {
       child?.kill("SIGTERM");
-      killTimer = setTimeout(() => {
+      killTimer = _timers.setTimeout(() => {
         child?.kill("SIGKILL");
       }, 2_000);
+    };
+
+    const onAbort = () => {
+      aborted = true;
+      startKillSequence();
+    };
+
+    const onChildEvent = (event: unknown) => {
+      if (event && typeof event === "object") {
+        const record = event as { type?: string };
+        if (record.type === "agent_end" && !sawAgentEnd) {
+          sawAgentEnd = true;
+          postAgentEndTimer = _timers.setTimeout(() => {
+            startKillSequence();
+            finish({
+              ok: true,
+              aborted: false,
+              stdout: finalText,
+              stderr: stderrBuffer,
+              exitCode: 0,
+              signal: null,
+            });
+          }, POST_AGENT_END_GRACE_MS);
+        }
+      }
+      onEvent?.(event);
     };
 
     if (signal?.aborted) {
@@ -285,7 +319,7 @@ async function runSpawn(
       while (newlineIndex !== -1) {
         const rawLine = stdoutBuffer.slice(0, newlineIndex);
         stdoutBuffer = stdoutBuffer.slice(newlineIndex + 1);
-        finalText = reduceJsonLine(rawLine, onEvent, finalText);
+        finalText = reduceJsonLine(rawLine, onChildEvent, finalText);
         newlineIndex = stdoutBuffer.indexOf("\n");
       }
     });
@@ -300,14 +334,14 @@ async function runSpawn(
       while (newlineIndex !== -1) {
         const line = stderrLineBuffer.slice(0, newlineIndex).trim();
         stderrLineBuffer = stderrLineBuffer.slice(newlineIndex + 1);
-        if (line) onEvent?.({ type: "stderr", text: line });
+        if (line) onChildEvent({ type: "stderr", text: line });
         newlineIndex = stderrLineBuffer.indexOf("\n");
       }
     });
 
     child?.on("close", (code, sig) => {
       if (stdoutBuffer.trim()) {
-        finalText = reduceJsonLine(stdoutBuffer, onEvent, finalText);
+        finalText = reduceJsonLine(stdoutBuffer, onChildEvent, finalText);
         stdoutBuffer = "";
       }
 
