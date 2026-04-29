@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   glyphFor,
+  renderStyledWidgetLines,
   renderWidgetLines,
   styleFor,
   summarizeCounts,
@@ -152,7 +153,7 @@ test("renderWidgetLines: one line per task (3 tasks → 4 lines total)", () => {
   assert.equal(lines.length, 4);
 });
 
-test("renderWidgetLines: each task row begins with the correct glyph", () => {
+test("renderWidgetLines: each task row begins with a tab and the correct glyph", () => {
   const state = makeState([
     { title: "P task", status: "pending" },
     { title: "IP task", status: "in_progress" },
@@ -164,64 +165,58 @@ test("renderWidgetLines: each task row begins with the correct glyph", () => {
   const taskLines = lines.slice(1);
   // After priority sort: recently-completed → in_progress → pending → failed
   assert.ok(
-    taskLines[0].startsWith("✔"),
+    taskLines[0].startsWith("\t✔"),
     `expected completed first: ${taskLines[0]}`,
   );
   assert.ok(
-    taskLines[1].startsWith("◼"),
+    taskLines[1].startsWith("\t◼"),
     `expected in_progress second: ${taskLines[1]}`,
   );
   assert.ok(
-    taskLines[2].startsWith("◻"),
+    taskLines[2].startsWith("\t◻"),
     `expected pending third: ${taskLines[2]}`,
   );
   assert.ok(
-    taskLines[3].startsWith("✗"),
+    taskLines[3].startsWith("\t✗"),
     `expected failed fourth: ${taskLines[3]}`,
   );
 });
 
-test("renderWidgetLines: 9 tasks fit without +N more (cap = 9 task rows)", () => {
+test("renderWidgetLines: 6 tasks fit without +N more (cap = 6 task rows)", () => {
   const state = makeState(
-    Array.from({ length: 9 }, () => ({ status: "pending" as const })),
+    Array.from({ length: 6 }, () => ({ status: "pending" as const })),
   );
   const lines = renderWidgetLines(state);
-  // 1 header + 9 rows = 10 total, no "+N more"
-  assert.equal(lines.length, 10);
+  // 1 header + 6 rows = 7 total, no "+N more"
+  assert.equal(lines.length, 7);
   assert.ok(
     !lines[lines.length - 1].includes("more"),
     "should not have +N more line",
   );
 });
 
-test("renderWidgetLines: 10 tasks → 8 rows + '+2 more' (total 10 lines)", () => {
+test("renderWidgetLines: 10 tasks → 5 rows + tabbed '+5 more' (total 7 lines)", () => {
   const state = makeState(
     Array.from({ length: 10 }, () => ({ status: "pending" as const })),
   );
   const lines = renderWidgetLines(state);
-  // 1 header + 8 rows + "+2 more" = 10 total
-  assert.equal(lines.length, 10);
-  assert.ok(
-    lines[lines.length - 1].includes("+2 more"),
-    `last line should be "+2 more": ${lines[lines.length - 1]}`,
-  );
+  // 1 header + 5 rows + "+5 more" = 7 total
+  assert.equal(lines.length, 7);
+  assert.equal(lines[lines.length - 1], "\t+5 more");
 });
 
-test("renderWidgetLines: 15 tasks → 8 rows + '+7 more' (total 10 lines)", () => {
+test("renderWidgetLines: 15 tasks → 5 rows + tabbed '+10 more' (total 7 lines)", () => {
   const state = makeState(
     Array.from({ length: 15 }, () => ({ status: "pending" as const })),
   );
   const lines = renderWidgetLines(state);
-  assert.equal(lines.length, 10);
-  assert.ok(
-    lines[lines.length - 1].includes("+7 more"),
-    `last line should be "+7 more": ${lines[lines.length - 1]}`,
-  );
+  assert.equal(lines.length, 7);
+  assert.equal(lines[lines.length - 1], "\t+10 more");
 });
 
-test("renderWidgetLines: truncation priority under 9-row budget (recently-completed → in_progress → pending → older-completed → failed)", () => {
+test("renderWidgetLines: truncation priority under 6-row budget (recently-completed → in_progress → pending → older-completed → failed)", () => {
   const now = Date.now();
-  // Build 11 tasks across buckets — only 8 should be kept (need +N more)
+  // Build 11 tasks across buckets — only 5 should be kept (need +N more)
   const state: TaskListState = {
     tasks: [
       // recently-completed (2)
@@ -245,24 +240,18 @@ test("renderWidgetLines: truncation priority under 9-row budget (recently-comple
   };
 
   const lines = renderWidgetLines(state);
-  // 11 tasks > 9 rows → 8 rows + "+3 more"
-  assert.equal(lines.length, 10);
-  assert.ok(
-    lines[lines.length - 1].includes("+3 more"),
-    `last line: ${lines[lines.length - 1]}`,
-  );
+  // 11 tasks > 6 rows → 5 rows + "+6 more"
+  assert.equal(lines.length, 7);
+  assert.equal(lines[lines.length - 1], "\t+6 more");
 
-  // The 8 kept tasks follow priority order: RC1, RC2, IP1, IP2, PD1, PD2, PD3, OC1
+  // The 5 kept tasks follow priority order: RC1, RC2, IP1, IP2, PD1
   const taskLines = lines.slice(1, -1); // remove header and "+N more"
-  assert.equal(taskLines.length, 8);
+  assert.equal(taskLines.length, 5);
   assert.ok(taskLines[0].includes("RC1"), `[0] should be RC1: ${taskLines[0]}`);
   assert.ok(taskLines[1].includes("RC2"), `[1] should be RC2: ${taskLines[1]}`);
   assert.ok(taskLines[2].includes("IP1"), `[2] should be IP1: ${taskLines[2]}`);
   assert.ok(taskLines[3].includes("IP2"), `[3] should be IP2: ${taskLines[3]}`);
   assert.ok(taskLines[4].includes("PD1"), `[4] should be PD1: ${taskLines[4]}`);
-  assert.ok(taskLines[5].includes("PD2"), `[5] should be PD2: ${taskLines[5]}`);
-  assert.ok(taskLines[6].includes("PD3"), `[6] should be PD3: ${taskLines[6]}`);
-  assert.ok(taskLines[7].includes("OC1"), `[7] should be OC1: ${taskLines[7]}`);
 });
 
 test("renderWidgetLines: in_progress task includes activity detail", () => {
@@ -285,4 +274,35 @@ test("renderWidgetLines: failed task includes failureReason", () => {
     lines[1].includes("timeout"),
     `task row should include failureReason: ${lines[1]}`,
   );
+});
+
+test("renderStyledWidgetLines: completed task uses muted strikethrough text and tab indentation", () => {
+  const state = makeState([
+    { title: "Ship it", status: "completed", completedAt: Date.now() - 1000 },
+  ]);
+  const theme = {
+    fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+    bold: (text: string) => `<b>${text}</b>`,
+    strikethrough: (text: string) => `<s>${text}</s>`,
+  };
+
+  const lines = renderStyledWidgetLines(state, theme);
+  assert.equal(
+    lines[1],
+    "\t<success>✔ </success><muted><s>Ship it</s></muted>",
+  );
+});
+
+test("renderStyledWidgetLines: failed task is styled with the error theme and tab indentation", () => {
+  const state = makeState([
+    { title: "Deploy", status: "failed", failureReason: "timeout" },
+  ]);
+  const theme = {
+    fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+    bold: (text: string) => `<b>${text}</b>`,
+    strikethrough: (text: string) => `<s>${text}</s>`,
+  };
+
+  const lines = renderStyledWidgetLines(state, theme);
+  assert.equal(lines[1], "\t<error><b>✗ Deploy · timeout</b></error>");
 });

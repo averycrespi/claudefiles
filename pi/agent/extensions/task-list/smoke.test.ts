@@ -72,6 +72,11 @@ function makeStubPi() {
           notify(msg: string, level: string) {
             notifications.push({ msg, level });
           },
+          theme: {
+            fg: (_color: string, text: string) => text,
+            bold: (text: string) => text,
+            strikethrough: (text: string) => text,
+          },
           setWidget(
             key: string,
             content: string[] | undefined,
@@ -103,6 +108,11 @@ function makeStubPi() {
       hasUI: boolean;
       ui: {
         notify: (msg: string, level: string) => void;
+        theme: {
+          fg: (_color: string, text: string) => string;
+          bold: (text: string) => string;
+          strikethrough: (text: string) => string;
+        };
         setWidget: (
           key: string,
           content: string[] | undefined,

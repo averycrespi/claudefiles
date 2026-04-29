@@ -172,7 +172,7 @@ Glyphs: `◻` pending, `◼` in progress, `✔` completed, `✗` failed. Complet
 
 While a task is `in_progress`, `setActivity(id, text)` appends a dim `· <text>` after the title so viewers can see the current sub-step. Activity is cleared automatically on transition out of `in_progress`.
 
-**10-line cap:** Pi enforces `MAX_WIDGET_LINES = 10` for string-array widgets. The budget is 1 header line + up to 9 task rows. When more rows would be needed, `truncateWithPriority` keeps the most interesting ones in this order:
+**Compact 7-line cap:** although Pi can render more, this widget intentionally caps itself at 7 lines total. The budget is 1 header line + up to 6 task rows, or 1 header + 5 rows + `+N more` when the list overflows. When more rows would be needed, `truncateWithPriority` keeps the most interesting ones in this order:
 
 1. Recently completed (within the last 30s) — a grace window so the user sees the `in_progress → completed` transition before the row scrolls away.
 2. In-progress tasks.

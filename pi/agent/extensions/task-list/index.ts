@@ -3,7 +3,8 @@ import type {
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
 import { taskList } from "./api.ts";
-import { renderWidgetLines } from "./render.ts";
+import { renderStyledWidgetLines, renderWidgetLines } from "./render.ts";
+import type { WidgetTheme } from "./render.ts";
 import type { TaskListState } from "./state.ts";
 import { registerTools } from "./tools.ts";
 
@@ -11,7 +12,10 @@ const WIDGET_KEY = "task-list";
 
 function renderWidget(ctx: ExtensionContext, state: TaskListState) {
   if (!ctx.hasUI) return;
-  const lines = renderWidgetLines(state);
+  const theme = (ctx.ui as { theme?: WidgetTheme }).theme;
+  const lines = theme
+    ? renderStyledWidgetLines(state, theme)
+    : renderWidgetLines(state);
   ctx.ui.setWidget(WIDGET_KEY, lines.length === 0 ? undefined : lines, {
     placement: "belowEditor",
   });
