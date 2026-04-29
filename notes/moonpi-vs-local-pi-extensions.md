@@ -2,6 +2,8 @@
 
 ## Summary
 
+Note: on this branch, `task-list`, `_workflow-core`, `autopilot`, and `autoralph` have since been moved to `pi/archive/extensions/` while experimenting with Moonpi-inspired ideas.
+
 After exploring both this repo's Pi configuration and [`galatolofederico/moonpi`](https://github.com/galatolofederico/moonpi), the clearest difference is this:
 
 - **This repo** is a modular, test-heavy toolkit for building and comparing agent workflows.
@@ -16,10 +18,10 @@ The Pi side of this repo is explicitly organized as a set of independent extensi
 Core pieces:
 
 - **`subagents`** — first-class delegation to isolated child Pi processes, including parallel execution and typed agent roles (`pi/agent/extensions/subagents/README.md:20`)
-- **`_workflow-core`** — reusable primitives for structured workflows built around subagents (`pi/agent/extensions/_workflow-core/README.md:3`)
-- **`autopilot`** — deterministic `plan → implement → verify` orchestration from a design doc (`pi/agent/extensions/autopilot/README.md:48`)
-- **`autoralph`** — an intentionally different, agent-driven iterative loop for comparison against autopilot (`pi/agent/extensions/autoralph/README.md:7`)
-- **`task-list`** — session-scoped task state with an explicit state machine and sticky widget (`pi/agent/extensions/task-list/README.md:60`)
+- **`_workflow-core`** — reusable primitives for structured workflows built around subagents (`pi/archive/extensions/_workflow-core/README.md:3`)
+- **`autopilot`** — deterministic `plan → implement → verify` orchestration from a design doc (`pi/archive/extensions/autopilot/README.md:48`)
+- **`autoralph`** — an intentionally different, agent-driven iterative loop for comparison against autopilot (`pi/archive/extensions/autoralph/README.md:7`)
+- **`task-list`** — session-scoped task state with an explicit state machine and sticky widget (`pi/archive/extensions/task-list/README.md:60`)
 - **`mcp-broker`** — broker-backed access to remote git and GitHub operations through stable meta-tools (`pi/agent/extensions/mcp-broker/README.md:5`)
 - **`web-access`** — web search, fetch, GitHub repo cloning, and PDF extraction (`pi/agent/extensions/web-access/README.md:14`)
 - **`ask-user`** — structured multiple-choice user clarification (`pi/agent/extensions/ask-user/README.md:7`)
@@ -29,9 +31,9 @@ Core pieces:
 This repo leans toward:
 
 - **composability** — many narrow extensions instead of one umbrella extension
-- **workflow experimentation** — e.g. `autopilot` and `autoralph` are deliberately comparable (`pi/agent/extensions/autoralph/README.md:7`)
+- **workflow experimentation** — e.g. `autopilot` and `autoralph` are deliberately comparable (`pi/archive/extensions/autoralph/README.md:7`)
 - **subagent specialization** — the system treats delegation as a core capability, not an escape hatch (`pi/agent/extensions/subagents/README.md:35`)
-- **verification and observability** — especially in `autopilot`, whose verify phase includes validation, multiple reviewers, synthesis, and capped fix loops (`pi/agent/extensions/autopilot/README.md:135`)
+- **verification and observability** — especially in `autopilot`, whose verify phase includes validation, multiple reviewers, synthesis, and capped fix loops (`pi/archive/extensions/autopilot/README.md:135`)
 
 In short: this repo is closer to an **agent harness lab** than a single-product UX.
 
@@ -62,21 +64,21 @@ In short: Moonpi is trying to be a **coherent default operating mode** for Pi.
 
 This is the biggest philosophical split.
 
-- **This repo:** subagents are central. `spawn_agents` is a first-class tool with built-in agent types like `explore`, `review`, `research`, `deep-research`, and `code` (`pi/agent/extensions/subagents/README.md:20`, `pi/agent/extensions/subagents/README.md:35`). `autopilot` also routes all LLM work through subagents (`pi/agent/extensions/autopilot/README.md:50`).
+- **This repo:** subagents are central. `spawn_agents` is a first-class tool with built-in agent types like `explore`, `review`, `research`, `deep-research`, and `code` (`pi/agent/extensions/subagents/README.md:20`, `pi/agent/extensions/subagents/README.md:35`). `autopilot` also routes all LLM work through subagents (`pi/archive/extensions/autopilot/README.md:50`).
 - **Moonpi:** explicitly argues against subagents in principle (`/tmp/pi-github-repos/galatolofederico/moonpi/README.md:19`).
 
 This repo treats isolation, specialization, and parallelism as worth the cost. Moonpi treats them as overhead.
 
 ## 2. Planning
 
-- **This repo:** planning is usually represented as a structured artifact for later isolated execution. In `autopilot`, a plan subagent emits architecture notes plus an ordered task list, then implement runs task-by-task in fresh contexts (`pi/agent/extensions/autopilot/README.md:68`, `pi/agent/extensions/autopilot/README.md:92`).
+- **This repo:** planning is usually represented as a structured artifact for later isolated execution. In `autopilot`, a plan subagent emits architecture notes plus an ordered task list, then implement runs task-by-task in fresh contexts (`pi/archive/extensions/autopilot/README.md:68`, `pi/archive/extensions/autopilot/README.md:92`).
 - **Moonpi:** planning is valuable only if the same conversation continues into execution, which is the core point of Auto mode (`/tmp/pi-github-repos/galatolofederico/moonpi/README.md:87`).
 
 This repo prefers **artifact handoff**. Moonpi prefers **history continuity**.
 
 ## 3. Task tracking
 
-- **This repo:** `task-list` is more formal. It has explicit statuses, sticky completion, atomic reconciliation, and a reusable public API (`pi/agent/extensions/task-list/README.md:16`, `pi/agent/extensions/task-list/README.md:87`, `pi/agent/extensions/task-list/README.md:154`).
+- **This repo:** `task-list` is more formal. It has explicit statuses, sticky completion, atomic reconciliation, and a reusable public API (`pi/archive/extensions/task-list/README.md:16`, `pi/archive/extensions/task-list/README.md:87`, `pi/archive/extensions/task-list/README.md:154`).
 - **Moonpi:** TODOs are simpler and more tightly coupled to the mode system and act as the steering mechanism for plan→act handoff (`/tmp/pi-github-repos/galatolofederico/moonpi/README.md:104`, `/tmp/pi-github-repos/galatolofederico/moonpi/src/index.ts:111`).
 
 This repo has the stronger task engine. Moonpi has the lower-friction default flow.
@@ -90,7 +92,7 @@ Moonpi is stronger on **hard steering constraints**.
 
 ## 5. Verification depth
 
-- **This repo:** `autopilot` has a substantial verify phase with validation, three parallel review passes, synthesis, and capped fix loops (`pi/agent/extensions/autopilot/README.md:137`).
+- **This repo:** `autopilot` has a substantial verify phase with validation, three parallel review passes, synthesis, and capped fix loops (`pi/archive/extensions/autopilot/README.md:137`).
 - **Moonpi:** deliberately keeps loops simple and does not present an equivalent verification subsystem in its core workflow (`/tmp/pi-github-repos/galatolofederico/moonpi/README.md:36`).
 
 This repo is much stronger on **post-implementation quality control**.
@@ -106,7 +108,7 @@ Moonpi is stronger on **automatic ambient project context**.
 
 ### Reusable architecture
 
-`_workflow-core` makes the local system feel like a platform for building workflows, not just a collection of features (`pi/agent/extensions/_workflow-core/README.md:5`).
+`_workflow-core` makes the local system feel like a platform for building workflows, not just a collection of features (`pi/archive/extensions/_workflow-core/README.md:5`).
 
 ### Capability breadth
 
@@ -114,7 +116,7 @@ The combination of `mcp-broker`, `web-access`, `subagents`, `task-list`, and wor
 
 ### Workflow sophistication
 
-`autopilot` in particular is much more advanced than Moonpi's core loop, especially around verification and structured failure handling (`pi/agent/extensions/autopilot/README.md:208`).
+`autopilot` in particular is much more advanced than Moonpi's core loop, especially around verification and structured failure handling (`pi/archive/extensions/autopilot/README.md:208`).
 
 ### Testing maturity
 

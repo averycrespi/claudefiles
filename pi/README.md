@@ -22,27 +22,34 @@ Running `make stow-pi` creates symlinks from `pi/agent/` into `~/.pi/agent/`. Ed
 
 TypeScript modules that customize the Pi agent. Type-check with `make typecheck`.
 
-| Extension        | Purpose                                                           |
-| ---------------- | ----------------------------------------------------------------- |
-| `ask-user`       | `ask_user` tool for multiple-choice questions                     |
-| `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc   |
-| `autoralph`      | Autonomous agent-driven Ralph-style loop from a design doc        |
-| `compact-tools`  | Compact TUI rendering for built-in shell and file tools           |
-| `format`         | Format files after write and edit                                 |
-| `mcp-broker`     | Broker CLI skill + guard for remote operations                    |
-| `provider-usage` | Provider rate-limit quota in the footer                           |
-| `subagents`      | Dynamic subagent loading and dispatch                             |
-| `task-list`      | Session-scoped task list with agent tools and a sticky TUI widget |
-| `web-access`     | Web search, fetch, GitHub, and PDF tools                          |
+| Extension        | Purpose                                                 |
+| ---------------- | ------------------------------------------------------- |
+| `ask-user`       | `ask_user` tool for multiple-choice questions           |
+| `compact-tools`  | Compact TUI rendering for built-in shell and file tools |
+| `format`         | Format files after write and edit                       |
+| `mcp-broker`     | Broker CLI skill + guard for remote operations          |
+| `provider-usage` | Provider rate-limit quota in the footer                 |
+| `subagents`      | Dynamic subagent loading and dispatch                   |
+| `web-access`     | Web search, fetch, GitHub, and PDF tools                |
 
 Underscore-prefixed directories are libraries imported by sibling extensions, not extensions themselves — pi's extension loader skips them because they have no `index.ts`.
 
-| Library          | Purpose                                                            |
-| ---------------- | ------------------------------------------------------------------ |
-| `_shared`        | Stateless helpers shared across extensions                         |
-| `_workflow-core` | Primitives for structured-state-machine-around-subagents workflows |
+| Library   | Purpose                                    |
+| --------- | ------------------------------------------ |
+| `_shared` | Stateless helpers shared across extensions |
 
 See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
+
+## Archived workflow code
+
+The following extensions and libraries have been moved to `pi/archive/extensions/` on this branch while experimenting with Moonpi-inspired ideas:
+
+| Archived item    | Previous role                                                      |
+| ---------------- | ------------------------------------------------------------------ |
+| `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc    |
+| `autoralph`      | Autonomous agent-driven Ralph-style loop from a design doc         |
+| `task-list`      | Session-scoped task list with agent tools and a sticky TUI widget  |
+| `_workflow-core` | Primitives for structured-state-machine-around-subagents workflows |
 
 ## Skills
 

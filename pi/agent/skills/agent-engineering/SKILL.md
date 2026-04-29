@@ -137,4 +137,4 @@ References cite primary sources where possible. When a claim has a known caveat 
 
 ## Local context
 
-The `autopilot` Pi extension in this repo (`pi/agent/extensions/autopilot/`) is a worked example of most of the principles above. The `.designs/2026-04-24-autopilot-sota-research.md` doc was the input that motivated this skill; this skill generalizes from autopilot's specific shape to the field as a whole.
+The archived `autopilot` Pi extension in this repo (`pi/archive/extensions/autopilot/`) is a worked example of most of the principles above. The `.designs/2026-04-24-autopilot-sota-research.md` doc was the input that motivated this skill; this skill generalizes from autopilot's specific shape to the field as a whole.

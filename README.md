@@ -16,7 +16,7 @@ This repo is opinionated. It provides a structured development workflow, securit
 
 ### [Pi](pi/README.md) → `~/.pi/agent/`
 
-- **Extensions** — TypeScript modules that add capabilities to the Pi agent: subagent dispatch, structured-workflow primitives, MCP brokering, web access, formatting, and more
+- **Extensions** — TypeScript modules that add capabilities to the Pi agent: subagent dispatch, MCP brokering, web access, formatting, and more
 - **Skills** — Reusable workflows and reference guides, tuned for Pi platform conventions and GPT-5.x prose
 - **Custom subagents and prompts** — Definitions for delegated exploration, fast research, deep research, and review
 

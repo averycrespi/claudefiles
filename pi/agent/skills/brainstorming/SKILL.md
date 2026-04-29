@@ -43,24 +43,24 @@ Start by understanding the current project context, then ask questions one at a 
 - Use Gherkin (`Given/When/Then`) or structured items (`AC-1: ...` with a `Verifies via:` line each)
 - Each criterion must be observable — a test, a command output, or a file/UI state — not a feeling
 - Validate the list with the user the same way as design sections: one round of confirmation, willing to revise
-- These become the canonical rubric `autopilot` threads into the implementer (as constraints) and reviewers (as the verification rubric)
+- These become the canonical rubric any follow-on implementation workflow can thread into implementation and verification
 
 ## After the Design
 
 **Documentation:**
 
 - Write the validated design to `.designs/YYYY-MM-DD-<topic>.md` in the project root
-- The doc must include an `## Acceptance Criteria` section containing the validated AC list — `/autopilot-start` rejects design docs without it
+- The doc must include an `## Acceptance Criteria` section containing the validated AC list so any follow-on implementation workflow has a concrete rubric
 - Commit the design document to git
 
 **Handoff:**
 
 ```
 Design saved to .designs/YYYY-MM-DD-<topic>.md and committed.
-Ready to build? Run: /autopilot-start .designs/YYYY-MM-DD-<topic>.md
+Ready to build? Hand the design to the branch's current implementation workflow.
 ```
 
-The user will invoke `/autopilot-start` directly to kick off planning and implementation.
+After the design is saved, either hand off to the branch's current implementation workflow or continue interactively.
 
 ## Key Principles
 

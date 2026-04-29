@@ -235,7 +235,7 @@ From this repo's `CLAUDE.md` and the broader ecosystem:
 - **`mock.method` from `node:test` can't replace ESM module exports** — they're non-configurable bindings. To stub something like `child_process.spawn`, wrap in an exported holder (`export const _spawn = { fn: _nodeSpawn }`) and call through `_spawn.fn(...)`. Tests then `mock.method(_spawn, "fn", stub)`. Reference pattern in this repo: `pi/agent/extensions/subagents/spawn.ts`.
 - **RPC mode loses component-factory widgets** — only string arrays cross the RPC boundary. Design any widget you want RPC-portable as line arrays.
 - **Events stream as JSON lines without an `id` field** (responses do); host code parsing the stream must not key on `id` for events.
-- **`setWidget` cast pattern.** The typed signature is `pi.ui.setWidget`, but the in-repo convention — used by both `_workflow-core/lib/run.ts` and `task-list/index.ts` — is `(pi as any).setWidget(...)` gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this when adding sticky widgets.
+- **`setWidget` cast pattern.** The typed signature is `pi.ui.setWidget`, but the in-repo convention — used by both `pi/archive/extensions/_workflow-core/lib/run.ts` and `pi/archive/extensions/task-list/index.ts` — is `(pi as any).setWidget(...)` gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this when adding sticky widgets.
 - **Tool schemas exposed to the agent are snake_case while internal task fields stay camelCase.** Map between them in the tool's `execute` body or validation breaks.
 - **Atomic agent-tool mutations.** When an agent tool mutates shared state, collect ALL validation errors before rejecting, apply changes atomically with a single `notify()` on success, and return errors as tool result text (not `throw`) so the agent can read and recover.
 
@@ -245,7 +245,7 @@ Patterns specific to `pi/agent/extensions/`:
 
 - Helpers shared across extensions go in `pi/agent/extensions/_shared/` (no `index.ts`, loader skips it).
 - An extension can expose a public surface via `api.ts` that other extensions import from.
-- Singletons share via Node's module caching: `task-list/api.ts` does `export const taskList = createStore()` — every importer sees the same store.
+- Singletons share via Node's module caching: the archived `pi/archive/extensions/task-list/api.ts` does `export const taskList = createStore()` — every importer sees the same store.
 - When a library outgrows `_shared/`, promote it to a top-level underscore-prefixed directory with its own `api.ts` (e.g. `_workflow-core/`).
 
 ## Picking a platform
