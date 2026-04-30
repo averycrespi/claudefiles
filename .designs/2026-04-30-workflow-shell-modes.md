@@ -310,9 +310,8 @@ That summary should rebuild state from:
 - current mode
 - active plan artifact path
 - plan contents
-- current high-level task/focus
 - tactical TODO state
-- last verify state/findings
+- recent command/test outcomes when available
 - file operations from Pi's compaction preparation data
 
 ### Mode-specific compaction summaries
@@ -400,16 +399,21 @@ Do not duplicate the TODO list inside the workflow widget.
 
 ## Recovery and resume
 
-On `session_start` and `session_tree`, reconstruct workflow state from:
+Persist only the active plan path in v1.
 
-1. persisted workflow session snapshot
-2. active `.plans/...md` artifact
+On `session_start` and `session_tree`, recover workflow context from:
+
+1. persisted active plan path
+2. the referenced `.plans/...md` artifact
 3. current TODO state
 
-If state is inconsistent, prefer the plan artifact and fail soft:
+Do not persist the current mode or a richer workflow snapshot. Mode should be re-entered explicitly via `/plan`, `/execute`, or `/verify`.
+
+If the persisted active plan path is missing or invalid, fail soft:
 
 - notify the user
-- reset back to Plan mode instead of guessing
+- clear the invalid reference
+- wait for the user to enter a mode command with new context
 
 ## V1 implementation layout
 
@@ -420,7 +424,7 @@ Create a new extension, for example:
 Suggested internal files:
 
 - `index.ts` — commands, event hooks, mode transitions
-- `state.ts` — persisted workflow state
+- `state.ts` — persisted active plan path only
 - `artifact.ts` — plan artifact create/load/validate helpers
 - `modes.ts` — tool allowlists and transition helpers
 - `compaction.ts` — custom compaction summary builder
@@ -431,7 +435,7 @@ Suggested internal files:
 Keep failure handling explicit and lightweight:
 
 - if a mode command cannot resolve a plan artifact or enough context to proceed, fail with a short actionable error
-- if persisted state and artifact disagree, prefer artifact state and return to Plan mode
+- if the persisted active plan path is missing or invalid, clear it and ask the user for new context
 - Verify findings should never silently mutate code in v1; they should become explicit state for a return to Execute
 
 ## Deferred work
@@ -459,16 +463,16 @@ This is intentionally a workflow shell, not an autonomous orchestrator.
 ## Acceptance Criteria
 
 **AC-1: Phase shell commands exist and switch modes correctly**  
-Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify`, then the workflow enters that mode, updates the visible workflow status/widget, and persists the active mode across session reload/tree restore.  
-**Verifies via:** command behavior in tests; restored state visible after `session_start` / `session_tree`.
+Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify`, then the workflow enters that mode, updates the visible workflow status/widget, and applies that mode's tools and thinking defaults for the current session.  
+**Verifies via:** command behavior in tests and visible widget updates.
 
 **AC-2: Mode commands accept flexible context**  
 Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify` with no arguments, a plan path/link, or free text, then the extension resumes the active workflow, opens the referenced plan, or treats the text as mode-specific context according to each command contract.  
 **Verifies via:** command parsing/dispatch tests and visible artifact selection in the workflow widget.
 
 **AC-3: Plan mode manages the single versioned workflow brief**  
-Given no active workflow exists, when the user enters `/plan`, then the extension creates or resumes a `.plans/YYYY-MM-DD-<slug>.md` brief and uses it as the sole active workflow artifact for planning, execution, and verification handoff.  
-**Verifies via:** file creation/load tests and visible artifact path in the workflow widget.
+Given no active workflow exists, when the user enters `/plan`, then the extension creates or resumes a `.plans/YYYY-MM-DD-<slug>.md` brief, persists that active plan path, and uses it as the sole active workflow artifact for planning, execution, and verification handoff.  
+**Verifies via:** file creation/load tests, persisted active-plan-path tests, and visible artifact path in the workflow widget.
 
 **AC-4: Plan mode includes collaborative discovery guidance**  
 Given the workflow enters Plan mode, when the extension prepares the mode-specific agent contract, then that contract instructs the agent to clarify ambiguous requests, ask focused questions, compare approaches when needed, and seek user confirmation before converging on the chosen approach in the workflow brief.  
@@ -482,8 +486,8 @@ Given a workflow is active, when the mode is Plan, Execute, or Verify, then each
 Given the workflow enters Plan, Execute, or Verify, when the extension applies mode defaults for the current GPT-5.4 setup, then it sets thinking to `high`, `low`, or `high` respectively, and does not keep reapplying those defaults on every turn within the same mode.  
 **Verifies via:** tests over mode-transition handlers and thinking-level updates.
 
-**AC-7: Custom compaction preserves workflow state across all modes**  
-Given Pi auto-compacts or the user triggers compaction, when the session resumes, then the summary preserves current mode, active plan artifact, current task/focus, and next intended action.  
+**AC-7: Custom compaction preserves workflow context across all modes**  
+Given Pi auto-compacts or the user triggers compaction, when the session resumes, then the summary preserves current mode, active plan artifact, relevant TODO context, and next intended action.  
 **Verifies via:** `session_before_compact` tests that inspect generated summary/details per mode.
 
 **AC-8: TODO state remains tactical, not durable workflow truth**  
