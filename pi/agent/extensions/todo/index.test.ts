@@ -2,6 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import todoExtension from "./index.ts";
 
+const identityTheme = {
+  fg: (_color: string, text: string) => text,
+  bold: (text: string) => text,
+};
+
 type ToolDef = {
   name: string;
   execute: (
@@ -80,7 +85,9 @@ function makePi() {
         | undefined,
     ) {
       const usedFactory = typeof content === "function";
-      const lines = usedFactory ? content({}, {}).render(32) : content;
+      const lines = usedFactory
+        ? content({}, identityTheme).render(32)
+        : content;
       widgetCalls.push({
         key,
         lines,
@@ -112,7 +119,9 @@ function makePi() {
             options?: { placement?: string },
           ) {
             const usedFactory = typeof content === "function";
-            const lines = usedFactory ? content({}, {}).render(32) : content;
+            const lines = usedFactory
+              ? content({}, identityTheme).render(32)
+              : content;
             widgetCalls.push({
               key,
               lines,

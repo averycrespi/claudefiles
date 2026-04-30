@@ -3,6 +3,13 @@ import type { TodoItem, TodoStatus } from "./state.ts";
 
 const WIDGET_SEPARATOR = "─";
 
+const plainTheme = {
+  fg: (_color: string, text: string) => text,
+  bold: (text: string) => text,
+};
+
+type WidgetTheme = typeof plainTheme;
+
 export function glyphForStatus(status: TodoStatus): string {
   switch (status) {
     case "todo":
@@ -16,16 +23,48 @@ export function glyphForStatus(status: TodoStatus): string {
   }
 }
 
-export function renderWidgetLines(items: TodoItem[], width: number): string[] {
+function renderStatusMarker(status: TodoStatus, theme: WidgetTheme): string {
+  const glyph = glyphForStatus(status);
+
+  switch (status) {
+    case "todo":
+      return theme.fg("muted", glyph);
+    case "in_progress":
+      return theme.fg("accent", theme.bold(glyph));
+    case "done":
+      return theme.fg("success", glyph);
+    case "blocked":
+      return theme.fg("warning", theme.bold(glyph));
+  }
+}
+
+function renderTodoText(item: TodoItem, theme: WidgetTheme): string {
+  switch (item.status) {
+    case "todo":
+      return theme.fg("text", item.text);
+    case "in_progress":
+      return theme.fg("accent", item.text);
+    case "done":
+      return theme.fg("dim", item.text);
+    case "blocked":
+      return theme.fg("text", item.text);
+  }
+}
+
+export function renderWidgetLines(
+  items: TodoItem[],
+  width: number,
+  theme: WidgetTheme = plainTheme,
+): string[] {
   if (items.length === 0) return [];
 
   const safeWidth = Math.max(0, width);
   return [
-    WIDGET_SEPARATOR.repeat(safeWidth),
+    theme.fg("borderMuted", WIDGET_SEPARATOR.repeat(safeWidth)),
     ...items.map((item) => {
-      const suffix = item.notes ? ` · ${item.notes}` : "";
+      const notes = item.notes ? theme.fg("dim", ` · ${item.notes}`) : "";
       return truncateToWidth(
-        `${glyphForStatus(item.status)} ${item.text}${suffix}`,
+        `${renderStatusMarker(item.status, theme)} ${renderTodoText(item, theme)}${notes}`,
         safeWidth,
       );
     }),
@@ -33,9 +72,9 @@ export function renderWidgetLines(items: TodoItem[], width: number): string[] {
 }
 
 export function createTodoWidget(items: TodoItem[]) {
-  return () => ({
+  return (_tui: unknown, theme: WidgetTheme) => ({
     render(width: number) {
-      return renderWidgetLines(items, width);
+      return renderWidgetLines(items, width, theme);
     },
     invalidate() {},
   });
