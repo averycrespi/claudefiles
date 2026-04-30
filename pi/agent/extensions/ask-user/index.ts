@@ -79,6 +79,8 @@ Ask the user a multiple-choice question when a decision materially affects the o
 
 - Use when multiple valid approaches have different trade-offs.
 - Ask only one focused question per call.
+- Keep the question and optional context brief and scannable.
+- Do not paste long writeups, design sections, or walls of text into context; summarize only what the user needs to choose.
 - Prefer 2–5 options.
 - Each option must have a short label and may include a brief description.
 - Put the recommended option first and set recommended=<index> (0-indexed).
