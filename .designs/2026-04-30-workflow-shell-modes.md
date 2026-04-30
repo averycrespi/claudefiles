@@ -107,14 +107,19 @@ The user-facing command surface should stay short:
 
 Use fixed tool sets per mode. Change the active tool set only on explicit mode transitions.
 
+Some tools also need mode-aware restrictions beyond simple on/off gating:
+
+- In Plan and Verify, broker access should be read-only even if the underlying broker extension supports writes.
+
 ### Normal mode behavior
 
 Normal mode should leave Pi in its ordinary operating state:
 
-- no workflow-specific tool gating
 - no workflow-specific prompt contract
 - no workflow widget
 - no workflow-specific thinking override
+- ordinary Pi tool access remains available
+- `todo` remains available
 
 ## Thinking level policy
 
@@ -144,12 +149,20 @@ These defaults are intentionally tuned for the current GPT-5.4 setup. Revisit th
 
 ### Plan mode tools
 
-- read-only file/navigation tools
+- `read`
+- `ls`
+- `find`
+- `grep`
 - `todo`
 - `ask_user`
-- optional read-only `spawn_agents`
+- `web_search`
+- `web_fetch`
+- read-only `mcp_search`
+- read-only `mcp_describe`
+- read-only `mcp_call`
+- `spawn_agents`
 
-Plan mode should not expose general editing tools.
+Plan mode should not expose general editing tools or `bash`. The intent is to allow rich repo exploration without opening a general shell, while still supporting lightweight external research and read-only broker access.
 
 ### Plan mode behavior
 
@@ -171,19 +184,26 @@ Once the direction is clear, Plan mode should converge the discussion into the `
 
 ### Execute mode tools
 
-- editing tools (`edit`, `write`, `bash`, `read`)
+- `read`
+- `edit`
+- `write`
+- `bash`
 - `todo`
 
-Execute mode may use tactical TODO decomposition, but the durable plan remains the source of truth.
+Execute mode may use tactical TODO decomposition, but the durable plan remains the source of truth. Do not add `ls`/`find`/`grep` here in v1; once `bash` is available they are redundant.
 
 ### Verify mode tools
 
 - `read`
 - `bash` for deterministic checks
-- optional read-only `spawn_agents` for review
-- `todo` only if needed to represent remediation work after findings
+- `todo`
+- `ask_user`
+- read-only `mcp_search`
+- read-only `mcp_describe`
+- read-only `mcp_call`
+- `spawn_agents`
 
-Verify mode should stay read-mostly in v1. It should not silently fix code.
+Verify mode should stay read-mostly in v1. It should not silently fix code. Do not add `ls`/`find`/`grep` here in v1; `bash` is sufficient when deterministic shell checks are allowed. Read-only broker access is useful for checking issue, PR, or remote context without reopening write-capable tooling.
 
 ## Plan artifact
 
@@ -501,8 +521,8 @@ Given the workflow enters Plan mode, when the extension prepares the mode-specif
 **Verifies via:** tests over the Plan-mode prompt/contract builder.
 
 **AC-5: Tool behavior changes only at mode boundaries**  
-Given the session is in Normal, Plan, Execute, or Verify, when the mode changes, then workflow-specific tool behavior changes only on that explicit mode transition, with Normal restoring ordinary Pi behavior and workflow modes applying their fixed tool sets.  
-**Verifies via:** tests over active tool behavior per mode.
+Given the session is in Normal, Plan, Execute, or Verify, when the mode changes, then workflow-specific tool behavior changes only on that explicit mode transition, with Normal restoring ordinary Pi behavior, Plan exposing `read`/`ls`/`find`/`grep`/`todo`/`ask_user`/`web_search`/`web_fetch` plus read-only broker access and subagent access, Execute exposing `read`/`edit`/`write`/`bash`/`todo`, and Verify exposing `read`/`bash`/`todo`/`ask_user` plus read-only broker access and subagent access.  
+**Verifies via:** tests over active tool behavior per mode, including rejection of writable broker calls in Plan and Verify.
 
 **AC-6: Thinking behavior changes only at mode boundaries**  
 Given the session enters Normal, Plan, Execute, or Verify, when the extension applies mode behavior for the current GPT-5.4 setup, then it uses no workflow-specific override in Normal and sets thinking to `high`, `low`, or `high` in Plan, Execute, or Verify respectively, without reapplying those defaults on every turn within the same mode.  
