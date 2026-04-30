@@ -2,7 +2,7 @@
 
 ## Summary
 
-Build a lightweight Pi extension that adapts Moonpi-style mode UX into this repo's modular workflow stack. The extension should provide explicit `Plan`, `Execute`, and `Verify` modes, short phase commands, Moonpi-style tool gating and guardrails, a versioned plan artifact, and custom compaction so long-running work does not lose workflow state. Plan mode should subsume brainstorming: it should support collaborative clarification, approach comparison, and convergence into the durable workflow brief.
+Build a lightweight Pi extension that adapts Moonpi-style mode UX into this repo's modular workflow stack. The extension should provide explicit `Plan`, `Execute`, and `Verify` modes, short phase commands, mode-specific tool gating, a versioned plan artifact, and custom compaction so long-running work does not lose workflow state. Plan mode should subsume brainstorming: it should support collaborative clarification, approach comparison, and convergence into the durable workflow brief.
 
 The extension is intentionally a workflow shell, not a full autonomous orchestrator. It should layer on top of the existing `todo`, `ask-user`, `subagents`, and other extensions instead of replacing them.
 
@@ -25,11 +25,11 @@ The extension is intentionally a workflow shell, not a full autonomous orchestra
 
 ## Why this shape
 
-Moonpi is strongest where it offers a cohesive shell: mode-specific tool gating, visible status, read-before-write enforcement, and low-friction task flow. This repo is strongest where it offers modular architecture, reusable extensions, richer verification, and durable workflow artifacts.
+Moonpi is strongest where it offers a cohesive shell: mode-specific tool gating, visible status, and low-friction task flow. This repo is strongest where it offers modular architecture, reusable extensions, richer verification, and durable workflow artifacts.
 
 The recommended hybrid keeps:
 
-- Moonpi's shell ideas: explicit modes, tool gating, cwd-only and read-before-write guards, compact status surfaces.
+- Moonpi's shell ideas: explicit modes, tool gating, compact status surfaces.
 - This repo's harness ideas: versioned workflow artifacts, acceptance criteria as the contract, explicit verification, and custom compaction tied to durable state.
 
 This follows the repo's agent-engineering principles:
@@ -59,11 +59,8 @@ The earlier brainstorm/plan split is not useful enough to justify either an extr
 The user-facing command surface should stay short:
 
 - `/plan [context]`
-- `/execute`
-- `/verify`
-- `/next`
-- `/workflow-status`
-- `/workflow-reset`
+- `/execute [context]`
+- `/verify [context]`
 
 ### Command semantics
 
@@ -77,39 +74,23 @@ The user-facing command surface should stay short:
 - When interpreting free-text context, prefer a short clarifying question over silently attaching the request to the wrong existing plan.
 - `/plan` should mean "take me to planning," whether that means resuming a brief, clarifying an idea, or starting a new workflow.
 
-#### `/execute`
+#### `/execute [context]`
 
-- Enter Execute mode for the active workflow.
-- Fail with a short actionable error if no active workflow exists.
+`/execute` enters Execute mode and may optionally accept context after the command.
 
-#### `/verify`
+- **No arguments:** if a workflow is already active, resume it in Execute mode. Otherwise ask the user to select an existing plan artifact or provide execution context.
+- **Plan path or link argument:** open that existing plan artifact and enter Execute mode for it.
+- **Free-text argument:** treat the text as execution context. The agent may resume a likely matching workflow, attach the request to a referenced plan, or ask a focused clarifying question before deciding.
+- `/execute` should support direct entry into implementation work; it should not require that the current session already passed through Plan mode.
 
-- Enter Verify mode for the active workflow.
-- Fail with a short actionable error if no active workflow exists.
+#### `/verify [context]`
 
-#### `/next`
+`/verify` enters Verify mode and may optionally accept context after the command.
 
-Advance only if preconditions pass:
-
-- Plan → Execute requires a valid plan artifact with acceptance criteria and ordered high-level tasks.
-- Execute → Verify requires an active plan and some execution progress.
-- Verify does not auto-advance into a separate Complete mode; it ends in pass, known issues, or explicit return to Execute.
-
-#### `/workflow-status`
-
-Show:
-
-- current mode
-- active plan path
-- current high-level task or focus
-- TODO summary
-- verify summary/findings state
-
-#### `/workflow-reset`
-
-- Clear workflow session state.
-- Clear tactical TODO state.
-- Keep the plan artifact on disk.
+- **No arguments:** if a workflow is already active, resume it in Verify mode. Otherwise ask the user to select an existing plan artifact or provide verification context.
+- **Plan path or link argument:** open that existing plan artifact and enter Verify mode for it.
+- **Free-text argument:** treat the text as verification context. The agent may resume a likely matching workflow, attach the request to a referenced plan, or ask a focused clarifying question before deciding.
+- `/verify` should support direct entry into verification work; it should not require that the current session already passed through Execute mode.
 
 ## Tool gating
 
@@ -181,15 +162,6 @@ Execute mode may use tactical TODO decomposition, but the durable plan remains t
 - `todo` only if needed to represent remediation work after findings
 
 Verify mode should stay read-mostly in v1. It should not silently fix code.
-
-## Guardrails
-
-Bring over Moonpi's practical runtime guardrails:
-
-- **cwd-only access** for read/write/edit-style file tools
-- **read-before-write** enforcement for modifying existing files
-
-These should be implemented as tool-call guards, not just prompt guidance.
 
 ## Plan artifact
 
@@ -283,12 +255,9 @@ The TODO list should be tactical workflow state, not the durable source of truth
 
 Recommended policy:
 
-- **Plan → Execute:** replace the TODO list with execution-focused tasks
-- **Execute → Verify:** keep the current TODO state visible, but it no longer defines workflow truth
-- **Verify → Execute:** replace TODOs with focused remediation items derived from findings
-- **Verify → Complete / reset:** clear TODOs
-
-This matches Moonpi's general pattern of clearing tactical TODO state at fresh workflow boundaries.
+- the `.plans/...md` brief remains the durable workflow artifact
+- entering a mode may replace, preserve, or clear TODOs depending on what best supports the current task
+- TODOs should stay short-lived and should not be treated as authoritative workflow state
 
 ## Prompt and context strategy
 
@@ -396,64 +365,35 @@ To make compaction safer, the plan artifact may include a small resumability sec
 
 This lets the compaction hook rebuild a deterministic resume summary rather than trusting raw chat memory.
 
-## Explicit phase compaction
-
-In addition to custom auto-compaction, the extension may trigger explicit compaction at selected phase boundaries when useful.
-
-Recommended default:
-
-- **Plan → Execute:** compact only when Plan was long or context usage is high
-- **Execute → Verify:** usually compact, because Verify should operate from artifacts and current repo state
-- **Verify → Execute:** compact after findings have been persisted into artifact/TODO state
-
-The rule is: compact when the next mode can run from durable artifacts rather than needing long chat memory.
-
 ## UI visible to the user
 
 The UI should stay ambient and lightweight.
 
-### Footer status
-
-Show a short status line, for example:
-
-- `workflow plan · auth-refactor · AC ready`
-- `workflow execute · auth-refactor · 1 in progress, 2 pending`
-- `workflow verify · auth-refactor · tests failing`
-
 ### Sticky workflow widget
 
-Render a small sticky widget above the editor, separate from the existing TODO widget.
+Render a small sticky widget above the editor, separate from the existing TODO widget. In v1 it should be a single line.
 
 Example in Plan mode:
 
 ```txt
-workflow · plan › execute › verify
-plan: .plans/2026-04-30-auth-refactor.md
-focus: Clarify constraints and confirm approach
-next: /next
+workflow · plan · .plans/2026-04-30-auth-refactor.md · clarifying constraints
 ```
 
 Example in Execute mode:
 
 ```txt
-workflow · plan › execute › verify
-plan: .plans/2026-04-30-auth-refactor.md
-task: Wire auth middleware into request pipeline
-verify: not run
+workflow · execute · .plans/2026-04-30-auth-refactor.md · wiring auth middleware
 ```
 
 Example in Verify mode:
 
 ```txt
-workflow · plan › execute › verify
-plan: .plans/2026-04-30-auth-refactor.md
-checks: tests passing · typecheck failing
-findings: 2 important
+workflow · verify · .plans/2026-04-30-auth-refactor.md · tests passing, typecheck failing
 ```
 
 ### Widget responsibilities
 
-- workflow widget = phase state
+- workflow widget = phase state and current focus
 - TODO widget = tactical checklist
 
 Do not duplicate the TODO list inside the workflow widget.
@@ -483,7 +423,6 @@ Suggested internal files:
 - `state.ts` — persisted workflow state
 - `artifact.ts` — plan artifact create/load/validate helpers
 - `modes.ts` — tool allowlists and transition helpers
-- `guards.ts` — cwd-only and read-before-write enforcement
 - `compaction.ts` — custom compaction summary builder
 - `render.ts` — workflow widget rendering
 
@@ -491,8 +430,7 @@ Suggested internal files:
 
 Keep failure handling explicit and lightweight:
 
-- `/execute` or `/verify` without an active plan should fail with a short actionable error
-- `/next` should say exactly what requirement is missing when advancement is blocked
+- if a mode command cannot resolve a plan artifact or enough context to proceed, fail with a short actionable error
 - if persisted state and artifact disagree, prefer artifact state and return to Plan mode
 - Verify findings should never silently mutate code in v1; they should become explicit state for a return to Execute
 
@@ -504,7 +442,7 @@ Do not build these in v1 unless needed:
 - verifier auto-fix loops
 - sidecar machine-readable files like `ac.json`
 - a revived autonomous `autopilot`-style runner
-- extra commands beyond the short mode commands plus status/reset
+- extra commands beyond the short mode commands
 - a second task engine
 
 ## Recommended v1 scope
@@ -512,7 +450,7 @@ Do not build these in v1 unless needed:
 Build one extension that does four things well:
 
 1. mode state + short commands
-2. mode-specific tool gating + Moonpi-style guardrails
+2. mode-specific tool gating
 3. versioned plan artifact management
 4. custom compaction that preserves workflow state across all modes
 
@@ -524,38 +462,30 @@ This is intentionally a workflow shell, not an autonomous orchestrator.
 Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify`, then the workflow enters that mode, updates the visible workflow status/widget, and persists the active mode across session reload/tree restore.  
 **Verifies via:** command behavior in tests; restored state visible after `session_start` / `session_tree`.
 
-**AC-2: `/plan` accepts flexible planning context**  
-Given the extension is loaded, when the user runs `/plan` with no arguments, a plan path/link, or free text, then the extension resumes the active workflow, opens the referenced plan, or treats the text as planning context according to the command contract.  
-**Verifies via:** command parsing/dispatch tests and visible artifact selection in `/workflow-status`.
+**AC-2: Mode commands accept flexible context**  
+Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify` with no arguments, a plan path/link, or free text, then the extension resumes the active workflow, opens the referenced plan, or treats the text as mode-specific context according to each command contract.  
+**Verifies via:** command parsing/dispatch tests and visible artifact selection in the workflow widget.
 
 **AC-3: Plan mode manages the single versioned workflow brief**  
-Given no active workflow exists, when the user enters `/plan`, then the extension creates or resumes a `.plans/YYYY-MM-DD-<slug>.md` brief and uses it as the sole active workflow artifact for planning and execution handoff.  
-**Verifies via:** file creation/load tests and visible artifact path in `/workflow-status`.
+Given no active workflow exists, when the user enters `/plan`, then the extension creates or resumes a `.plans/YYYY-MM-DD-<slug>.md` brief and uses it as the sole active workflow artifact for planning, execution, and verification handoff.  
+**Verifies via:** file creation/load tests and visible artifact path in the workflow widget.
 
 **AC-4: Plan mode includes collaborative discovery guidance**  
 Given the workflow enters Plan mode, when the extension prepares the mode-specific agent contract, then that contract instructs the agent to clarify ambiguous requests, ask focused questions, compare approaches when needed, and seek user confirmation before converging on the chosen approach in the workflow brief.  
 **Verifies via:** tests over the Plan-mode prompt/contract builder.
 
-**AC-5: Plan artifact requires acceptance criteria and high-level tasks before advancing**  
-Given the user is in Plan mode, when `/next` is invoked without an `Acceptance Criteria` section or without ordered high-level tasks, then the extension blocks advancement to Execute and reports the missing requirement.  
-**Verifies via:** artifact validation tests and command error output.
-
-**AC-6: Tool gating changes only at mode boundaries**  
+**AC-5: Tool gating changes only at mode boundaries**  
 Given a workflow is active, when the mode is Plan, Execute, or Verify, then each mode exposes its fixed tool set and those tool sets change only on explicit mode transitions.  
 **Verifies via:** tests over active tool lists per mode.
 
-**AC-7: Thinking defaults change only at mode boundaries**  
+**AC-6: Thinking defaults change only at mode boundaries**  
 Given the workflow enters Plan, Execute, or Verify, when the extension applies mode defaults for the current GPT-5.4 setup, then it sets thinking to `high`, `low`, or `high` respectively, and does not keep reapplying those defaults on every turn within the same mode.  
 **Verifies via:** tests over mode-transition handlers and thinking-level updates.
 
-**AC-8: Moonpi-style guardrails are enforced in writable modes**  
-Given the extension is active, when the agent tries to read/write outside cwd or edit/write an existing file it has not read first, then the tool call is blocked with a clear reason.  
-**Verifies via:** guard tests for cwd-only and read-before-write enforcement.
-
-**AC-9: Custom compaction preserves workflow state across all modes**  
+**AC-7: Custom compaction preserves workflow state across all modes**  
 Given Pi auto-compacts or the user triggers compaction, when the session resumes, then the summary preserves current mode, active plan artifact, current task/focus, and next intended action.  
 **Verifies via:** `session_before_compact` tests that inspect generated summary/details per mode.
 
-**AC-10: TODO state remains tactical, not durable workflow truth**  
-Given a workflow transitions Plan→Execute, Verify→Execute, or Verify→Complete, then TODO state is replaced or cleared according to phase policy while the `.plans/...md` brief remains the durable source of truth.  
+**AC-8: TODO state remains tactical, not durable workflow truth**  
+Given the user enters or resumes different modes during a workflow, when TODO state is updated for the current task, then the `.plans/...md` brief remains the durable source of truth and TODO state remains short-lived tactical state.  
 **Verifies via:** transition tests over TODO lifecycle and unchanged plan artifact state.
