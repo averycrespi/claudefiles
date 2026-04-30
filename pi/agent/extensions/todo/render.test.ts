@@ -64,11 +64,36 @@ test("renderWidgetLines styles each todo state and dims notes", () => {
   ]);
 });
 
+test("renderWidgetLines shows only the first five todos and appends an aligned bottom overflow summary", () => {
+  const items: TodoItem[] = [
+    { id: 1, text: "One", status: "todo" },
+    { id: 2, text: "Two", status: "in_progress" },
+    { id: 3, text: "Three", status: "done" },
+    { id: 4, text: "Four", status: "blocked" },
+    { id: 5, text: "Five", status: "todo" },
+    { id: 6, text: "Six", status: "todo" },
+    { id: 7, text: "Seven", status: "done" },
+  ];
+
+  assert.deepEqual(renderWidgetLines(items, 80, fakeTheme as any), [
+    fakeTheme.fg("borderMuted", "─".repeat(80)),
+    `${fakeTheme.fg("muted", "[ ]")} ${fakeTheme.fg("text", "One")}`,
+    `${fakeTheme.fg("accent", fakeTheme.bold("[~]"))} ${fakeTheme.fg("accent", "Two")}`,
+    `${fakeTheme.fg("success", "[✓]")} ${fakeTheme.fg("dim", "Three")}`,
+    `${fakeTheme.fg("warning", fakeTheme.bold("[!]"))} ${fakeTheme.fg("text", "Four")}`,
+    `${fakeTheme.fg("muted", "[ ]")} ${fakeTheme.fg("text", "Five")}`,
+    fakeTheme.fg("dim", "    +2 more todos"),
+  ]);
+});
+
 test("renderWidgetLines preserves item order and respects width", () => {
   const items: TodoItem[] = [
     { id: 2, text: "Second", status: "done" },
     { id: 1, text: "First", status: "todo", notes: "needs design" },
     { id: 3, text: "Third", status: "blocked", notes: "waiting on API" },
+    { id: 4, text: "Fourth", status: "todo" },
+    { id: 5, text: "Fifth", status: "todo" },
+    { id: 6, text: "Sixth", status: "todo" },
   ];
 
   for (const line of renderWidgetLines(items, 12, fakeTheme as any)) {

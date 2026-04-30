@@ -2,6 +2,7 @@ import { truncateToWidth } from "@mariozechner/pi-tui";
 import type { TodoItem, TodoStatus } from "./state.ts";
 
 const WIDGET_SEPARATOR = "─";
+const WIDGET_VISIBLE_LIMIT = 5;
 
 const plainTheme = {
   fg: (_color: string, text: string) => text,
@@ -59,9 +60,12 @@ export function renderWidgetLines(
   if (items.length === 0) return [];
 
   const safeWidth = Math.max(0, width);
-  return [
+  const visibleItems = items.slice(0, WIDGET_VISIBLE_LIMIT);
+  const hiddenCount = Math.max(0, items.length - visibleItems.length);
+
+  const lines = [
     theme.fg("borderMuted", WIDGET_SEPARATOR.repeat(safeWidth)),
-    ...items.map((item) => {
+    ...visibleItems.map((item) => {
       const notes = item.notes ? theme.fg("dim", ` · ${item.notes}`) : "";
       return truncateToWidth(
         `${renderStatusMarker(item.status, theme)} ${renderTodoText(item, theme)}${notes}`,
@@ -69,6 +73,20 @@ export function renderWidgetLines(
       );
     }),
   ];
+
+  if (hiddenCount > 0) {
+    lines.push(
+      truncateToWidth(
+        theme.fg(
+          "dim",
+          `    +${hiddenCount} more todo${hiddenCount === 1 ? "" : "s"}`,
+        ),
+        safeWidth,
+      ),
+    );
+  }
+
+  return lines;
 }
 
 export function createTodoWidget(items: TodoItem[]) {
