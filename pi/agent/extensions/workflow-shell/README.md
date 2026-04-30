@@ -32,6 +32,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - intended for code changes and deterministic local execution
 - uses `read`, `edit`, `write`, `bash`, and `todo`
 - defaults thinking to `low`
+- encourages regular commits at logical checkpoints instead of one large end-of-run commit
 
 ### Verify
 

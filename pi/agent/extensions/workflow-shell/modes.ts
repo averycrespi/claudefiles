@@ -90,6 +90,8 @@ export function buildModeContract(options: {
       "Read the plan artifact before changing code.",
       "Use TODO state for short-lived decomposition only; do not treat it as the durable plan.",
       "Keep changes aligned with the brief's acceptance criteria and ordered tasks.",
+      "Commit regularly at logical checkpoints as the work progresses.",
+      "Do not wait for one giant commit at the end of Execute mode.",
     ].join("\n");
   }
 

@@ -21,6 +21,19 @@ test("buildModeContract for plan mode includes collaborative discovery guidance"
   assert.match(contract, /workflow_brief/i);
 });
 
+test("buildModeContract for execute mode encourages regular logical commits", () => {
+  const contract = buildModeContract({
+    mode: "execute",
+    activePlanPath: ".plans/2026-04-30-auth.md",
+  });
+
+  assert.match(contract, /current mode: execute/i);
+  assert.match(contract, /read the plan artifact before changing code/i);
+  assert.match(contract, /commit regularly/i);
+  assert.match(contract, /logical checkpoints/i);
+  assert.match(contract, /do not wait for one giant commit/i);
+});
+
 test("mode helpers return the expected thinking defaults and tool sets", () => {
   assert.equal(getThinkingLevelForMode("normal"), undefined);
   assert.equal(getThinkingLevelForMode("plan"), "high");
