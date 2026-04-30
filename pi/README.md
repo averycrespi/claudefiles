@@ -22,16 +22,17 @@ Running `make stow-pi` creates symlinks from `pi/agent/` into `~/.pi/agent/`. Ed
 
 TypeScript modules that customize the Pi agent. Type-check with `make typecheck`.
 
-| Extension        | Purpose                                                 |
-| ---------------- | ------------------------------------------------------- |
-| `ask-user`       | `ask_user` tool for multiple-choice questions           |
-| `compact-tools`  | Compact TUI rendering for built-in shell and file tools |
-| `format`         | Format files after write and edit                       |
-| `mcp-broker`     | Broker CLI skill + guard for remote operations          |
-| `provider-usage` | Provider rate-limit quota in the footer                 |
-| `subagents`      | Dynamic subagent loading and dispatch                   |
-| `todo`           | Session-persisted TODO tool with a sticky widget        |
-| `web-access`     | Web search, fetch, GitHub, and PDF tools                |
+| Extension        | Purpose                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| `ask-user`       | `ask_user` tool for multiple-choice questions                        |
+| `compact-tools`  | Compact TUI rendering for built-in shell and file tools              |
+| `format`         | Format files after write and edit                                    |
+| `mcp-broker`     | Broker CLI skill + guard for remote operations                       |
+| `provider-usage` | Provider rate-limit quota in the footer                              |
+| `subagents`      | Dynamic subagent loading and dispatch                                |
+| `todo`           | Session-persisted TODO tool with a sticky widget                     |
+| `web-access`     | Web search, fetch, GitHub, and PDF tools                             |
+| `workflow-shell` | Workflow modes, durable `.plans` briefs, and compaction-aware resume |
 
 Underscore-prefixed directories are libraries imported by sibling extensions, not extensions themselves — pi's extension loader skips them because they have no `index.ts`.
 
