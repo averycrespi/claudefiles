@@ -115,6 +115,30 @@ Show:
 
 Use fixed tool sets per mode. Change the active tool set only on explicit mode transitions.
 
+## Thinking level policy
+
+The workflow shell should also set a default thinking level per mode, but only on explicit mode transitions. Do not continuously reapply it every turn.
+
+### Why tie thinking to modes?
+
+Planning and verification benefit from more reasoning; execution-heavy work benefits from lower reasoning and faster action. This matches the repo's agent-engineering guidance to vary reasoning effort by phase rather than setting one global level.
+
+### V1 defaults for the current GPT-5.4 setup
+
+- **Plan:** `high`
+- **Execute:** `low`
+- **Verify:** `high`
+
+These defaults are intentionally tuned for the current GPT-5.4 setup. Revisit them when upgrading models, especially if the default workhorse changes to GPT-5.5 or a Claude model with different reasoning behavior.
+
+### Application rules
+
+- Apply the mode's default thinking level when entering Plan, Execute, or Verify.
+- Do not change thinking level mid-turn.
+- Do not keep reapplying the mode default on every agent start within the same mode.
+- If the user manually changes thinking level during a mode, let that override stand until the next explicit mode transition.
+- If the current model does not support the requested thinking level, rely on Pi's normal clamping behavior.
+
 ### Plan mode tools
 
 - read-only file/navigation tools
@@ -280,6 +304,7 @@ The prompt should provide:
 - instructions to use the plan artifact and TODO state correctly
 - the expected Plan-mode output: a single `.plans/...md` workflow brief
 - Plan-mode guidance to clarify ambiguous requests, compare approaches when needed, and confirm the chosen direction before converging on the brief
+- awareness that the workflow shell may set a mode-specific thinking default on phase transitions
 
 ### What not to inject every turn
 
@@ -292,9 +317,10 @@ Do **not** inject highly variable runtime state into the system prompt each turn
 
 ### Rationale
 
-Changing tool sets and constantly changing prompt prefixes hurt prompt-cache reuse. The extension should preserve cache where possible by:
+Changing tool sets, thinking config, and constantly changing prompt prefixes hurt prompt-cache reuse. The extension should preserve cache where possible by:
 
 - changing tools only at mode boundaries
+- changing thinking level only at mode boundaries
 - keeping the per-mode prompt mostly static
 - storing volatile state in artifacts and tools rather than re-inlining it into the system prompt
 
@@ -518,14 +544,18 @@ Given the user is in Plan mode, when `/next` is invoked without an `Acceptance C
 Given a workflow is active, when the mode is Plan, Execute, or Verify, then each mode exposes its fixed tool set and those tool sets change only on explicit mode transitions.  
 **Verifies via:** tests over active tool lists per mode.
 
-**AC-7: Moonpi-style guardrails are enforced in writable modes**  
+**AC-7: Thinking defaults change only at mode boundaries**  
+Given the workflow enters Plan, Execute, or Verify, when the extension applies mode defaults for the current GPT-5.4 setup, then it sets thinking to `high`, `low`, or `high` respectively, and does not keep reapplying those defaults on every turn within the same mode.  
+**Verifies via:** tests over mode-transition handlers and thinking-level updates.
+
+**AC-8: Moonpi-style guardrails are enforced in writable modes**  
 Given the extension is active, when the agent tries to read/write outside cwd or edit/write an existing file it has not read first, then the tool call is blocked with a clear reason.  
 **Verifies via:** guard tests for cwd-only and read-before-write enforcement.
 
-**AC-8: Custom compaction preserves workflow state across all modes**  
+**AC-9: Custom compaction preserves workflow state across all modes**  
 Given Pi auto-compacts or the user triggers compaction, when the session resumes, then the summary preserves current mode, active plan artifact, current task/focus, and next intended action.  
 **Verifies via:** `session_before_compact` tests that inspect generated summary/details per mode.
 
-**AC-9: TODO state remains tactical, not durable workflow truth**  
+**AC-10: TODO state remains tactical, not durable workflow truth**  
 Given a workflow transitions Plan→Execute, Verify→Execute, or Verify→Complete, then TODO state is replaced or cleared according to phase policy while the `.plans/...md` brief remains the durable source of truth.  
 **Verifies via:** transition tests over TODO lifecycle and unchanged plan artifact state.
