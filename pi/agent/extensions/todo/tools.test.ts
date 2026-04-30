@@ -65,6 +65,23 @@ test("list returns the current formatted todo list", async () => {
   );
 });
 
+test("mutating actions include nextTodoId in persisted details", async () => {
+  const { tool } = loadTool();
+
+  const result = await tool.execute(
+    "call-1",
+    { action: "add", text: "Persist me" },
+    undefined,
+    undefined,
+    undefined,
+  );
+
+  assert.deepEqual(result.details, {
+    items: [{ id: 1, text: "Persist me", status: "todo" }],
+    nextTodoId: 2,
+  });
+});
+
 test("set replaces the current list and restarts ids at 1", async () => {
   const { tool, store } = loadTool();
   store.add("Old item");

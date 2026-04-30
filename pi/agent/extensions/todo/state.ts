@@ -14,6 +14,8 @@ export interface TodoState {
 
 export interface TodoStore {
   list(): TodoItem[];
+  getState(): TodoState;
+  replaceState(state: TodoState): void;
   set(
     items: Array<{ text: string; status?: TodoStatus; notes?: string }>,
   ): TodoItem[];
@@ -74,6 +76,28 @@ export function createTodoStore(): TodoStore {
   return {
     list() {
       return items.map(cloneItem);
+    },
+
+    getState() {
+      return cloneState(items, nextTodoId);
+    },
+
+    replaceState(state) {
+      items = state.items.map((item) => {
+        const notes = normalizedNotes(item.notes);
+        return {
+          id: item.id,
+          text: item.text,
+          status: item.status,
+          ...(notes ? { notes } : {}),
+        };
+      });
+      const maxId = items.reduce(
+        (highest, item) => Math.max(highest, item.id),
+        0,
+      );
+      nextTodoId = Math.max(state.nextTodoId, maxId + 1, 1);
+      notify();
     },
 
     set(nextItems) {

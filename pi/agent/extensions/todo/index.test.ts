@@ -31,9 +31,12 @@ type EventHandler = (
   ctx: ReturnType<typeof makeCtx>,
 ) => Promise<void> | void;
 
-function makeCtx() {
+function makeCtx(branch: unknown[] = []) {
   return {
     hasUI: true,
+    sessionManager: {
+      getBranch: () => branch,
+    },
     ui: {
       notify: (_msg: string, _level: string) => {},
       setWidget: (
@@ -63,6 +66,8 @@ function makePi() {
   }> = [];
   const notifications: Array<{ msg: string; level: string }> = [];
 
+  const appendedEntries: Array<{ customType: string; data: unknown }> = [];
+
   const pi = {
     registerTool(def: ToolDef) {
       tools.set(def.name, def);
@@ -72,6 +77,9 @@ function makePi() {
     },
     on(event: string, handler: EventHandler) {
       handlers.set(event, handler);
+    },
+    appendEntry(customType: string, data: unknown) {
+      appendedEntries.push({ customType, data });
     },
     hasUI: true,
     setWidget(
@@ -100,9 +108,13 @@ function makePi() {
     _handlers: handlers,
     _widgetCalls: widgetCalls,
     _notifications: notifications,
-    _ctx() {
+    _appendedEntries: appendedEntries,
+    _ctx(branch: unknown[] = []) {
       return {
         hasUI: true,
+        sessionManager: {
+          getBranch: () => branch,
+        },
         ui: {
           notify(msg: string, level: string) {
             notifications.push({ msg, level });
@@ -137,10 +149,13 @@ function makePi() {
   return pi;
 }
 
-async function startSession(pi: ReturnType<typeof makePi>) {
+async function startSession(
+  pi: ReturnType<typeof makePi>,
+  branch: unknown[] = [],
+) {
   const handler = pi._handlers.get("session_start");
   assert.ok(handler, "session_start handler should be registered");
-  await handler!({ type: "session_start", reason: "startup" }, pi._ctx());
+  await handler!({ type: "session_start", reason: "startup" }, pi._ctx(branch));
 }
 
 async function shutdownSession(pi: ReturnType<typeof makePi>) {
@@ -181,19 +196,54 @@ test("session_start subscribes widget updates and tool mutations render aboveEdi
   });
 });
 
-test("/todo-clear clears the store, hides the widget, and notifies the user", async () => {
+test("session_start reconstructs persisted todos and preserves next ids", async () => {
   const pi = makePi();
   todoExtension(pi as any);
-  await startSession(pi);
+  await startSession(pi, [
+    {
+      type: "message",
+      message: {
+        role: "toolResult",
+        toolName: "todo",
+        details: {
+          items: [{ id: 1, text: "Keep", status: "todo" }],
+          nextTodoId: 3,
+        },
+      },
+    },
+  ]);
 
   const tool = pi._tools.get("todo")!;
-  await tool.execute(
+  const result = await tool.execute(
     "call-1",
-    { action: "add", text: "Temp" },
+    { action: "add", text: "Third" },
     undefined,
     undefined,
     undefined,
   );
+
+  assert.equal(
+    result.content[0]?.text,
+    "Current TODO list:\n1. [ ] Keep\n3. [ ] Third",
+  );
+});
+
+test("/todo-clear persists an empty snapshot, hides the widget, and notifies the user", async () => {
+  const pi = makePi();
+  todoExtension(pi as any);
+  await startSession(pi, [
+    {
+      type: "message",
+      message: {
+        role: "toolResult",
+        toolName: "todo",
+        details: {
+          items: [{ id: 1, text: "Temp", status: "todo" }],
+          nextTodoId: 2,
+        },
+      },
+    },
+  ]);
 
   const command = pi._commands.get("todo-clear")!;
   await command.handler("", pi._ctx());
@@ -204,6 +254,12 @@ test("/todo-clear clears the store, hides the widget, and notifies the user", as
     lines: undefined,
     options: { placement: "aboveEditor" },
   });
+  assert.deepEqual(pi._appendedEntries, [
+    {
+      customType: "todo-state",
+      data: { items: [], nextTodoId: 1 },
+    },
+  ]);
   assert.equal(
     pi._notifications[pi._notifications.length - 1]?.msg,
     "/todo-clear: cleared all TODO items",

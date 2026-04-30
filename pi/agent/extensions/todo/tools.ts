@@ -43,15 +43,15 @@ const todoParamsSchema = Type.Object({
 
 type TodoParams = Static<typeof todoParamsSchema>;
 
-function textResult(text: string, items: ReturnType<TodoStore["list"]>) {
+function textResult(text: string, store: TodoStore) {
   return {
     content: [{ type: "text" as const, text }],
-    details: { items },
+    details: store.getState(),
   };
 }
 
 function errorResult(message: string, store: TodoStore) {
-  return textResult(`Error: ${message}`, store.list());
+  return textResult(`Error: ${message}`, store);
 }
 
 function normalizeText(value: unknown): string | undefined {
@@ -123,13 +123,13 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
     async execute(_toolCallId, params: TodoParams, _signal, _onUpdate, _ctx) {
       switch (params.action) {
         case "list":
-          return textResult(formatTodoList(store.list()), store.list());
+          return textResult(formatTodoList(store.list()), store);
 
         case "set": {
           const validated = validateSetItems(params.items);
           if (!validated.ok) return errorResult(validated.message, store);
           const items = store.set(validated.items);
-          return textResult(formatTodoList(items), items);
+          return textResult(formatTodoList(items), store);
         }
 
         case "add": {
@@ -144,7 +144,7 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           }
           store.add(text, normalizeStatus(params.status), params.notes);
           const items = store.list();
-          return textResult(formatTodoList(items), items);
+          return textResult(formatTodoList(items), store);
         }
 
         case "update": {
@@ -173,7 +173,7 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           const updated = store.update(params.id, patch);
           if (!updated)
             return errorResult(`TODO #${params.id} not found.`, store);
-          return textResult(formatTodoList(store.list()), store.list());
+          return textResult(formatTodoList(store.list()), store);
         }
 
         case "remove": {
@@ -183,12 +183,12 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           if (!store.remove(params.id)) {
             return errorResult(`TODO #${params.id} not found.`, store);
           }
-          return textResult(formatTodoList(store.list()), store.list());
+          return textResult(formatTodoList(store.list()), store);
         }
 
         case "clear":
           store.clear();
-          return textResult(formatTodoList(store.list()), store.list());
+          return textResult(formatTodoList(store.list()), store);
       }
     },
   });

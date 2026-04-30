@@ -84,6 +84,25 @@ test("clear empties the list and resets next ids", () => {
   assert.deepEqual(next, { id: 1, text: "Fresh", status: "todo" });
 });
 
+test("replaceState restores ids and the nextTodoId from a persisted snapshot", () => {
+  const store = createTodoStore();
+
+  store.replaceState({
+    items: [{ id: 4, text: "Restored", status: "blocked", notes: "waiting" }],
+    nextTodoId: 7,
+  });
+  const next = store.add("Next");
+
+  assert.deepEqual(store.getState(), {
+    items: [
+      { id: 4, text: "Restored", status: "blocked", notes: "waiting" },
+      { id: 7, text: "Next", status: "todo" },
+    ],
+    nextTodoId: 8,
+  });
+  assert.deepEqual(next, { id: 7, text: "Next", status: "todo" });
+});
+
 test("subscribe receives snapshots for each mutation and unsubscribe stops updates", () => {
   const store = createTodoStore();
   const snapshots: string[] = [];
