@@ -8,7 +8,7 @@ The extension is intentionally a workflow shell, not a full autonomous orchestra
 
 ## Goals
 
-- Give Pi a coherent day-to-day workflow shell with explicit phase boundaries.
+- Give Pi a coherent day-to-day workflow shell with explicit workflow modes.
 - Align with the user's Claude Code / autopilot mental model without copying it exactly.
 - Keep the UX lightweight and visible, more like Moonpi than archived `autopilot`.
 - Preserve this repo's stronger workflow rigor around acceptance criteria, verification, and durable artifacts.
@@ -35,7 +35,7 @@ The recommended hybrid keeps:
 This follows the repo's agent-engineering principles:
 
 - plan as intent, not diff
-- deterministic boundaries between phases
+- explicit mode transitions
 - acceptance criteria as the load-bearing artifact
 - durable notes on disk instead of relying on long chat history
 - no open-ended verify → implement loop
@@ -51,9 +51,9 @@ The extension should expose four modes:
 
 `Normal` means ordinary Pi behavior with no workflow shell active. `Complete` is not a mode. It is a terminal outcome or report state, not a persistent shell mode.
 
-### Why not one mode per phase?
+### Why not more workflow modes?
 
-The earlier brainstorm/plan split is not useful enough to justify either an extra mode or a separate artifact in v1. Discovery, clarification, approach comparison, and brief authoring are all part of Plan mode. Plan mode should support conversational back-and-forth when the task is under-specified, then converge into the durable workflow brief once the user confirms the direction. Execute and Verify do have meaningfully different permissions and success criteria, so they deserve separate modes.
+The earlier brainstorm/plan split is not useful enough to justify either an extra mode or a separate artifact in v1. Discovery, clarification, approach comparison, and brief authoring are all part of Plan mode. Plan mode should support conversational back-and-forth when the task is under-specified, then converge into the durable workflow brief once the user confirms the direction. Execute and Verify do have meaningfully different permissions and success criteria, so they deserve their own modes.
 
 ## Commands
 
@@ -79,7 +79,7 @@ The user-facing command surface should stay short:
 
 `/plan` enters Plan mode and may optionally accept context after the command.
 
-- **No arguments:** if a workflow is already active, resume it. Otherwise ask the user to create a new workflow or select an existing plan artifact.
+- **No arguments:** if an active plan path is already selected, reopen that plan in Plan mode. Otherwise ask the user to create a new workflow or select an existing plan artifact.
 - **Plan path or link argument:** open that existing plan artifact and enter Plan mode for it.
 - **Free-text argument:** treat the text as planning context. The agent may create a new plan, resume a likely matching plan, or ask a focused clarifying question before deciding.
 - When interpreting free-text context, prefer a short clarifying question over silently attaching the request to the wrong existing plan.
@@ -89,7 +89,7 @@ The user-facing command surface should stay short:
 
 `/execute` enters Execute mode and may optionally accept context after the command.
 
-- **No arguments:** if a workflow is already active, resume it in Execute mode. Otherwise ask the user to select an existing plan artifact or provide execution context.
+- **No arguments:** if an active plan path is already selected, reopen that plan in Execute mode. Otherwise ask the user to select an existing plan artifact or provide execution context.
 - **Plan path or link argument:** open that existing plan artifact and enter Execute mode for it.
 - **Free-text argument:** treat the text as execution context. The agent may resume a likely matching workflow, attach the request to a referenced plan, or ask a focused clarifying question before deciding.
 - `/execute` should support direct entry into implementation work; it should not require that the current session already passed through Plan mode.
@@ -98,7 +98,7 @@ The user-facing command surface should stay short:
 
 `/verify` enters Verify mode and may optionally accept context after the command.
 
-- **No arguments:** if a workflow is already active, resume it in Verify mode. Otherwise ask the user to select an existing plan artifact or provide verification context.
+- **No arguments:** if an active plan path is already selected, reopen that plan in Verify mode. Otherwise ask the user to select an existing plan artifact or provide verification context.
 - **Plan path or link argument:** open that existing plan artifact and enter Verify mode for it.
 - **Free-text argument:** treat the text as verification context. The agent may resume a likely matching workflow, attach the request to a referenced plan, or ask a focused clarifying question before deciding.
 - `/verify` should support direct entry into verification work; it should not require that the current session already passed through Execute mode.
@@ -225,7 +225,7 @@ For workflow-shell usage, do not create a separate `.designs/...md` document. Th
 
 - Plan mode creates or updates the `.plans/...md` brief.
 - Execute mode reads it and may append limited workflow notes.
-- Verify mode reads it and may append findings, known issues, or verification outcomes.
+- Verify mode reads it and evaluates work against it, producing findings or follow-up outcomes without assuming direct writeback in v1.
 - The plan brief remains the canonical artifact for the workflow.
 
 ## Plan artifact contents
@@ -256,7 +256,7 @@ Recommended structure:
 
 ### Why one combined brief?
 
-One file keeps the workflow low-friction while still preserving the durable artifacts recommended by modern harness design. It avoids drift between separate "design" and "plan" documents while still giving later phases a structured source of truth.
+One file keeps the workflow low-friction while still preserving the durable artifacts recommended by modern harness design. It avoids drift between separate "design" and "plan" documents while still giving later modes a structured source of truth.
 
 ## Plan-mode output quality bar
 
@@ -291,7 +291,7 @@ Bad examples are line-by-line or command-by-command instructions.
 
 Execute may decompose one high-level task into smaller TODOs for the current session. Those substeps should not bloat the versioned plan brief.
 
-## TODO lifecycle across phases
+## TODO lifecycle across modes
 
 The TODO list should be tactical workflow state, not the durable source of truth.
 
@@ -315,7 +315,7 @@ The prompt should provide:
 - instructions to use the plan artifact and TODO state correctly
 - the expected Plan-mode output: a single `.plans/...md` workflow brief
 - Plan-mode guidance to clarify ambiguous requests, compare approaches when needed, and confirm the chosen direction before converging on the brief
-- awareness that the workflow shell may set a mode-specific thinking default on phase transitions
+- awareness that the workflow shell may set a mode-specific thinking default on mode transitions
 
 ### What not to inject every turn
 
@@ -337,74 +337,19 @@ Changing tool sets, thinking config, and constantly changing prompt prefixes hur
 
 ## Compaction strategy
 
-### Default principle
-
 Use durable workflow artifacts so the workflow can survive compaction without depending on raw conversation history.
-
-Moonpi's sprint loop handles long-running work by writing state to files and compacting at phase boundaries. This design should go further by adding custom compaction behavior for all workflow modes.
-
-### Custom compaction
 
 Implement `session_before_compact` and provide a mode-aware workflow summary when compaction occurs while a workflow mode is active.
 
-That summary should rebuild state from:
+For v1, that summary should preserve only the workflow context needed to resume sensibly:
 
 - current mode
 - active plan artifact path
-- plan contents
-- tactical TODO state
-- recent command/test outcomes when available
-- file operations from Pi's compaction preparation data
+- relevant TODO context
+- recent command or test outcome when useful
+- next intended action
 
-### Mode-specific compaction summaries
-
-#### Plan mode summary
-
-Preserve:
-
-- goal
-- constraints
-- AC status
-- chosen approach
-- remaining planning questions
-- ordered tasks drafted so far
-
-#### Execute mode summary
-
-Most important for v1. Preserve:
-
-- active plan file
-- current high-level task being executed
-- completed changes so far
-- remaining work for the current task
-- blockers
-- last important command/test result
-- next immediate action on resume
-
-#### Verify mode summary
-
-Preserve:
-
-- checks already run
-- pass/fail results
-- findings gathered
-- whether next step is pass, known issues, or return to Execute
-
-### Execute-mode resumability note
-
-To make compaction safer, the plan artifact may include a small resumability section or sibling note, for example:
-
-```md
-## Current Execution State
-
-- Active task:
-- Last completed substep:
-- Remaining work:
-- Blockers:
-- Last verification command/result:
-```
-
-This lets the compaction hook rebuild a deterministic resume summary rather than trusting raw chat memory.
+Build the summary primarily from the plan brief and current tactical state rather than relying on raw conversation history.
 
 ## UI visible to the user
 
@@ -434,7 +379,7 @@ workflow · verify · .plans/2026-04-30-auth-refactor.md · tests passing, typec
 
 ### Widget responsibilities
 
-- workflow widget = phase state and current focus
+- workflow widget = mode state and current focus
 - TODO widget = tactical checklist
 
 Do not duplicate the TODO list inside the workflow widget.
@@ -465,8 +410,7 @@ Create a new extension, for example:
 
 Suggested internal files:
 
-- `index.ts` — commands, event hooks, mode transitions
-- `state.ts` — persisted active plan path only
+- `index.ts` — commands, event hooks, mode transitions, and active-plan-path persistence
 - `artifact.ts` — plan artifact create/load/validate helpers
 - `modes.ts` — tool allowlists and transition helpers
 - `compaction.ts` — custom compaction summary builder
@@ -484,7 +428,7 @@ Keep failure handling explicit and lightweight:
 
 Do not build these in v1 unless needed:
 
-- automatic phase transitions
+- automatic mode transitions
 - verifier auto-fix loops
 - sidecar machine-readable files like `ac.json`
 - a revived autonomous `autopilot`-style runner
@@ -509,15 +453,15 @@ Given the extension is loaded, when the user runs `/normal`, `/plan`, `/execute`
 **Verifies via:** command behavior in tests and visible widget updates.
 
 **AC-2: Mode commands accept flexible context**  
-Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify` with no arguments, a plan path/link, or free text, then the extension resumes the active workflow, opens the referenced plan, or treats the text as mode-specific context according to each command contract.  
+Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify` with no arguments, a plan path/link, or free text, then the extension reopens the selected plan when one is available, opens the referenced plan, or treats the text as mode-specific context according to each command contract.  
 **Verifies via:** command parsing/dispatch tests and visible artifact selection in the workflow widget.
 
 **AC-3: Plan mode manages the single versioned workflow brief**  
-Given no active workflow exists, when the user enters `/plan`, then the extension creates or resumes a `.plans/YYYY-MM-DD-<slug>.md` brief, persists that active plan path, and uses it as the sole active workflow artifact for planning, execution, and verification handoff.  
+Given no active plan path is selected, when the user enters `/plan`, then the extension creates or resumes a `.plans/YYYY-MM-DD-<slug>.md` brief, persists that active plan path, and uses it as the sole active workflow artifact for planning, execution, and verification handoff.  
 **Verifies via:** file creation/load tests, persisted active-plan-path tests, and visible artifact path in the workflow widget.
 
 **AC-4: Plan mode includes collaborative discovery guidance**  
-Given the workflow enters Plan mode, when the extension prepares the mode-specific agent contract, then that contract instructs the agent to clarify ambiguous requests, ask focused questions, compare approaches when needed, and seek user confirmation before converging on the chosen approach in the workflow brief.  
+Given the session enters Plan mode, when the extension prepares the mode-specific agent contract, then that contract instructs the agent to clarify ambiguous requests, ask focused questions, compare approaches when needed, and seek user confirmation before converging on the chosen approach in the workflow brief.  
 **Verifies via:** tests over the Plan-mode prompt/contract builder.
 
 **AC-5: Tool behavior changes only at mode boundaries**  
