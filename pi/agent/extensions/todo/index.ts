@@ -2,7 +2,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { renderWidgetLines } from "./render.ts";
+import { createTodoWidget } from "./render.ts";
 import { createTodoStore, type TodoItem } from "./state.ts";
 import { registerTodoTool } from "./tools.ts";
 
@@ -11,15 +11,15 @@ const WIDGET_KEY = "todo";
 function setTodoWidget(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
-  lines: string[] | undefined,
+  content: string[] | ReturnType<typeof createTodoWidget> | undefined,
 ): void {
   const piAny = pi as any;
   if (piAny.hasUI && typeof piAny.setWidget === "function") {
-    piAny.setWidget(WIDGET_KEY, lines);
+    piAny.setWidget(WIDGET_KEY, content);
     return;
   }
   if (!ctx.hasUI) return;
-  ctx.ui.setWidget(WIDGET_KEY, lines, { placement: "aboveEditor" });
+  ctx.ui.setWidget(WIDGET_KEY, content as any, { placement: "aboveEditor" });
 }
 
 function renderTodoWidget(
@@ -27,8 +27,11 @@ function renderTodoWidget(
   ctx: ExtensionContext,
   items: TodoItem[],
 ) {
-  const lines = renderWidgetLines(items);
-  setTodoWidget(pi, ctx, lines.length > 0 ? lines : undefined);
+  setTodoWidget(
+    pi,
+    ctx,
+    items.length > 0 ? createTodoWidget(items) : undefined,
+  );
 }
 
 export default function (pi: ExtensionAPI) {

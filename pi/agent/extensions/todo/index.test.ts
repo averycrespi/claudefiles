@@ -33,7 +33,13 @@ function makeCtx() {
       notify: (_msg: string, _level: string) => {},
       setWidget: (
         _key: string,
-        _lines: string[] | undefined,
+        _lines:
+          | string[]
+          | ((
+              tui: unknown,
+              theme: unknown,
+            ) => { render(width: number): string[] })
+          | undefined,
         _options?: { placement?: string },
       ) => {},
     },
@@ -48,6 +54,7 @@ function makePi() {
     key: string;
     lines: string[] | undefined;
     options?: { placement?: string };
+    usedFactory?: boolean;
   }> = [];
   const notifications: Array<{ msg: string; level: string }> = [];
 
@@ -62,8 +69,24 @@ function makePi() {
       handlers.set(event, handler);
     },
     hasUI: true,
-    setWidget(key: string, lines: string[] | undefined) {
-      widgetCalls.push({ key, lines, options: { placement: "aboveEditor" } });
+    setWidget(
+      key: string,
+      content:
+        | string[]
+        | ((
+            tui: unknown,
+            theme: unknown,
+          ) => { render(width: number): string[] })
+        | undefined,
+    ) {
+      const usedFactory = typeof content === "function";
+      const lines = usedFactory ? content({}, {}).render(32) : content;
+      widgetCalls.push({
+        key,
+        lines,
+        options: { placement: "aboveEditor" },
+        ...(usedFactory ? { usedFactory } : {}),
+      });
     },
     _tools: tools,
     _commands: commands,
@@ -79,10 +102,23 @@ function makePi() {
           },
           setWidget(
             key: string,
-            lines: string[] | undefined,
+            content:
+              | string[]
+              | ((
+                  tui: unknown,
+                  theme: unknown,
+                ) => { render(width: number): string[] })
+              | undefined,
             options?: { placement?: string },
           ) {
-            widgetCalls.push({ key, lines, options });
+            const usedFactory = typeof content === "function";
+            const lines = usedFactory ? content({}, {}).render(32) : content;
+            widgetCalls.push({
+              key,
+              lines,
+              options,
+              ...(usedFactory ? { usedFactory } : {}),
+            });
           },
         },
       };
@@ -130,8 +166,9 @@ test("session_start subscribes widget updates and tool mutations render aboveEdi
   const last = pi._widgetCalls[pi._widgetCalls.length - 1];
   assert.deepEqual(last, {
     key: "todo",
-    lines: ["[ ] Write code · index.ts"],
+    lines: ["─".repeat(32), "[ ] Write code · index.ts"],
     options: { placement: "aboveEditor" },
+    usedFactory: true,
   });
 });
 
