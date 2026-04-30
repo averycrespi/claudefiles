@@ -2,7 +2,7 @@
 
 ## Summary
 
-Build a lightweight Pi extension that adapts Moonpi-style mode UX into this repo's modular workflow stack. The extension should provide explicit `Plan`, `Execute`, and `Verify` modes, short phase commands, mode-specific tool gating, a versioned plan artifact, and custom compaction so long-running work does not lose workflow state. Plan mode should subsume brainstorming: it should support collaborative clarification, approach comparison, and convergence into the durable workflow brief.
+Build a lightweight Pi extension that adapts Moonpi-style mode UX into this repo's modular workflow stack. The extension should provide an explicit `Normal` mode alongside `Plan`, `Execute`, and `Verify`, short phase commands, mode-specific tool gating, a versioned plan artifact, and custom compaction so long-running work does not lose workflow state. Plan mode should subsume brainstorming: it should support collaborative clarification, approach comparison, and convergence into the durable workflow brief.
 
 The extension is intentionally a workflow shell, not a full autonomous orchestrator. It should layer on top of the existing `todo`, `ask-user`, `subagents`, and other extensions instead of replacing them.
 
@@ -42,13 +42,14 @@ This follows the repo's agent-engineering principles:
 
 ## Mode model
 
-The extension should expose three modes:
+The extension should expose four modes:
 
-1. **Plan**
-2. **Execute**
-3. **Verify**
+1. **Normal**
+2. **Plan**
+3. **Execute**
+4. **Verify**
 
-`Complete` is not a mode. It is a terminal report/reset outcome.
+`Normal` means ordinary Pi behavior with no workflow shell active. `Complete` is not a mode. It is a terminal outcome or report state, not a persistent shell mode.
 
 ### Why not one mode per phase?
 
@@ -58,11 +59,21 @@ The earlier brainstorm/plan split is not useful enough to justify either an extr
 
 The user-facing command surface should stay short:
 
+- `/normal`
 - `/plan [context]`
 - `/execute [context]`
 - `/verify [context]`
 
 ### Command semantics
+
+#### `/normal`
+
+`/normal` exits workflow-shell mode and returns the session to ordinary Pi behavior.
+
+- Clear the active workflow mode for the current session.
+- Hide the workflow widget.
+- Restore the session's default tool access and default thinking behavior.
+- Keep the persisted active plan path unchanged so the user can later resume with `/plan`, `/execute`, or `/verify`.
 
 #### `/plan [context]`
 
@@ -96,6 +107,15 @@ The user-facing command surface should stay short:
 
 Use fixed tool sets per mode. Change the active tool set only on explicit mode transitions.
 
+### Normal mode behavior
+
+Normal mode should leave Pi in its ordinary operating state:
+
+- no workflow-specific tool gating
+- no workflow-specific prompt contract
+- no workflow widget
+- no workflow-specific thinking override
+
 ## Thinking level policy
 
 The workflow shell should also set a default thinking level per mode, but only on explicit mode transitions. Do not continuously reapply it every turn.
@@ -106,6 +126,7 @@ Planning and verification benefit from more reasoning; execution-heavy work bene
 
 ### V1 defaults for the current GPT-5.4 setup
 
+- **Normal:** no workflow-specific default
 - **Plan:** `high`
 - **Execute:** `low`
 - **Verify:** `high`
@@ -115,6 +136,7 @@ These defaults are intentionally tuned for the current GPT-5.4 setup. Revisit th
 ### Application rules
 
 - Apply the mode's default thinking level when entering Plan, Execute, or Verify.
+- Entering Normal mode should restore the session's default thinking behavior rather than applying a workflow-specific override.
 - Do not change thinking level mid-turn.
 - Do not keep reapplying the mode default on every agent start within the same mode.
 - If the user manually changes thinking level during a mode, let that override stand until the next explicit mode transition.
@@ -299,11 +321,11 @@ Changing tool sets, thinking config, and constantly changing prompt prefixes hur
 
 Use durable workflow artifacts so the workflow can survive compaction without depending on raw conversation history.
 
-Moonpi's sprint loop handles long-running work by writing state to files and compacting at phase boundaries. This design should go further by adding custom compaction behavior for all modes.
+Moonpi's sprint loop handles long-running work by writing state to files and compacting at phase boundaries. This design should go further by adding custom compaction behavior for all workflow modes.
 
 ### Custom compaction
 
-Implement `session_before_compact` and always provide a mode-aware workflow summary when compaction occurs.
+Implement `session_before_compact` and provide a mode-aware workflow summary when compaction occurs while a workflow mode is active.
 
 That summary should rebuild state from:
 
@@ -370,7 +392,7 @@ The UI should stay ambient and lightweight.
 
 ### Sticky workflow widget
 
-Render a small sticky widget above the editor, separate from the existing TODO widget. In v1 it should be a single line.
+Render a small sticky widget above the editor, separate from the existing TODO widget. In v1 it should be a single line and only appear in Plan, Execute, or Verify.
 
 Example in Plan mode:
 
@@ -407,7 +429,7 @@ On `session_start` and `session_tree`, recover workflow context from:
 2. the referenced `.plans/...md` artifact
 3. current TODO state
 
-Do not persist the current mode or a richer workflow snapshot. Mode should be re-entered explicitly via `/plan`, `/execute`, or `/verify`.
+Do not persist the current mode or a richer workflow snapshot. New or restored sessions should start in Normal mode. Workflow mode should be re-entered explicitly via `/plan`, `/execute`, or `/verify`.
 
 If the persisted active plan path is missing or invalid, fail soft:
 
@@ -456,14 +478,14 @@ Build one extension that does four things well:
 1. mode state + short commands
 2. mode-specific tool gating
 3. versioned plan artifact management
-4. custom compaction that preserves workflow state across all modes
+4. custom compaction that preserves workflow context across workflow modes
 
 This is intentionally a workflow shell, not an autonomous orchestrator.
 
 ## Acceptance Criteria
 
-**AC-1: Phase shell commands exist and switch modes correctly**  
-Given the extension is loaded, when the user runs `/plan`, `/execute`, or `/verify`, then the workflow enters that mode, updates the visible workflow status/widget, and applies that mode's tools and thinking defaults for the current session.  
+**AC-1: Shell commands exist and switch modes correctly**  
+Given the extension is loaded, when the user runs `/normal`, `/plan`, `/execute`, or `/verify`, then the session enters that mode, updates workflow UI visibility appropriately, and applies that mode's tools and thinking behavior for the current session.  
 **Verifies via:** command behavior in tests and visible widget updates.
 
 **AC-2: Mode commands accept flexible context**  
@@ -478,16 +500,16 @@ Given no active workflow exists, when the user enters `/plan`, then the extensio
 Given the workflow enters Plan mode, when the extension prepares the mode-specific agent contract, then that contract instructs the agent to clarify ambiguous requests, ask focused questions, compare approaches when needed, and seek user confirmation before converging on the chosen approach in the workflow brief.  
 **Verifies via:** tests over the Plan-mode prompt/contract builder.
 
-**AC-5: Tool gating changes only at mode boundaries**  
-Given a workflow is active, when the mode is Plan, Execute, or Verify, then each mode exposes its fixed tool set and those tool sets change only on explicit mode transitions.  
-**Verifies via:** tests over active tool lists per mode.
+**AC-5: Tool behavior changes only at mode boundaries**  
+Given the session is in Normal, Plan, Execute, or Verify, when the mode changes, then workflow-specific tool behavior changes only on that explicit mode transition, with Normal restoring ordinary Pi behavior and workflow modes applying their fixed tool sets.  
+**Verifies via:** tests over active tool behavior per mode.
 
-**AC-6: Thinking defaults change only at mode boundaries**  
-Given the workflow enters Plan, Execute, or Verify, when the extension applies mode defaults for the current GPT-5.4 setup, then it sets thinking to `high`, `low`, or `high` respectively, and does not keep reapplying those defaults on every turn within the same mode.  
+**AC-6: Thinking behavior changes only at mode boundaries**  
+Given the session enters Normal, Plan, Execute, or Verify, when the extension applies mode behavior for the current GPT-5.4 setup, then it uses no workflow-specific override in Normal and sets thinking to `high`, `low`, or `high` in Plan, Execute, or Verify respectively, without reapplying those defaults on every turn within the same mode.  
 **Verifies via:** tests over mode-transition handlers and thinking-level updates.
 
-**AC-7: Custom compaction preserves workflow context across all modes**  
-Given Pi auto-compacts or the user triggers compaction, when the session resumes, then the summary preserves current mode, active plan artifact, relevant TODO context, and next intended action.  
+**AC-7: Custom compaction preserves workflow context across workflow modes**  
+Given Pi auto-compacts or the user triggers compaction while a workflow mode is active, when the session resumes, then the summary preserves current mode, active plan artifact, relevant TODO context, and next intended action.  
 **Verifies via:** `session_before_compact` tests that inspect generated summary/details per mode.
 
 **AC-8: TODO state remains tactical, not durable workflow truth**  
