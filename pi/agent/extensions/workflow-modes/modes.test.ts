@@ -14,7 +14,12 @@ test("buildModeContract for plan mode includes collaborative discovery and plan-
   assert.match(contract, /current mode: plan/i);
   assert.match(contract, /clarify ambiguous requests/i);
   assert.match(contract, /ask one focused question at a time/i);
+  assert.match(contract, /multiple-choice/i);
+  assert.match(contract, /purpose, constraints, and success criteria/i);
+  assert.match(contract, /2-3 approaches/i);
   assert.match(contract, /confirm the chosen direction/i);
+  assert.match(contract, /testable acceptance criteria/i);
+  assert.match(contract, /YAGNI/i);
   assert.match(contract, /write_plan/i);
   assert.match(contract, /edit_plan/i);
   assert.match(contract, /\.plans\//i);
