@@ -1,12 +1,27 @@
+import { truncateToWidth } from "@mariozechner/pi-tui";
 import type { WorkflowMode } from "./types.ts";
 
-export function renderWorkflowWidget(options: {
-  mode: WorkflowMode;
-  activePlanPath?: string;
-  focus?: string;
-}): string[] | undefined {
-  if (options.mode === "normal" || !options.activePlanPath) return undefined;
+const WIDGET_SEPARATOR = "─";
 
+const plainTheme = {
+  fg: (_color: string, text: string) => text,
+  bold: (text: string) => text,
+};
+
+type WidgetTheme = typeof plainTheme;
+
+export function renderWorkflowWidgetLines(
+  options: {
+    mode: WorkflowMode;
+    activePlanPath?: string;
+    focus?: string;
+  },
+  width: number,
+  theme: WidgetTheme = plainTheme,
+): string[] {
+  if (options.mode === "normal" || !options.activePlanPath) return [];
+
+  const safeWidth = Math.max(0, width);
   const focus = options.focus?.trim();
   const line = [
     "workflow",
@@ -17,7 +32,23 @@ export function renderWorkflowWidget(options: {
     .filter((value): value is string => Boolean(value))
     .join(" · ");
 
-  return [line];
+  return [
+    theme.fg("borderMuted", WIDGET_SEPARATOR.repeat(safeWidth)),
+    truncateToWidth(line, safeWidth),
+  ];
+}
+
+export function createWorkflowWidget(options: {
+  mode: WorkflowMode;
+  activePlanPath?: string;
+  focus?: string;
+}) {
+  return (_tui: unknown, theme: WidgetTheme) => ({
+    render(width: number) {
+      return renderWorkflowWidgetLines(options, width, theme);
+    },
+    invalidate() {},
+  });
 }
 
 function truncate(text: string, max: number): string {

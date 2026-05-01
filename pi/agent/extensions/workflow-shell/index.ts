@@ -25,7 +25,7 @@ import {
   getManagedToolNamesForMode,
   getThinkingLevelForMode,
 } from "./modes.ts";
-import { renderWorkflowWidget } from "./render.ts";
+import { createWorkflowWidget } from "./render.ts";
 import type { WorkflowMode } from "./types.ts";
 
 const WIDGET_KEY = "workflow-shell";
@@ -64,7 +64,7 @@ export function createWorkflowShellExtension(
 
     function setWorkflowWidget(
       ctx: ExtensionContext,
-      content: string[] | undefined,
+      content: ReturnType<typeof createWorkflowWidget> | undefined,
     ): void {
       const piAny = pi as any;
       if (piAny.hasUI && typeof piAny.setWidget === "function") {
@@ -80,17 +80,21 @@ export function createWorkflowShellExtension(
     function renderWidget(ctx: ExtensionContext): void {
       setWorkflowWidget(
         ctx,
-        renderWorkflowWidget({
-          mode: state.mode,
-          activePlanPath: state.activePlanPath,
-          focus:
-            state.focus ??
-            deriveNextAction({
-              focus: state.focus,
-              todos: extractTodoItemsFromBranch(ctx.sessionManager.getBranch()),
+        state.mode === "normal" || !state.activePlanPath
+          ? undefined
+          : createWorkflowWidget({
               mode: state.mode,
+              activePlanPath: state.activePlanPath,
+              focus:
+                state.focus ??
+                deriveNextAction({
+                  focus: state.focus,
+                  todos: extractTodoItemsFromBranch(
+                    ctx.sessionManager.getBranch(),
+                  ),
+                  mode: state.mode,
+                }),
             }),
-        }),
       );
     }
 

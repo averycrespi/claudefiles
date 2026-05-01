@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import workflowShell, { createWorkflowShellExtension } from "./index.ts";
 
+const identityTheme = {
+  fg: (_color: string, text: string) => text,
+  bold: (text: string) => text,
+};
+
 type CommandDef = {
   description?: string;
   handler: (args: string, ctx: ReturnType<typeof makeCtx>) => Promise<void>;
@@ -26,7 +31,11 @@ function makeCtx(options: {
   inputResponse?: string | undefined;
   confirmResponse?: boolean;
   notifications?: Array<{ msg: string; level: string }>;
-  widgetCalls?: Array<{ key: string; lines: string[] | undefined }>;
+  widgetCalls?: Array<{
+    key: string;
+    lines: string[] | undefined;
+    usedFactory?: boolean;
+  }>;
 }): any {
   return {
     hasUI: true,
@@ -56,8 +65,25 @@ function makeCtx(options: {
       },
       input: async () => options.inputResponse,
       confirm: async () => options.confirmResponse ?? true,
-      setWidget(key: string, content: string[] | undefined) {
-        options.widgetCalls?.push({ key, lines: content });
+      setWidget(
+        key: string,
+        content:
+          | string[]
+          | ((
+              tui: unknown,
+              theme: unknown,
+            ) => { render(width: number): string[] })
+          | undefined,
+      ) {
+        const usedFactory = typeof content === "function";
+        const lines = usedFactory
+          ? content({}, identityTheme).render(120)
+          : content;
+        options.widgetCalls?.push({
+          key,
+          lines,
+          ...(usedFactory ? { usedFactory } : {}),
+        });
       },
       setStatus: () => {},
       setWorkingMessage: () => {},
@@ -87,7 +113,11 @@ function makePi(cwd: string) {
   const commands = new Map<string, CommandDef>();
   const handlers = new Map<string, EventHandler>();
   const notifications: Array<{ msg: string; level: string }> = [];
-  const widgetCalls: Array<{ key: string; lines: string[] | undefined }> = [];
+  const widgetCalls: Array<{
+    key: string;
+    lines: string[] | undefined;
+    usedFactory?: boolean;
+  }> = [];
   const appendedEntries: Array<{ customType: string; data: unknown }> = [];
   const activeTools = [
     "read",
@@ -125,8 +155,25 @@ function makePi(cwd: string) {
       appendedEntries.push({ customType, data });
     },
     hasUI: true,
-    setWidget(key: string, content: string[] | undefined) {
-      widgetCalls.push({ key, lines: content });
+    setWidget(
+      key: string,
+      content:
+        | string[]
+        | ((
+            tui: unknown,
+            theme: unknown,
+          ) => { render(width: number): string[] })
+        | undefined,
+    ) {
+      const usedFactory = typeof content === "function";
+      const lines = usedFactory
+        ? content({}, identityTheme).render(120)
+        : content;
+      widgetCalls.push({
+        key,
+        lines,
+        ...(usedFactory ? { usedFactory } : {}),
+      });
     },
     getActiveTools() {
       return [...currentTools];
@@ -315,7 +362,7 @@ test("/normal restores baseline tools, hides the widget, and /execute reopens th
   assert.ok(
     pi._widgetCalls
       .at(-1)
-      ?.lines?.[0]?.includes(".plans/2026-04-30-refactor-auth-middleware.md"),
+      ?.lines?.[1]?.includes(".plans/2026-04-30-refactor-auth-middleware.md"),
   );
 
   await rm(cwd, { recursive: true, force: true });
