@@ -2,7 +2,7 @@
 
 This document covers multi-phase agent workflow design — the patterns deterministic orchestrators use to drive a sequence of LLM calls toward a complete artifact (a PR, a refactor, a migration). Single-agent harness patterns are in `platforms.md` and `models.md`; this document is about what happens between agents.
 
-The reference architecture is a code-orchestrated pipeline of fresh subagents with strict structured output at each phase boundary. The `autopilot` extension in this repo is one worked instance.
+The reference architecture is a code-orchestrated pipeline of fresh subagents with strict structured output at each phase boundary.
 
 ## The canonical phase sequence
 
@@ -42,7 +42,7 @@ What "threading AC through every phase" means concretely:
 
 Format: Gherkin (Given/When/Then) is the most common, but any structured `{id, criterion, verifies_via}` works. The `verifies_via` field is what makes the criterion testable rather than aspirational.
 
-The `autopilot` extension surfaces AC during brainstorming and persists them in an `## Acceptance Criteria` section in the design doc. Preflight rejects design docs without one.
+In this repo, the live `workflow-shell` brief format persists AC in a dedicated `## Acceptance Criteria` section, and the `workflow_brief` tool validates that the section exists before replacing the active brief.
 
 ## Localization
 
@@ -185,7 +185,7 @@ Do:
 
 ## The single richest source of patterns
 
-[`tmdgusya/roach-pi`](https://github.com/tmdgusya/roach-pi). Its `autonomous-dev` extension is the closest in shape to what an autopilot extended toward true ticket-to-PR would look like. Worth reading the whole `extensions/agentic-harness/` directory; in particular:
+[`tmdgusya/roach-pi`](https://github.com/tmdgusya/roach-pi). Its `autonomous-dev` extension is one of the closest open-source examples of a full ticket-to-PR Pi workflow. Worth reading the whole `extensions/agentic-harness/` directory; in particular:
 
 - `agents/plan-validator.md` — validator information barrier prompt.
 - `validator-template.ts` — code-built prompt construction.

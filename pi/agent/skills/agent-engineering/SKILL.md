@@ -17,7 +17,7 @@ harness = (what the model sees)  +  (what it can do)  +  (the loop around it)
 There are two design scopes, and they interleave:
 
 - **Single-agent harness.** One model, one loop. Decisions: tool surface, context strategy, system prompt, hooks, model+effort selection, retry behavior. Examples: Claude Code's main loop, Codex CLI, a one-shot SDK script.
-- **Workflow.** Multi-phase orchestration where deterministic code drives a sequence of LLM calls (often as fresh subagents). Decisions: phase boundaries, what crosses each boundary, verification shape, termination. Examples: the `autopilot` Pi extension, `roach-pi`'s `agentic-harness`, OpenAI's internal Codex pipeline.
+- **Workflow.** Multi-phase orchestration where deterministic code drives a sequence of LLM calls (often as fresh subagents). Decisions: phase boundaries, what crosses each boundary, verification shape, termination. Examples: `roach-pi`'s `agentic-harness`, OpenAI's internal Codex pipeline.
 
 A workflow is built out of harnesses. So the harness-level principles always apply; workflow-level principles add to them.
 
@@ -137,4 +137,6 @@ References cite primary sources where possible. When a claim has a known caveat 
 
 ## Local context
 
-The archived `autopilot` Pi extension in this repo (`pi/archive/extensions/autopilot/`) is a worked example of most of the principles above. The `.designs/2026-04-24-autopilot-sota-research.md` doc was the input that motivated this skill; this skill generalizes from autopilot's specific shape to the field as a whole.
+In this repo, `pi/agent/extensions/workflow-shell/` is the live example of lightweight workflow scaffolding (mode-gated tools, durable workflow briefs, compaction-aware state), and `pi/agent/extensions/subagents/` is the live example of read-only delegation.
+
+Historical material under `pi/archive/` can still be useful for archeology, but the live extension set reflects the current recommended conventions in this repo.
