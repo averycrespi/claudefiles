@@ -1,18 +1,18 @@
-# provider-usage
+# statusline
 
-Pi extension that displays provider rate-limit quota in the footer.
+Pi extension that renders a single-line footer with the current working directory, provider quota, context usage, model, and thinking level.
 
 ## Footer format
 
 ```
-Codex: 45% (20%) · resets in 2h 30m (3d 12h)
-Codex: limit reached · resets in 2h 30m
-Codex: $4.20 · resets in 1h 15m
+~/Workspace/agent-config · Codex 45% (20%) ↺2h/3d · ctx 42%/200k · gpt-5-codex · medium
+/repo · Codex limit ↺2h · ctx 92%/200k · gpt-5-codex · high
+/repo · Codex $4.20 ↺1h · ctx 18%/200k · gpt-5-codex · low
 ```
 
-Shows the current provider's short and weekly window usage as paired percentages and reset timers. When only one window is available, the format degrades gracefully to a single value. When the hard limit is reached, the reset timer is still shown so you know when quota returns. Credit-based plans show the balance instead of a percentage.
+Left-to-right priority is preserved when the terminal is narrow: cwd, then provider quota, then context, then model, then thinking. Quota percentages and context percentage are highlighted in warning/error colors above the configured thresholds.
 
-The footer updates on session start and after each turn, debounced to one API call per 60 seconds.
+The footer updates on session start, model changes, and after each turn. Provider usage fetching remains debounced to one API call per 60 seconds.
 
 ## Current providers
 
@@ -29,6 +29,7 @@ Each adapter handles provider detection (`handles`) and API-specific fetching (`
 ## File layout
 
 - `index.ts` — extension entry point, event wiring, and footer updates
+- `footer.ts` — single-line footer rendering and truncation rules
 - `codex.ts` — Codex provider adapter
 - `utils.ts` — `ProviderAdapter` interface, `UsageStats` type, and formatting helpers
 
