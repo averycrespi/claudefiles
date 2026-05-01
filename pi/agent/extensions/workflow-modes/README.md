@@ -1,6 +1,6 @@
-# workflow-shell
+# workflow-modes
 
-Pi extension that adds a lightweight workflow mode shell on top of the repo's existing tools.
+Pi extension that adds lightweight workflow modes on top of the repo's existing tools.
 
 ## What it does
 

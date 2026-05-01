@@ -42,7 +42,7 @@ test("resolvePlanPathArgument accepts direct paths and markdown links", () => {
 });
 
 test("ensureWorkflowBrief creates a dated .plans artifact and preserves existing content", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-shell-artifact-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-artifact-"));
 
   try {
     const firstPath = await ensureWorkflowBrief({

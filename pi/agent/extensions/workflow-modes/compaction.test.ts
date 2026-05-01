@@ -11,8 +11,8 @@ test("buildWorkflowCompactionSummary preserves mode, plan path, todo context, an
       { id: 1, text: "Run typecheck", status: "done" },
       { id: 2, text: "Investigate failing test", status: "in_progress" },
     ],
-    recentOutcome: "make test: 1 failure in workflow-shell/index.test.ts",
-    nextAction: "Fix the failing workflow-shell test",
+    recentOutcome: "make test: 1 failure in workflow-modes/index.test.ts",
+    nextAction: "Fix the failing workflow-modes test",
   });
 
   assert.match(summary, /Mode: verify/);
@@ -20,5 +20,5 @@ test("buildWorkflowCompactionSummary preserves mode, plan path, todo context, an
   assert.match(summary, /Goal: Refactor auth middleware/);
   assert.match(summary, /\[~\] Investigate failing test/);
   assert.match(summary, /Recent outcome: make test: 1 failure/);
-  assert.match(summary, /Next action: Fix the failing workflow-shell test/);
+  assert.match(summary, /Next action: Fix the failing workflow-modes test/);
 });

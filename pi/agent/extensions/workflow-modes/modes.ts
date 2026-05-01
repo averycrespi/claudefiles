@@ -62,11 +62,11 @@ export function buildModeContract(options: {
   activePlanPath: string;
 }): string {
   const shared = [
-    "## Workflow shell",
+    "## Workflow modes",
     `Current mode: ${options.mode}`,
     `Active plan artifact: ${options.activePlanPath}`,
     "Use the plan artifact as the durable source of truth and keep TODO state tactical.",
-    "The workflow shell applies tool and thinking defaults only on explicit mode transitions.",
+    "Workflow modes apply tool and thinking defaults only on explicit mode transitions.",
   ];
 
   if (options.mode === "plan") {

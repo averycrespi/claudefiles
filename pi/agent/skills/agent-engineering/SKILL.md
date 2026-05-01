@@ -137,6 +137,6 @@ References cite primary sources where possible. When a claim has a known caveat 
 
 ## Local context
 
-In this repo, `pi/agent/extensions/workflow-shell/` is the live example of lightweight workflow scaffolding (mode-gated tools, durable workflow briefs, compaction-aware state), and `pi/agent/extensions/subagents/` is the live example of read-only delegation.
+In this repo, `pi/agent/extensions/workflow-modes/` is the live example of lightweight workflow scaffolding (mode-gated tools, durable workflow briefs, compaction-aware state), and `pi/agent/extensions/subagents/` is the live example of read-only delegation.
 
 Historical material under `pi/archive/` can still be useful for archeology, but the live extension set reflects the current recommended conventions in this repo.

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import workflowShell, { createWorkflowShellExtension } from "./index.ts";
+import workflowModes, { createWorkflowModesExtension } from "./index.ts";
 
 const identityTheme = {
   fg: (_color: string, text: string) => text,
@@ -239,14 +239,14 @@ async function startSession(
   await handler({ type: "session_start", reason: "startup" }, pi._ctx(branch));
 }
 
-test("default export is the configurable workflow-shell extension", () => {
-  assert.equal(typeof workflowShell, "function");
+test("default export is the configurable workflow-modes extension", () => {
+  assert.equal(typeof workflowModes, "function");
 });
 
 test("/plan creates a workflow brief, switches tools/thinking, and injects the plan contract", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-shell-index-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-index-"));
   const pi = makePi(cwd);
-  createWorkflowShellExtension({
+  createWorkflowModesExtension({
     now: () => new Date("2026-04-30T12:00:00Z"),
   })(pi as any);
   await startSession(pi);
@@ -276,7 +276,7 @@ test("/plan creates a workflow brief, switches tools/thinking, and injects the p
   ]);
   assert.equal(pi._thinkingLevel(), "high");
   assert.deepEqual(pi._appendedEntries.at(-1), {
-    customType: "workflow-shell-state",
+    customType: "workflow-modes-state",
     data: {
       version: 1,
       activePlanPath: ".plans/2026-04-30-refactor-auth-middleware.md",
@@ -298,9 +298,9 @@ test("/plan creates a workflow brief, switches tools/thinking, and injects the p
 });
 
 test("re-entering the same mode does not reapply tools or thinking defaults", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-shell-reenter-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-reenter-"));
   const pi = makePi(cwd);
-  createWorkflowShellExtension({
+  createWorkflowModesExtension({
     now: () => new Date("2026-04-30T12:00:00Z"),
   })(pi as any);
   await startSession(pi);
@@ -322,9 +322,9 @@ test("re-entering the same mode does not reapply tools or thinking defaults", as
 });
 
 test("/normal restores baseline tools, hides the widget, and /execute reopens the active plan", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-shell-normal-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-normal-"));
   const pi = makePi(cwd);
-  createWorkflowShellExtension({
+  createWorkflowModesExtension({
     now: () => new Date("2026-04-30T12:00:00Z"),
   })(pi as any);
   await startSession(pi);
@@ -353,7 +353,7 @@ test("/normal restores baseline tools, hides the widget, and /execute reopens th
     "grep",
   ]);
   assert.deepEqual(pi._widgetCalls.at(-1), {
-    key: "workflow-shell",
+    key: "workflow-modes",
     lines: undefined,
   });
 
@@ -369,9 +369,9 @@ test("/normal restores baseline tools, hides the widget, and /execute reopens th
 });
 
 test("/plan with no active workflow prompts for context when needed", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-shell-input-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-input-"));
   const pi = makePi(cwd);
-  createWorkflowShellExtension({
+  createWorkflowModesExtension({
     now: () => new Date("2026-04-30T12:00:00Z"),
   })(pi as any);
   await startSession(pi);
@@ -389,10 +389,10 @@ test("/plan with no active workflow prompts for context when needed", async () =
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("verify mode keeps mcp_call available without workflow-shell filtering", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-shell-broker-"));
+test("verify mode keeps mcp_call available without workflow-modes filtering", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-broker-"));
   const pi = makePi(cwd);
-  createWorkflowShellExtension({
+  createWorkflowModesExtension({
     now: () => new Date("2026-04-30T12:00:00Z"),
   })(pi as any);
   await startSession(pi);
@@ -407,9 +407,9 @@ test("verify mode keeps mcp_call available without workflow-shell filtering", as
 });
 
 test("session_before_compact returns a workflow-aware summary while a mode is active", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-shell-compact-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-compact-"));
   const pi = makePi(cwd);
-  createWorkflowShellExtension({
+  createWorkflowModesExtension({
     now: () => new Date("2026-04-30T12:00:00Z"),
   })(pi as any);
   await startSession(pi);

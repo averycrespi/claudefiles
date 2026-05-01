@@ -28,10 +28,10 @@ import {
 import { createWorkflowWidget } from "./render.ts";
 import type { WorkflowMode } from "./types.ts";
 
-const WIDGET_KEY = "workflow-shell";
-const STATE_ENTRY_TYPE = "workflow-shell-state";
+const WIDGET_KEY = "workflow-modes";
+const STATE_ENTRY_TYPE = "workflow-modes-state";
 
-type WorkflowShellOptions = {
+type WorkflowModesOptions = {
   now?: () => Date;
 };
 
@@ -56,8 +56,8 @@ const WORKFLOW_BRIEF_PARAMS = Type.Object({
   }),
 });
 
-export function createWorkflowShellExtension(
-  options: WorkflowShellOptions = {},
+export function createWorkflowModesExtension(
+  options: WorkflowModesOptions = {},
 ) {
   return function (pi: ExtensionAPI) {
     const state: RuntimeState = { mode: "normal" };
@@ -141,7 +141,7 @@ export function createWorkflowShellExtension(
         persistActivePlanPath();
         if (ctx.hasUI) {
           ctx.ui.notify(
-            "workflow-shell: cleared missing active plan reference",
+            "workflow-modes: cleared missing active plan reference",
             "warning",
           );
         }
@@ -264,7 +264,7 @@ export function createWorkflowShellExtension(
             content: [
               {
                 type: "text" as const,
-                text: "workflow_brief: only available while the workflow shell is in Plan mode",
+                text: "workflow_brief: only available while workflow modes are in Plan mode",
               },
             ],
             details: {},
@@ -314,7 +314,7 @@ export function createWorkflowShellExtension(
     });
 
     pi.registerCommand("normal", {
-      description: "Exit workflow-shell mode and restore ordinary Pi behavior.",
+      description: "Exit workflow modes and restore ordinary Pi behavior.",
       handler: async (_args, ctx) => {
         captureBaselines();
         if (state.mode !== "normal") {
@@ -329,7 +329,7 @@ export function createWorkflowShellExtension(
 
     for (const mode of ["plan", "execute", "verify"] as const) {
       pi.registerCommand(mode, {
-        description: `Enter ${mode} mode for the workflow shell.`,
+        description: `Enter ${mode} mode for workflow modes.`,
         handler: async (args, ctx) => {
           await transitionToMode(mode, args, ctx);
         },
@@ -424,7 +424,7 @@ export function createWorkflowShellExtension(
           }),
           details: {
             version: 1,
-            workflowShell: {
+            workflowModes: {
               mode: state.mode,
               activePlanPath: state.activePlanPath,
               nextAction,
@@ -436,4 +436,4 @@ export function createWorkflowShellExtension(
   };
 }
 
-export default createWorkflowShellExtension();
+export default createWorkflowModesExtension();
