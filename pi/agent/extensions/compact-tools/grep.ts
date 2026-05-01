@@ -7,13 +7,13 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createGrepTool } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
 import {
   clearPartialTimer,
   countNonEmptyLines,
   firstLine,
   getRelativeLabel,
   getResultText,
+  getTruncatedText,
   partialElapsed,
   plural,
 } from "../_shared/render.ts";
@@ -46,25 +46,21 @@ export default function registerGrep(pi: ExtensionAPI) {
       const pattern = args?.pattern ?? "";
       const scope = getRelativeLabel(context.cwd, args?.path ?? ".");
       const globSuffix = args?.glob ? theme.fg("muted", ` (${args.glob})`) : "";
-      return new Text(
+      return getTruncatedText(context.lastComponent, [
         `${theme.fg("toolTitle", theme.bold("grep"))} ${theme.fg("accent", `/${pattern}/`)} ${theme.fg("muted", `in ${scope}`)}${globSuffix}`,
-        0,
-        0,
-      );
+      ]);
     },
 
     renderResult(result, { isPartial }, theme, context) {
       const pattern = context.args?.pattern ?? "pattern";
 
       if (isPartial) {
-        return new Text(
+        return getTruncatedText(context.lastComponent, [
           theme.fg(
             "warning",
             `Searching /${pattern}/...${partialElapsed(context)}`,
           ),
-          0,
-          0,
-        );
+        ]);
       }
 
       clearPartialTimer(context);
@@ -73,19 +69,21 @@ export default function registerGrep(pi: ExtensionAPI) {
 
       if (context.isError) {
         const message = firstLine(text) || `Error searching /${pattern}/`;
-        return new Text(theme.fg("error", message), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("error", message),
+        ]);
       }
 
       const count = countNonEmptyLines(text);
       if (count === 0) {
-        return new Text(theme.fg("muted", "no matches"), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("muted", "no matches"),
+        ]);
       }
 
-      return new Text(
+      return getTruncatedText(context.lastComponent, [
         theme.fg("muted", plural(count, "match", "matches")),
-        0,
-        0,
-      );
+      ]);
     },
   });
 }

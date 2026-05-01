@@ -8,11 +8,11 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createBashTool } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
 import {
   clearPartialTimer,
   firstLine,
   getResultText,
+  getTruncatedText,
   partialElapsed,
   singleLineCommand,
   tailNonEmptyLines,
@@ -44,27 +44,23 @@ export default function registerBash(pi: ExtensionAPI) {
       return getBashTool(ctx.cwd).execute(toolCallId, params, signal, onUpdate);
     },
 
-    renderCall(args, theme, _context) {
+    renderCall(args, theme, context) {
       const commandLabel = singleLineCommand(args?.command);
-      return new Text(
+      return getTruncatedText(context.lastComponent, [
         `${theme.fg("toolTitle", theme.bold("bash"))} ${theme.fg("accent", commandLabel)}`,
-        0,
-        0,
-      );
+      ]);
     },
 
     renderResult(result, { isPartial }, theme, context) {
       const commandLabel = singleLineCommand(context.args?.command);
 
       if (isPartial) {
-        return new Text(
+        return getTruncatedText(context.lastComponent, [
           theme.fg(
             "warning",
             `Running ${commandLabel}...${partialElapsed(context)}`,
           ),
-          0,
-          0,
-        );
+        ]);
       }
 
       clearPartialTimer(context);
@@ -73,16 +69,20 @@ export default function registerBash(pi: ExtensionAPI) {
 
       if (context.isError) {
         const message = firstLine(text) || `bash failed: ${commandLabel}`;
-        return new Text(theme.fg("error", message), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("error", message),
+        ]);
       }
 
       const tail = tailNonEmptyLines(text, TAIL_LINES);
       if (tail.length === 0) {
-        return new Text("", 0, 0);
+        return getTruncatedText(context.lastComponent, []);
       }
 
-      const rendered = tail.map((line) => theme.fg("muted", line)).join("\n");
-      return new Text(rendered, 0, 0);
+      return getTruncatedText(
+        context.lastComponent,
+        tail.map((line) => theme.fg("muted", line)),
+      );
     },
   });
 }

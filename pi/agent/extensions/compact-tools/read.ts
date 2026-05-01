@@ -7,12 +7,12 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createReadTool } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
 import {
   clearPartialTimer,
   firstLine,
   getRelativeLabel,
   getResultText,
+  getTruncatedText,
   partialElapsed,
 } from "../_shared/render.ts";
 
@@ -42,25 +42,21 @@ export default function registerRead(pi: ExtensionAPI) {
 
     renderCall(args, theme, context) {
       const fileLabel = getRelativeLabel(context.cwd, args.path);
-      return new Text(
+      return getTruncatedText(context.lastComponent, [
         `${theme.fg("toolTitle", theme.bold("read"))} ${theme.fg("accent", fileLabel)}`,
-        0,
-        0,
-      );
+      ]);
     },
 
     renderResult(result, { isPartial }, theme, context) {
       const fileLabel = getRelativeLabel(context.cwd, context.args?.path);
 
       if (isPartial) {
-        return new Text(
+        return getTruncatedText(context.lastComponent, [
           theme.fg(
             "warning",
             `Reading ${fileLabel}...${partialElapsed(context)}`,
           ),
-          0,
-          0,
-        );
+        ]);
       }
 
       clearPartialTimer(context);
@@ -68,10 +64,12 @@ export default function registerRead(pi: ExtensionAPI) {
       if (context.isError) {
         const message =
           firstLine(getResultText(result)) || `Error reading ${fileLabel}`;
-        return new Text(theme.fg("error", message), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("error", message),
+        ]);
       }
 
-      return new Text("", 0, 0);
+      return getTruncatedText(context.lastComponent, []);
     },
   });
 }

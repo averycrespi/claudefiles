@@ -12,6 +12,7 @@
  */
 
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
+import { truncateToWidth, type Component } from "@mariozechner/pi-tui";
 import { isAbsolute, relative, resolve } from "node:path";
 
 /**
@@ -204,4 +205,58 @@ export function partialElapsed(context: PartialTimerContext): string {
   const elapsedMs = Date.now() - (state.startedAt as number);
   if (elapsedMs < ELAPSED_THRESHOLD_MS) return "";
   return ` (${formatDuration(elapsedMs)})`;
+}
+
+/**
+ * Width-aware text component for compact tool renderers that must stay
+ * on the same logical lines regardless of terminal width. Each stored
+ * line is independently truncated at render time instead of wrapped.
+ */
+export class TruncatedText implements Component {
+  private lines: string[];
+  private cachedWidth?: number;
+  private cachedLines?: string[];
+
+  constructor(lines: string[] = []) {
+    this.lines = lines;
+  }
+
+  setLines(lines: string[]): void {
+    this.lines = lines;
+    this.cachedWidth = undefined;
+    this.cachedLines = undefined;
+  }
+
+  invalidate(): void {
+    this.cachedWidth = undefined;
+    this.cachedLines = undefined;
+  }
+
+  render(width: number): string[] {
+    if (this.cachedLines && this.cachedWidth === width) {
+      return this.cachedLines;
+    }
+
+    const safeWidth = Math.max(0, width);
+    const rendered = this.lines.map((line) => truncateToWidth(line, safeWidth));
+    this.cachedWidth = width;
+    this.cachedLines = rendered;
+    return rendered;
+  }
+}
+
+/**
+ * Reuse a prior compact renderer component when possible, updating its
+ * logical lines so truncation recomputes against the current width.
+ */
+export function getTruncatedText(
+  lastComponent: unknown,
+  lines: string[],
+): TruncatedText {
+  const text =
+    lastComponent instanceof TruncatedText
+      ? lastComponent
+      : new TruncatedText();
+  text.setLines(lines);
+  return text;
 }
