@@ -13,21 +13,19 @@ type WidgetTheme = typeof plainTheme;
 export function renderWorkflowWidgetLines(
   options: {
     mode: WorkflowMode;
-    activePlanPath?: string;
-    focus?: string;
+    nextAction?: string;
   },
   width: number,
   theme: WidgetTheme = plainTheme,
 ): string[] {
-  if (options.mode === "normal" || !options.activePlanPath) return [];
+  if (options.mode === "normal") return [];
 
   const safeWidth = Math.max(0, width);
-  const focus = options.focus?.trim();
+  const nextAction = options.nextAction?.trim();
   const line = [
     "workflow",
     options.mode,
-    options.activePlanPath,
-    focus && focus.length > 0 ? truncate(focus, 60) : undefined,
+    nextAction && nextAction.length > 0 ? truncate(nextAction, 60) : undefined,
   ]
     .filter((value): value is string => Boolean(value))
     .join(" · ");
@@ -40,8 +38,7 @@ export function renderWorkflowWidgetLines(
 
 export function createWorkflowWidget(options: {
   mode: WorkflowMode;
-  activePlanPath?: string;
-  focus?: string;
+  nextAction?: string;
 }) {
   return (_tui: unknown, theme: WidgetTheme) => ({
     render(width: number) {

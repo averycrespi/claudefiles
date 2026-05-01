@@ -1,143 +1,118 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
-import type { WorkflowMode } from "./types.ts";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
-const REQUIRED_SECTIONS = [
-  "## Goal",
-  "## Constraints",
-  "## Acceptance Criteria",
-  "## Chosen Approach",
-  "## Assumptions / Open Questions",
-  "## Ordered Tasks",
-  "## Verification Checklist",
-  "## Known Issues / Follow-ups",
-] as const;
+export type ExactTextEdit = {
+  oldText: string;
+  newText: string;
+};
 
-export function buildWorkflowBriefTemplate(options: {
-  context: string;
-  mode: WorkflowMode;
-}): string {
-  const context = options.context.trim() || "TBD";
-  const seedQuestion =
-    options.mode === "plan"
-      ? "- Confirm any missing constraints before finalizing the brief."
-      : `- Entered directly in ${options.mode} mode; refine the brief if important context is still missing.`;
-
-  return [
-    "# Workflow Brief",
-    "",
-    "## Goal",
-    context,
-    "",
-    "## Constraints",
-    "- (none yet)",
-    "",
-    "## Acceptance Criteria",
-    "- (to be defined)",
-    "",
-    "## Chosen Approach",
-    "TBD",
-    "",
-    "## Assumptions / Open Questions",
-    seedQuestion,
-    "",
-    "## Ordered Tasks",
-    "1. Triage and refine the workflow brief.",
-    "2. Implement the chosen approach.",
-    "3. Verify the outcome against the acceptance criteria.",
-    "",
-    "## Verification Checklist",
-    "- Identify the deterministic checks to run.",
-    "",
-    "## Known Issues / Follow-ups",
-    "- (none yet)",
-    "",
-  ].join("\n");
-}
-
-export function resolvePlanPathArgument(
-  input: string,
+export function resolvePlanFilePath(
   cwd: string,
-): string | undefined {
-  const trimmed = input.trim();
-  if (!trimmed) return undefined;
-
-  const markdownMatch = trimmed.match(/\(([^)]+\.md)\)/);
-  const rawPath =
-    markdownMatch?.[1] ?? (looksLikePlanPath(trimmed) ? trimmed : undefined);
-  if (!rawPath) return undefined;
-
-  return resolve(cwd, rawPath);
-}
-
-export function buildPlanPath(context: string, now: Date): string {
-  const date = now.toISOString().slice(0, 10);
-  const slug = slugify(context) || "workflow";
-  return `.plans/${date}-${slug}.md`;
-}
-
-export async function ensureWorkflowBrief(options: {
-  cwd: string;
-  context: string;
-  mode: WorkflowMode;
-  now: Date;
-}): Promise<string> {
-  const planPath = buildPlanPath(options.context, options.now);
-  const absolutePath = resolve(options.cwd, planPath);
-
-  try {
-    await stat(absolutePath);
-    return planPath;
-  } catch {
-    await mkdir(dirname(absolutePath), { recursive: true });
-    await writeFile(
-      absolutePath,
-      buildWorkflowBriefTemplate({
-        context: options.context,
-        mode: options.mode,
-      }),
-      "utf8",
-    );
-    return planPath;
+  inputPath: string,
+):
+  | {
+      ok: true;
+      absolutePath: string;
+      displayPath: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    } {
+  const trimmed = inputPath.trim();
+  if (!trimmed) {
+    return { ok: false, error: "path is required" };
   }
-}
 
-export async function readWorkflowBrief(
-  cwd: string,
-  planPath: string,
-): Promise<string> {
-  return await readFile(resolve(cwd, planPath), "utf8");
-}
-
-export function validateWorkflowBrief(content: string): {
-  valid: boolean;
-  missingSections: string[];
-} {
-  const missingSections = REQUIRED_SECTIONS.filter(
-    (section) => !content.includes(section),
+  const plansRoot = resolve(cwd, ".plans");
+  const absolutePath = resolve(
+    trimmed.startsWith(`.plans${sep}`) ||
+      trimmed === ".plans" ||
+      isAbsolute(trimmed)
+      ? cwd
+      : plansRoot,
+    trimmed,
   );
-  return { valid: missingSections.length === 0, missingSections };
+
+  if (!absolutePath.endsWith(".md")) {
+    return {
+      ok: false,
+      error: "path must target a markdown file under .plans/",
+    };
+  }
+
+  if (!isWithin(plansRoot, absolutePath)) {
+    return {
+      ok: false,
+      error: "path must stay within .plans/ at the repo root",
+    };
+  }
+
+  return {
+    ok: true,
+    absolutePath,
+    displayPath: relative(cwd, absolutePath),
+  };
 }
 
-export function extractPlanGoal(content: string): string | undefined {
-  const match = content.match(/## Goal\n([\s\S]*?)(?:\n## |$)/);
-  const goal = match?.[1]?.trim();
-  return goal && goal.length > 0 ? goal.split("\n")[0]?.trim() : undefined;
+export function applyExactTextEdits(
+  originalContent: string,
+  edits: ExactTextEdit[],
+):
+  | {
+      ok: true;
+      content: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    } {
+  const ranges: Array<{ start: number; end: number; newText: string }> = [];
+
+  for (const edit of edits) {
+    if (edit.oldText.length === 0) {
+      return { ok: false, error: "oldText must not be empty" };
+    }
+    const start = originalContent.indexOf(edit.oldText);
+    if (start === -1) {
+      return {
+        ok: false,
+        error: `oldText must match exactly once: ${JSON.stringify(edit.oldText)}`,
+      };
+    }
+    const nextMatch = originalContent.indexOf(edit.oldText, start + 1);
+    if (nextMatch !== -1) {
+      return {
+        ok: false,
+        error: `oldText must match exactly once: ${JSON.stringify(edit.oldText)}`,
+      };
+    }
+    ranges.push({
+      start,
+      end: start + edit.oldText.length,
+      newText: edit.newText,
+    });
+  }
+
+  ranges.sort((a, b) => a.start - b.start);
+  for (let index = 1; index < ranges.length; index++) {
+    const previous = ranges[index - 1]!;
+    const current = ranges[index]!;
+    if (current.start < previous.end) {
+      return {
+        ok: false,
+        error: "edits must not overlap in the original file",
+      };
+    }
+  }
+
+  let content = originalContent;
+  for (const range of [...ranges].reverse()) {
+    content =
+      content.slice(0, range.start) + range.newText + content.slice(range.end);
+  }
+  return { ok: true, content };
 }
 
-export function toStoredPlanPath(cwd: string, absolutePath: string): string {
-  const rel = relative(cwd, absolutePath);
-  return rel.length > 0 && !rel.startsWith("..") ? rel : absolutePath;
-}
-
-function looksLikePlanPath(value: string): boolean {
-  return /(?:^|\/).*\.md$/.test(value);
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
+function isWithin(parent: string, child: string): boolean {
+  return child === parent || child.startsWith(`${parent}${sep}`);
 }

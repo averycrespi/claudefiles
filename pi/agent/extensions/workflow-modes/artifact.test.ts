@@ -1,75 +1,48 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import {
-  buildWorkflowBriefTemplate,
-  ensureWorkflowBrief,
-  resolvePlanPathArgument,
-} from "./artifact.ts";
+import { applyExactTextEdits, resolvePlanFilePath } from "./artifact.ts";
 
-test("buildWorkflowBriefTemplate includes the required sections and seeds the goal", () => {
-  const template = buildWorkflowBriefTemplate({
-    context: "Refactor auth middleware",
-    mode: "plan",
-  });
-
-  assert.match(template, /^# Workflow Brief/m);
-  assert.match(template, /^## Goal$/m);
-  assert.match(template, /^## Constraints$/m);
-  assert.match(template, /^## Acceptance Criteria$/m);
-  assert.match(template, /^## Chosen Approach$/m);
-  assert.match(template, /^## Assumptions \/ Open Questions$/m);
-  assert.match(template, /^## Ordered Tasks$/m);
-  assert.match(template, /^## Verification Checklist$/m);
-  assert.match(template, /^## Known Issues \/ Follow-ups$/m);
-  assert.match(template, /Refactor auth middleware/);
-});
-
-test("resolvePlanPathArgument accepts direct paths and markdown links", () => {
+test("resolvePlanFilePath scopes bare filenames and explicit .plans paths into repo-root .plans", () => {
   const cwd = "/repo";
 
-  assert.equal(
-    resolvePlanPathArgument(".plans/2026-04-30-auth.md", cwd),
-    "/repo/.plans/2026-04-30-auth.md",
-  );
-  assert.equal(
-    resolvePlanPathArgument("[workflow](.plans/2026-04-30-auth.md)", cwd),
-    "/repo/.plans/2026-04-30-auth.md",
-  );
-  assert.equal(resolvePlanPathArgument("Refactor auth", cwd), undefined);
+  assert.deepEqual(resolvePlanFilePath(cwd, "auth.md"), {
+    ok: true,
+    absolutePath: "/repo/.plans/auth.md",
+    displayPath: ".plans/auth.md",
+  });
+  assert.deepEqual(resolvePlanFilePath(cwd, ".plans/nested/auth.md"), {
+    ok: true,
+    absolutePath: "/repo/.plans/nested/auth.md",
+    displayPath: ".plans/nested/auth.md",
+  });
 });
 
-test("ensureWorkflowBrief creates a dated .plans artifact and preserves existing content", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-artifact-"));
+test("resolvePlanFilePath rejects paths outside .plans and non-markdown targets", () => {
+  const cwd = "/repo";
 
-  try {
-    const firstPath = await ensureWorkflowBrief({
-      cwd,
-      context: "Refactor auth middleware",
-      mode: "plan",
-      now: new Date("2026-04-30T12:00:00Z"),
-    });
+  assert.equal(resolvePlanFilePath(cwd, "../README.md").ok, false);
+  assert.equal(resolvePlanFilePath(cwd, "notes.txt").ok, false);
+});
 
-    assert.equal(firstPath, ".plans/2026-04-30-refactor-auth-middleware.md");
-    const absolute = join(cwd, firstPath);
-    const firstContent = await readFile(absolute, "utf8");
-    assert.match(firstContent, /Refactor auth middleware/);
+test("applyExactTextEdits applies multiple disjoint replacements against the original content", () => {
+  const result = applyExactTextEdits("alpha\nbeta\ngamma\n", [
+    { oldText: "alpha", newText: "one" },
+    { oldText: "gamma", newText: "three" },
+  ]);
 
-    await writeFile(absolute, "# Workflow Brief\n\ncustom\n", "utf8");
+  assert.deepEqual(result, {
+    ok: true,
+    content: "one\nbeta\nthree\n",
+  });
+});
 
-    const secondPath = await ensureWorkflowBrief({
-      cwd,
-      context: "Refactor auth middleware",
-      mode: "plan",
-      now: new Date("2026-04-30T12:00:00Z"),
-    });
-    const secondContent = await readFile(absolute, "utf8");
+test("applyExactTextEdits rejects non-unique matches", () => {
+  const result = applyExactTextEdits("alpha\nbeta\nalpha\n", [
+    { oldText: "alpha", newText: "one" },
+  ]);
 
-    assert.equal(secondPath, firstPath);
-    assert.equal(secondContent, "# Workflow Brief\n\ncustom\n");
-  } finally {
-    await rm(cwd, { recursive: true, force: true });
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.match(result.error, /must match exactly once/i);
   }
 });

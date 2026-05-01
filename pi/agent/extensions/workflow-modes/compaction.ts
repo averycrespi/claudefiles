@@ -2,31 +2,16 @@ import type { TodoItem, TodoStatus, WorkflowMode } from "./types.ts";
 
 export function buildWorkflowCompactionSummary(options: {
   mode: Exclude<WorkflowMode, "normal">;
-  activePlanPath: string;
-  planGoal?: string;
   todos: TodoItem[];
-  recentOutcome?: string;
   nextAction?: string;
 }): string {
-  const lines = [
-    "Workflow shell checkpoint",
-    `Mode: ${options.mode}`,
-    `Active plan: ${options.activePlanPath}`,
-  ];
-
-  if (options.planGoal) {
-    lines.push(`Goal: ${options.planGoal}`);
-  }
+  const lines = ["Workflow shell checkpoint", `Mode: ${options.mode}`];
 
   if (options.todos.length > 0) {
     lines.push("TODOs:");
     for (const todo of options.todos) {
       lines.push(`- ${formatTodo(todo)}`);
     }
-  }
-
-  if (options.recentOutcome) {
-    lines.push(`Recent outcome: ${options.recentOutcome}`);
   }
 
   if (options.nextAction) {
@@ -64,7 +49,6 @@ export function extractTodoItemsFromBranch(
 }
 
 export function deriveNextAction(options: {
-  focus?: string;
   todos: TodoItem[];
   mode: WorkflowMode;
 }): string | undefined {
@@ -72,30 +56,11 @@ export function deriveNextAction(options: {
     (item) => item.status === "in_progress" || item.status === "todo",
   );
   if (activeTodo) return activeTodo.text;
-  if (options.focus?.trim()) return options.focus.trim();
-  if (options.mode === "plan") return "Refine the workflow brief.";
+  if (options.mode === "plan") return "Start or refine the plan in .plans/.";
   if (options.mode === "execute")
-    return "Continue implementing the active workflow.";
+    return "Continue implementing the current workflow.";
   if (options.mode === "verify")
     return "Run or review the next verification step.";
-  return undefined;
-}
-
-export function summarizeToolResultText(content: unknown): string | undefined {
-  if (typeof content === "string") {
-    return firstLine(content);
-  }
-  if (!Array.isArray(content)) return undefined;
-  for (const block of content) {
-    if (
-      block &&
-      typeof block === "object" &&
-      (block as { type?: unknown }).type === "text" &&
-      typeof (block as { text?: unknown }).text === "string"
-    ) {
-      return firstLine((block as { text: string }).text);
-    }
-  }
   return undefined;
 }
 
@@ -146,11 +111,4 @@ function formatTodo(item: TodoItem): string {
           ? "[!]"
           : "[ ]";
   return `${marker} ${item.text}`;
-}
-
-function firstLine(text: string): string | undefined {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line.length > 0);
 }

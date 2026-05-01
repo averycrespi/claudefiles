@@ -17,17 +17,9 @@ const fakeTheme = {
   },
 };
 
-test("renderWorkflowWidgetLines returns an empty list in normal mode or without a plan", () => {
+test("renderWorkflowWidgetLines returns an empty list in normal mode", () => {
   assert.deepEqual(
-    renderWorkflowWidgetLines(
-      { mode: "normal", activePlanPath: ".plans/x.md" },
-      24,
-      fakeTheme as any,
-    ),
-    [],
-  );
-  assert.deepEqual(
-    renderWorkflowWidgetLines({ mode: "plan" }, 24, fakeTheme as any),
+    renderWorkflowWidgetLines({ mode: "normal" }, 24, fakeTheme as any),
     [],
   );
 });
@@ -36,8 +28,7 @@ test("renderWorkflowWidgetLines adds a full-width separator above the workflow l
   const lines = renderWorkflowWidgetLines(
     {
       mode: "execute",
-      activePlanPath: ".plans/2026-04-30-auth.md",
-      focus: "wire auth middleware",
+      nextAction: "wire auth middleware",
     },
     16,
     fakeTheme as any,
@@ -48,19 +39,18 @@ test("renderWorkflowWidgetLines adds a full-width separator above the workflow l
   assert.ok(visibleWidth(lines[1]!) <= 16);
 });
 
-test("renderWorkflowWidgetLines respects width and includes the workflow context", () => {
+test("renderWorkflowWidgetLines respects width and includes the mode and next action", () => {
   const lines = renderWorkflowWidgetLines(
     {
       mode: "verify",
-      activePlanPath: ".plans/2026-04-30-auth.md",
-      focus: "tests passing, typecheck failing",
+      nextAction: "tests passing, typecheck failing",
     },
     80,
     fakeTheme as any,
   );
 
   assert.equal(lines.length, 2);
-  assert.match(lines[1]!, /workflow · verify · \.plans\/2026-04-30-auth\.md/);
+  assert.match(lines[1]!, /workflow · verify/);
   assert.match(lines[1]!, /tests passing, typecheck failing/);
   for (const line of lines) {
     assert.ok(visibleWidth(line) <= 80, `line should fit width: ${line}`);

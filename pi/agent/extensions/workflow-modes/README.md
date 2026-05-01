@@ -5,27 +5,27 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 ## What it does
 
 - registers `/normal`, `/plan`, `/execute`, and `/verify` commands
-- tracks one active workflow brief at a time in `.plans/YYYY-MM-DD-<slug>.md`
-- persists the active plan path in session state so later sessions can reopen the same workflow
 - switches tool access only on explicit mode transitions
 - applies per-mode thinking defaults only on explicit mode transitions
 - shows a small sticky widget above the editor while Plan, Execute, or Verify mode is active
 - injects a stable mode-specific contract into `before_agent_start`
-- provides a Plan-mode-only `workflow_brief` tool for replacing the active workflow brief
-- builds a custom compaction summary so long-running workflow sessions keep their mode, plan, TODO context, and next action
+- immediately sends a kickoff user message on `/plan`, `/execute`, and `/verify` so the agent starts in the new mode
+- provides Plan-mode-only `write_plan` and `edit_plan` tools scoped to `.plans/` at the repo root
+- builds a custom compaction summary so long-running workflow sessions keep their mode and TODO context
 - currently leaves `mcp_call` available in Plan and Verify mode; read-only broker filtering is deferred to a later revision
 
 ## Modes
 
 ### Normal
 
-Restores the session's baseline tool set and baseline thinking level. No workflow widget or workflow prompt contract is active.
+Restores the session's baseline tool set and baseline thinking level. No workflow widget or workflow prompt contract is active, and `/normal` does not send a kickoff message.
 
 ### Plan
 
-- intended for clarification, repo reading, approach comparison, and workflow-brief authoring
-- uses read-oriented tools plus `workflow_brief`
+- intended for clarification, repo reading, approach comparison, and plan authoring
+- uses read-oriented tools plus `write_plan` and `edit_plan`
 - defaults thinking to `high`
+- expects plan files to live under `.plans/` at the repo root
 
 ### Execute
 
@@ -40,11 +40,11 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - stays read-mostly
 - defaults thinking to `high`
 
-## Workflow brief
+## Plan files
 
-The durable artifact lives in `.plans/` and uses one combined brief rather than separate design and execution documents.
+Plan files are ordinary markdown files stored under `.plans/` in the repo root.
 
-Expected sections:
+The Plan-mode contract tells the agent to usually include sections like:
 
 - `## Goal`
 - `## Constraints`
@@ -55,34 +55,31 @@ Expected sections:
 - `## Verification Checklist`
 - `## Known Issues / Follow-ups`
 
-`workflow_brief` validates these sections before replacing the active file.
+`write_plan` creates or replaces `.plans` files. `edit_plan` applies exact text replacements to existing `.plans` files.
 
 ## Command behavior
 
-- `/plan [context]` creates, resumes, or reopens a workflow brief
-- `/execute [context]` resumes or creates a workflow and enters implementation mode
-- `/verify [context]` resumes or creates a workflow and enters verification mode
-- `/normal` exits workflow mode but keeps the persisted active plan path so the workflow can be resumed later
+- `/plan [context]` enters Plan mode and immediately starts the planning process with the provided context
+- `/execute [context]` enters Execute mode and immediately starts implementation with the provided context
+- `/verify [context]` enters Verify mode and immediately starts verification with the provided context
+- `/normal` exits workflow mode and restores ordinary Pi behavior
 
-If no active workflow exists and a mode command is run without arguments, the extension prompts for workflow context or a `.plans/...md` path.
+The extension does not pre-create or preselect a workflow brief. Slash-command arguments are passed through to the agent, which decides whether to read, create, or refine plan files.
 
 ## Persistence and compaction
 
-The extension persists only the active plan path via a custom session entry. New or restored sessions start in Normal mode.
+Workflow mode itself is in-memory session state. New or restored sessions start in Normal mode.
 
-During compaction, the extension summarizes the active workflow from durable state instead of relying on raw conversation history. The summary preserves:
+During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. The summary preserves:
 
 - current mode
-- active plan path
-- plan goal when available
 - tactical TODO state
-- recent tool outcome when useful
 - next intended action
 
 ## File layout
 
-- `index.ts` — commands, event hooks, tool gating, and state persistence
-- `artifact.ts` — workflow-brief creation, loading, parsing, and validation
+- `index.ts` — commands, event hooks, tool gating, and plan-scoped tools
+- `artifact.ts` — `.plans/` path validation and exact-text edit helpers
 - `modes.ts` — tool sets, mode contracts, and thinking defaults
 - `compaction.ts` — workflow-aware compaction summary helpers
 - `render.ts` — sticky widget rendering

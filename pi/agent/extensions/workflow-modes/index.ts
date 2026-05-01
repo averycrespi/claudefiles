@@ -1,24 +1,15 @@
-import { stat, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import {
-  buildWorkflowBriefTemplate,
-  ensureWorkflowBrief,
-  extractPlanGoal,
-  readWorkflowBrief,
-  resolvePlanPathArgument,
-  toStoredPlanPath,
-  validateWorkflowBrief,
-} from "./artifact.ts";
+import { applyExactTextEdits, resolvePlanFilePath } from "./artifact.ts";
 import {
   buildWorkflowCompactionSummary,
   deriveNextAction,
   extractTodoItemsFromBranch,
-  summarizeToolResultText,
 } from "./compaction.ts";
 import {
   buildModeContract,
@@ -29,36 +20,43 @@ import { createWorkflowWidget } from "./render.ts";
 import type { WorkflowMode } from "./types.ts";
 
 const WIDGET_KEY = "workflow-modes";
-const STATE_ENTRY_TYPE = "workflow-modes-state";
-
-type WorkflowModesOptions = {
-  now?: () => Date;
-};
-
-type PersistedState = {
-  version: 1;
-  activePlanPath: string | null;
-};
 
 type RuntimeState = {
   mode: WorkflowMode;
-  activePlanPath?: string;
-  focus?: string;
-  lastOutcome?: string;
   baselineTools?: string[];
   baselineThinking?: string;
 };
 
-const WORKFLOW_BRIEF_PARAMS = Type.Object({
-  content: Type.String({
+const WRITE_PLAN_PARAMS = Type.Object({
+  path: Type.String({
     description:
-      "Full markdown content for the active .plans/... workflow brief. Read the current file first, then replace it with the updated brief.",
+      "Markdown file path scoped to the repo-root .plans/ directory. Bare filenames are written under .plans/.",
+  }),
+  content: Type.String({
+    description: "Full markdown content to write to the selected .plans file.",
   }),
 });
 
-export function createWorkflowModesExtension(
-  options: WorkflowModesOptions = {},
-) {
+const EDIT_PLAN_PARAMS = Type.Object({
+  path: Type.String({
+    description:
+      "Markdown file path scoped to the repo-root .plans/ directory. Bare filenames are resolved under .plans/.",
+  }),
+  edits: Type.Array(
+    Type.Object({
+      oldText: Type.String({
+        description:
+          "Exact text that must match a unique, non-overlapping region of the original plan file.",
+      }),
+      newText: Type.String({
+        description: "Replacement text for the matched region.",
+      }),
+    }),
+    { minItems: 1 },
+  ),
+});
+
+export function createWorkflowModesExtension() {
   return function (pi: ExtensionAPI) {
     const state: RuntimeState = { mode: "normal" };
 
@@ -80,20 +78,16 @@ export function createWorkflowModesExtension(
     function renderWidget(ctx: ExtensionContext): void {
       setWorkflowWidget(
         ctx,
-        state.mode === "normal" || !state.activePlanPath
+        state.mode === "normal"
           ? undefined
           : createWorkflowWidget({
               mode: state.mode,
-              activePlanPath: state.activePlanPath,
-              focus:
-                state.focus ??
-                deriveNextAction({
-                  focus: state.focus,
-                  todos: extractTodoItemsFromBranch(
-                    ctx.sessionManager.getBranch(),
-                  ),
-                  mode: state.mode,
-                }),
+              nextAction: deriveNextAction({
+                todos: extractTodoItemsFromBranch(
+                  ctx.sessionManager.getBranch(),
+                ),
+                mode: state.mode,
+              }),
             }),
       );
     }
@@ -104,47 +98,6 @@ export function createWorkflowModesExtension(
       }
       if (!state.baselineThinking) {
         state.baselineThinking = `${pi.getThinkingLevel()}`;
-      }
-    }
-
-    function persistActivePlanPath(): void {
-      pi.appendEntry<PersistedState>(STATE_ENTRY_TYPE, {
-        version: 1,
-        activePlanPath: state.activePlanPath ?? null,
-      });
-    }
-
-    function restorePersistedState(ctx: ExtensionContext): void {
-      let restored: string | undefined;
-      for (const entry of ctx.sessionManager.getBranch()) {
-        if (!entry || typeof entry !== "object") continue;
-        if (
-          (entry as { type?: unknown }).type === "custom" &&
-          (entry as { customType?: unknown }).customType === STATE_ENTRY_TYPE
-        ) {
-          const data = (entry as { data?: PersistedState }).data;
-          if (!data || data.version !== 1) continue;
-          restored = data.activePlanPath ?? undefined;
-        }
-      }
-      state.activePlanPath = restored;
-    }
-
-    async function validateActivePlanPath(
-      ctx: ExtensionContext,
-    ): Promise<void> {
-      if (!state.activePlanPath) return;
-      try {
-        await stat(resolve(ctx.cwd, state.activePlanPath));
-      } catch {
-        state.activePlanPath = undefined;
-        persistActivePlanPath();
-        if (ctx.hasUI) {
-          ctx.ui.notify(
-            "workflow-modes: cleared missing active plan reference",
-            "warning",
-          );
-        }
       }
     }
 
@@ -169,67 +122,49 @@ export function createWorkflowModesExtension(
       }
     }
 
-    async function ensureReadablePlanPath(
-      cwd: string,
-      planPath: string,
-    ): Promise<string> {
-      await readWorkflowBrief(cwd, planPath);
-      return planPath;
+    function buildKickoffMessage(
+      mode: Exclude<WorkflowMode, "normal">,
+      args: string,
+    ): string {
+      const lines = [`You are now in ${capitalize(mode)} mode.`];
+      const trimmedArgs = args.trim();
+
+      if (trimmedArgs) {
+        lines.push(`User context from /${mode}:\n${trimmedArgs}`);
+      } else {
+        lines.push(
+          "No additional command arguments were provided. Use the current conversation and repo context to get started.",
+        );
+      }
+
+      if (mode === "plan") {
+        lines.push(
+          "Start planning now. Read relevant repo context, clarify what matters, and create or refine .plans/*.md files only when you have enough information.",
+        );
+      } else if (mode === "execute") {
+        lines.push(
+          "Start implementing now. Use the available conversation context and any relevant .plans/*.md files you discover or that the user referenced.",
+        );
+      } else {
+        lines.push(
+          "Start verification now. Run deterministic checks first and review the current work against the available conversation context and any relevant .plans/*.md files.",
+        );
+      }
+
+      return lines.join("\n\n");
     }
 
-    async function resolveCommandPlanPath(
+    function sendKickoffMessage(
       mode: Exclude<WorkflowMode, "normal">,
       args: string,
       ctx: ExtensionContext,
-    ): Promise<{ planPath?: string; focus?: string }> {
-      let raw = args.trim();
-      if (!raw) {
-        if (state.activePlanPath) {
-          await ensureReadablePlanPath(ctx.cwd, state.activePlanPath);
-          return { planPath: state.activePlanPath };
-        }
-        if (!ctx.hasUI) {
-          ctx.ui.notify(
-            `/${mode}: provide workflow context or a .plans path when no workflow is active`,
-            "warning",
-          );
-          return {};
-        }
-        raw =
-          (
-            await ctx.ui.input(
-              `/${mode}`,
-              "Describe the workflow or enter a .plans/... path",
-            )
-          )?.trim() ?? "";
-        if (!raw) return {};
+    ): void {
+      const message = buildKickoffMessage(mode, args);
+      if (ctx.isIdle()) {
+        pi.sendUserMessage(message);
+        return;
       }
-
-      const explicitPath = resolvePlanPathArgument(raw, ctx.cwd);
-      if (explicitPath) {
-        const planPath = toStoredPlanPath(ctx.cwd, explicitPath);
-        await ensureReadablePlanPath(ctx.cwd, planPath);
-        return { planPath };
-      }
-
-      if (state.activePlanPath && ctx.hasUI && args.trim().length > 0) {
-        const reuse = await ctx.ui.confirm(
-          `Reuse ${state.activePlanPath}?`,
-          `Use the active workflow for this ${mode} request?`,
-        );
-        if (reuse) {
-          await ensureReadablePlanPath(ctx.cwd, state.activePlanPath);
-          return { planPath: state.activePlanPath, focus: raw };
-        }
-      }
-
-      const planPath = await ensureWorkflowBrief({
-        cwd: ctx.cwd,
-        context: raw,
-        mode,
-        now: (options.now ?? (() => new Date()))(),
-      });
-      return { planPath, focus: raw };
+      pi.sendUserMessage(message, { deliverAs: "steer" });
     }
 
     async function transitionToMode(
@@ -237,78 +172,129 @@ export function createWorkflowModesExtension(
       args: string,
       ctx: ExtensionContext,
     ): Promise<void> {
-      const resolved = await resolveCommandPlanPath(mode, args, ctx);
-      if (!resolved.planPath) return;
-
-      state.activePlanPath = resolved.planPath;
-      state.focus = resolved.focus;
-      state.lastOutcome = undefined;
-      persistActivePlanPath();
-
       if (state.mode !== mode) {
         applyMode(mode);
       }
       state.mode = mode;
       renderWidget(ctx);
+      sendKickoffMessage(mode, args, ctx);
     }
 
     pi.registerTool({
-      name: "workflow_brief",
-      label: "Workflow Brief",
+      name: "write_plan",
+      label: "Write Plan",
       description:
-        "Write the active .plans/... workflow brief during Plan mode. Replaces the full file content after validating the expected section headings.",
-      parameters: WORKFLOW_BRIEF_PARAMS,
+        "Create or replace a markdown file under the repo-root .plans/ directory while in Plan mode.",
+      parameters: WRITE_PLAN_PARAMS,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         if (state.mode !== "plan") {
           return {
             content: [
               {
                 type: "text" as const,
-                text: "workflow_brief: only available while workflow modes are in Plan mode",
+                text: "write_plan: only available while workflow modes are in Plan mode",
               },
             ],
             details: {},
-          };
-        }
-        if (!state.activePlanPath) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: "workflow_brief: no active workflow brief is selected",
-              },
-            ],
-            details: {},
-          };
-        }
-        const validation = validateWorkflowBrief(params.content);
-        if (!validation.valid) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `workflow_brief: missing required sections: ${validation.missingSections.join(", ")}`,
-              },
-            ],
-            details: { missingSections: validation.missingSections },
           };
         }
 
-        await writeFile(
-          resolve(ctx.cwd, state.activePlanPath),
-          params.content,
-          "utf8",
-        );
-        state.focus = extractPlanGoal(params.content) ?? state.focus;
-        renderWidget(ctx);
+        const resolved = resolvePlanFilePath(ctx.cwd, params.path);
+        if (!resolved.ok) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `write_plan: ${resolved.error}`,
+              },
+            ],
+            details: {},
+          };
+        }
+
+        await mkdir(dirname(resolved.absolutePath), { recursive: true });
+        await writeFile(resolved.absolutePath, params.content, "utf8");
         return {
           content: [
             {
               type: "text" as const,
-              text: `Updated ${state.activePlanPath}`,
+              text: `Wrote ${resolved.displayPath}`,
             },
           ],
-          details: { path: state.activePlanPath },
+          details: { path: resolved.displayPath },
+        };
+      },
+    });
+
+    pi.registerTool({
+      name: "edit_plan",
+      label: "Edit Plan",
+      description:
+        "Apply exact text replacements to a markdown file under the repo-root .plans/ directory while in Plan mode.",
+      parameters: EDIT_PLAN_PARAMS,
+      async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+        if (state.mode !== "plan") {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "edit_plan: only available while workflow modes are in Plan mode",
+              },
+            ],
+            details: {},
+          };
+        }
+
+        const resolved = resolvePlanFilePath(ctx.cwd, params.path);
+        if (!resolved.ok) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `edit_plan: ${resolved.error}`,
+              },
+            ],
+            details: {},
+          };
+        }
+
+        let originalContent: string;
+        try {
+          originalContent = await readFile(resolved.absolutePath, "utf8");
+        } catch {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `edit_plan: ${resolved.displayPath} does not exist`,
+              },
+            ],
+            details: {},
+          };
+        }
+
+        const edited = applyExactTextEdits(originalContent, params.edits);
+        if (!edited.ok) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `edit_plan: ${edited.error}`,
+              },
+            ],
+            details: {},
+          };
+        }
+
+        await writeFile(resolved.absolutePath, edited.content, "utf8");
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Updated ${resolved.displayPath}`,
+            },
+          ],
+          details: { path: resolved.displayPath },
         };
       },
     });
@@ -321,8 +307,6 @@ export function createWorkflowModesExtension(
           applyMode("normal");
         }
         state.mode = "normal";
-        state.focus = undefined;
-        state.lastOutcome = undefined;
         renderWidget(ctx);
       },
     });
@@ -338,42 +322,31 @@ export function createWorkflowModesExtension(
 
     pi.on("session_start", async (_event, ctx) => {
       captureBaselines();
-      restorePersistedState(ctx);
-      await validateActivePlanPath(ctx);
       if (state.mode !== "normal") {
         applyMode("normal");
       }
       state.mode = "normal";
-      state.focus = undefined;
-      state.lastOutcome = undefined;
       renderWidget(ctx);
     });
 
     pi.on("session_tree", async (_event, ctx) => {
-      restorePersistedState(ctx);
-      await validateActivePlanPath(ctx);
       if (state.mode !== "normal") {
         applyMode("normal");
       }
       state.mode = "normal";
-      state.focus = undefined;
-      state.lastOutcome = undefined;
       renderWidget(ctx);
     });
 
     pi.on("session_shutdown", async (_event, ctx) => {
       state.mode = "normal";
-      state.focus = undefined;
-      state.lastOutcome = undefined;
       setWorkflowWidget(ctx, undefined);
     });
 
     pi.on("before_agent_start", async (event) => {
-      if (state.mode === "normal" || !state.activePlanPath) return undefined;
+      if (state.mode === "normal") return undefined;
       return {
         systemPrompt: `${event.systemPrompt}\n\n${buildModeContract({
           mode: state.mode,
-          activePlanPath: state.activePlanPath,
         })}`,
       };
     });
@@ -382,31 +355,16 @@ export function createWorkflowModesExtension(
       if (state.mode === "normal") return undefined;
       if (event.toolName === "todo") {
         renderWidget(ctx);
-        return undefined;
-      }
-      const summary = summarizeToolResultText(event.content);
-      if (summary) {
-        state.lastOutcome = `${event.toolName}: ${summary}`;
-        renderWidget(ctx);
       }
       return undefined;
     });
 
-    pi.on("session_before_compact", async (event, ctx) => {
-      if (state.mode === "normal" || !state.activePlanPath) return undefined;
-      let planGoal: string | undefined;
-      try {
-        planGoal = extractPlanGoal(
-          await readWorkflowBrief(ctx.cwd, state.activePlanPath),
-        );
-      } catch {
-        planGoal = undefined;
-      }
+    pi.on("session_before_compact", async (event) => {
+      if (state.mode === "normal") return undefined;
       const todos = extractTodoItemsFromBranch(
         event.branchEntries as unknown[],
       );
       const nextAction = deriveNextAction({
-        focus: state.focus,
         todos,
         mode: state.mode,
       });
@@ -416,17 +374,13 @@ export function createWorkflowModesExtension(
           tokensBefore: event.preparation.tokensBefore,
           summary: buildWorkflowCompactionSummary({
             mode: state.mode,
-            activePlanPath: state.activePlanPath,
-            planGoal,
             todos,
-            recentOutcome: state.lastOutcome,
             nextAction,
           }),
           details: {
-            version: 1,
+            version: 2,
             workflowModes: {
               mode: state.mode,
-              activePlanPath: state.activePlanPath,
               nextAction,
             },
           },
@@ -434,6 +388,10 @@ export function createWorkflowModesExtension(
       };
     });
   };
+}
+
+function capitalize(value: string): string {
+  return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
 
 export default createWorkflowModesExtension();

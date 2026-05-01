@@ -13,7 +13,8 @@ const PLAN_TOOLS = [
   "mcp_describe",
   "mcp_call",
   "spawn_agents",
-  "workflow_brief",
+  "write_plan",
+  "edit_plan",
 ] as const;
 
 const EXECUTE_TOOLS = ["read", "edit", "write", "bash", "todo"] as const;
@@ -59,37 +60,38 @@ export function getThinkingLevelForMode(
 
 export function buildModeContract(options: {
   mode: Exclude<WorkflowMode, "normal">;
-  activePlanPath: string;
 }): string {
   const shared = [
     "## Workflow modes",
     `Current mode: ${options.mode}`,
-    `Active plan artifact: ${options.activePlanPath}`,
-    "Use the plan artifact as the durable source of truth and keep TODO state tactical.",
     "Workflow modes apply tool and thinking defaults only on explicit mode transitions.",
+    "Mode switch commands may send a kickoff user message so work starts immediately in the new mode.",
   ];
 
   if (options.mode === "plan") {
     return [
       ...shared,
-      "Success criteria: leave the active .plans/... workflow brief clearer, more complete, and ready for execution.",
-      "Clarify ambiguous requests before locking in the brief.",
+      "Success criteria: leave the workflow clearer, more complete, and ready for execution.",
+      "Clarify ambiguous requests before locking in the plan.",
       "Ask one focused question at a time.",
       "Compare approaches when the trade-offs matter and recommend one.",
-      "Confirm the chosen direction with the user before converging on the brief.",
+      "Confirm the chosen direction with the user before converging on the plan.",
       "Read relevant repo context before proposing the plan.",
-      "Use workflow_brief to write or replace the active workflow brief; general editing tools are intentionally unavailable in Plan mode.",
-      "The workflow_brief content must be a single .plans/... markdown document with: Goal, Constraints, Acceptance Criteria, Chosen Approach, Assumptions / Open Questions, Ordered Tasks, Verification Checklist, and Known Issues / Follow-ups.",
+      "Plan files belong under .plans/ at the repo root.",
+      "Use write_plan to create a new plan file and edit_plan to refine an existing plan file under .plans/.",
+      "Do not use general editing tools in Plan mode.",
+      "Only write or update a plan after you have enough context.",
+      "Plan files should be markdown and usually include: Goal, Constraints, Acceptance Criteria, Chosen Approach, Assumptions / Open Questions, Ordered Tasks, Verification Checklist, and Known Issues / Follow-ups.",
     ].join("\n");
   }
 
   if (options.mode === "execute") {
     return [
       ...shared,
-      "Success criteria: make focused implementation progress that matches the active workflow brief.",
-      "Read the plan artifact before changing code.",
+      "Success criteria: make focused implementation progress that matches the available workflow context.",
+      "Read relevant .plans/*.md files before changing code when they are available or referenced by the user.",
       "Use TODO state for short-lived decomposition only; do not treat it as the durable plan.",
-      "Keep changes aligned with the brief's acceptance criteria and ordered tasks.",
+      "Keep changes aligned with the current conversation, acceptance criteria, and ordered tasks.",
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
     ].join("\n");
@@ -97,7 +99,8 @@ export function buildModeContract(options: {
 
   return [
     ...shared,
-    "Success criteria: evaluate the current work against the active workflow brief and acceptance criteria.",
+    "Success criteria: evaluate the current work against the available workflow context and acceptance criteria.",
+    "Read relevant .plans/*.md files before reviewing when they are available or referenced by the user.",
     "Run deterministic checks first.",
     "Do not silently edit code in Verify mode.",
     "Turn findings into explicit next actions for a possible return to Execute mode.",
