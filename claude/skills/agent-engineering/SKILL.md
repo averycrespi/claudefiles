@@ -118,7 +118,7 @@ Quick orientation; deep guidance in `references/platforms.md`.
 
 **Pi (`@mariozechner/pi-coding-agent`)** for opinionated minimal harnesses:
 
-- Extensions are TypeScript modules with a synchronous factory. Live at `pi/agent/extensions/`. Authoritative docs: [pi-mono extensions.md](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md). See also the `pi-extensions` skill in this repo.
+- Extensions are TypeScript modules with a synchronous factory. Live at `pi/agent/extensions/`. Authoritative docs: [pi-mono extensions.md](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md). See this repo's `AGENTS.md` for local structure and sharing conventions.
 - Tool schemas exposed to the agent are snake_case; internal task fields stay camelCase. Map between them in the tool's `execute` body.
 - See `references/platforms.md` for gotchas (RPC mode constraints, ESM stub patterns, etc.).
 

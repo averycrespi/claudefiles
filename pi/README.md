@@ -40,7 +40,7 @@ Underscore-prefixed directories are libraries imported by sibling extensions, no
 | --------- | ------------------------------------------ |
 | `_shared` | Stateless helpers shared across extensions |
 
-See the [pi-extensions](../claude/skills/pi-extensions/SKILL.md) skill for authoring guidance.
+See [AGENTS.md](../AGENTS.md) for repo-specific authoring guidance.
 
 ## Archived workflow code
 

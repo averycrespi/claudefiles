@@ -185,7 +185,7 @@ When the CLI is enough, use the CLI — fewer moving parts.
 
 ## Pi (`@mariozechner/pi-coding-agent`)
 
-Pi is an opinionated minimal coding agent by Mario Zechner. Smaller surface than Claude Code, single-file extensions, fast to iterate on. The `pi-extensions` skill in this repo covers the day-to-day API; this section captures harness-engineering-specific patterns.
+Pi is an opinionated minimal coding agent by Mario Zechner. Smaller surface than Claude Code, single-file extensions, fast to iterate on. Use the upstream Pi docs plus this repo's `AGENTS.md` for day-to-day extension conventions; this section captures harness-engineering-specific patterns.
 
 Authoritative docs:
 

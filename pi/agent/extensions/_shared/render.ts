@@ -7,8 +7,8 @@
  * `packages/coding-agent/src/core/extensions/loader.ts`. Keep it that
  * way: do not add an `index.ts` here.
  *
- * The conventions implemented here are documented in
- * `claude/skills/pi-extensions/references/tui-rendering.md`.
+ * Keep shared rendering conventions aligned with this repo's Pi
+ * extension guidance in `AGENTS.md`.
  */
 
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
