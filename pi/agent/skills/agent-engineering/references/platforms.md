@@ -4,7 +4,7 @@ Three platforms dominate the agent-config ecosystem in this repo: **Claude Code*
 
 ## Claude Code
 
-Claude Code is a deterministic harness around the Claude Agent loop. ~98.4% of the codebase is non-LLM infra (per [Anthropic's Claude Code retrospective](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built)). The extension surface that you, as a harness engineer, work with is:
+Claude Code is a deterministic harness around the Claude Agent loop. One retrospective estimated that ~98.4% of the codebase is non-LLM infra (per [Anthropic's Claude Code retrospective](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built)). The extension surface that you, as a harness engineer, work with is:
 
 - **Hooks** — deterministic shell commands run on lifecycle events.
 - **Skills** — instruction packages loaded on demand.
@@ -67,8 +67,8 @@ Subagents are markdown files in `.claude/agents/*.md` (project) or `~/.claude/ag
 
 **Key knobs:**
 
-- `isolation: worktree` in the frontmatter creates a temporary git worktree for the subagent. **Silently no-ops outside a git repo** ([issue #39886](https://github.com/anthropics/claude-code/issues/39886)).
-- Worktree subagents branch from `origin/main`, not the parent's HEAD ([issue #50850](https://github.com/anthropics/claude-code/issues/50850)). Surprises workflows that assume the subagent inherits parent's branch state.
+- `isolation: worktree` in the frontmatter creates a temporary git worktree for the subagent. **At the time of writing, issue reports say it silently no-ops outside a git repo** ([issue #39886](https://github.com/anthropics/claude-code/issues/39886)).
+- At the time of writing, issue reports say worktree subagents branch from `origin/main`, not the parent's HEAD ([issue #50850](https://github.com/anthropics/claude-code/issues/50850)). Surprises workflows that assume the subagent inherits parent's branch state.
 - Tools available to the subagent are configured in its frontmatter; default is all tools.
 - The subagent's prompt should be self-contained — it has no access to prior conversation.
 
@@ -185,7 +185,7 @@ When the CLI is enough, use the CLI — fewer moving parts.
 
 ## Pi (`@mariozechner/pi-coding-agent`)
 
-Pi is an opinionated minimal coding agent by Mario Zechner. Smaller surface than Claude Code, single-file extensions, fast to iterate on. Use the upstream Pi docs plus this repo's `AGENTS.md` for day-to-day extension conventions; this section captures harness-engineering-specific patterns.
+Pi is an opinionated minimal coding agent by Mario Zechner. Smaller surface than Claude Code and fast to iterate on. Upstream, an extension is a TypeScript module; in this repo, extensions are organized as directory-based packages. Use the upstream Pi docs plus this repo's `AGENTS.md` for day-to-day extension conventions; this section captures harness-engineering-specific patterns.
 
 Authoritative docs:
 
@@ -203,7 +203,7 @@ Background reading:
 
 ### Pi extension shape
 
-Each extension is a TypeScript module with a synchronous default-exported factory:
+Upstream, an extension entrypoint is a TypeScript module with a synchronous default-exported factory. In this repo that usually means an `index.ts` entrypoint inside `pi/agent/extensions/<name>/`:
 
 ```ts
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -217,7 +217,7 @@ The factory receives the `ExtensionAPI` and registers tools (`pi.registerTool`),
 
 ### Pi-specific harness patterns
 
-These come up repeatedly across the ~60 surveyed Pi extensions:
+These showed up repeatedly across the Pi extensions surveyed for this skill:
 
 1. **Tagged-output protocol > free text, ≤ JSON.** rmr's `<rmr:status>`, autonomous-dev's `STATUS:/PR_URL:/SUMMARY:` blocks. Models reliably emit tags inside markdown without escaping issues. JSON is more rigid; tags are more forgiving.
 2. **Plan = intent, not diff.** Across rmr, roach-pi, agent-pi: "A good plan does NOT contain line-by-line diffs. The implementing agent decides the code-level details." Don't over-specify.

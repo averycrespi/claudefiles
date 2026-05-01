@@ -32,7 +32,7 @@ These are the load-bearing references. Read them directly when you need to groun
 - [Cognition — Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents) — The 2025 piece that became consensus. Single most-cited source on why code-orchestrator beats multi-agent debate.
 - [Cognition — Devin 2.0 Architecture](https://cognition.ai/blog/devin-2) — Interactive Planning, Devin Wiki, the specific changes that doubled PR merge rate (34% → 67%).
 - [Cognition — Devin Annual Performance Review 2025](https://cognition.ai/blog/devin-annual-performance-review-2025) — "Performs worse when you keep telling it more after it starts." Foundational for "spec is immutable once implementation begins."
-- [Pragmatic Engineer — How Claude Code Is Built](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built) — 98.4% of Claude Code is deterministic infra. Reference for "code orchestrator, not LLM orchestrator."
+- [Pragmatic Engineer — How Claude Code Is Built](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built) — Retrospective citing ~98.4% of Claude Code as deterministic infra. Reference for "code orchestrator, not LLM orchestrator."
 - [OpenAI — Harness engineering: leveraging Codex in an agent-first world](https://openai.com/index/harness-engineering/) — Three engineers, five months, ~1M LOC, 1,500 merged PRs with zero hand-written code. Coined "harness engineering" as a discipline.
 - [OpenAI — Unrolling the Codex agent loop](https://openai.com/index/unrolling-the-codex-agent-loop/) — Canonical OpenAI write-up on the Codex loop. **[caveat: 403'd during research; pull manually]**
 - [Mario Zechner — What I Learned Building an Opinionated and Minimal Coding Agent](https://mariozechner.at/posts/2025-11-30-pi-coding-agent/) — Pi's design philosophy.
@@ -133,7 +133,7 @@ These are the load-bearing references. Read them directly when you need to groun
 
 ## 4. Pi extension repos
 
-The single richest source of harness patterns. ~60 surveyed; these are the highest-leverage.
+A high-leverage set of harness-pattern repos from the survey for this skill.
 
 - [tmustier/pi-extensions/ralph-wiggum](https://github.com/tmustier/pi-extensions/tree/main/ralph-wiggum) — Single-stage in-session loop with optional reflection checkpoints. `before_agent_start` re-injecting loop instructions to survive compaction.
 - [klaudworks/ralph-meets-rex](https://github.com/klaudworks/ralph-meets-rex) — YAML-defined sequential steps, code orchestrator, conditional looping. Tag-based output protocol. "Planner can reject upfront" gate.
@@ -239,7 +239,7 @@ The single richest source of harness patterns. ~60 surveyed; these are the highe
 ### Context engineering
 
 - [Phil Schmid — Context Engineering Part 2](https://www.philschmid.de/context-engineering-part-2)
-- [Zylos — AI Agent Context Compression Strategies](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies) — ~65% of failures trace to context drift, not exhaustion.
+- [Zylos — AI Agent Context Compression Strategies](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies) — Vendor report arguing many enterprise failures trace to context drift, not exhaustion.
 - [Harness — Defeating Context Rot: Mastering the Flow of AI Sessions](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions) — Companion data point.
 
 ### Worktrees and parallel agents
@@ -287,4 +287,4 @@ The single richest source of harness patterns. ~60 surveyed; these are the highe
 - Looking for "the" reference for a topic? Section 1 (lab pubs) is your starting point; sections 2 (model guides) and 3 (platform docs) when you need authoritative API surface.
 - Looking for evidence at the methodology level? Section 5 (research papers) — but flag the **[caveat]** entries.
 - Looking for production validation? Section 7 (case studies) is the load-bearing section for "this works at scale" claims.
-- Looking for ecosystem patterns to steal? Section 4 (Pi extension repos), with `roach-pi` as the single richest source.
+- Looking for ecosystem patterns to steal? Section 4 (Pi extension repos), with `roach-pi` as a particularly rich source.

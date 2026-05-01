@@ -10,7 +10,7 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **What**: Two or more LLM agents converse with each other to refine an answer. Variants: "critic and proposer," "red team / blue team," "panel of experts."
 
-**Why it fails**: Agents lack the shared grounding that makes human debate productive. They drift, agree spuriously, or argue past each other. No frontier lab ships this in production.
+**Why it fails**: Agents lack the shared grounding that makes human debate productive. They drift, agree spuriously, or argue past each other. It does not appear in the mainstream production harnesses surveyed for this skill.
 
 **Instead**: Code orchestrator coordinating fresh subagents with strict structured outputs. Reviewer reads spec + code, returns rubric verdict; orchestrator decides what to do.
 
@@ -124,7 +124,7 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **What**: "We have 1M context, just put everything in."
 
-**Why it fails**: ~65% of enterprise agent failures trace to context drift, not exhaustion ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Bigger windows make compaction _more_ important, not less. Models get worse at finding the relevant signal in a large window, not better.
+**Why it fails**: Vendor reports from Zylos and Harness argue that context drift causes more enterprise failures than raw context exhaustion ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Bigger windows make compaction _more_ important, not less. Models get worse at finding the relevant signal in a large window, not better.
 
 **Instead**: Just-in-time retrieval. Lightweight identifiers (paths, function names) resolved on demand via tools. Big windows are a _capacity_ lever, not a _correctness_ lever.
 
@@ -254,7 +254,7 @@ Mitigations map to patterns elsewhere in this skill:
 
 ### Claude Code: subagent worktrees branch from `origin/main`
 
-**What**: `isolation: worktree` subagent runs against `origin/main`, not the parent's HEAD.
+**What**: At the time of writing, issue reports say `isolation: worktree` subagents run against `origin/main`, not the parent's HEAD.
 
 **Why it fails**: Workflows that assume the subagent inherits parent's branch state break.
 
