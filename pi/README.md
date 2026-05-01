@@ -26,7 +26,7 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | ---------------- | -------------------------------------------------------------------- |
 | `ask-user`       | `ask_user` tool for multiple-choice questions                        |
 | `compact-tools`  | Compact TUI rendering for built-in shell and file tools              |
-| `format`         | Format files after write and edit                                    |
+| `autoformat`     | Format files after write and edit                                    |
 | `mcp-broker`     | Broker CLI skill + guard for remote operations                       |
 | `statusline`     | Single-line footer with cwd, quota, context, model, and thinking     |
 | `subagents`      | Dynamic subagent loading and dispatch                                |

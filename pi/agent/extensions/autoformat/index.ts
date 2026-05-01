@@ -1,5 +1,5 @@
 /**
- * format extension for Pi.
+ * autoformat extension for Pi.
  *
  * After a successful built-in `write` or `edit`, runs gofmt (.go) or
  * prettier (everything else Prettier understands) against the file.
@@ -60,7 +60,7 @@ export default function (pi: ExtensionAPI) {
     } catch (error) {
       logFormattingIssue(
         notifyCtx,
-        `Format failed for ${path}: ${
+        `Autoformat failed for ${path}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
