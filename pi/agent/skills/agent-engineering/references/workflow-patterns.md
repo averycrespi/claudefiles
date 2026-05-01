@@ -136,23 +136,20 @@ Pattern for ticket→PR: worktree created at plan-acceptance time, branch name e
 
 ## Structured note-taking artifacts
 
-Anthropic's most-cited under-appreciated pattern from [Effective Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents). Write workflow state to known files referenced _by path_ in subagent prompts, not inlined.
+Anthropic's most-cited under-appreciated pattern from [Effective Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents): write workflow state to known files referenced _by path_ in subagent prompts, not inlined.
 
-Common artifacts:
+The canonical artifact pattern for this skill lives in `context-engineering.md`. In workflow terms, the minimum useful set is usually:
 
-| File                | Contents                                                 | When written                  |
-| ------------------- | -------------------------------------------------------- | ----------------------------- |
-| `ac.json`           | Acceptance criteria list                                 | After extract-AC              |
-| `localization.json` | Ranked file list + entry points                          | After localize                |
-| `PLAN.md`           | The plan (after any plan-repair revision)                | After plan / plan-repair      |
-| `DECISIONS.md`      | Implementer decisions worth carrying forward             | Appended during implement     |
-| `OPEN_QUESTIONS.md` | Unresolved ambiguity, surfaced for human or later phase  | Appended whenever encountered |
-| `KNOWN_ISSUES.md`   | Validator/reviewer findings that didn't block completion | Written at emit-report        |
-| `PR_BODY.md`        | PR description (from plan + AC, not from diff)           | At emit-report                |
+- `ac.json`
+- `localization.json`
+- `PLAN.md`
+- `DECISIONS.md`
+- `KNOWN_ISSUES.md`
+- `PR_BODY.md`
 
-Subagent prompts say "read `<workflowDir>/PLAN.md` for the plan" rather than embedding the plan inline. Cuts token cost, survives compaction, gives the human a forensic trail.
+The important part is the prompt shape: tell subagents to read `<workflowDir>/PLAN.md` rather than embedding the plan inline. That cuts token cost, survives compaction, and gives the human a forensic trail.
 
-`roach-pi` uses this pattern with a "shared diff artifact." `pi-coordination`'s scout output explicitly splits into ~85K-token "context document" plus ~15K-token "synthesized meta-prompt" — relevant context as data, generation guidance as instruction.
+`roach-pi` uses this pattern with a shared diff artifact. `pi-coordination` shows the same idea in a different form: a large context document plus a smaller synthesized meta-prompt.
 
 ## Diff budgets and idle-iteration kill switches
 

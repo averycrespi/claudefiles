@@ -88,14 +88,9 @@ Documented failure modes — short list. Full annotated catalog in `references/a
 
 Quick orientation; deep guidance in `references/models.md`.
 
-| Family     | Latest stable (2026-04) | Default for...                                | Watch out for                                                                                                                                                           |
-| ---------- | ----------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude 4.x | Opus 4.7                | Long-running, high-reasoning agent loops      | Extended-thinking budgets are gone (400 error if you set them); thinking content omitted by default; new tokenizer ~1.0–1.35x more tokens — bump `max_tokens`           |
-| Claude 4.x | Sonnet 4.6              | Default workhorse, both adaptive and extended | 1M context, 64K output                                                                                                                                                  |
-| Claude 4.x | Haiku 4.5               | Fast cheap subagents (review, classify)       | Extended-thinking only — no adaptive mode                                                                                                                               |
-| GPT-5.x    | GPT-5.5                 | Default Codex model since 2026-04-23          | OpenAI explicitly says rebaseline prompts — don't drop-in from 5.4. Move tool guidance into tool descriptions; replace step-by-step prose with outcome+success criteria |
-| GPT-5.x    | GPT-5.4                 | Codex fallback                                | "Bias to action" default; per-plan-item Done/Blocked/Cancelled closure                                                                                                  |
-| Codex CLI  | v0.125.0                | OpenAI-side coding harness                    | Hooks now stable; `apply_patch` is a first-class tool, not shell                                                                                                        |
+- **Claude 4.x** is the better default when you want long-running, high-reasoning agent loops.
+- **GPT-5.x / Codex** is the better default when you want strong execution, explicit structured outputs, and OpenAI's codex-style harness guidance.
+- **Model-specific prompting advice changes quickly.** Read the current migration/prompting guide for the exact model version before reusing an older harness prompt.
 
 Cross-family rule: **never use the same model for implement and verify if you can avoid it.**
 
@@ -103,24 +98,11 @@ Cross-family rule: **never use the same model for implement and verify if you ca
 
 Quick orientation; deep guidance in `references/platforms.md`.
 
-**Claude Code** as a harness:
+- **Claude Code**: best when you want an interactive coding harness with first-class hooks, skills, subagents, routines, and settings.
+- **Claude Agent SDK**: best when you want the Claude Code loop but need to drive it programmatically in TypeScript or Python.
+- **Pi (`@mariozechner/pi-coding-agent`)**: best when you want a smaller TypeScript extension surface and a lightweight base for custom harness experiments.
 
-- **Hooks** are deterministic — use when something _must_ run every time. Exit code 2 blocks; exit code 1 only logs. ([Hooks reference](https://docs.claude.com/en/docs/claude-code/hooks))
-- **Skills** load on demand via progressive disclosure: only `name`+`description` of every skill is preloaded; `SKILL.md` body and `references/` files load only when invoked. ([Equipping agents with Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills))
-- **Subagents** = `.claude/agents/*.md` definitions, isolated context; `isolation: worktree` for git isolation (at the time of writing, issue reports say this silently no-ops outside a git repo; see [issue #39886](https://github.com/anthropics/claude-code/issues/39886)).
-- **Settings** evaluate deny → ask → allow, first match wins. Hierarchy: managed → CLI → `.claude/settings.local.json` → `.claude/settings.json` → `~/.claude/settings.json`.
-- **Routines** for cron / API / GitHub-event-triggered runs ([routines doc](https://code.claude.com/docs/en/routines)).
-
-**Claude Agent SDK** for custom harnesses:
-
-- Same loop, tools, hooks, subagents, MCP — programmable in TS or Python. At the time of writing, Opus 4.7 required SDK ≥ v0.2.111.
-- 5-min ephemeral prompt-cache TTL; pin thinking config across an agent loop or you blow the cache. ([Tool use with prompt caching](https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-use-with-prompt-caching))
-
-**Pi (`@mariozechner/pi-coding-agent`)** for opinionated minimal harnesses:
-
-- Upstream, extensions are TypeScript modules with a synchronous factory. In this repo, they live as directory-based packages under `pi/agent/extensions/`. Authoritative docs: [pi-mono extensions.md](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md). See this repo's `AGENTS.md` for local structure and sharing conventions.
-- Tool schemas exposed to the agent are snake_case; internal task fields stay camelCase. Map between them in the tool's `execute` body.
-- See `references/platforms.md` for gotchas (RPC mode constraints, ESM stub patterns, etc.).
+For exact platform behavior, current gotchas, and repo-specific conventions, read `references/platforms.md`.
 
 ## How to use this skill
 
