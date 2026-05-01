@@ -23,26 +23,25 @@ Launch one or more subagents in parallel. Each runs independently in its own con
 
 **Parameters:**
 
-| Parameter         | Type   | Required | Description                                                             |
-| ----------------- | ------ | -------- | ----------------------------------------------------------------------- |
-| `agents`          | array  | yes      | List of agents to run concurrently (minimum 1)                          |
-| `agents[].agent`  | string | yes      | Agent type: `explore`, `review`, `research`, `deep-research`, or `code` |
-| `agents[].intent` | string | yes      | Short label shown in activity titles (3–6 words)                        |
-| `agents[].prompt` | string | yes      | Full task — brief the agent like a colleague who just walked in         |
+| Parameter         | Type   | Required | Description                                                     |
+| ----------------- | ------ | -------- | --------------------------------------------------------------- |
+| `agents`          | array  | yes      | List of agents to run concurrently (minimum 1)                  |
+| `agents[].agent`  | string | yes      | Agent type: `explore`, `review`, `research`, or `deep-research` |
+| `agents[].intent` | string | yes      | Short label shown in activity titles (3–6 words)                |
+| `agents[].prompt` | string | yes      | Full task — brief the agent like a colleague who just walked in |
 
 Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. The built-in types are defined in `pi/agent/agents/` in this repo and symlinked via `make stow`. Custom agents can be added by dropping additional `.md` files in that directory — no code changes required.
 
 The built-in types:
 
-| Type            | Tools                   | Extensions                 | Model        | Thinking |
-| --------------- | ----------------------- | -------------------------- | ------------ | -------- |
-| `explore`       | read, ls, find, grep    | —                          | gpt-5.4-mini | medium   |
-| `review`        | read, ls, find, grep    | `mcp-broker`               | gpt-5.4      | high     |
-| `research`      | read, ls, find, grep    | `mcp-broker`, `web-access` | gpt-5.4-mini | medium   |
-| `deep-research` | read, ls, find, grep    | `mcp-broker`, `web-access` | gpt-5.4      | high     |
-| `code`          | read, bash, edit, write | `format`                   | gpt-5.4      | medium   |
+| Type            | Tools                | Extensions                 | Model        | Thinking |
+| --------------- | -------------------- | -------------------------- | ------------ | -------- |
+| `explore`       | read, ls, find, grep | —                          | gpt-5.4-mini | medium   |
+| `review`        | read, ls, find, grep | `mcp-broker`               | gpt-5.4      | high     |
+| `research`      | read, ls, find, grep | `mcp-broker`, `web-access` | gpt-5.4-mini | medium   |
+| `deep-research` | read, ls, find, grep | `mcp-broker`, `web-access` | gpt-5.4      | high     |
 
-`explore`, `review`, `research`, and `deep-research` are read-only. `review` adds read-only broker access (MCP search, describe, and call restricted to tools annotated `readOnlyHint`). `research` is the faster default for external lookup, while `deep-research` is the slower, evidence-heavier option. Both `research` and `deep-research` add web search and fetch via the `web-access` extension. `code` has full write access including shell.
+All built-in agent types are read-only. `review` adds read-only broker access (MCP search, describe, and call restricted to tools annotated `readOnlyHint`). `research` is the faster default for external lookup, while `deep-research` is the slower, evidence-heavier option. Both `research` and `deep-research` add web search and fetch via the `web-access` extension. If you want a writable subagent, add a custom agent markdown file with a broader tool set.
 
 **Returns** a single document with each agent's result under a `## <type> · <intent>` heading, separated by `---`. On failure, the agent's section contains a formatted error including exit code and stderr.
 
@@ -55,11 +54,11 @@ While running, `spawn_agents` shows each agent as a section separated by blank l
  - read: src/auth.ts
  Running: 4 tool uses (14s)
 
- **Code agent** Run tests
- Done: 5 tool uses · 20.3k tokens · 20s
+ **Research agent** Check docs
+ Done: 3 tool uses · 12.4k tokens · 18s
 
  **Review agent** Check config
- - bash: npm test
+ - grep: config
  Running: 1 tool use (3s)
 ```
 
@@ -88,7 +87,7 @@ Recursion is blocked by default. Each spawn sets `PI_SUBAGENT_DEPTH` in the chil
 - `intent` is required for every agent and drives activity titles — keep it short and descriptive
 - Each subagent starts with a fresh context; session inheritance is not supported
 - `review`, `research`, and `deep-research` require the `mcp-broker` extension to be installed and discoverable; if missing, extension resolution fails with "no matching extensions found". `research` and `deep-research` additionally require `web-access`
-- `code` skills and prompt templates are enabled; all other agent types disable them
+- Built-in agent types disable skills and prompt templates for tighter, role-specific behavior
 - All agents in a single `spawn_agents` call run concurrently; result order matches input order
 
 ## Agent file format
