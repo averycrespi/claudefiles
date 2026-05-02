@@ -15,4 +15,4 @@ Pi extension that formats files after every successful `write` or `edit`.
 
 ## Non-goals
 
-This extension was split out of the archived `code-feedback` extension, which combined autoformatting with LSP diagnostic auto-injection. The LSP-on-write path was deliberately dropped — see [`pi/archive/extensions/code-feedback/DESIGN.md`](../../../archive/extensions/code-feedback/DESIGN.md) for the rationale. Diagnostics, when needed, should be polled via explicit tools, not pushed into tool results.
+This extension only handles formatting. LSP diagnostics, when needed, should be polled via explicit tools, not pushed into tool results.

@@ -43,17 +43,6 @@ Underscore-prefixed directories are libraries imported by sibling extensions, no
 
 See [AGENTS.md](../AGENTS.md) for repo-specific authoring guidance.
 
-## Archived workflow code
-
-The following extensions and libraries have been moved to `pi/archive/extensions/` on this branch while experimenting with Moonpi-inspired ideas:
-
-| Archived item    | Previous role                                                      |
-| ---------------- | ------------------------------------------------------------------ |
-| `autopilot`      | Autonomous plan → implement → verify pipeline from a design doc    |
-| `autoralph`      | Autonomous agent-driven Ralph-style loop from a design doc         |
-| `task-list`      | Session-scoped task list with agent tools and a sticky TUI widget  |
-| `_workflow-core` | Primitives for structured-state-machine-around-subagents workflows |
-
 ## Skills
 
 Markdown skill packages that load on demand via progressive disclosure — only the `name` and `description` are pre-registered; the body of `SKILL.md` and any bundled `references/` files load only when the skill activates.

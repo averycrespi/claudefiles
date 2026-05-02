@@ -45,4 +45,4 @@ Primary reference:
 
 - Moonpi repository: [galatolofederico/moonpi](https://github.com/galatolofederico/moonpi)
 
-The goal here is narrower than Moonpi: keep the low-friction TODO surface without reintroducing Moonpi's broader mode system or this repo's archived workflow stack.
+The goal here is narrower than Moonpi: keep the low-friction TODO surface without reintroducing Moonpi's broader mode system.
