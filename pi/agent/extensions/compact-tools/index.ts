@@ -5,14 +5,13 @@
  * summaries instead of full tool output. Tool execution behavior is
  * unchanged — only rendering is compacted.
  *
- * Registration is deferred to `session_start` so we can check which
- * built-ins are already active and override only those. Registering at
- * factory time would force-enable the tool: on initial boot pi calls
- * `_refreshToolRegistry` with `includeAllExtensionTools: true`, which
- * pushes every extension-registered tool into the active set regardless
- * of the user's configuration. After bind, `registerTool` triggers a
- * refresh without that flag, so same-name overrides stay scoped to the
- * already-active tools.
+ * Registration is deferred to `session_start` instead of factory time.
+ * On initial boot pi calls `_refreshToolRegistry` with
+ * `includeAllExtensionTools: true`, which pushes every extension-registered
+ * tool into the active set regardless of the user's configuration. After
+ * bind, `registerTool` triggers a refresh without that flag, so same-name
+ * overrides can exist for tools that may be activated later without
+ * force-enabling them at startup.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -35,9 +34,8 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", () => {
     if (registered) return;
     registered = true;
-    const active = new Set(pi.getActiveTools());
-    for (const [name, register] of Object.entries(overrides)) {
-      if (active.has(name)) register(pi);
+    for (const register of Object.values(overrides)) {
+      register(pi);
     }
   });
 }

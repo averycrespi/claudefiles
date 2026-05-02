@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { visibleWidth } from "@mariozechner/pi-tui";
+import compactTools from "./index.ts";
 import registerBash from "./bash.ts";
 import registerFind from "./find.ts";
 import registerGrep from "./grep.ts";
@@ -91,6 +92,29 @@ function assertRenderedWidth(lines: string[], width: number) {
     );
   }
 }
+
+test("extension registers all renderer overrides after session_start", async () => {
+  const registered: string[] = [];
+  const handlers = new Map<string, Function>();
+  let setActiveToolsCalled = false;
+
+  compactTools({
+    on(event: string, handler: Function) {
+      handlers.set(event, handler);
+    },
+    registerTool(def: { name: string }) {
+      registered.push(def.name);
+    },
+    setActiveTools() {
+      setActiveToolsCalled = true;
+    },
+  } as any);
+
+  await handlers.get("session_start")?.();
+
+  assert.deepEqual(registered.sort(), ["bash", "find", "grep", "ls", "read"]);
+  assert.equal(setActiveToolsCalled, false);
+});
 
 test("bash renderCall truncates long commands instead of wrapping", () => {
   const tool = captureTool(registerBash);
