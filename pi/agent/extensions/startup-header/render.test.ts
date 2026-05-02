@@ -29,7 +29,7 @@ test("renderHeader renders tiny wordmark, metadata, and recent commits", () => {
   const lines = renderHeader(
     {
       piVersion: "0.65.0",
-      cwd: "/Users/avery/Workspace/agent-config",
+      cwd: "/Users/example/Workspace/agent-config",
       repoName: "agent-config",
       branch: "main",
       commits: [

@@ -35,8 +35,8 @@ function renderUsage(stats: UsageStats) {
 test("renderFooterLine renders statusline segments in priority order", () => {
   const line = renderFooterLine(
     {
-      cwd: "/Users/avery/Workspace/agent-config",
-      homeDir: "/Users/avery",
+      cwd: "/Users/example/Workspace/agent-config",
+      homeDir: "/Users/example",
       usage: renderUsage({
         primary: { usedPercent: 45, resetAfterSeconds: 2 * 3600 },
         secondary: { usedPercent: 20, resetAfterSeconds: 3 * 24 * 3600 },
@@ -79,8 +79,8 @@ test("renderFooterLine colors statusline percentages above warning and error thr
 test("renderFooterLine drops lower-priority statusline segments first when width is tight", () => {
   const line = renderFooterLine(
     {
-      cwd: "/Users/avery/Workspace/agent-config",
-      homeDir: "/Users/avery",
+      cwd: "/Users/example/Workspace/agent-config",
+      homeDir: "/Users/example",
       usage: renderUsage({
         primary: { usedPercent: 45, resetAfterSeconds: 2 * 3600 },
         secondary: { usedPercent: 20, resetAfterSeconds: 3 * 24 * 3600 },
@@ -102,8 +102,8 @@ test("renderFooterLine drops lower-priority statusline segments first when width
 test("renderFooterLine prefixes workflow mode and hides the normal-mode badge", () => {
   const workflowLine = renderFooterLine(
     {
-      cwd: "/Users/avery/Workspace/agent-config",
-      homeDir: "/Users/avery",
+      cwd: "/Users/example/Workspace/agent-config",
+      homeDir: "/Users/example",
       contextUsage: { percent: 42, contextWindow: 200_000 },
       modelId: "gpt-5-codex",
       thinking: "high",
@@ -115,8 +115,8 @@ test("renderFooterLine prefixes workflow mode and hides the normal-mode badge", 
   );
   const normalLine = renderFooterLine(
     {
-      cwd: "/Users/avery/Workspace/agent-config",
-      homeDir: "/Users/avery",
+      cwd: "/Users/example/Workspace/agent-config",
+      homeDir: "/Users/example",
       contextUsage: { percent: 42, contextWindow: 200_000 },
       modelId: "gpt-5-codex",
       thinking: "medium",

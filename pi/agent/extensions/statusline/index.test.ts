@@ -15,7 +15,7 @@ type EventHandler = (
 function makeCtx() {
   return {
     hasUI: true,
-    cwd: "/Users/avery/Workspace/agent-config",
+    cwd: "/repo/agent-config",
     model: {
       provider: "openai-codex",
       id: "gpt-5-codex",
@@ -113,7 +113,7 @@ test("session_start installs a single-line statusline instead of publishing only
   await handler!({ type: "session_start", reason: "startup" }, pi._ctx());
 
   assert.deepEqual(pi._statuslineCalls[0], [
-    "~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium",
+    "/repo/agent-config · ctx 42%/200k · gpt-5-codex · medium",
   ]);
 });
 
@@ -133,11 +133,11 @@ test("workflow mode events rerender the statusline with mode badge and base thin
   });
 
   assert.deepEqual(pi._statuslineCalls[0], [
-    "~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium",
+    "/repo/agent-config · ctx 42%/200k · gpt-5-codex · medium",
   ]);
   assert.deepEqual(pi._statuslineCalls.slice(-1), [
     [
-      "execute mode · ~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · low (base: high)",
+      "execute mode · /repo/agent-config · ctx 42%/200k · gpt-5-codex · low (base: high)",
     ],
   ]);
 });
