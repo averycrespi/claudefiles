@@ -5,7 +5,6 @@ tools: read, ls, find, grep
 extensions: web-access, mcp-broker
 env:
   MCP_BROKER_READONLY: "1"
-model: openai-codex/gpt-5.4-mini
 thinking: medium
 disable_skills: true
 disable_prompt_templates: true

@@ -38,7 +38,7 @@ test("buildModeContract for execute mode encourages using relevant plan files wi
 
 test("mode helpers return the expected thinking defaults and tool sets", () => {
   assert.equal(getThinkingLevelForMode("normal"), undefined);
-  assert.equal(getThinkingLevelForMode("plan"), "high");
+  assert.equal(getThinkingLevelForMode("plan"), "medium");
   assert.equal(getThinkingLevelForMode("execute"), "low");
   assert.equal(getThinkingLevelForMode("verify"), "high");
 

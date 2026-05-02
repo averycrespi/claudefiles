@@ -23,12 +23,12 @@ Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. Th
 
 The built-in types:
 
-| Type            | Tools                | Extensions                 | Model        | Thinking |
-| --------------- | -------------------- | -------------------------- | ------------ | -------- |
-| `explore`       | read, ls, find, grep | —                          | gpt-5.4-mini | medium   |
-| `review`        | read, ls, find, grep | `mcp-broker`               | gpt-5.4      | high     |
-| `research`      | read, ls, find, grep | `mcp-broker`, `web-access` | gpt-5.4-mini | medium   |
-| `deep-research` | read, ls, find, grep | `mcp-broker`, `web-access` | gpt-5.4      | high     |
+| Type            | Tools                | Extensions                 | Model           | Thinking |
+| --------------- | -------------------- | -------------------------- | --------------- | -------- |
+| `explore`       | read, ls, find, grep | —                          | inherits parent | medium   |
+| `review`        | read, ls, find, grep | `mcp-broker`               | inherits parent | high     |
+| `research`      | read, ls, find, grep | `mcp-broker`, `web-access` | inherits parent | medium   |
+| `deep-research` | read, ls, find, grep | `mcp-broker`, `web-access` | inherits parent | high     |
 
 All built-in agent types are read-only. `review` adds read-only broker access (MCP search, describe, and call restricted to tools annotated `readOnlyHint`). `research` is the faster default for external lookup, while `deep-research` is the slower, evidence-heavier option. Both `research` and `deep-research` add web search and fetch via the `web-access` extension. If you want a writable subagent, add a custom agent markdown file with a broader tool set.
 
@@ -89,7 +89,6 @@ name: explore
 description: Read-only codebase research — finding files and answering questions
 tools: read
 extensions:
-model: openai-codex/gpt-5.4-mini
 thinking: medium
 disable_skills: true
 disable_prompt_templates: true

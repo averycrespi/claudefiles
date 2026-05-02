@@ -4,6 +4,6 @@ export const WORKFLOW_MODE_CHANGED_EVENT = "workflow-modes:changed";
 
 export type WorkflowModeState = {
   mode: WorkflowMode;
-  baseThinking?: "high" | "low";
+  baseThinking?: "medium" | "high" | "low";
   baselineThinking?: string;
 };

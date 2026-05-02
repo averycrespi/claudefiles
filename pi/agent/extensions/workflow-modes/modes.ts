@@ -45,10 +45,10 @@ export function getManagedToolNamesForMode(mode: WorkflowMode): string[] {
 
 export function getThinkingLevelForMode(
   mode: WorkflowMode,
-): "high" | "low" | undefined {
+): "medium" | "high" | "low" | undefined {
   switch (mode) {
     case "plan":
-      return "high";
+      return "medium";
     case "execute":
       return "low";
     case "verify":

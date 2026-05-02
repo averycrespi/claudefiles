@@ -43,7 +43,7 @@ pi.events.on(WORKFLOW_MODE_CHANGED_EVENT, (data) => {
 ```ts
 interface WorkflowModeState {
   mode: "normal" | "plan" | "execute" | "verify";
-  baseThinking?: "high" | "low";
+  baseThinking?: "medium" | "high" | "low";
   baselineThinking?: string;
 }
 ```

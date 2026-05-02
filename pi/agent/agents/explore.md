@@ -3,7 +3,6 @@ name: explore
 description: Read-only repo exploration — localize code, trace behavior, and answer codebase questions from local files
 tools: read, ls, find, grep
 extensions:
-model: openai-codex/gpt-5.4-mini
 thinking: medium
 disable_skills: true
 disable_prompt_templates: true

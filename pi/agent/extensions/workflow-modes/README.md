@@ -24,7 +24,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 
 - intended for clarification, repo reading, approach comparison, and plan authoring
 - uses read-oriented tools plus `write_plan` and `edit_plan`
-- defaults thinking to `high`
+- defaults thinking to `medium`
 - expects plan files to live under `.plans/` at the repo root
 - encourages one focused question at a time, multiple-choice questions when useful, 2-3 approaches with a recommendation, testable acceptance criteria, and YAGNI planning
 

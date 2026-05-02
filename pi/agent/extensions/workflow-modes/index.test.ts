@@ -288,7 +288,7 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
     "write_plan",
     "edit_plan",
   ]);
-  assert.equal(pi._thinkingLevel(), "high");
+  assert.equal(pi._thinkingLevel(), "medium");
   assert.equal(pi._sentUserMessages.length, 1);
   assert.match(String(pi._sentUserMessages[0]?.content), /plan mode/i);
   assert.match(
@@ -299,7 +299,7 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
     event: "workflow-modes:changed",
     data: {
       mode: "plan",
-      baseThinking: "high",
+      baseThinking: "medium",
       baselineThinking: "medium",
     },
   });
