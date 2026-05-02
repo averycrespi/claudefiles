@@ -61,6 +61,14 @@ Replaces the default search output with a compact pattern label and match count.
 
 Execution is delegated to Pi's built-in `grep` tool via `createGrepTool(ctx.cwd)`.
 
+## Configuration
+
+No presets, config file, or slash commands. Behavior is hardcoded.
+
+## Logging
+
+This extension does not write retained logs or diagnostic files.
+
 ## Testing
 
 `render.test.ts` covers the compact renderer output shape and width behavior for all compacted tools. It also verifies that the extension registers every renderer override after `session_start` without mutating the active tool list.
@@ -71,7 +79,6 @@ Intentionally out of scope — this is a minimal, hand-rolled subset tailored to
 
 - **No MCP tool rendering.** MCP tools vary too widely to compact generically.
 - **No edit / write diff customization.** Pi's built-in diff renderer is already reasonable.
-- **No presets, config file, or slash commands.** Behavior is hardcoded.
 
 ## Inspiration
 

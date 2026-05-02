@@ -37,6 +37,14 @@ IDs stay stable once assigned. If an item is removed, later items keep their exi
 
 This keeps normal tool usage aligned with Pi's recommended stateful-tool pattern while still making manual clears survive reloads.
 
+## Configuration
+
+No user-facing configuration.
+
+## Logging
+
+This extension does not write retained logs or diagnostic files.
+
 ## Inspiration / References
 
 This extension adapts Moonpi's lightweight TODO UX into this repo's standalone Pi extension model.

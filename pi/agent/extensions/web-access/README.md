@@ -19,12 +19,18 @@ Fetch and read web content as clean markdown. Intelligently routes by URL type:
 - **GitHub repos** — shallow-clones the repository and returns the README, file tree, and clone path for further exploration with Pi's built-in tools
 - **PDFs** — extracts text via [unpdf](https://github.com/unjs/unpdf)
 
-## Setup
+## Configuration
 
 ```bash
 export TAVILY_API_KEY=tvly-...   # recommended for web_search
 export JINA_API_KEY=jina_...     # optional — improves Jina rate limits
 ```
+
+If `TAVILY_API_KEY` is absent, `web_search` falls back to Jina Search. If `JINA_API_KEY` is absent, Jina-backed search/fetch still works where anonymous rate limits allow it.
+
+## Logging
+
+This extension does not write retained logs or diagnostic files.
 
 ## Inspiration
 

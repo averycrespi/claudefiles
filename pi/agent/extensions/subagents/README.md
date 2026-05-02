@@ -71,6 +71,16 @@ Each spawn:
 
 Recursion is blocked by default. Each spawn sets `PI_SUBAGENT_DEPTH` in the child environment (`currentDepth + 1`). The `spawn_agents` tool calls `spawnSubagent` without specifying `maxDepth`, which defaults to `1` — so a subagent (running at depth 1) cannot spawn another subagent. The `MAX_SUBAGENT_DEPTH = 5` constant in `types.ts` is an absolute ceiling, reachable only by direct callers of the programmatic `spawnSubagent` API that explicitly pass a higher `maxDepth`. Aborting the parent tool call sends SIGTERM to child processes with a 2-second grace period before SIGKILL.
 
+## Configuration
+
+Subagent types are configured by markdown files with YAML frontmatter; see [Agent file format](#agent-file-format). Agent files control the tool allowlist, extensions, model, thinking level, skill/template availability, and child-process environment. The `PI_CODING_AGENT_DIR` environment variable can point discovery at a non-default Pi agent directory.
+
+## Logging
+
+Each child process writes raw stdout and stderr to a managed temp log while it runs. Successful subagent logs are deleted after the process exits. Failed or aborted subagents retain their log under `${tmpdir()}/pi-extension-logs/subagents/`, and the path is shown in the tool result and activity rendering.
+
+Retained logs may contain raw subagent output, tool results, command output, and stderr. Do not treat them as sanitized artifacts.
+
 ## Notes
 
 - `intent` is required for every agent and drives activity titles — keep it short and descriptive

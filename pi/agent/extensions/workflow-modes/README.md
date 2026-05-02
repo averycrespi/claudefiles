@@ -92,6 +92,10 @@ Workflow modes reads extension-scoped settings from `~/.pi/agent/settings.json` 
 
 `autoCompactOnModeSwitch` enables pre-switch compaction for `/plan`, `/execute`, and `/verify`. `autoCompactMinTokens` controls the context-token threshold. Project settings override global settings.
 
+## Logging
+
+This extension does not write retained logs or diagnostic files. Pre-switch compaction failures are reported to the user and the requested mode switch continues.
+
 ## Persistence and compaction
 
 Workflow mode itself is in-memory session state. New or restored sessions start in Normal mode.

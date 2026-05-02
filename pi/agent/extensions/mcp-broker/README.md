@@ -71,7 +71,9 @@ File location: `${tmpdir()}/pi-mcp-broker/<toolCallId>.txt`. Files are written w
 - Multi-block results: all text blocks are joined and measured together; if the total exceeds the threshold, the joined text is spilled and image blocks are preserved inline.
 - Write failure (disk full, permissions): the extension logs a warning and falls back to returning the original content inline rather than failing the tool call.
 
-See `.designs/2026-04-26-mcp-broker-spillover.md` for the full design rationale, envelope format details, and decisions log.
+## Logging
+
+This extension does not write retained diagnostic logs. Large-output spillover writes temporary output files as described above; those files may contain raw broker tool output. If a spillover write fails, the extension emits a warning to stderr and returns the original content inline.
 
 ## Guard behavior
 

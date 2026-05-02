@@ -13,6 +13,14 @@ Pi extension that formats files after every successful `write` or `edit`.
 - Formatter failures never block the edit. Errors are surfaced as a TUI warning (or stderr in headless mode) and the original written content is left in place.
 - A missing formatter binary (`ENOENT`) is silent — no warning, no error. Install gofmt/prettier separately if you want them to run.
 
+## Configuration
+
+No extension-specific configuration. Formatter availability is determined by installed binaries: `gofmt`, project-local `node_modules/.bin/prettier`, or `prettier` on `$PATH`.
+
+## Logging
+
+This extension does not write retained logs or diagnostic files. Formatter failures are reported with a TUI warning when UI is available, or to stderr in headless mode.
+
 ## Non-goals
 
 This extension only handles formatting. LSP diagnostics, when needed, should be polled via explicit tools, not pushed into tool results.

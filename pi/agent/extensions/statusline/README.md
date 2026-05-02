@@ -16,6 +16,14 @@ Left-to-right priority is preserved when the terminal is narrow: workflow mode, 
 
 The footer updates on session start, workflow-mode changes, model changes, thinking-level changes, and after each turn. Provider usage fetching remains debounced to one API call per 60 seconds.
 
+## Configuration
+
+No extension-specific configuration. Path shortening uses the `HOME` environment variable when available.
+
+## Logging
+
+This extension does not write retained logs or diagnostic files.
+
 ## Current providers
 
 - `openai-codex` — polls the ChatGPT/Codex usage endpoint

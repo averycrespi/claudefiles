@@ -41,6 +41,14 @@ Renders a custom TUI widget at the bottom of the terminal:
 
 In non-interactive mode (`!ctx.hasUI`) the tool returns an error immediately.
 
+## Configuration
+
+No user-facing configuration.
+
+## Logging
+
+This extension does not write retained logs or diagnostic files.
+
 ## Inspiration
 
 - [edlsh/pi-ask-user](https://github.com/edlsh/pi-ask-user) — searchable single/multi-select options, freeform responses, and a bundled skill that prompts agents to seek input on architectural trade-offs
