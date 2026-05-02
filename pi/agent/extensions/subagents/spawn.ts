@@ -1,12 +1,5 @@
 import { spawn as _nodeSpawn } from "node:child_process";
-import {
-  createWriteStream,
-  mkdirSync,
-  unlinkSync,
-  type WriteStream,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { createManagedLogger } from "../_shared/logging.ts";
 import {
   MAX_SUBAGENT_DEPTH,
   type BuiltinTool,
@@ -179,32 +172,6 @@ function reduceJsonLine(
   return currentText;
 }
 
-const LOG_DIR = join(tmpdir(), "pi-subagent-logs");
-
-function ensureLogDir(): void {
-  try {
-    mkdirSync(LOG_DIR, { recursive: true });
-  } catch {
-    // best-effort
-  }
-}
-
-function removeLogFile(path: string): void {
-  try {
-    unlinkSync(path);
-  } catch {
-    // best-effort
-  }
-}
-
-function createLogFile(id: string): { path: string; stream: WriteStream } {
-  ensureLogDir();
-  const safeName = id.replace(/[^a-zA-Z0-9_:-]/g, "_");
-  const path = join(LOG_DIR, `${safeName}-${Date.now()}.log`);
-  const stream = createWriteStream(path, { flags: "a" });
-  return { path, stream };
-}
-
 async function runSpawn(
   args: string[],
   cwd: string,
@@ -213,8 +180,8 @@ async function runSpawn(
   onEvent?: (event: unknown) => void,
   extraEnv?: Record<string, string>,
 ): Promise<SpawnOutcome> {
-  const log = createLogFile(logId);
-  log.stream.write(
+  const log = createManagedLogger({ extensionName: "subagents", id: logId });
+  log.write(
     `$ pi ${args.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ")}\n\n`,
   );
 
@@ -235,13 +202,14 @@ async function runSpawn(
       signal?.removeEventListener("abort", onAbort);
       if (killTimer) _timers.clearTimeout(killTimer);
       if (postAgentEndTimer) _timers.clearTimeout(postAgentEndTimer);
-      log.stream.end();
-      if (outcome.ok) {
-        removeLogFile(log.path);
-      } else {
-        outcome.logFile = log.path;
-      }
-      resolve(outcome);
+      void log.close().then(() => {
+        if (outcome.ok) {
+          log.delete();
+        } else {
+          outcome.logFile = log.path;
+        }
+        resolve(outcome);
+      });
     };
 
     const startKillSequence = () => {
@@ -313,7 +281,7 @@ async function runSpawn(
 
     child?.stdout?.setEncoding("utf8");
     child?.stdout?.on("data", (chunk: string) => {
-      log.stream.write(chunk);
+      log.write(chunk);
       stdoutBuffer += chunk;
       let newlineIndex = stdoutBuffer.indexOf("\n");
       while (newlineIndex !== -1) {
@@ -327,7 +295,7 @@ async function runSpawn(
     child?.stderr?.setEncoding("utf8");
     let stderrLineBuffer = "";
     child?.stderr?.on("data", (chunk: string) => {
-      log.stream.write(`[stderr] ${chunk}`);
+      log.write(`[stderr] ${chunk}`);
       stderrBuffer += chunk;
       stderrLineBuffer += chunk;
       let newlineIndex = stderrLineBuffer.indexOf("\n");

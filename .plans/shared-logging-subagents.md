@@ -16,7 +16,7 @@ Refactor `pi/agent/extensions/_shared/logging.ts` from redaction-only helpers in
 
 1. `_shared/logging.ts` exports a reusable managed logger abstraction that always creates logs under the fixed shared temp root `/tmp/pi-extension-logs` (technically `join(tmpdir(), "pi-extension-logs")`) using sanitized extension and run identifiers.
 2. The logger is the only write path extensions need for managed logs, and its write helpers redact secrets before data reaches disk.
-3. The logger supports close/dispose and best-effort deletion/cleanup of a created log file without throwing when the file is already gone or cannot be removed.
+3. The logger supports close/dispose and best-effort deletion of a created log file without throwing when the file is already gone or cannot be removed.
 4. Tests cover filename sanitization, automatic directory creation, redacted writes, error-message writes, success cleanup, and best-effort cleanup failure behavior.
 5. `subagents/spawn.ts` no longer defines its own `LOG_DIR`, `ensureLogDir`, `removeLogFile`, `createLogFile`, or direct `WriteStream` management; it delegates those responsibilities to `_shared/logging.ts`.
 6. Existing subagent failure output still includes the persisted log path, successful subagent runs still remove the log file, and subagent logs no longer persist obvious secrets written through the logger.
@@ -32,7 +32,7 @@ Add a minimal generic class-style library surface to `_shared/logging.ts`:
   - `write(text: string | Buffer): void` — redacts before writing to disk
   - `writeError(error: unknown, prefix?: string): void` — writes `safeErrorMessage(error)`
   - `close(): void` or `close(): Promise<void>`
-  - `delete(): void` / `cleanup(): void` — best-effort removal of the file
+  - `delete(): void` — best-effort removal of the file
 - Add a factory such as `createManagedLogger(options)` with options similar to:
   - `extensionName: string` for the owning extension directory under the shared root
   - `id?: string` for the logical run/tool id; callers should pass the Pi session id or a tool/run id, and extension-level wrappers may default this from `ctx.sessionManager.getSessionFile()` when available
@@ -50,7 +50,7 @@ Refactor `subagents/spawn.ts` to import `createManagedLogger` and replace:
 - `log.stream.write(...)` with `log.write(...)`
 - error logging with `log.writeError(...)` where applicable
 - all completion paths first close/flush the logger
-- successful cleanup with `log.delete()` / `log.cleanup()` after close
+- successful cleanup with `log.delete()` after close
 - failure/abort behavior with `outcome.logFile = log.path` after close, leaving the retained log readable
 
 ## Ordered Tasks

@@ -1,6 +1,9 @@
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { mkdtemp, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import {
   POST_AGENT_END_GRACE_MS,
   buildArgs,
@@ -10,6 +13,7 @@ import {
   _timers,
   type SpawnOutcome,
 } from "./spawn.ts";
+import { _loggingFs } from "../_shared/logging.ts";
 
 function baseOutcome(overrides: Partial<SpawnOutcome> = {}): SpawnOutcome {
   return {
@@ -406,6 +410,50 @@ test("spawnSubagent env: omitting options.env passes process.env through unchang
     else process.env.PI_SUBAGENT_DEPTH = prevDepth;
     if (prevVar === undefined) delete process.env.MCP_BROKER_READONLY;
     else process.env.MCP_BROKER_READONLY = prevVar;
+  }
+});
+
+test("spawnSubagent: retained failure logs are redacted", async () => {
+  const prev = process.env.PI_SUBAGENT_DEPTH;
+  process.env.PI_SUBAGENT_DEPTH = "0";
+  const root = await mkdtemp(join(tmpdir(), "subagent-log-test-"));
+  const tmpStub = mock.method(_loggingFs, "tmpdir", () => root);
+
+  const spawnStub = mock.method(_spawn, "fn", () => {
+    const child = new EventEmitter() as any;
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.stdout.setEncoding = () => {};
+    child.stderr.setEncoding = () => {};
+
+    setImmediate(() => {
+      child.stderr.emit("data", "token=super-secret\n");
+      child.emit("close", 1, null);
+    });
+
+    return child;
+  });
+
+  try {
+    const result = await spawnSubagent({
+      prompt: "p",
+      toolAllowlist: [],
+      extensionAllowlist: [],
+      cwd: "/tmp",
+      logId: "secret-run",
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.logFile ?? "", /secret-run\.log$/);
+    assert.equal(
+      await readFile(result.logFile!, "utf8"),
+      "$ pi --mode json -p --no-session --no-tools --no-extensions p\n\n[stderr] token=[REDACTED]\n",
+    );
+  } finally {
+    spawnStub.mock.restore();
+    tmpStub.mock.restore();
+    if (prev === undefined) delete process.env.PI_SUBAGENT_DEPTH;
+    else process.env.PI_SUBAGENT_DEPTH = prev;
   }
 });
 
