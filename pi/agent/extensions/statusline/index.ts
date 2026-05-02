@@ -6,6 +6,10 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import {
+  WORKFLOW_MODE_CHANGED_EVENT,
+  type WorkflowModeState,
+} from "../workflow-modes/api.ts";
 import { codexAdapter } from "./codex.ts";
 import { renderFooterLine, type FooterState } from "./footer.ts";
 import { type ProviderAdapter } from "./utils.ts";
@@ -28,6 +32,11 @@ export default function (pi: ExtensionAPI) {
     state.contextUsage = ctx.getContextUsage?.() ?? null;
     state.modelId = ctx.model?.id;
     state.thinking = pi.getThinkingLevel();
+  }
+
+  function syncWorkflowState(workflowState: WorkflowModeState): void {
+    state.workflowMode = workflowState.mode;
+    state.workflowBaseThinking = workflowState.baseThinking;
   }
 
   async function refreshUsage(ctx: any): Promise<void> {
@@ -92,6 +101,12 @@ export default function (pi: ExtensionAPI) {
     requestRender?.();
   }
 
+  pi.events.on(WORKFLOW_MODE_CHANGED_EVENT, (workflowState) => {
+    syncWorkflowState(workflowState as WorkflowModeState);
+    state.thinking = pi.getThinkingLevel();
+    requestRender?.();
+  });
+
   pi.on("session_start", async (_event, ctx) => {
     syncState(ctx);
     installFooter(ctx);
@@ -104,6 +119,11 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("model_select", async (_event, ctx) => {
     await refreshAndRender(ctx);
+  });
+
+  (pi as any).on("thinking_level_select", async () => {
+    state.thinking = pi.getThinkingLevel();
+    requestRender?.();
   });
 
   pi.on("session_shutdown", async () => {

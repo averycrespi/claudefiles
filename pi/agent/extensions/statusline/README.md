@@ -1,18 +1,20 @@
 # statusline
 
-Pi extension that renders a single-line footer with the current working directory, provider quota, context usage, model, and thinking level.
+Pi extension that renders a single-line footer with the current workflow mode, working directory, provider quota, context usage, model, and thinking level.
 
 ## Footer format
 
 ```
 ~/Workspace/agent-config · Codex 45% (20%) ↺2h/3d · ctx 42%/200k · gpt-5-codex · medium
-/repo · Codex limit ↺2h · ctx 92%/200k · gpt-5-codex · high
-/repo · Codex $4.20 ↺1h · ctx 18%/200k · gpt-5-codex · low
+plan mode · /repo · Codex limit ↺2h · ctx 92%/200k · gpt-5-codex · high
+verify mode · /repo · Codex $4.20 ↺1h · ctx 18%/200k · gpt-5-codex · low (base: high)
 ```
 
-Left-to-right priority is preserved when the terminal is narrow: cwd, then provider quota, then context, then model, then thinking. Quota percentages and context percentage are highlighted in warning/error colors above the configured thresholds.
+Normal mode omits the workflow badge. When a workflow mode is active, the footer prefixes a colored `plan mode`, `execute mode`, or `verify mode` segment. If the current thinking level differs from the workflow mode's default, the footer appends `(base: …)` after the current thinking level.
 
-The footer updates on session start, model changes, and after each turn. Provider usage fetching remains debounced to one API call per 60 seconds.
+Left-to-right priority is preserved when the terminal is narrow: workflow mode, cwd, provider quota, context, model, then thinking. Quota percentages and context percentage are highlighted in warning/error colors above the configured thresholds.
+
+The footer updates on session start, workflow-mode changes, model changes, thinking-level changes, and after each turn. Provider usage fetching remains debounced to one API call per 60 seconds.
 
 ## Current providers
 

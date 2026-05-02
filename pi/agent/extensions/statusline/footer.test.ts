@@ -44,7 +44,7 @@ test("renderFooterLine renders statusline segments in priority order", () => {
       contextUsage: { percent: 42, contextWindow: 200_000 },
       modelId: "gpt-5-codex",
       thinking: "medium",
-    },
+    } as any,
     200,
     theme,
   );
@@ -66,7 +66,7 @@ test("renderFooterLine colors statusline percentages above warning and error thr
       contextUsage: { percent: 92, contextWindow: 200_000 },
       modelId: "gpt-5-codex",
       thinking: "high",
-    },
+    } as any,
     200,
     theme,
   );
@@ -88,7 +88,7 @@ test("renderFooterLine drops lower-priority statusline segments first when width
       contextUsage: { percent: 42, contextWindow: 200_000 },
       modelId: "gpt-5-codex",
       thinking: "medium",
-    },
+    } as any,
     52,
     theme,
   );
@@ -96,5 +96,61 @@ test("renderFooterLine drops lower-priority statusline segments first when width
   assert.equal(
     stripAnsi(line),
     "~/Workspace/agent-config · Codex 45% (20%) ↺2h/3d",
+  );
+});
+
+test("renderFooterLine prefixes workflow mode and hides the normal-mode badge", () => {
+  const workflowLine = renderFooterLine(
+    {
+      cwd: "/Users/avery/Workspace/agent-config",
+      homeDir: "/Users/avery",
+      contextUsage: { percent: 42, contextWindow: 200_000 },
+      modelId: "gpt-5-codex",
+      thinking: "high",
+      workflowMode: "plan",
+      workflowBaseThinking: "high",
+    } as any,
+    200,
+    theme,
+  );
+  const normalLine = renderFooterLine(
+    {
+      cwd: "/Users/avery/Workspace/agent-config",
+      homeDir: "/Users/avery",
+      contextUsage: { percent: 42, contextWindow: 200_000 },
+      modelId: "gpt-5-codex",
+      thinking: "medium",
+      workflowMode: "normal",
+    } as any,
+    200,
+    theme,
+  );
+
+  assert.equal(
+    stripAnsi(workflowLine),
+    "plan mode · ~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · high",
+  );
+  assert.equal(
+    stripAnsi(normalLine),
+    "~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium",
+  );
+});
+
+test("renderFooterLine shows workflow base thinking only when overridden", () => {
+  const line = renderFooterLine(
+    {
+      cwd: "/repo",
+      modelId: "gpt-5-codex",
+      thinking: "low",
+      workflowMode: "verify",
+      workflowBaseThinking: "high",
+    } as any,
+    200,
+    theme,
+  );
+
+  assert.equal(
+    stripAnsi(line),
+    "verify mode · /repo · gpt-5-codex · low (base: high)",
   );
 });

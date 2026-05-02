@@ -44,16 +44,31 @@ function makeCtx() {
 function makePi() {
   const handlers = new Map<string, EventHandler>();
   const statuslineCalls: string[][] = [];
+  const eventHandlers = new Map<string, Array<(data: unknown) => void>>();
+  let thinkingLevel = "medium";
 
   const pi = {
     on(event: string, handler: EventHandler) {
       handlers.set(event, handler);
     },
     getThinkingLevel() {
-      return "medium" as const;
+      return thinkingLevel as any;
+    },
+    events: {
+      on(event: string, handler: (data: unknown) => void) {
+        const list = eventHandlers.get(event) ?? [];
+        list.push(handler);
+        eventHandlers.set(event, list);
+      },
+      emit(event: string, data: unknown) {
+        for (const handler of eventHandlers.get(event) ?? []) handler(data);
+      },
     },
     _handlers: handlers,
     _statuslineCalls: statuslineCalls,
+    _setThinkingLevel(level: string) {
+      thinkingLevel = level;
+    },
     _ctx() {
       return {
         ...makeCtx(),
@@ -65,8 +80,16 @@ function makePi() {
               footerData: unknown,
             ) => { render(width: number): string[]; invalidate(): void },
           ) {
-            const component = factory(
-              { requestRender() {} },
+            let component: {
+              render(width: number): string[];
+              invalidate(): void;
+            };
+            component = factory(
+              {
+                requestRender() {
+                  statuslineCalls.push(component.render(200));
+                },
+              },
               identityTheme,
               {},
             );
@@ -89,7 +112,38 @@ test("session_start installs a single-line statusline instead of publishing only
 
   await handler!({ type: "session_start", reason: "startup" }, pi._ctx());
 
-  assert.deepEqual(pi._statuslineCalls, [
-    ["~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium"],
+  assert.deepEqual(pi._statuslineCalls[0], [
+    "~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium",
+  ]);
+});
+
+test("workflow mode events rerender the statusline with mode badge and base thinking", async () => {
+  const pi = makePi();
+  statuslineExtension(pi as any);
+
+  const handler = pi._handlers.get("session_start");
+  assert.ok(handler, "session_start handler should be registered");
+
+  await handler!({ type: "session_start", reason: "startup" }, pi._ctx());
+  pi.events.emit("workflow-modes:changed", {
+    mode: "plan",
+    baseThinking: "high",
+  });
+  pi._setThinkingLevel("low");
+  pi.events.emit("workflow-modes:changed", {
+    mode: "plan",
+    baseThinking: "high",
+  });
+
+  assert.deepEqual(pi._statuslineCalls[0], [
+    "~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium",
+  ]);
+  assert.deepEqual(pi._statuslineCalls.slice(-2), [
+    [
+      "plan mode · ~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium (base: high)",
+    ],
+    [
+      "plan mode · ~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · low (base: high)",
+    ],
   ]);
 });

@@ -1,4 +1,5 @@
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import type { WorkflowMode } from "../workflow-modes/types.ts";
 import { formatDuration, type UsageStats } from "./utils.ts";
 
 export type FooterTheme = {
@@ -19,6 +20,8 @@ export type FooterState = {
   } | null;
   modelId?: string;
   thinking?: string;
+  workflowMode?: WorkflowMode;
+  workflowBaseThinking?: string;
 };
 
 function collapseHome(cwd: string, homeDir?: string): string {
@@ -112,6 +115,31 @@ function buildContextSegment(
   return `ctx ${percentText}/${formatTokens(contextUsage.contextWindow)}`;
 }
 
+function buildWorkflowModeSegment(
+  mode: FooterState["workflowMode"],
+  theme: FooterTheme,
+): string | undefined {
+  if (!mode || mode === "normal") return undefined;
+
+  const label = `${mode} mode`;
+  if (mode === "plan") return theme.fg("accent", label);
+  if (mode === "execute") return theme.fg("success", label);
+  return theme.fg("warning", label);
+}
+
+function buildThinkingSegment(state: FooterState): string | undefined {
+  if (!state.thinking) return undefined;
+  if (
+    state.workflowMode &&
+    state.workflowMode !== "normal" &&
+    state.workflowBaseThinking &&
+    state.thinking !== state.workflowBaseThinking
+  ) {
+    return `${state.thinking} (base: ${state.workflowBaseThinking})`;
+  }
+  return state.thinking;
+}
+
 export function renderFooterLine(
   state: FooterState,
   width: number,
@@ -121,11 +149,12 @@ export function renderFooterLine(
 
   const separator = theme.fg("dim", " · ");
   const segments = [
+    buildWorkflowModeSegment(state.workflowMode, theme),
     collapseHome(state.cwd, state.homeDir),
     buildUsageSegment(state.usage, theme),
     buildContextSegment(state.contextUsage, theme),
     state.modelId,
-    state.thinking,
+    buildThinkingSegment(state),
   ].filter((segment): segment is string => Boolean(segment));
 
   let line = "";

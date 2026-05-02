@@ -16,10 +16,8 @@ import {
   getManagedToolNamesForMode,
   getThinkingLevelForMode,
 } from "./modes.ts";
-import { createWorkflowWidget } from "./render.ts";
+import { WORKFLOW_MODE_CHANGED_EVENT, type WorkflowModeState } from "./api.ts";
 import type { WorkflowMode } from "./types.ts";
-
-const WIDGET_KEY = "workflow-modes";
 
 type RuntimeState = {
   mode: WorkflowMode;
@@ -60,36 +58,15 @@ export function createWorkflowModesExtension() {
   return function (pi: ExtensionAPI) {
     const state: RuntimeState = { mode: "normal" };
 
-    function setWorkflowWidget(
-      ctx: ExtensionContext,
-      content: ReturnType<typeof createWorkflowWidget> | undefined,
-    ): void {
-      const piAny = pi as any;
-      if (piAny.hasUI && typeof piAny.setWidget === "function") {
-        piAny.setWidget(WIDGET_KEY, content);
-        return;
-      }
-      if (!ctx.hasUI) return;
-      ctx.ui.setWidget(WIDGET_KEY, content as any, {
-        placement: "aboveEditor",
-      });
+    function getWorkflowModeState(): WorkflowModeState {
+      return {
+        mode: state.mode,
+        baseThinking: getThinkingLevelForMode(state.mode),
+      };
     }
 
-    function renderWidget(ctx: ExtensionContext): void {
-      setWorkflowWidget(
-        ctx,
-        state.mode === "normal"
-          ? undefined
-          : createWorkflowWidget({
-              mode: state.mode,
-              nextAction: deriveNextAction({
-                todos: extractTodoItemsFromBranch(
-                  ctx.sessionManager.getBranch(),
-                ),
-                mode: state.mode,
-              }),
-            }),
-      );
+    function publishWorkflowModeState(): void {
+      pi.events.emit(WORKFLOW_MODE_CHANGED_EVENT, getWorkflowModeState());
     }
 
     function captureBaselines(): void {
@@ -176,7 +153,7 @@ export function createWorkflowModesExtension() {
         applyMode(mode);
       }
       state.mode = mode;
-      renderWidget(ctx);
+      publishWorkflowModeState();
       sendKickoffMessage(mode, args, ctx);
     }
 
@@ -307,7 +284,7 @@ export function createWorkflowModesExtension() {
           applyMode("normal");
         }
         state.mode = "normal";
-        renderWidget(ctx);
+        publishWorkflowModeState();
       },
     });
 
@@ -320,26 +297,26 @@ export function createWorkflowModesExtension() {
       });
     }
 
-    pi.on("session_start", async (_event, ctx) => {
+    pi.on("session_start", async () => {
       captureBaselines();
       if (state.mode !== "normal") {
         applyMode("normal");
       }
       state.mode = "normal";
-      renderWidget(ctx);
+      publishWorkflowModeState();
     });
 
-    pi.on("session_tree", async (_event, ctx) => {
+    pi.on("session_tree", async () => {
       if (state.mode !== "normal") {
         applyMode("normal");
       }
       state.mode = "normal";
-      renderWidget(ctx);
+      publishWorkflowModeState();
     });
 
-    pi.on("session_shutdown", async (_event, ctx) => {
+    pi.on("session_shutdown", async () => {
       state.mode = "normal";
-      setWorkflowWidget(ctx, undefined);
+      publishWorkflowModeState();
     });
 
     pi.on("before_agent_start", async (event) => {
@@ -349,14 +326,6 @@ export function createWorkflowModesExtension() {
           mode: state.mode,
         })}`,
       };
-    });
-
-    pi.on("tool_result", async (event, ctx) => {
-      if (state.mode === "normal") return undefined;
-      if (event.toolName === "todo") {
-        renderWidget(ctx);
-      }
-      return undefined;
     });
 
     pi.on("session_before_compact", async (event) => {

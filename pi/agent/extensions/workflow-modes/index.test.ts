@@ -143,6 +143,8 @@ function makePi(cwd: string) {
   ];
   const setActiveToolsCalls: string[][] = [];
   const setThinkingLevelCalls: string[] = [];
+  const eventHandlers = new Map<string, Array<(data: unknown) => void>>();
+  const emittedEvents: Array<{ event: string; data: unknown }> = [];
   let currentTools = [...activeTools];
   let thinkingLevel = "medium";
 
@@ -205,7 +207,17 @@ function makePi(cwd: string) {
       thinkingLevel = level;
       setThinkingLevelCalls.push(level);
     },
-    events: { on: () => {}, emit: () => {} },
+    events: {
+      on(event: string, handler: (data: unknown) => void) {
+        const list = eventHandlers.get(event) ?? [];
+        list.push(handler);
+        eventHandlers.set(event, list);
+      },
+      emit(event: string, data: unknown) {
+        emittedEvents.push({ event, data });
+        for (const handler of eventHandlers.get(event) ?? []) handler(data);
+      },
+    },
     _cwd: cwd,
     _tools: tools,
     _commands: commands,
@@ -216,6 +228,7 @@ function makePi(cwd: string) {
     _sentUserMessages: sentUserMessages,
     _setActiveToolsCalls: setActiveToolsCalls,
     _setThinkingLevelCalls: setThinkingLevelCalls,
+    _emittedEvents: emittedEvents,
     _currentTools: () => [...currentTools],
     _thinkingLevel: () => thinkingLevel,
     _ctx(branch: unknown[] = [], inputResponse?: string, idle = true) {
@@ -282,6 +295,10 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
     String(pi._sentUserMessages[0]?.content),
     /Refactor auth middleware/,
   );
+  assert.deepEqual(pi._emittedEvents.at(-1), {
+    event: "workflow-modes:changed",
+    data: { mode: "plan", baseThinking: "high" },
+  });
 
   const beforeAgentStart = pi._handlers.get("before_agent_start");
   const result = await beforeAgentStart!(
@@ -319,7 +336,7 @@ test("re-entering the same mode does not reapply tools or thinking defaults", as
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("/normal restores baseline tools, hides the widget, and does not send a kickoff message", async () => {
+test("/normal restores baseline tools, clears workflow state, and does not send a kickoff message", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-normal-"));
   const pi = makePi(cwd);
   createWorkflowModesExtension()(pi as any);
@@ -348,9 +365,10 @@ test("/normal restores baseline tools, hides the widget, and does not send a kic
     "find",
     "grep",
   ]);
-  assert.deepEqual(pi._widgetCalls.at(-1), {
-    key: "workflow-modes",
-    lines: undefined,
+  assert.equal(pi._widgetCalls.length, 0);
+  assert.deepEqual(pi._emittedEvents.at(-1), {
+    event: "workflow-modes:changed",
+    data: { mode: "normal", baseThinking: undefined },
   });
   assert.equal(pi._sentUserMessages.length, 1);
 

@@ -7,7 +7,7 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 - registers `/normal`, `/plan`, `/execute`, and `/verify` commands
 - switches tool access only on explicit mode transitions
 - applies per-mode thinking defaults only on explicit mode transitions
-- shows a small sticky widget above the editor while Plan, Execute, or Verify mode is active
+- publishes workflow-mode state over `pi.events` for other extensions
 - injects a stable mode-specific contract into `before_agent_start`
 - immediately sends a kickoff user message on `/plan`, `/execute`, and `/verify` so the agent starts in the new mode
 - provides Plan-mode-only `write_plan` and `edit_plan` tools scoped to `.plans/` at the repo root
@@ -18,7 +18,7 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 
 ### Normal
 
-Restores the session's baseline tool set and baseline thinking level. No workflow widget or workflow prompt contract is active, and `/normal` does not send a kickoff message.
+Restores the session's baseline tool set and baseline thinking level. No workflow prompt contract is active, and `/normal` does not send a kickoff message.
 
 ### Plan
 
@@ -67,6 +67,12 @@ The Plan-mode contract tells the agent to usually include sections like:
 
 The extension does not pre-create or preselect a workflow brief. Slash-command arguments are passed through to the agent, which decides whether to read, create, or refine plan files.
 
+## Integration API
+
+For programmatic integration from other extensions, see [API.md](./API.md).
+
+The extension publishes workflow-mode state changes over `pi.events` so other extensions can react without duplicating workflow state.
+
 ## Persistence and compaction
 
 Workflow mode itself is in-memory session state. New or restored sessions start in Normal mode.
@@ -83,5 +89,6 @@ During compaction, the extension summarizes the active workflow shell state inst
 - `artifact.ts` — `.plans/` path validation and exact-text edit helpers
 - `modes.ts` — tool sets, mode contracts, and thinking defaults
 - `compaction.ts` — workflow-aware compaction summary helpers
-- `render.ts` — sticky widget rendering
+- `api.ts` — curated public event contract for other extensions
+- `API.md` — programmatic integration docs for the `api.ts` surface
 - `types.ts` — shared local types
