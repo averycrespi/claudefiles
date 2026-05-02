@@ -15,6 +15,11 @@ import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { truncateToWidth, type Component } from "@mariozechner/pi-tui";
 import { isAbsolute, relative, resolve } from "node:path";
 
+// Pi tool boxes apply background after child rendering; full resets inside
+// child lines clear that background before the box's final background reset.
+const SGR_FULL_RESET = /\x1b\[0m/g;
+const SGR_BG_SAFE_RESET = "\x1b[22;23;24;25;27;28;29;39m";
+
 /**
  * Partial-state renderers only show elapsed time once they've been
  * running at least this long. Avoids flashing "(0s)" on fast calls.
@@ -238,7 +243,12 @@ export class TruncatedText implements Component {
     }
 
     const safeWidth = Math.max(0, width);
-    const rendered = this.lines.map((line) => truncateToWidth(line, safeWidth));
+    const rendered = this.lines.map((line) =>
+      truncateToWidth(line, safeWidth).replace(
+        SGR_FULL_RESET,
+        SGR_BG_SAFE_RESET,
+      ),
+    );
     this.cachedWidth = width;
     this.cachedLines = rendered;
     return rendered;

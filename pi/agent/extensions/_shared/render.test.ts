@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
+import { visibleWidth } from "@mariozechner/pi-tui";
 import {
   ELAPSED_THRESHOLD_MS,
+  TruncatedText,
   clearPartialTimer,
   countNonEmptyLines,
   firstLine,
@@ -162,6 +164,18 @@ test("clearPartialTimer clears and unsets the timer; safe when nothing is set", 
   assert.ok(context.state.renderTimer);
   clearPartialTimer(context);
   assert.equal(context.state.renderTimer, undefined);
+});
+
+test("TruncatedText keeps truncated styled lines background-safe", () => {
+  const component = new TruncatedText([
+    "\x1b[38;5;246mabcdefghijklmnopqrstuvwxyz0123456789\x1b[39m",
+  ]);
+
+  const [line] = component.render(18);
+
+  assert.equal(visibleWidth(line), 18);
+  assert.match(line, /\.\.\./);
+  assert.doesNotMatch(line, /\x1b\[0m/);
 });
 
 test("partialElapsed records startedAt and returns '' before threshold", () => {
