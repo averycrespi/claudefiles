@@ -5,9 +5,9 @@ Pi extension that renders a single-line footer with the current workflow mode, w
 ## Footer format
 
 ```
-~/Workspace/agent-config · Codex 45% (20%) ↺2h/3d · ctx 42%/200k · gpt-5-codex · medium
-plan mode · /repo · Codex limit ↺2h · ctx 92%/200k · gpt-5-codex · high
-verify mode · /repo · Codex $4.20 ↺1h · ctx 18%/200k · gpt-5-codex · low (base: high)
+~/Workspace/agent-config · Codex 45% (20%) 2h · ctx 42%/200k · gpt-5-codex · medium
+plan mode · /repo · Codex limit 2h · ctx 92%/200k · gpt-5-codex · high
+verify mode · /repo · Codex $4.20 1h · ctx 18%/200k · gpt-5-codex · low (base: high)
 ```
 
 Normal mode omits the workflow badge. When a workflow mode is active, the footer prefixes a colored `plan mode`, `execute mode`, or `verify mode` segment. If the current thinking level differs from the session's original pre-workflow thinking level, the footer appends `(base: …)` after the current thinking level.

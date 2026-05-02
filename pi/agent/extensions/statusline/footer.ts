@@ -60,20 +60,19 @@ function buildUsageSegment(
     const reset = stats.primary?.resetAfterSeconds;
     return reset === undefined
       ? `${label} $${stats.balance}`
-      : `${label} $${stats.balance} ↺${formatDuration(reset)}`;
+      : `${label} $${stats.balance} ${formatDuration(reset)}`;
   }
 
   if (stats.limitReached) {
     const reset = stats.primary?.resetAfterSeconds;
     return reset === undefined
       ? `${label} limit`
-      : `${label} limit ↺${formatDuration(reset)}`;
+      : `${label} limit ${formatDuration(reset)}`;
   }
 
   const primaryPercent = stats.primary?.usedPercent;
   const secondaryPercent = stats.secondary?.usedPercent;
   const primaryReset = stats.primary?.resetAfterSeconds;
-  const secondaryReset = stats.secondary?.resetAfterSeconds;
 
   if (primaryPercent === undefined && secondaryPercent === undefined) {
     return label;
@@ -88,14 +87,8 @@ function buildUsageSegment(
     percentText = colorizePercent(secondaryPercent, theme);
   }
 
-  let resetText = "";
-  if (primaryReset !== undefined && secondaryReset !== undefined) {
-    resetText = ` ↺${formatDuration(primaryReset)}/${formatDuration(secondaryReset)}`;
-  } else if (primaryReset !== undefined) {
-    resetText = ` ↺${formatDuration(primaryReset)}`;
-  } else if (secondaryReset !== undefined) {
-    resetText = ` ↺${formatDuration(secondaryReset)}`;
-  }
+  const resetText =
+    primaryReset === undefined ? "" : ` ${formatDuration(primaryReset)}`;
 
   return `${label} ${percentText}${resetText}`;
 }

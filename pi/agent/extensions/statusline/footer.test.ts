@@ -51,7 +51,7 @@ test("renderFooterLine renders statusline segments in priority order", () => {
 
   assert.equal(
     stripAnsi(line),
-    "~/Workspace/agent-config · Codex 45% (20%) ↺2h/3d · ctx 42%/200k · gpt-5-codex · medium",
+    "~/Workspace/agent-config · Codex 45% (20%) 2h · ctx 42%/200k · gpt-5-codex · medium",
   );
 });
 
@@ -95,7 +95,7 @@ test("renderFooterLine drops lower-priority statusline segments first when width
 
   assert.equal(
     stripAnsi(line),
-    "~/Workspace/agent-config · Codex 45% (20%) ↺2h/3d",
+    "~/Workspace/agent-config · Codex 45% (20%) 2h",
   );
 });
 

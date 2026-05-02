@@ -29,7 +29,7 @@ test("formatDuration rounds to minutes between 1m and 1h", () => {
 
 test("formatDuration shows hours with minute remainder", () => {
   assert.equal(formatDuration(3600), "1h");
-  assert.equal(formatDuration(3600 + 30 * 60), "1h 30m");
+  assert.equal(formatDuration(3600 + 30 * 60), "1h30m");
   assert.equal(formatDuration(2 * 3600), "2h");
 });
 

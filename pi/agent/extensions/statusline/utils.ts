@@ -38,7 +38,7 @@ export function formatDuration(seconds: number): string {
     const rh = h % 24;
     return rh > 0 ? `${d}d ${rh}h` : `${d}d`;
   }
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return m > 0 ? `${h}h${m}m` : `${h}h`;
 }
 
 export function buildFooterText(
