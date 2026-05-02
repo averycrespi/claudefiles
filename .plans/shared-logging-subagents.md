@@ -2,7 +2,7 @@
 
 ## Goal
 
-Refactor `pi/agent/extensions/_shared/logging.ts` from redaction-only helpers into a small shared logging abstraction that owns log-file creation, redacted writes, closing, and best-effort deletion. Then refactor `pi/agent/extensions/subagents/spawn.ts` to use it instead of maintaining its own temp log directory, file creation, stream writes, and cleanup code.
+Refactor `pi/agent/extensions/_shared/logging.ts` from redaction-only helpers into a small shared logging abstraction that owns log-file creation, raw writes, closing, and best-effort deletion. Then refactor `pi/agent/extensions/subagents/spawn.ts` to use it instead of maintaining its own temp log directory, file creation, stream writes, and cleanup code.
 
 ## Constraints
 
@@ -15,22 +15,21 @@ Refactor `pi/agent/extensions/_shared/logging.ts` from redaction-only helpers in
 ## Acceptance Criteria
 
 1. `_shared/logging.ts` exports a reusable managed logger abstraction that always creates logs under the fixed shared temp root `/tmp/pi-extension-logs` (technically `join(tmpdir(), "pi-extension-logs")`) using sanitized extension and run identifiers.
-2. The logger is the only write path extensions need for managed logs, and its write helpers redact secrets before data reaches disk.
+2. The logger is the only write path extensions need for managed logs, and v1 writes raw local transcript data without claiming automatic secret redaction.
 3. The logger supports close/dispose and best-effort deletion of a created log file without throwing when the file is already gone or cannot be removed.
-4. Tests cover filename sanitization, automatic directory creation, redacted writes, error-message writes, success cleanup, and best-effort cleanup failure behavior.
+4. Tests cover filename sanitization, automatic directory creation, raw writes, success cleanup, and best-effort cleanup failure behavior.
 5. `subagents/spawn.ts` no longer defines its own `LOG_DIR`, `ensureLogDir`, `removeLogFile`, `createLogFile`, or direct `WriteStream` management; it delegates those responsibilities to `_shared/logging.ts`.
-6. Existing subagent failure output still includes the persisted log path, successful subagent runs still remove the log file, and subagent logs no longer persist obvious secrets written through the logger.
+6. Existing subagent failure output still includes the persisted log path, and successful subagent runs still remove the log file.
 7. `make typecheck` and `make test` pass.
 
 ## Chosen Approach
 
 Add a minimal generic class-style library surface to `_shared/logging.ts`:
 
-- Keep `redactSecrets()` and `safeErrorMessage()` available, but allow changing their implementation if needed to support the logger.
+- Keep `redactSecrets()` and `safeErrorMessage()` available as opt-in helpers, but do not wire them into logger writes in v1.
 - Add a `ManagedLogger` / `LogFile` class (exact name can be chosen during implementation) with at least:
   - `path: string`
-  - `write(text: string | Buffer): void` — redacts before writing to disk
-  - `writeError(error: unknown, prefix?: string): void` — writes `safeErrorMessage(error)`
+  - `write(text: string | Buffer): void` — writes raw local log data
   - `close(): void` or `close(): Promise<void>`
   - `delete(): void` — best-effort removal of the file
 - Add a factory such as `createManagedLogger(options)` with options similar to:
@@ -40,15 +39,14 @@ Add a minimal generic class-style library surface to `_shared/logging.ts`:
 - Do not let extensions choose arbitrary log directories. The shared helper owns the root directory policy.
 - Internally sanitize both extension name and id with the current subagent-safe character policy (`/[^a-zA-Z0-9_:-]/g -> "_"`), create the extension-specific directory with `mkdirSync(..., { recursive: true })`, and open the file with exclusive-create semantics (`wx`) so one run cannot append to or overwrite another run's log.
 - If the requested id already exists, the helper should add a short uniqueness suffix internally (for example timestamp/counter) while keeping the path under the same extension directory. This preserves per-run isolation even when a caller reuses an id.
-- The class should hide `WriteStream` from callers so extensions cannot accidentally bypass redaction. If direct stream access becomes necessary later, expose it deliberately as a separate advanced API with clear warnings.
+- The class should hide `WriteStream` from callers so extensions consistently use the managed file lifecycle and fixed root policy. If direct stream access becomes necessary later, expose it deliberately as a separate advanced API.
 - Add a standalone best-effort deletion helper only if it remains useful outside the class, e.g. `deleteLogFile(path: string): void`.
-- Do not add structured `event(...)` / JSONL logging in v1. Keep the first shared logger focused on safe raw transcript writes plus error-message writes.
+- Do not add structured `event(...)` / JSONL logging in v1. Keep the first shared logger focused on raw local transcript writes.
 
 Refactor `subagents/spawn.ts` to import `createManagedLogger` and replace:
 
 - `createLogFile(logId)` with `createManagedLogger({ extensionName: "subagents", id: logId })`
 - `log.stream.write(...)` with `log.write(...)`
-- error logging with `log.writeError(...)` where applicable
 - all completion paths first close/flush the logger
 - successful cleanup with `log.delete()` after close
 - failure/abort behavior with `outcome.logFile = log.path` after close, leaving the retained log readable
@@ -57,9 +55,9 @@ Refactor `subagents/spawn.ts` to import `createManagedLogger` and replace:
 
 1. Read current `_shared/logging.ts`, `_shared/logging.test.ts`, `subagents/spawn.ts`, and `subagents/spawn.test.ts` before editing.
 2. Add a managed logger class/factory to `_shared/logging.ts` while preserving existing redaction exports. Use injectable filesystem/time helpers or the repo's exported-wrapper pattern for Node built-ins that tests need to stub (e.g. unlink/create stream/tmpdir/time).
-3. Extend `_shared/logging.test.ts` (or add a colocated logging file test if clearer) for creation, sanitization, unique path behavior when an id already exists, redacted raw writes, error writes, close, and cleanup behavior.
+3. Extend `_shared/logging.test.ts` (or add a colocated logging file test if clearer) for creation, sanitization, unique path behavior when an id already exists, raw writes, close, and cleanup behavior.
 4. Refactor `subagents/spawn.ts` to use the shared logger and remove duplicated local logging code/imports/direct stream management.
-5. Add or update `subagents/spawn.test.ts` assertions for success cleanup, failure log retention, and secret redaction in retained logs if current coverage does not already prove it.
+5. Add or update `subagents/spawn.test.ts` assertions for success cleanup and failure log retention if current coverage does not already prove it.
 6. Run `make typecheck`.
 7. Run `make test`.
 
@@ -73,7 +71,7 @@ Refactor `subagents/spawn.ts` to import `createManagedLogger` and replace:
 ## Assumptions / Open Questions
 
 - The requested cleanup surface is library-only, not LLM-visible tools or slash commands.
-- A class-style logger is preferable because it lets extensions share one safe API and makes redaction the default write path.
+- A class-style logger is preferable because it lets extensions share one managed lifecycle API without exposing stream details.
 - The existing behavior of deleting logs only on successful subagent completion is desirable.
 - A temp directory under `tmpdir()` remains acceptable, but the root must be fixed by the shared helper as `pi-extension-logs`, not extension-controlled. User-facing examples may look like `/tmp/pi-extension-logs/...`, but implementation/tests should assert `tmpdir()`-based paths rather than a literal `/tmp`.
 - For subagents, the current tool call id remains the right run id because it identifies one child-process log. Other future extensions can default to a session-derived id when their logs are session-scoped.

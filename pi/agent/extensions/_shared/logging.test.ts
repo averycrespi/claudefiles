@@ -93,19 +93,19 @@ test("createManagedLogger chooses a unique path when the requested id exists", a
   }
 });
 
-test("ManagedLogger redacts raw writes and error writes", async () => {
+test("ManagedLogger writes raw string and buffer chunks", async () => {
   const root = await mkdtemp(join(tmpdir(), "managed-logger-test-"));
   const tmpStub = mock.method(_loggingFs, "tmpdir", () => root);
 
   try {
-    const logger = createManagedLogger({ extensionName: "x", id: "redact" });
-    logger.write(Buffer.from("Authorization: Bearer secret-token\n"));
-    logger.writeError(new Error("failed with token=abc123"), "error: ");
+    const logger = createManagedLogger({ extensionName: "x", id: "raw" });
+    logger.write("Authorization: Bearer secret-token\n");
+    logger.write(Buffer.from("token=abc123\n"));
     await logger.close();
 
     assert.equal(
       await readFile(logger.path, "utf8"),
-      "Authorization: Bearer [REDACTED]\nerror: failed with token=[REDACTED]\n",
+      "Authorization: Bearer secret-token\ntoken=abc123\n",
     );
   } finally {
     tmpStub.mock.restore();

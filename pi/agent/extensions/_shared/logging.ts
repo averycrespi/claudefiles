@@ -104,12 +104,7 @@ export class ManagedLogger {
   }
 
   write(text: string | Buffer): void {
-    this.stream.write(redactSecrets(text.toString()));
-  }
-
-  writeError(error: unknown, prefix = ""): void {
-    const message = safeErrorMessage(error);
-    this.write(prefix ? `${prefix}${message}\n` : `${message}\n`);
+    this.stream.write(text);
   }
 
   close(): Promise<void> {

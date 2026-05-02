@@ -413,7 +413,7 @@ test("spawnSubagent env: omitting options.env passes process.env through unchang
   }
 });
 
-test("spawnSubagent: retained failure logs are redacted", async () => {
+test("spawnSubagent: retained failure logs include raw output", async () => {
   const prev = process.env.PI_SUBAGENT_DEPTH;
   process.env.PI_SUBAGENT_DEPTH = "0";
   const root = await mkdtemp(join(tmpdir(), "subagent-log-test-"));
@@ -447,7 +447,7 @@ test("spawnSubagent: retained failure logs are redacted", async () => {
     assert.match(result.logFile ?? "", /secret-run\.log$/);
     assert.equal(
       await readFile(result.logFile!, "utf8"),
-      "$ pi --mode json -p --no-session --no-tools --no-extensions p\n\n[stderr] token=[REDACTED]\n",
+      "$ pi --mode json -p --no-session --no-tools --no-extensions p\n\n[stderr] token=super-secret\n",
     );
   } finally {
     spawnStub.mock.restore();
