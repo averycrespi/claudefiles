@@ -297,7 +297,11 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
   );
   assert.deepEqual(pi._emittedEvents.at(-1), {
     event: "workflow-modes:changed",
-    data: { mode: "plan", baseThinking: "high" },
+    data: {
+      mode: "plan",
+      baseThinking: "high",
+      baselineThinking: "medium",
+    },
   });
 
   const beforeAgentStart = pi._handlers.get("before_agent_start");
@@ -368,7 +372,11 @@ test("/normal restores baseline tools, clears workflow state, and does not send 
   assert.equal(pi._widgetCalls.length, 0);
   assert.deepEqual(pi._emittedEvents.at(-1), {
     event: "workflow-modes:changed",
-    data: { mode: "normal", baseThinking: undefined },
+    data: {
+      mode: "normal",
+      baseThinking: undefined,
+      baselineThinking: undefined,
+    },
   });
   assert.equal(pi._sentUserMessages.length, 1);
 

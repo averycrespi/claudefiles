@@ -10,7 +10,7 @@ plan mode · /repo · Codex limit ↺2h · ctx 92%/200k · gpt-5-codex · high
 verify mode · /repo · Codex $4.20 ↺1h · ctx 18%/200k · gpt-5-codex · low (base: high)
 ```
 
-Normal mode omits the workflow badge. When a workflow mode is active, the footer prefixes a colored `plan mode`, `execute mode`, or `verify mode` segment. If the current thinking level differs from the workflow mode's default, the footer appends `(base: …)` after the current thinking level.
+Normal mode omits the workflow badge. When a workflow mode is active, the footer prefixes a colored `plan mode`, `execute mode`, or `verify mode` segment. If the current thinking level differs from the session's original pre-workflow thinking level, the footer appends `(base: …)` after the current thinking level.
 
 Left-to-right priority is preserved when the terminal is narrow: workflow mode, cwd, provider quota, context, model, then thinking. Quota percentages and context percentage are highlighted in warning/error colors above the configured thresholds.
 

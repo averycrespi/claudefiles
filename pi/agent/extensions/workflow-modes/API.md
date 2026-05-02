@@ -32,7 +32,7 @@ Subscribe like this:
 ```ts
 pi.events.on(WORKFLOW_MODE_CHANGED_EVENT, (data) => {
   const state = data as WorkflowModeState;
-  // react to state.mode / state.baseThinking
+  // react to state.mode / state.baseThinking / state.baselineThinking
 });
 ```
 
@@ -44,6 +44,7 @@ pi.events.on(WORKFLOW_MODE_CHANGED_EVENT, (data) => {
 interface WorkflowModeState {
   mode: "normal" | "plan" | "execute" | "verify";
   baseThinking?: "high" | "low";
+  baselineThinking?: string;
 }
 ```
 
@@ -51,4 +52,5 @@ Notes:
 
 - `mode` is always present.
 - `baseThinking` is the mode's default thinking level.
-- `baseThinking` is `undefined` in `normal` mode.
+- `baselineThinking` is the session's original thinking level captured before the first workflow-mode transition.
+- `baseThinking` and `baselineThinking` are `undefined` in `normal` mode.

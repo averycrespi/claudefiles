@@ -62,6 +62,8 @@ export function createWorkflowModesExtension() {
       return {
         mode: state.mode,
         baseThinking: getThinkingLevelForMode(state.mode),
+        baselineThinking:
+          state.mode === "normal" ? undefined : state.baselineThinking,
       };
     }
 

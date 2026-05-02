@@ -125,25 +125,19 @@ test("workflow mode events rerender the statusline with mode badge and base thin
   assert.ok(handler, "session_start handler should be registered");
 
   await handler!({ type: "session_start", reason: "startup" }, pi._ctx());
-  pi.events.emit("workflow-modes:changed", {
-    mode: "plan",
-    baseThinking: "high",
-  });
   pi._setThinkingLevel("low");
   pi.events.emit("workflow-modes:changed", {
-    mode: "plan",
-    baseThinking: "high",
+    mode: "execute",
+    baseThinking: "low",
+    baselineThinking: "high",
   });
 
   assert.deepEqual(pi._statuslineCalls[0], [
     "~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium",
   ]);
-  assert.deepEqual(pi._statuslineCalls.slice(-2), [
+  assert.deepEqual(pi._statuslineCalls.slice(-1), [
     [
-      "plan mode · ~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · medium (base: high)",
-    ],
-    [
-      "plan mode · ~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · low (base: high)",
+      "execute mode · ~/Workspace/agent-config · ctx 42%/200k · gpt-5-codex · low (base: high)",
     ],
   ]);
 });

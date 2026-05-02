@@ -36,7 +36,8 @@ export default function (pi: ExtensionAPI) {
 
   function syncWorkflowState(workflowState: WorkflowModeState): void {
     state.workflowMode = workflowState.mode;
-    state.workflowBaseThinking = workflowState.baseThinking;
+    state.workflowBaseThinking =
+      workflowState.baselineThinking ?? workflowState.baseThinking;
   }
 
   async function refreshUsage(ctx: any): Promise<void> {
