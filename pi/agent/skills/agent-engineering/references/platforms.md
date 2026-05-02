@@ -4,7 +4,7 @@ Three platforms dominate the agent-config ecosystem in this repo: **Claude Code*
 
 ## Claude Code
 
-Claude Code is a deterministic harness around the Claude Agent loop. ~98.4% of the codebase is non-LLM infra (per [Anthropic's Claude Code retrospective](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built)). The extension surface that you, as a harness engineer, work with is:
+Claude Code is a deterministic harness around the Claude Agent loop. One retrospective estimated that ~98.4% of the codebase is non-LLM infra (per [Anthropic's Claude Code retrospective](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built)). The extension surface that you, as a harness engineer, work with is:
 
 - **Hooks** — deterministic shell commands run on lifecycle events.
 - **Skills** — instruction packages loaded on demand.
@@ -67,8 +67,8 @@ Subagents are markdown files in `.claude/agents/*.md` (project) or `~/.claude/ag
 
 **Key knobs:**
 
-- `isolation: worktree` in the frontmatter creates a temporary git worktree for the subagent. **Silently no-ops outside a git repo** ([issue #39886](https://github.com/anthropics/claude-code/issues/39886)).
-- Worktree subagents branch from `origin/main`, not the parent's HEAD ([issue #50850](https://github.com/anthropics/claude-code/issues/50850)). Surprises workflows that assume the subagent inherits parent's branch state.
+- `isolation: worktree` in the frontmatter creates a temporary git worktree for the subagent. **At the time of writing, issue reports say it silently no-ops outside a git repo** ([issue #39886](https://github.com/anthropics/claude-code/issues/39886)).
+- At the time of writing, issue reports say worktree subagents branch from `origin/main`, not the parent's HEAD ([issue #50850](https://github.com/anthropics/claude-code/issues/50850)). Surprises workflows that assume the subagent inherits parent's branch state.
 - Tools available to the subagent are configured in its frontmatter; default is all tools.
 - The subagent's prompt should be self-contained — it has no access to prior conversation.
 
@@ -185,7 +185,7 @@ When the CLI is enough, use the CLI — fewer moving parts.
 
 ## Pi (`@mariozechner/pi-coding-agent`)
 
-Pi is an opinionated minimal coding agent by Mario Zechner. Smaller surface than Claude Code, single-file extensions, fast to iterate on. The `pi-extensions` skill in this repo covers the day-to-day API; this section captures harness-engineering-specific patterns.
+Pi is an opinionated minimal coding agent by Mario Zechner. Smaller surface than Claude Code and fast to iterate on. Upstream, an extension is a TypeScript module; in this repo, extensions are organized as directory-based packages. Use the upstream Pi docs plus this repo's `AGENTS.md` for day-to-day extension conventions; this section captures harness-engineering-specific patterns.
 
 Authoritative docs:
 
@@ -203,7 +203,7 @@ Background reading:
 
 ### Pi extension shape
 
-Each extension is a TypeScript module with a synchronous default-exported factory:
+Upstream, an extension entrypoint is a TypeScript module with a synchronous default-exported factory. In this repo that usually means an `index.ts` entrypoint inside `pi/agent/extensions/<name>/`:
 
 ```ts
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -217,7 +217,7 @@ The factory receives the `ExtensionAPI` and registers tools (`pi.registerTool`),
 
 ### Pi-specific harness patterns
 
-These come up repeatedly across the ~60 surveyed Pi extensions:
+These showed up repeatedly across the Pi extensions surveyed for this skill:
 
 1. **Tagged-output protocol > free text, ≤ JSON.** rmr's `<rmr:status>`, autonomous-dev's `STATUS:/PR_URL:/SUMMARY:` blocks. Models reliably emit tags inside markdown without escaping issues. JSON is more rigid; tags are more forgiving.
 2. **Plan = intent, not diff.** Across rmr, roach-pi, agent-pi: "A good plan does NOT contain line-by-line diffs. The implementing agent decides the code-level details." Don't over-specify.
@@ -235,7 +235,7 @@ From this repo's `CLAUDE.md` and the broader ecosystem:
 - **`mock.method` from `node:test` can't replace ESM module exports** — they're non-configurable bindings. To stub something like `child_process.spawn`, wrap in an exported holder (`export const _spawn = { fn: _nodeSpawn }`) and call through `_spawn.fn(...)`. Tests then `mock.method(_spawn, "fn", stub)`. Reference pattern in this repo: `pi/agent/extensions/subagents/spawn.ts`.
 - **RPC mode loses component-factory widgets** — only string arrays cross the RPC boundary. Design any widget you want RPC-portable as line arrays.
 - **Events stream as JSON lines without an `id` field** (responses do); host code parsing the stream must not key on `id` for events.
-- **`setWidget` cast pattern.** The typed signature is `pi.ui.setWidget`, but the in-repo convention — used by both `_workflow-core/lib/run.ts` and `task-list/index.ts` — is `(pi as any).setWidget(...)` gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this when adding sticky widgets.
+- **`setWidget` cast pattern.** The typed signature is `pi.ui.setWidget`, but the in-repo convention — used by both `pi/agent/extensions/workflow-modes/index.ts` and `pi/agent/extensions/todo/index.ts` — is `(pi as any).setWidget(...)` gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this when adding sticky widgets.
 - **Tool schemas exposed to the agent are snake_case while internal task fields stay camelCase.** Map between them in the tool's `execute` body or validation breaks.
 - **Atomic agent-tool mutations.** When an agent tool mutates shared state, collect ALL validation errors before rejecting, apply changes atomically with a single `notify()` on success, and return errors as tool result text (not `throw`) so the agent can read and recover.
 
@@ -244,9 +244,9 @@ From this repo's `CLAUDE.md` and the broader ecosystem:
 Patterns specific to `pi/agent/extensions/`:
 
 - Helpers shared across extensions go in `pi/agent/extensions/_shared/` (no `index.ts`, loader skips it).
-- An extension can expose a public surface via `api.ts` that other extensions import from.
-- Singletons share via Node's module caching: `task-list/api.ts` does `export const taskList = createStore()` — every importer sees the same store.
-- When a library outgrows `_shared/`, promote it to a top-level underscore-prefixed directory with its own `api.ts` (e.g. `_workflow-core/`).
+- An extension can expose a curated public surface via `api.ts` that other extensions import from; `pi/agent/extensions/subagents/api.ts` is the current in-repo example.
+- Module-level singletons are shared through Node's module caching, so shared state created once in a module will be seen by every importer.
+- Keep public cross-extension imports intentional: prefer a small `api.ts` surface over importing deep internal files.
 
 ## Picking a platform
 

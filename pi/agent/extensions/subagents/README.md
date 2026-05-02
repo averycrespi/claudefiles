@@ -2,18 +2,7 @@
 
 Pi extension that exposes a single tool, `spawn_agents`, for delegating work to child Pi processes as focused subagents.
 
-## Public API
-
-Other extensions may import the following from `api.ts`. Anything not listed here is internal and may change without notice.
-
-```ts
-import { spawnSubagent, formatSpawnFailure } from "../subagents/api.ts";
-import type { SpawnInvocation, SpawnOutcome } from "../subagents/api.ts";
-```
-
-- `spawnSubagent(options: SpawnInvocation): Promise<SpawnOutcome>` — low-level child-process spawn used by `spawn_agents` under the hood. Use when you need to run a Pi subagent from extension code without going through the LLM tool interface. Honors `signal` for cancellation.
-- `formatSpawnFailure(outcome: SpawnOutcome): string` — canonical error formatter for a failed `SpawnOutcome`. Produces the same error text rendered when an agent within `spawn_agents` fails.
-- `SpawnInvocation`, `SpawnOutcome` — input/output types for `spawnSubagent`.
+For programmatic integration from other extensions, see [API.md](./API.md).
 
 ## Tool
 
@@ -26,7 +15,7 @@ Launch one or more subagents in parallel. Each runs independently in its own con
 | Parameter         | Type   | Required | Description                                                     |
 | ----------------- | ------ | -------- | --------------------------------------------------------------- |
 | `agents`          | array  | yes      | List of agents to run concurrently (minimum 1)                  |
-| `agents[].agent`  | string | yes      | Agent type: `explore`, `review`, `research`, or `code`          |
+| `agents[].agent`  | string | yes      | Agent type: `explore`, `review`, `research`, or `deep-research` |
 | `agents[].intent` | string | yes      | Short label shown in activity titles (3–6 words)                |
 | `agents[].prompt` | string | yes      | Full task — brief the agent like a colleague who just walked in |
 
@@ -34,14 +23,14 @@ Agent types are loaded dynamically from `~/.pi/agent/agents/*.md` at startup. Th
 
 The built-in types:
 
-| Type       | Tools                   | Extensions                 | Model        | Thinking |
-| ---------- | ----------------------- | -------------------------- | ------------ | -------- |
-| `explore`  | read, ls, find, grep    | —                          | gpt-5.4-mini | medium   |
-| `review`   | read, ls, find, grep    | `mcp-broker`               | gpt-5.4      | high     |
-| `research` | read, ls, find, grep    | `mcp-broker`, `web-access` | gpt-5.4      | high     |
-| `code`     | read, bash, edit, write | `format`                   | gpt-5.4      | medium   |
+| Type            | Tools                | Extensions                 | Model           | Thinking |
+| --------------- | -------------------- | -------------------------- | --------------- | -------- |
+| `explore`       | read, ls, find, grep | —                          | inherits parent | medium   |
+| `review`        | read, ls, find, grep | `mcp-broker`               | inherits parent | high     |
+| `research`      | read, ls, find, grep | `mcp-broker`, `web-access` | inherits parent | medium   |
+| `deep-research` | read, ls, find, grep | `mcp-broker`, `web-access` | inherits parent | high     |
 
-`explore`, `review`, and `research` are read-only. `review` adds read-only broker access (MCP search, describe, and call restricted to tools annotated `readOnlyHint`). `research` builds on that with web search and fetch via the `web-access` extension. `code` has full write access including shell.
+All built-in agent types are read-only. `review` adds read-only broker access (MCP search, describe, and call restricted to tools annotated `readOnlyHint`). `research` is the faster default for external lookup, while `deep-research` is the slower, evidence-heavier option. Both `research` and `deep-research` add web search and fetch via the `web-access` extension. If you want a writable subagent, add a custom agent markdown file with a broader tool set.
 
 **Returns** a single document with each agent's result under a `## <type> · <intent>` heading, separated by `---`. On failure, the agent's section contains a formatted error including exit code and stderr.
 
@@ -54,11 +43,11 @@ While running, `spawn_agents` shows each agent as a section separated by blank l
  - read: src/auth.ts
  Running: 4 tool uses (14s)
 
- **Code agent** Run tests
- Done: 5 tool uses · 20.3k tokens · 20s
+ **Research agent** Check docs
+ Done: 3 tool uses · 12.4k tokens · 18s
 
  **Review agent** Check config
- - bash: npm test
+ - grep: config
  Running: 1 tool use (3s)
 ```
 
@@ -86,8 +75,8 @@ Recursion is blocked by default. Each spawn sets `PI_SUBAGENT_DEPTH` in the chil
 
 - `intent` is required for every agent and drives activity titles — keep it short and descriptive
 - Each subagent starts with a fresh context; session inheritance is not supported
-- `review` and `research` require the `mcp-broker` extension to be installed and discoverable; if missing, extension resolution fails with "no matching extensions found". `research` additionally requires `web-access`
-- `code` skills and prompt templates are enabled; all other agent types disable them
+- `review`, `research`, and `deep-research` require the `mcp-broker` extension to be installed and discoverable; if missing, extension resolution fails with "no matching extensions found". `research` and `deep-research` additionally require `web-access`
+- Built-in agent types disable skills and prompt templates for tighter, role-specific behavior
 - All agents in a single `spawn_agents` call run concurrently; result order matches input order
 
 ## Agent file format
@@ -100,7 +89,6 @@ name: explore
 description: Read-only codebase research — finding files and answering questions
 tools: read
 extensions:
-model: openai-codex/gpt-5.4-mini
 thinking: medium
 disable_skills: true
 disable_prompt_templates: true
@@ -134,7 +122,8 @@ Variable values are always strings. The map is merged into the child's environme
 
 - `index.ts` — tool registration and execution orchestration
 - `render.ts` — TUI rendering and rendering-adjacent formatters
-- `api.ts` — public surface re-exported for other extensions (see **Public API** above)
+- `api.ts` — curated public export surface for other extensions
+- `API.md` — programmatic integration docs for the `api.ts` surface
 - `loader.ts` — agent discovery and frontmatter parsing
 - `spawn.ts` — child process spawning, CLI argument construction, and result handling
 - `activity.ts` — live activity tracking and UI widget updates

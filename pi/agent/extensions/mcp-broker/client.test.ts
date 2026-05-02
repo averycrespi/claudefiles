@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  BrokerClient,
   extractProviders,
   filterReadOnly,
   isReadOnly,
@@ -133,4 +134,24 @@ test("filterReadOnly preserves annotations on kept tools", () => {
     readOnlyHint: true,
     idempotentHint: true,
   });
+});
+
+test("BrokerClient.close closes the live MCP client and clears caches", async () => {
+  const closed: string[] = [];
+  const client = new BrokerClient();
+
+  (client as any).client = {
+    close: async () => {
+      closed.push("client");
+    },
+  };
+  (client as any).cachedTools = [{ name: "github.gh_list_prs" }];
+  (client as any).cachedProviders = ["github"];
+
+  await (client as any).close();
+
+  assert.deepEqual(closed, ["client"]);
+  assert.equal((client as any).client, null);
+  assert.equal((client as any).cachedTools, null);
+  assert.equal((client as any).cachedProviders, null);
 });

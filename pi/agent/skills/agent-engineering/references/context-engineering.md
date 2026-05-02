@@ -2,7 +2,7 @@
 
 Long pipelines lose information mid-run. The question is whether the harness controls _how_. Anthropic's [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) names three load-bearing techniques: **compaction**, **structured note-taking**, **just-in-time retrieval**. OpenAI's [compaction guide](https://developers.openai.com/api/docs/guides/compaction) treats compaction as a first-class API surface. This document covers all three plus the practical issues that show up in production.
 
-The key insight from the Zylos and Harness reports: **~65% of enterprise AI agent failures in 2025 traced to context drift / memory loss, NOT context exhaustion.** ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Bigger context windows make compaction _more_ important, not less.
+A useful directional signal from the Zylos and Harness vendor reports: **context drift / memory loss appears to drive more enterprise agent failures than raw context exhaustion.** ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Bigger context windows make compaction _more_ important, not less.
 
 ## The three techniques
 

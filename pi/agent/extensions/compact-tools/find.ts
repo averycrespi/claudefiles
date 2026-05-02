@@ -7,13 +7,13 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createFindTool } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
 import {
   clearPartialTimer,
   countNonEmptyLines,
   firstLine,
   getRelativeLabel,
   getResultText,
+  getTruncatedText,
   headNonEmptyLines,
   partialElapsed,
   plural,
@@ -46,25 +46,21 @@ export default function registerFind(pi: ExtensionAPI) {
     renderCall(args, theme, context) {
       const pattern = args?.pattern ?? "";
       const scope = getRelativeLabel(context.cwd, args?.path ?? ".");
-      return new Text(
+      return getTruncatedText(context.lastComponent, [
         `${theme.fg("toolTitle", theme.bold("find"))} ${theme.fg("accent", pattern)} ${theme.fg("muted", `in ${scope}`)}`,
-        0,
-        0,
-      );
+      ]);
     },
 
     renderResult(result, { isPartial }, theme, context) {
       const pattern = context.args?.pattern ?? "files";
 
       if (isPartial) {
-        return new Text(
+        return getTruncatedText(context.lastComponent, [
           theme.fg(
             "warning",
             `Finding ${pattern}...${partialElapsed(context)}`,
           ),
-          0,
-          0,
-        );
+        ]);
       }
 
       clearPartialTimer(context);
@@ -73,22 +69,26 @@ export default function registerFind(pi: ExtensionAPI) {
 
       if (context.isError) {
         const message = firstLine(text) || `Error finding ${pattern}`;
-        return new Text(theme.fg("error", message), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("error", message),
+        ]);
       }
 
       const head = headNonEmptyLines(text, 3);
       if (head.length === 0) {
-        return new Text(theme.fg("muted", "no matches"), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("muted", "no matches"),
+        ]);
       }
 
       const totalLines = countNonEmptyLines(text);
       const extra = totalLines - head.length;
       const displayLines =
         extra > 0 ? [...head, `... +${plural(extra, "more result")}`] : head;
-      const rendered = displayLines
-        .map((line) => theme.fg("muted", line))
-        .join("\n");
-      return new Text(rendered, 0, 0);
+      return getTruncatedText(
+        context.lastComponent,
+        displayLines.map((line) => theme.fg("muted", line)),
+      );
     },
   });
 }

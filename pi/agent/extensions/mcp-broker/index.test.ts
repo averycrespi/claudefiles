@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import type { BrokerTool } from "./client.ts";
-import { buildBrokerPrompt } from "./index.ts";
+import extensionDefault, { buildBrokerPrompt } from "./index.ts";
 
 const TOOLS: BrokerTool[] = [
   { name: "github.gh_list_prs", description: "List pull requests" },
@@ -60,4 +61,22 @@ test("buildBrokerPrompt skips tools without a namespace prefix", () => {
     { name: "no_namespace_tool", description: "ignored" },
   ]);
   assert.doesNotMatch(prompt, /no_namespace_tool/);
+});
+
+test("extension registers a session_shutdown handler for broker cleanup", () => {
+  const handlers = new Map<string, (event: unknown, ctx: unknown) => unknown>();
+  const pi = {
+    registerTool() {},
+    on(event: string, handler: (event: unknown, ctx: unknown) => unknown) {
+      handlers.set(event, handler);
+    },
+    addBashGuard() {},
+  } as unknown as ExtensionAPI;
+
+  extensionDefault(pi);
+
+  assert.ok(
+    handlers.has("session_shutdown"),
+    "session_shutdown handler should be registered",
+  );
 });

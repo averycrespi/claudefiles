@@ -7,13 +7,13 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createLsTool } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
 import {
   clearPartialTimer,
   countNonEmptyLines,
   firstLine,
   getRelativeLabel,
   getResultText,
+  getTruncatedText,
   headNonEmptyLines,
   partialElapsed,
   plural,
@@ -45,11 +45,9 @@ export default function registerLs(pi: ExtensionAPI) {
 
     renderCall(args, theme, context) {
       const pathLabel = getRelativeLabel(context.cwd, args?.path ?? ".");
-      return new Text(
+      return getTruncatedText(context.lastComponent, [
         `${theme.fg("toolTitle", theme.bold("ls"))} ${theme.fg("accent", pathLabel)}`,
-        0,
-        0,
-      );
+      ]);
     },
 
     renderResult(result, { isPartial }, theme, context) {
@@ -59,14 +57,12 @@ export default function registerLs(pi: ExtensionAPI) {
       );
 
       if (isPartial) {
-        return new Text(
+        return getTruncatedText(context.lastComponent, [
           theme.fg(
             "warning",
             `Listing ${pathLabel}...${partialElapsed(context)}`,
           ),
-          0,
-          0,
-        );
+        ]);
       }
 
       clearPartialTimer(context);
@@ -75,12 +71,16 @@ export default function registerLs(pi: ExtensionAPI) {
 
       if (context.isError) {
         const message = firstLine(text) || `Error listing ${pathLabel}`;
-        return new Text(theme.fg("error", message), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("error", message),
+        ]);
       }
 
       const head = headNonEmptyLines(text, 3);
       if (head.length === 0) {
-        return new Text(theme.fg("muted", "empty"), 0, 0);
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("muted", "empty"),
+        ]);
       }
 
       const totalLines = countNonEmptyLines(text);
@@ -89,10 +89,10 @@ export default function registerLs(pi: ExtensionAPI) {
         extra > 0
           ? [...head, `... +${plural(extra, "more entry", "more entries")}`]
           : head;
-      const rendered = displayLines
-        .map((line) => theme.fg("muted", line))
-        .join("\n");
-      return new Text(rendered, 0, 0);
+      return getTruncatedText(
+        context.lastComponent,
+        displayLines.map((line) => theme.fg("muted", line)),
+      );
     },
   });
 }

@@ -6,14 +6,14 @@ Pi extension that provides an `ask_user` tool for interactive multiple-choice de
 
 ### `ask_user`
 
-Ask the user a multiple-choice question and return their answer. Use when multiple valid approaches exist with meaningfully different trade-offs. Do not use for trivial confirmations.
+Ask the user a multiple-choice question and return their answer. Use when multiple valid approaches exist with meaningfully different trade-offs. Keep the prompt brief and scannable; do not paste long design sections or walls of text into `context`. Do not use for trivial confirmations.
 
 **Parameters:**
 
 | Parameter     | Type    | Required | Description                                                              |
 | ------------- | ------- | -------- | ------------------------------------------------------------------------ |
-| `question`    | string  | yes      | The question to ask                                                      |
-| `context`     | string  | no       | Additional framing shown above the options                               |
+| `question`    | string  | yes      | The question to ask; keep it focused and concise                         |
+| `context`     | string  | no       | Brief framing shown above the options; summarize, don't paste long text  |
 | `options`     | array   | yes      | 2–5 choices, each with a `label` (required) and `description` (optional) |
 | `recommended` | integer | no       | 0-indexed option to mark as "(Recommended)"                              |
 

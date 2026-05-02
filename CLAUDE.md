@@ -48,9 +48,35 @@ Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This 
 - **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)
 - **Reference skills** (provide information/context): use nouns (e.g., `playwright-cli`, `tdd`)
 
-## Pi Extension API
+## Pi Extension Conventions
 
-- **`setWidget` cast pattern.** The typed signature lives at `pi.ui.setWidget` (on `ExtensionUIContext`), but the in-repo convention — used by both `_workflow-core/lib/run.ts` and `task-list/index.ts` — is to call `(pi as any).setWidget(...)` at the top level, gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this pattern when adding sticky widgets in new extensions.
+Use directory-based Pi extensions under `pi/agent/extensions/<name>/`.
+
+Preferred structure:
+
+- `index.ts` — extension entry point
+- `README.md` — user-facing behavior, configuration, and usage
+- `API.md` — optional programmatic integration docs for other extensions
+- `api.ts` — optional curated public export surface referenced by `API.md`
+- `*.test.ts` — colocated tests for meaningful logic
+- additional `*.ts` files named by concern (`tools.ts`, `render.ts`, `state.ts`, etc.)
+
+Repo-specific structure rules:
+
+- Do not add top-level single-file Pi extensions under `pi/agent/extensions/*.ts` in this repo. Keep each extension in its own directory so colocated `*.test.ts` files are never mistaken for extension entrypoints.
+- Put general cross-extension helpers in `pi/agent/extensions/_shared/`. Keep that directory loader-inert: do not add an `index.ts`.
+- If shared code grows into a real library with its own conceptual surface, promote it to a top-level underscore-prefixed directory with an `api.ts` public surface instead of stretching `_shared/` into an ad hoc package.
+
+Documentation split:
+
+- Keep `README.md` focused on what the extension does for users and agents.
+- If an extension exposes reusable code to other extensions, document imports, exports, types, and usage contracts in `API.md` instead of the README.
+- Treat `api.ts` as the stable public surface. Anything not exported there should usually be treated as internal.
+
+Implementation conventions:
+
+- **`setWidget` cast pattern.** The typed signature lives at `pi.ui.setWidget` (on `ExtensionUIContext`), but the in-repo convention — used by `workflow-modes/index.ts` and `todo/index.ts` — is to call `(pi as any).setWidget(...)` at the top level, gated on `piAny.hasUI && typeof piAny.setWidget === "function"`. Match this pattern when adding sticky widgets in new extensions.
+- **Shared render helpers.** For compact tool-call/result renderers, prefer helpers from `pi/agent/extensions/_shared/render.ts` instead of reimplementing common formatting, truncation, and partial-timer logic per extension.
 - **Agent tool schema naming.** Typebox schemas exposed to the agent use snake_case (e.g. `failure_reason`); internal task/state fields stay camelCase (`failureReason`). Map between them in the tool's `execute` body.
 - **Atomic agent-tool mutations.** When an agent tool mutates shared state (e.g. `task_list_set`'s `reconcile`), collect ALL validation errors before rejecting, apply changes atomically with a single `notify()` on success, and return errors as tool result text (not `throw`) so the agent can read and recover from them.
 - **Stub Node built-ins via wrapper export.** `mock.method` from `node:test` can't replace ESM module exports — they're non-configurable bindings. To stub something like `child_process.spawn`, wrap the call in an exported holder (`export const _spawn = { fn: _nodeSpawn }`) and call through `_spawn.fn(...)`. Tests then `mock.method(_spawn, "fn", stub)`. See `subagents/spawn.ts:19-22` for the reference pattern.

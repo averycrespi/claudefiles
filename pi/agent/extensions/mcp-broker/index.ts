@@ -32,6 +32,10 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
+  pi.on("session_shutdown", async () => {
+    await client.close();
+  });
+
   // Inject the broker tool menu and decision rules into the system
   // prompt. Cache-safe: the tools array stays static, and the system
   // prompt is stable within a session.

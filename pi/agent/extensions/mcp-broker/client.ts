@@ -31,6 +31,7 @@ export function filterReadOnly(tools: BrokerTool[]): BrokerTool[] {
 
 export class BrokerClient {
   private client: Client | null = null;
+  private transport: StreamableHTTPClientTransport | null = null;
   private connecting: Promise<Client> | null = null;
   private cachedTools: BrokerTool[] | null = null;
   private cachedProviders: string[] | null = null;
@@ -52,7 +53,8 @@ export class BrokerClient {
       );
     }
 
-    this.connecting = (async () => {
+    let connectPromise!: Promise<Client>;
+    connectPromise = (async () => {
       const transport = new StreamableHTTPClientTransport(
         new URL(`${endpoint}/mcp`),
         {
@@ -61,19 +63,28 @@ export class BrokerClient {
           },
         },
       );
+      this.transport = transport;
       const client = new Client(
         { name: "pi-mcp-broker", version: "0.1.0" },
         { capabilities: {} },
       );
       await client.connect(transport);
+      if (this.connecting !== connectPromise) {
+        await client.close().catch(() => {});
+        throw new Error("broker client closed during connect");
+      }
       this.client = client;
       return client;
     })();
 
+    this.connecting = connectPromise;
+
     try {
-      return await this.connecting;
+      return await connectPromise;
     } finally {
-      this.connecting = null;
+      if (this.connecting === connectPromise) {
+        this.connecting = null;
+      }
     }
   }
 
@@ -114,11 +125,60 @@ export class BrokerClient {
     return this.cachedProviders;
   }
 
-  /** Drop the current client so the next call reconnects. */
-  reset(): void {
+  async close(): Promise<void> {
+    const client = this.client;
+    const transport = this.transport;
+    const connecting = this.connecting;
+
     this.client = null;
+    this.transport = null;
+    this.connecting = null;
     this.cachedTools = null;
     this.cachedProviders = null;
+
+    if (client) {
+      await client.close().catch(() => {});
+      return;
+    }
+
+    if (connecting) {
+      const connectedClient = await connecting.catch(() => null);
+      if (connectedClient) {
+        await connectedClient.close().catch(() => {});
+        return;
+      }
+    }
+
+    await transport?.close().catch(() => {});
+  }
+
+  /** Drop the current client so the next call reconnects. */
+  reset(): void {
+    const client = this.client;
+    const transport = this.transport;
+    const connecting = this.connecting;
+
+    this.client = null;
+    this.transport = null;
+    this.connecting = null;
+    this.cachedTools = null;
+    this.cachedProviders = null;
+
+    if (client) {
+      void client.close().catch(() => {});
+      return;
+    }
+
+    if (connecting) {
+      void connecting
+        .then((connectedClient) => connectedClient.close())
+        .catch(() => {});
+      return;
+    }
+
+    if (transport) {
+      void transport.close().catch(() => {});
+    }
   }
 }
 

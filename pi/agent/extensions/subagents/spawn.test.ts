@@ -2,10 +2,12 @@ import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import {
+  POST_AGENT_END_GRACE_MS,
   buildArgs,
   formatSpawnFailure,
   spawnSubagent,
   _spawn,
+  _timers,
   type SpawnOutcome,
 } from "./spawn.ts";
 
@@ -404,5 +406,66 @@ test("spawnSubagent env: omitting options.env passes process.env through unchang
     else process.env.PI_SUBAGENT_DEPTH = prevDepth;
     if (prevVar === undefined) delete process.env.MCP_BROKER_READONLY;
     else process.env.MCP_BROKER_READONLY = prevVar;
+  }
+});
+
+test("spawnSubagent: resolves after agent_end if process hangs", async () => {
+  const prev = process.env.PI_SUBAGENT_DEPTH;
+  process.env.PI_SUBAGENT_DEPTH = "0";
+
+  const timerStub = mock.method(_timers, "setTimeout", ((
+    fn: (...args: any[]) => void,
+    ms?: number,
+  ) => {
+    if (ms === POST_AGENT_END_GRACE_MS) {
+      queueMicrotask(() => fn());
+    }
+    return { ms } as unknown as NodeJS.Timeout;
+  }) as typeof setTimeout);
+  const clearStub = mock.method(_timers, "clearTimeout", () => {});
+
+  const spawnStub = mock.method(_spawn, "fn", () => {
+    const child = new EventEmitter() as any;
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.stdout.setEncoding = () => {};
+    child.stderr.setEncoding = () => {};
+    child.kill = () => true;
+
+    setImmediate(() => {
+      child.stdout.emit(
+        "data",
+        `${JSON.stringify({
+          type: "agent_end",
+          messages: [
+            {
+              role: "assistant",
+              content: [{ type: "text", text: "done" }],
+            },
+          ],
+        })}\n`,
+      );
+    });
+
+    return child;
+  });
+
+  try {
+    const result = await spawnSubagent({
+      prompt: "p",
+      toolAllowlist: [],
+      extensionAllowlist: [],
+      cwd: "/tmp",
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.aborted, false);
+    assert.equal(result.stdout, "done");
+  } finally {
+    spawnStub.mock.restore();
+    timerStub.mock.restore();
+    clearStub.mock.restore();
+    if (prev === undefined) delete process.env.PI_SUBAGENT_DEPTH;
+    else process.env.PI_SUBAGENT_DEPTH = prev;
   }
 });

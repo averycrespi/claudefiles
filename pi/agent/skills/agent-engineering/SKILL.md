@@ -17,15 +17,15 @@ harness = (what the model sees)  +  (what it can do)  +  (the loop around it)
 There are two design scopes, and they interleave:
 
 - **Single-agent harness.** One model, one loop. Decisions: tool surface, context strategy, system prompt, hooks, model+effort selection, retry behavior. Examples: Claude Code's main loop, Codex CLI, a one-shot SDK script.
-- **Workflow.** Multi-phase orchestration where deterministic code drives a sequence of LLM calls (often as fresh subagents). Decisions: phase boundaries, what crosses each boundary, verification shape, termination. Examples: the `autopilot` Pi extension, `roach-pi`'s `agentic-harness`, OpenAI's internal Codex pipeline.
+- **Workflow.** Multi-phase orchestration where deterministic code drives a sequence of LLM calls (often as fresh subagents). Decisions: phase boundaries, what crosses each boundary, verification shape, termination. Examples: `roach-pi`'s `agentic-harness`, OpenAI's internal Codex pipeline.
 
 A workflow is built out of harnesses. So the harness-level principles always apply; workflow-level principles add to them.
 
 ## Consensus principles
 
-Twelve things the field converged on between 2025 and 2026. Sources in `references/bibliography.md`.
+Twelve principles that show up repeatedly across 2025–2026 literature, vendor writeups, and open-source harnesses. Sources and caveats live in `references/bibliography.md`.
 
-1. **Code orchestrator, not LLM orchestrator.** Anthropic's Claude Code retrospective reports 98.4% of Claude Code is deterministic infra. Cognition's [Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents) formalized this. LLM-as-router is fragile; deterministic code holding context and dispatching subagents is robust.
+1. **Code orchestrator, not LLM orchestrator.** A Claude Code retrospective estimated that ~98.4% of Claude Code is deterministic infra. Cognition's [Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents) formalized the same lesson. LLM-as-router is fragile; deterministic code holding context and dispatching subagents is robust.
 
 2. **Subagents are read-mostly context firewalls.** Use them for exploration, retrieval, review, verification — read-only fan-out. Avoid parallel writes to the same code. Claude Code's official guidance is to use subagents to _answer questions, not write code_. ([Anthropic on context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents); [HumanLayer on context firewalls](https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents))
 
@@ -41,7 +41,7 @@ Twelve things the field converged on between 2025 and 2026. Sources in `referenc
 
 8. **Plan = intent, not diff.** The plan describes _what_ and _why_; the implementer decides _how_. Hard-coded line-by-line diffs in the plan rob the implementer of the local context that makes the diff right. This appears verbatim across `roach-pi`, `ralph-meets-rex`, `agent-pi`.
 
-9. **Sticky completion + capped fix loops.** Once a task or phase reaches `done`, no edge out. Verifier complaints become known issues, not new iterations. Without this, models perpetually nitpick on style. The `pi-supervisor` "5-strike lenient mode" is the canonical reference.
+9. **Sticky completion + capped fix loops.** Once a task or phase reaches `done`, no edge out. Verifier complaints become known issues, not new iterations. Without this, models perpetually nitpick on style. The `pi-supervisor` "5-strike lenient mode" is a useful reference point.
 
 10. **Compaction-aware design.** Long pipelines lose information mid-run; the question is whether you control how. Anthropic's [context engineering post](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) and OpenAI's [compaction guide](https://developers.openai.com/api/docs/guides/compaction) name the same three techniques: (a) compaction, (b) structured note-taking artifacts on disk, (c) just-in-time retrieval. The 5-min Anthropic prompt-cache TTL is a hard pacing constraint. (See `references/context-engineering.md`.)
 
@@ -74,13 +74,13 @@ Most production pipelines collapse some of these. Don't add a phase unless the c
 
 Documented failure modes — short list. Full annotated catalog in `references/anti-patterns.md`.
 
-- **Multi-agent debate / agent-to-agent negotiation.** Cognition called this in 2025; no frontier lab ships it.
+- **Multi-agent debate / agent-to-agent negotiation.** Cognition called this in 2025; it does not appear in the mainstream production harnesses surveyed for this skill.
 - **Parallel implementations of the same subtask + merge.** Hidden coupling kills it.
 - **LLM-driven mid-task replanning.** Devin's data: "performs worse when you keep telling it more after it starts." Take the spec as immutable once implementation begins.
 - **Generic LLM-as-judge without rubrics.** Beaten consistently by rubric-based + cross-family.
 - **Free-text completion markers.** `<promise>COMPLETE</promise>` is fragile; structured output is robust.
 - **Verify → implement loopback.** The exact open-ended loop GPT-5/Claude-4-class models thrash in.
-- **Massive context windows as a substitute for retrieval.** ~65% of enterprise agent failures trace to context drift, not exhaustion ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Big windows make compaction _more_ important, not less.
+- **Massive context windows as a substitute for retrieval.** Two 2026 vendor reports argue that context drift causes more enterprise failures than raw context exhaustion ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Big windows make compaction _more_ important, not less.
 - **Self-improving agents that rewrite their own scaffold mid-run.** Cool research, not production-ready. ([Live-SWE-Agent](https://arxiv.org/pdf/2511.13646))
 - **Context anxiety.** Sonnet 4.5 documented to take shortcuts when it _believes_ it's near context exhaustion ([Inkeep on Context Anxiety](https://inkeep.com/blog/context-anxiety)). Don't expose the agent to its own context-pressure signal unless you've thought about it.
 
@@ -88,14 +88,9 @@ Documented failure modes — short list. Full annotated catalog in `references/a
 
 Quick orientation; deep guidance in `references/models.md`.
 
-| Family     | Latest stable (2026-04) | Default for...                                | Watch out for                                                                                                                                                           |
-| ---------- | ----------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude 4.x | Opus 4.7                | Long-running, high-reasoning agent loops      | Extended-thinking budgets are gone (400 error if you set them); thinking content omitted by default; new tokenizer ~1.0–1.35x more tokens — bump `max_tokens`           |
-| Claude 4.x | Sonnet 4.6              | Default workhorse, both adaptive and extended | 1M context, 64K output                                                                                                                                                  |
-| Claude 4.x | Haiku 4.5               | Fast cheap subagents (review, classify)       | Extended-thinking only — no adaptive mode                                                                                                                               |
-| GPT-5.x    | GPT-5.5                 | Default Codex model since 2026-04-23          | OpenAI explicitly says rebaseline prompts — don't drop-in from 5.4. Move tool guidance into tool descriptions; replace step-by-step prose with outcome+success criteria |
-| GPT-5.x    | GPT-5.4                 | Codex fallback                                | "Bias to action" default; per-plan-item Done/Blocked/Cancelled closure                                                                                                  |
-| Codex CLI  | v0.125.0                | OpenAI-side coding harness                    | Hooks now stable; `apply_patch` is a first-class tool, not shell                                                                                                        |
+- **Claude 4.x** is the better default when you want long-running, high-reasoning agent loops.
+- **GPT-5.x / Codex** is the better default when you want strong execution, explicit structured outputs, and OpenAI's codex-style harness guidance.
+- **Model-specific prompting advice changes quickly.** Read the current migration/prompting guide for the exact model version before reusing an older harness prompt.
 
 Cross-family rule: **never use the same model for implement and verify if you can avoid it.**
 
@@ -103,24 +98,11 @@ Cross-family rule: **never use the same model for implement and verify if you ca
 
 Quick orientation; deep guidance in `references/platforms.md`.
 
-**Claude Code** as a harness:
+- **Claude Code**: best when you want an interactive coding harness with first-class hooks, skills, subagents, routines, and settings.
+- **Claude Agent SDK**: best when you want the Claude Code loop but need to drive it programmatically in TypeScript or Python.
+- **Pi (`@mariozechner/pi-coding-agent`)**: best when you want a smaller TypeScript extension surface and a lightweight base for custom harness experiments.
 
-- **Hooks** are deterministic — use when something _must_ run every time. Exit code 2 blocks; exit code 1 only logs. ([Hooks reference](https://docs.claude.com/en/docs/claude-code/hooks))
-- **Skills** load on demand via progressive disclosure: only `name`+`description` of every skill is preloaded; `SKILL.md` body and `references/` files load only when invoked. ([Equipping agents with Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills))
-- **Subagents** = `.claude/agents/*.md` definitions, isolated context; `isolation: worktree` for git isolation (silently no-ops outside a git repo, [issue #39886](https://github.com/anthropics/claude-code/issues/39886)).
-- **Settings** evaluate deny → ask → allow, first match wins. Hierarchy: managed → CLI → `.claude/settings.local.json` → `.claude/settings.json` → `~/.claude/settings.json`.
-- **Routines** for cron / API / GitHub-event-triggered runs ([routines doc](https://code.claude.com/docs/en/routines)).
-
-**Claude Agent SDK** for custom harnesses:
-
-- Same loop, tools, hooks, subagents, MCP — programmable in TS or Python. SDK ≥ v0.2.111 required for Opus 4.7.
-- 5-min ephemeral prompt-cache TTL; pin thinking config across an agent loop or you blow the cache. ([Tool use with prompt caching](https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-use-with-prompt-caching))
-
-**Pi (`@mariozechner/pi-coding-agent`)** for opinionated minimal harnesses:
-
-- Extensions are TypeScript modules with a synchronous factory. Live at `pi/agent/extensions/`. Authoritative docs: [pi-mono extensions.md](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md). See also the `pi-extensions` skill in this repo.
-- Tool schemas exposed to the agent are snake_case; internal task fields stay camelCase. Map between them in the tool's `execute` body.
-- See `references/platforms.md` for gotchas (RPC mode constraints, ESM stub patterns, etc.).
+For exact platform behavior, current gotchas, and repo-specific conventions, read `references/platforms.md`.
 
 ## How to use this skill
 
@@ -137,4 +119,4 @@ References cite primary sources where possible. When a claim has a known caveat 
 
 ## Local context
 
-The `autopilot` Pi extension in this repo (`pi/agent/extensions/autopilot/`) is a worked example of most of the principles above. The `.designs/2026-04-24-autopilot-sota-research.md` doc was the input that motivated this skill; this skill generalizes from autopilot's specific shape to the field as a whole.
+In this repo, `pi/agent/extensions/workflow-modes/` is the live example of lightweight workflow scaffolding (mode-gated tools, durable workflow briefs, compaction-aware state), and `pi/agent/extensions/subagents/` is the live example of read-only delegation.

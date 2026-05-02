@@ -8,7 +8,7 @@ Piping LSP diagnostics into the agent's tool results after every `write` or `edi
 
 Agents mutate one file at a time. Anything non-trivial — renaming a function, moving an import, splitting a module — takes multiple writes, and during that window every file except the most-recently-edited one is out of sync with the edit that's in flight. The LSP sees that inconsistency and reports it accurately. The errors are **real from the server's point of view and misleading from the task's point of view** — intermediate states the model is about to fix with its next write.
 
-Surface them as tool-result feedback and the model treats them as bugs. It stops the task it was doing, chases them, and derails. I ran into this building [`code-feedback`](../pi/archive/extensions/code-feedback/) for Pi. The extension originally auto-injected diagnostics into every `write`/`edit` tool_result. I removed both paths for exactly this reason, and wrote it up in the design notes:
+Surface them as tool-result feedback and the model treats them as bugs. It stops the task it was doing, chases them, and derails. I ran into this while experimenting with a Pi extension that auto-injected diagnostics into every `write`/`edit` tool_result. I removed both paths for exactly this reason:
 
 > Diagnostics captured in that window are "real" from the server's point of view but misleading from the task's point of view — they describe an intermediate state the model is about to fix with its next write. Surfacing them pushed the model down rabbit holes fixing errors that would have gone away on their own.
 
@@ -36,7 +36,6 @@ I've convinced myself on multi-file refactors, which is what I mostly do. The co
 
 ## References
 
-- [`code-feedback/DESIGN.md`](../pi/archive/extensions/code-feedback/DESIGN.md) — firsthand design notes; the "Why pull-only diagnostics" section is this thesis in detail
 - [Kiro — Empowering Kiro with IDE diagnostics](https://kiro.dev/blog/empowering-kiro-with-ide-diagnostics/) — pull-based as an explicit product design choice
 - [Anthropic — Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) — the general "attention is scarce, don't pollute the window" argument
 - [Anthropic — Writing effective tools for AI agents](https://www.anthropic.com/engineering/writing-tools-for-agents) — tool design principles

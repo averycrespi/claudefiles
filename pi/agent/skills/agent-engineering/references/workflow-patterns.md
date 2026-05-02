@@ -2,7 +2,7 @@
 
 This document covers multi-phase agent workflow design — the patterns deterministic orchestrators use to drive a sequence of LLM calls toward a complete artifact (a PR, a refactor, a migration). Single-agent harness patterns are in `platforms.md` and `models.md`; this document is about what happens between agents.
 
-The reference architecture is a code-orchestrated pipeline of fresh subagents with strict structured output at each phase boundary. The `autopilot` extension in this repo is one worked instance.
+The reference architecture is a code-orchestrated pipeline of fresh subagents with strict structured output at each phase boundary.
 
 ## The canonical phase sequence
 
@@ -42,7 +42,7 @@ What "threading AC through every phase" means concretely:
 
 Format: Gherkin (Given/When/Then) is the most common, but any structured `{id, criterion, verifies_via}` works. The `verifies_via` field is what makes the criterion testable rather than aspirational.
 
-The `autopilot` extension surfaces AC during brainstorming and persists them in an `## Acceptance Criteria` section in the design doc. Preflight rejects design docs without one.
+In this repo, the live `workflow-modes` brief format persists AC in a dedicated `## Acceptance Criteria` section, and the `workflow_brief` tool validates that the section exists before replacing the active brief.
 
 ## Localization
 
@@ -130,29 +130,26 @@ Caveats:
 - **Worktrees isolate code, not runtime.** Shared ports, databases, services bite hard. Solve this separately.
 - **Disk cost is real.** Reports of ~10GB consumed in 20 minutes on a 2GB codebase via auto-worktree.
 - **Branch naming + cleanup matters.** `agent/<task-id>/<timestamp>` plus a janitor.
-- **Claude Code's `isolation: worktree` silently no-ops outside a git repo** ([issue #39886](https://github.com/anthropics/claude-code/issues/39886)) and **branches from `origin/main`, not parent's HEAD** ([issue #50850](https://github.com/anthropics/claude-code/issues/50850)). Build accordingly.
+- **At the time of writing, issue reports say Claude Code's `isolation: worktree` silently no-ops outside a git repo** ([issue #39886](https://github.com/anthropics/claude-code/issues/39886)) and **branches from `origin/main`, not parent's HEAD** ([issue #50850](https://github.com/anthropics/claude-code/issues/50850)). Build accordingly.
 
 Pattern for ticket→PR: worktree created at plan-acceptance time, branch name encodes the ticket ID, orchestrator pushes the branch on success and either deletes the worktree or hands it to a janitor.
 
 ## Structured note-taking artifacts
 
-Anthropic's most-cited under-appreciated pattern from [Effective Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents). Write workflow state to known files referenced _by path_ in subagent prompts, not inlined.
+Anthropic's most-cited under-appreciated pattern from [Effective Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents): write workflow state to known files referenced _by path_ in subagent prompts, not inlined.
 
-Common artifacts:
+The canonical artifact pattern for this skill lives in `context-engineering.md`. In workflow terms, the minimum useful set is usually:
 
-| File                | Contents                                                 | When written                  |
-| ------------------- | -------------------------------------------------------- | ----------------------------- |
-| `ac.json`           | Acceptance criteria list                                 | After extract-AC              |
-| `localization.json` | Ranked file list + entry points                          | After localize                |
-| `PLAN.md`           | The plan (after any plan-repair revision)                | After plan / plan-repair      |
-| `DECISIONS.md`      | Implementer decisions worth carrying forward             | Appended during implement     |
-| `OPEN_QUESTIONS.md` | Unresolved ambiguity, surfaced for human or later phase  | Appended whenever encountered |
-| `KNOWN_ISSUES.md`   | Validator/reviewer findings that didn't block completion | Written at emit-report        |
-| `PR_BODY.md`        | PR description (from plan + AC, not from diff)           | At emit-report                |
+- `ac.json`
+- `localization.json`
+- `PLAN.md`
+- `DECISIONS.md`
+- `KNOWN_ISSUES.md`
+- `PR_BODY.md`
 
-Subagent prompts say "read `<workflowDir>/PLAN.md` for the plan" rather than embedding the plan inline. Cuts token cost, survives compaction, gives the human a forensic trail.
+The important part is the prompt shape: tell subagents to read `<workflowDir>/PLAN.md` rather than embedding the plan inline. That cuts token cost, survives compaction, and gives the human a forensic trail.
 
-`roach-pi` uses this pattern with a "shared diff artifact." `pi-coordination`'s scout output explicitly splits into ~85K-token "context document" plus ~15K-token "synthesized meta-prompt" — relevant context as data, generation guidance as instruction.
+`roach-pi` uses this pattern with a shared diff artifact. `pi-coordination` shows the same idea in a different form: a large context document plus a smaller synthesized meta-prompt.
 
 ## Diff budgets and idle-iteration kill switches
 
@@ -185,7 +182,7 @@ Do:
 
 ## The single richest source of patterns
 
-[`tmdgusya/roach-pi`](https://github.com/tmdgusya/roach-pi). Its `autonomous-dev` extension is the closest in shape to what an autopilot extended toward true ticket-to-PR would look like. Worth reading the whole `extensions/agentic-harness/` directory; in particular:
+[`tmdgusya/roach-pi`](https://github.com/tmdgusya/roach-pi). Its `autonomous-dev` extension is one of the closest open-source examples of a full ticket-to-PR Pi workflow. Worth reading the whole `extensions/agentic-harness/` directory; in particular:
 
 - `agents/plan-validator.md` — validator information barrier prompt.
 - `validator-template.ts` — code-built prompt construction.
