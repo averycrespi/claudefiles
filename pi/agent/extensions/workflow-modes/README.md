@@ -10,6 +10,7 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 - publishes workflow-mode state over `pi.events` for other extensions
 - injects a stable mode-specific contract into `before_agent_start`
 - immediately sends a kickoff user message on `/plan`, `/execute`, and `/verify` so the agent starts in the new mode
+- compacts large idle sessions before `/plan`, `/execute`, and `/verify` mode switches to reduce expensive cache misses after the tool set changes
 - provides Plan-mode-only `write_plan` and `edit_plan` tools scoped to `.plans/` at the repo root
 - builds a custom compaction summary so long-running workflow sessions keep their mode and TODO context
 - currently leaves `mcp_call` available in Plan and Verify mode; read-only broker filtering is deferred to a later revision
@@ -76,9 +77,26 @@ For programmatic integration from other extensions, see [API.md](./API.md).
 
 The extension publishes workflow-mode state changes over `pi.events` so other extensions can react without duplicating workflow state.
 
+## Configuration
+
+Workflow modes reads extension-scoped settings from `~/.pi/agent/settings.json` and `<project>/.pi/settings.json`:
+
+```json
+{
+  "extension:workflow-modes": {
+    "autoCompactOnModeSwitch": true,
+    "autoCompactMinTokens": 50000
+  }
+}
+```
+
+`autoCompactOnModeSwitch` enables pre-switch compaction for `/plan`, `/execute`, and `/verify`. `autoCompactMinTokens` controls the context-token threshold. Project settings override global settings.
+
 ## Persistence and compaction
 
 Workflow mode itself is in-memory session state. New or restored sessions start in Normal mode.
+
+By default, when an idle session has at least 50,000 context tokens, `/plan`, `/execute`, and `/verify` compact before changing tools/thinking and before sending the kickoff message. Pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the command is invoked while the agent is not idle. If compaction fails, the extension reports the error and continues with the requested mode switch.
 
 During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. The summary preserves:
 

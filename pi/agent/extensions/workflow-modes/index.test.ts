@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import workflowModes, { createWorkflowModesExtension } from "./index.ts";
@@ -37,6 +37,12 @@ function makeCtx(options: {
   }>;
   inputCalls?: string[];
   idle?: boolean;
+  usageTokens?: number | null;
+  compactCalls?: Array<{
+    customInstructions?: string;
+    onComplete?: (result: any) => void;
+    onError?: (error: Error) => void;
+  }>;
 }): any {
   return {
     hasUI: true,
@@ -47,8 +53,13 @@ function makeCtx(options: {
     abort: () => {},
     hasPendingMessages: () => false,
     shutdown: () => {},
-    getContextUsage: () => undefined,
-    compact: () => {},
+    getContextUsage: () =>
+      options.usageTokens === undefined
+        ? undefined
+        : { tokens: options.usageTokens, contextWindow: 200000, percent: null },
+    compact: (compactOptions: any) => {
+      options.compactCalls?.push(compactOptions);
+    },
     getSystemPrompt: () => "base",
     waitForIdle: async () => {},
     newSession: async () => ({ cancelled: false }),
@@ -124,6 +135,11 @@ function makePi(cwd: string) {
   }> = [];
   const inputCalls: string[] = [];
   const sentUserMessages: Array<{ content: unknown; options?: unknown }> = [];
+  const compactCalls: Array<{
+    customInstructions?: string;
+    onComplete?: (result: any) => void;
+    onError?: (error: Error) => void;
+  }> = [];
   const activeTools = [
     "read",
     "edit",
@@ -226,12 +242,18 @@ function makePi(cwd: string) {
     _widgetCalls: widgetCalls,
     _inputCalls: inputCalls,
     _sentUserMessages: sentUserMessages,
+    _compactCalls: compactCalls,
     _setActiveToolsCalls: setActiveToolsCalls,
     _setThinkingLevelCalls: setThinkingLevelCalls,
     _emittedEvents: emittedEvents,
     _currentTools: () => [...currentTools],
     _thinkingLevel: () => thinkingLevel,
-    _ctx(branch: unknown[] = [], inputResponse?: string, idle = true) {
+    _ctx(
+      branch: unknown[] = [],
+      inputResponse?: string,
+      idle = true,
+      usageTokens?: number | null,
+    ) {
       return makeCtx({
         cwd,
         branch,
@@ -240,6 +262,8 @@ function makePi(cwd: string) {
         widgetCalls,
         inputCalls,
         idle,
+        usageTokens,
+        compactCalls,
       });
     },
   };
@@ -394,6 +418,129 @@ test("/plan with no args starts immediately without prompting", async () => {
   assert.equal(pi._inputCalls.length, 0);
   assert.equal(pi._sentUserMessages.length, 1);
   assert.match(String(pi._sentUserMessages[0]?.content), /plan mode/i);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("mode switch compacts above the default threshold before applying mode", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-"));
+  const pi = makePi(cwd);
+  createWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+
+  let resolved = false;
+  const transition = pi._commands
+    .get("execute")!
+    .handler("Implement auth middleware", pi._ctx([], undefined, true, 50000))
+    .then(() => {
+      resolved = true;
+    });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  assert.equal(pi._compactCalls.length, 1);
+  assert.equal(pi._sentUserMessages.length, 0);
+  assert.equal(pi._setActiveToolsCalls.length, 0);
+  assert.equal(resolved, false);
+
+  pi._compactCalls[0]!.onComplete?.({
+    summary: "ok",
+    firstKeptEntryId: "keep-1",
+    tokensBefore: 50000,
+  });
+  await transition;
+
+  assert.equal(resolved, true);
+  assert.deepEqual(pi._currentTools(), [
+    "read",
+    "edit",
+    "write",
+    "bash",
+    "todo",
+  ]);
+  assert.equal(pi._sentUserMessages.length, 1);
+  assert.match(String(pi._sentUserMessages[0]?.content), /execute mode/i);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("mode switch skips pre-compaction when disabled by project settings", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-precompact-disabled-"),
+  );
+  await mkdir(join(cwd, ".pi"), { recursive: true });
+  await writeFile(
+    join(cwd, ".pi/settings.json"),
+    JSON.stringify({
+      "extension:workflow-modes": { autoCompactOnModeSwitch: false },
+    }),
+    "utf8",
+  );
+  const pi = makePi(cwd);
+  createWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+
+  await pi._commands
+    .get("execute")!
+    .handler("Implement auth middleware", pi._ctx([], undefined, true, 100000));
+
+  assert.equal(pi._compactCalls.length, 0);
+  assert.equal(pi._sentUserMessages.length, 1);
+  assert.deepEqual(pi._currentTools(), [
+    "read",
+    "edit",
+    "write",
+    "bash",
+    "todo",
+  ]);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("mode switch skips pre-compaction below threshold or when not idle", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-skip-"));
+  const pi = makePi(cwd);
+  createWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+
+  await pi._commands
+    .get("plan")!
+    .handler("Plan auth middleware", pi._ctx([], undefined, true, 49999));
+  await pi._commands
+    .get("execute")!
+    .handler(
+      "Implement auth middleware",
+      pi._ctx([], undefined, false, 100000),
+    );
+
+  assert.equal(pi._compactCalls.length, 0);
+  assert.equal(pi._sentUserMessages.length, 2);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("mode switch notifies and proceeds when pre-compaction fails", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-error-"));
+  const pi = makePi(cwd);
+  createWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+
+  const transition = pi._commands
+    .get("verify")!
+    .handler("Check tests", pi._ctx([], undefined, true, 75000));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  assert.equal(pi._compactCalls.length, 1);
+  assert.equal(pi._sentUserMessages.length, 0);
+
+  pi._compactCalls[0]!.onError?.(new Error("provider unavailable"));
+  await transition;
+
+  assert.equal(pi._sentUserMessages.length, 1);
+  assert.match(String(pi._sentUserMessages[0]?.content), /verify mode/i);
+  assert.deepEqual(pi._notifications.at(-1), {
+    msg: "Workflow mode pre-compaction failed: provider unavailable",
+    level: "error",
+  });
 
   await rm(cwd, { recursive: true, force: true });
 });

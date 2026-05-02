@@ -1,10 +1,17 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type {
-  ExtensionAPI,
-  ExtensionContext,
+import {
+  getAgentDir,
+  type ExtensionAPI,
+  type ExtensionCommandContext,
+  type ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import {
+  mergeExtensionConfig,
+  readExtensionSettings,
+  readPiSettingsFiles,
+} from "../_shared/config.ts";
 import { applyExactTextEdits, resolvePlanFilePath } from "./artifact.ts";
 import {
   buildWorkflowCompactionSummary,
@@ -23,6 +30,16 @@ type RuntimeState = {
   mode: WorkflowMode;
   baselineTools?: string[];
   baselineThinking?: string;
+};
+
+type WorkflowModesConfig = {
+  autoCompactOnModeSwitch: boolean;
+  autoCompactMinTokens: number;
+};
+
+const DEFAULT_CONFIG: WorkflowModesConfig = {
+  autoCompactOnModeSwitch: true,
+  autoCompactMinTokens: 50_000,
 };
 
 const WRITE_PLAN_PARAMS = Type.Object({
@@ -149,14 +166,52 @@ export function createWorkflowModesExtension() {
     async function transitionToMode(
       mode: Exclude<WorkflowMode, "normal">,
       args: string,
-      ctx: ExtensionContext,
+      ctx: ExtensionCommandContext,
     ): Promise<void> {
       if (state.mode !== mode) {
+        await maybeCompactBeforeModeSwitch(mode, ctx);
         applyMode(mode);
       }
       state.mode = mode;
       publishWorkflowModeState();
       sendKickoffMessage(mode, args, ctx);
+    }
+
+    async function maybeCompactBeforeModeSwitch(
+      mode: Exclude<WorkflowMode, "normal">,
+      ctx: ExtensionCommandContext,
+    ): Promise<void> {
+      const config = await loadConfig(ctx.cwd);
+      if (!config.autoCompactOnModeSwitch || !ctx.isIdle()) return;
+
+      const tokens = ctx.getContextUsage()?.tokens;
+      if (typeof tokens !== "number" || tokens < config.autoCompactMinTokens) {
+        return;
+      }
+
+      await new Promise<void>((resolve) => {
+        if (ctx.hasUI) {
+          ctx.ui.notify(`Compacting before ${mode} mode`, "info");
+        }
+        ctx.compact({
+          customInstructions: `Prepare the session for switching to ${mode} workflow mode. Preserve current goals, decisions, TODOs, changed files, and next actions.`,
+          onComplete: () => {
+            if (ctx.hasUI) {
+              ctx.ui.notify("Workflow mode pre-compaction completed", "info");
+            }
+            resolve();
+          },
+          onError: (error) => {
+            if (ctx.hasUI) {
+              ctx.ui.notify(
+                `Workflow mode pre-compaction failed: ${error.message}`,
+                "error",
+              );
+            }
+            resolve();
+          },
+        });
+      });
     }
 
     pi.registerTool({
@@ -358,6 +413,31 @@ export function createWorkflowModesExtension() {
         },
       };
     });
+  };
+}
+
+async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
+  const { globalSettings, projectSettings } = await readPiSettingsFiles({
+    agentDir: getAgentDir(),
+    cwd,
+  });
+  const merged = mergeExtensionConfig({
+    defaults: DEFAULT_CONFIG,
+    globalSettings: readExtensionSettings(globalSettings, "workflow-modes"),
+    projectSettings: readExtensionSettings(projectSettings, "workflow-modes"),
+  });
+
+  return {
+    autoCompactOnModeSwitch:
+      typeof merged.autoCompactOnModeSwitch === "boolean"
+        ? merged.autoCompactOnModeSwitch
+        : DEFAULT_CONFIG.autoCompactOnModeSwitch,
+    autoCompactMinTokens:
+      typeof merged.autoCompactMinTokens === "number" &&
+      Number.isFinite(merged.autoCompactMinTokens) &&
+      merged.autoCompactMinTokens >= 0
+        ? merged.autoCompactMinTokens
+        : DEFAULT_CONFIG.autoCompactMinTokens,
   };
 }
 
