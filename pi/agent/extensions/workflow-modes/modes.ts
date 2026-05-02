@@ -84,9 +84,11 @@ export function buildModeContract(options: {
       "Use write_plan to create a new plan file and edit_plan to refine an existing plan file under .plans/.",
       "Do not use general editing tools in Plan mode.",
       "Only write or update a plan after you have enough context.",
+      "Every plan must include Documentation Impact: list docs, READMEs, examples, changelogs, or user-facing references that execution should update, or explicitly state that no documentation updates are required.",
+      "Verification Checklist should include checking that Documentation Impact was followed: required docs were updated, or the no-docs-needed rationale still holds.",
       "Include 3-7 testable acceptance criteria whenever the task is substantial enough to need them.",
       "Each acceptance criterion should be observable via a test, command output, or file/UI state — not a feeling.",
-      "Plan files should be markdown and usually include: Goal, Constraints, Acceptance Criteria, Chosen Approach, Assumptions / Open Questions, Ordered Tasks, Verification Checklist, and Known Issues / Follow-ups.",
+      "Plan files should be markdown and usually include: Goal, Constraints, Acceptance Criteria, Chosen Approach, Documentation Impact, Assumptions / Open Questions, Ordered Tasks, Verification Checklist, and Known Issues / Follow-ups.",
     ].join("\n");
   }
 

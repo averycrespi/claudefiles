@@ -26,7 +26,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - uses read-oriented tools plus `write_plan` and `edit_plan`
 - defaults thinking to `medium`
 - expects plan files to live under `.plans/` at the repo root
-- encourages one focused question at a time, multiple-choice questions when useful, 2-3 approaches with a recommendation, testable acceptance criteria, and YAGNI planning
+- encourages one focused question at a time, multiple-choice questions when useful, 2-3 approaches with a recommendation, testable acceptance criteria, explicit documentation-impact decisions, and YAGNI planning
 
 ### Execute
 
@@ -51,10 +51,13 @@ The Plan-mode contract tells the agent to usually include sections like:
 - `## Constraints`
 - `## Acceptance Criteria`
 - `## Chosen Approach`
+- `## Documentation Impact`
 - `## Assumptions / Open Questions`
 - `## Ordered Tasks`
 - `## Verification Checklist`
 - `## Known Issues / Follow-ups`
+
+`Documentation Impact` should list required docs updates or state that none are needed. The `Verification Checklist` should include checking that this documentation decision was followed.
 
 `write_plan` creates or replaces `.plans` files. `edit_plan` applies exact text replacements to existing `.plans` files.
 
