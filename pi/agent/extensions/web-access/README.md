@@ -28,6 +28,10 @@ export JINA_API_KEY=jina_...     # optional — improves Jina rate limits
 
 If `TAVILY_API_KEY` is absent, `web_search` falls back to Jina Search. If `JINA_API_KEY` is absent, Jina-backed search/fetch still works where anonymous rate limits allow it.
 
+## Temporary files
+
+For GitHub repository URLs, `web_fetch` shallow-clones the repository to `/tmp/pi-github-repos/<owner>/<repo>` and returns that clone path for follow-up exploration with Pi's built-in tools. If the clone already exists and contains a `.git` directory, it is reused. Clones are not actively cleaned up by the extension.
+
 ## Logging
 
 This extension does not write retained logs or diagnostic files.
