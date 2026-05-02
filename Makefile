@@ -6,6 +6,7 @@ install-dev:
 install-playwright:
 	npm install -g @playwright/cli@latest
 	npm install -g playwright@latest
+	playwright install-deps
 	playwright install
 
 stow-claude:
