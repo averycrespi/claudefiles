@@ -5,42 +5,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { test, mock } from "node:test";
 
-import {
-  _loggingFs,
-  createManagedLogger,
-  redactSecrets,
-  safeErrorMessage,
-} from "./logging.ts";
-
-test("redactSecrets masks bearer tokens and assignment-style secrets", () => {
-  const text = `Authorization: Bearer sk-abc123SECRET\napi_key = "ghp_abcdefghijklmnopqrstuvwxyz123456"\npassword: hunter2`;
-
-  assert.equal(
-    redactSecrets(text),
-    `Authorization: Bearer [REDACTED]\napi_key = "[REDACTED]"\npassword: [REDACTED]`,
-  );
-});
-
-test("redactSecrets masks private key blocks", () => {
-  const text =
-    "before\n-----BEGIN OPENSSH PRIVATE KEY-----\nsecret\n-----END OPENSSH PRIVATE KEY-----\nafter";
-
-  assert.equal(redactSecrets(text), "before\n[REDACTED PRIVATE KEY]\nafter");
-});
-
-test("safeErrorMessage returns sanitized error message without stack", () => {
-  const error = new Error("Request failed with Bearer token123");
-  error.stack = "stack should not appear";
-
-  assert.equal(
-    safeErrorMessage(error),
-    "Request failed with Bearer [REDACTED]",
-  );
-});
-
-test("safeErrorMessage handles non-errors", () => {
-  assert.equal(safeErrorMessage({ reason: "bad" }), "[object Object]");
-});
+import { _loggingFs, createManagedLogger } from "./logging.ts";
 
 test("createManagedLogger creates sanitized logs under the shared temp root", async () => {
   const root = await mkdtemp(join(tmpdir(), "managed-logger-test-"));

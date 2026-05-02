@@ -2,7 +2,7 @@
 
 ## Goal
 
-Refactor `pi/agent/extensions/_shared/logging.ts` from redaction-only helpers into a small shared logging abstraction that owns log-file creation, raw writes, closing, and best-effort deletion. Then refactor `pi/agent/extensions/subagents/spawn.ts` to use it instead of maintaining its own temp log directory, file creation, stream writes, and cleanup code.
+Refactor `pi/agent/extensions/_shared/logging.ts` into a small shared logging abstraction that owns log-file creation, raw writes, closing, and best-effort deletion. Then refactor `pi/agent/extensions/subagents/spawn.ts` to use it instead of maintaining its own temp log directory, file creation, stream writes, and cleanup code.
 
 ## Constraints
 
@@ -26,7 +26,6 @@ Refactor `pi/agent/extensions/_shared/logging.ts` from redaction-only helpers in
 
 Add a minimal generic class-style library surface to `_shared/logging.ts`:
 
-- Keep `redactSecrets()` and `safeErrorMessage()` available as opt-in helpers, but do not wire them into logger writes in v1.
 - Add a `ManagedLogger` / `LogFile` class (exact name can be chosen during implementation) with at least:
   - `path: string`
   - `write(text: string | Buffer): void` — writes raw local log data
@@ -54,7 +53,7 @@ Refactor `subagents/spawn.ts` to import `createManagedLogger` and replace:
 ## Ordered Tasks
 
 1. Read current `_shared/logging.ts`, `_shared/logging.test.ts`, `subagents/spawn.ts`, and `subagents/spawn.test.ts` before editing.
-2. Add a managed logger class/factory to `_shared/logging.ts` while preserving existing redaction exports. Use injectable filesystem/time helpers or the repo's exported-wrapper pattern for Node built-ins that tests need to stub (e.g. unlink/create stream/tmpdir/time).
+2. Add a managed logger class/factory to `_shared/logging.ts`. Use injectable filesystem/time helpers or the repo's exported-wrapper pattern for Node built-ins that tests need to stub (e.g. unlink/create stream/tmpdir/time).
 3. Extend `_shared/logging.test.ts` (or add a colocated logging file test if clearer) for creation, sanitization, unique path behavior when an id already exists, raw writes, close, and cleanup behavior.
 4. Refactor `subagents/spawn.ts` to use the shared logger and remove duplicated local logging code/imports/direct stream management.
 5. Add or update `subagents/spawn.test.ts` assertions for success cleanup and failure log retention if current coverage does not already prove it.
