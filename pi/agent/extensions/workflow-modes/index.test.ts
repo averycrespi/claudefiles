@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import workflowModes, { createWorkflowModesExtension } from "./index.ts";
@@ -24,6 +24,28 @@ type ToolDef = {
   name: string;
   execute?: (...args: any[]) => Promise<any>;
 };
+
+const defaultTestConfig = {
+  autoCompactOnModeSwitch: true,
+  autoCompactMinTokens: 50_000,
+};
+
+function createTestWorkflowModesExtension(
+  config = defaultTestConfig,
+): ReturnType<typeof createWorkflowModesExtension> {
+  return createWorkflowModesExtension({
+    loadConfig: async () => config,
+  });
+}
+
+async function waitForCompactCall(
+  pi: ReturnType<typeof makePi>,
+): Promise<void> {
+  for (let i = 0; i < 10; i += 1) {
+    if (pi._compactCalls.length > 0) return;
+    await Promise.resolve();
+  }
+}
 
 function makeCtx(options: {
   cwd: string;
@@ -287,7 +309,7 @@ test("default export is the configurable workflow-modes extension", () => {
 test("/plan sends a kickoff user message, switches tools/thinking, and injects the plan contract", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-index-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -344,7 +366,7 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
 test("re-entering the same mode does not reapply tools or thinking defaults", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-reenter-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -367,7 +389,7 @@ test("re-entering the same mode does not reapply tools or thinking defaults", as
 test("/normal restores baseline tools, clears workflow state, and does not send a kickoff message", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-normal-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -410,7 +432,7 @@ test("/normal restores baseline tools, clears workflow state, and does not send 
 test("/plan with no args starts immediately without prompting", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-input-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands.get("plan")!.handler("", pi._ctx([], "ignored"));
@@ -425,7 +447,7 @@ test("/plan with no args starts immediately without prompting", async () => {
 test("mode switch compacts above the default threshold before applying mode", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   let resolved = false;
@@ -435,7 +457,7 @@ test("mode switch compacts above the default threshold before applying mode", as
     .then(() => {
       resolved = true;
     });
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await waitForCompactCall(pi);
 
   assert.equal(pi._compactCalls.length, 1);
   assert.equal(pi._sentUserMessages.length, 0);
@@ -463,20 +485,15 @@ test("mode switch compacts above the default threshold before applying mode", as
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("mode switch skips pre-compaction when disabled by project settings", async () => {
+test("mode switch skips pre-compaction when disabled by config", async () => {
   const cwd = await mkdtemp(
     join(tmpdir(), "workflow-modes-precompact-disabled-"),
   );
-  await mkdir(join(cwd, ".pi"), { recursive: true });
-  await writeFile(
-    join(cwd, ".pi/settings.json"),
-    JSON.stringify({
-      "extension:workflow-modes": { autoCompactOnModeSwitch: false },
-    }),
-    "utf8",
-  );
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension({
+    autoCompactOnModeSwitch: false,
+    autoCompactMinTokens: 50_000,
+  })(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -499,7 +516,7 @@ test("mode switch skips pre-compaction when disabled by project settings", async
 test("mode switch skips pre-compaction below threshold or when not idle", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-skip-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -521,13 +538,13 @@ test("mode switch skips pre-compaction below threshold or when not idle", async 
 test("mode switch notifies and proceeds when pre-compaction fails", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-error-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   const transition = pi._commands
     .get("verify")!
     .handler("Check tests", pi._ctx([], undefined, true, 75000));
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await waitForCompactCall(pi);
 
   assert.equal(pi._compactCalls.length, 1);
   assert.equal(pi._sentUserMessages.length, 0);
@@ -545,10 +562,31 @@ test("mode switch notifies and proceeds when pre-compaction fails", async () => 
   await rm(cwd, { recursive: true, force: true });
 });
 
+test("mode switch respects configured pre-compaction threshold", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-precompact-threshold-"),
+  );
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({
+    autoCompactOnModeSwitch: true,
+    autoCompactMinTokens: 100_000,
+  })(pi as any);
+  await startSession(pi);
+
+  await pi._commands
+    .get("execute")!
+    .handler("Implement auth middleware", pi._ctx([], undefined, true, 75_000));
+
+  assert.equal(pi._compactCalls.length, 0);
+  assert.equal(pi._sentUserMessages.length, 1);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
 test("/execute and /verify send kickoff messages with mode-specific guidance", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -576,7 +614,7 @@ test("/execute and /verify send kickoff messages with mode-specific guidance", a
 test("write_plan and edit_plan are scoped to .plans", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-tools-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
   await pi._commands.get("plan")!.handler("Draft a workflow", pi._ctx());
 
@@ -634,7 +672,7 @@ test("write_plan and edit_plan are scoped to .plans", async () => {
 test("session_before_compact returns a workflow-aware summary while a mode is active", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-compact-"));
   const pi = makePi(cwd);
-  createWorkflowModesExtension()(pi as any);
+  createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
   await pi._commands
     .get("plan")!

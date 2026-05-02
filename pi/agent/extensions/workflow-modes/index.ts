@@ -37,6 +37,10 @@ type WorkflowModesConfig = {
   autoCompactMinTokens: number;
 };
 
+type WorkflowModesExtensionOptions = {
+  loadConfig?: (cwd: string) => Promise<WorkflowModesConfig>;
+};
+
 const DEFAULT_CONFIG: WorkflowModesConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
@@ -71,7 +75,11 @@ const EDIT_PLAN_PARAMS = Type.Object({
   ),
 });
 
-export function createWorkflowModesExtension() {
+export function createWorkflowModesExtension(
+  options: WorkflowModesExtensionOptions = {},
+) {
+  const loadWorkflowModesConfig = options.loadConfig ?? loadConfig;
+
   return function (pi: ExtensionAPI) {
     const state: RuntimeState = { mode: "normal" };
 
@@ -181,7 +189,7 @@ export function createWorkflowModesExtension() {
       mode: Exclude<WorkflowMode, "normal">,
       ctx: ExtensionCommandContext,
     ): Promise<void> {
-      const config = await loadConfig(ctx.cwd);
+      const config = await loadWorkflowModesConfig(ctx.cwd);
       if (!config.autoCompactOnModeSwitch || !ctx.isIdle()) return;
 
       const tokens = ctx.getContextUsage()?.tokens;

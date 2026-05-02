@@ -9,7 +9,7 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 - applies per-mode thinking defaults only on explicit mode transitions
 - publishes workflow-mode state over `pi.events` for other extensions
 - injects a stable mode-specific contract into `before_agent_start`
-- immediately sends a kickoff user message on `/plan`, `/execute`, and `/verify` so the agent starts in the new mode
+- sends a kickoff user message on `/plan`, `/execute`, and `/verify` so the agent starts in the new mode after any configured pre-switch compaction
 - compacts large idle sessions before `/plan`, `/execute`, and `/verify` mode switches to reduce expensive cache misses after the tool set changes
 - provides Plan-mode-only `write_plan` and `edit_plan` tools scoped to `.plans/` at the repo root
 - builds a custom compaction summary so long-running workflow sessions keep their mode and TODO context
@@ -64,9 +64,9 @@ The Plan-mode contract tells the agent to usually include sections like:
 
 ## Command behavior
 
-- `/plan [context]` enters Plan mode and immediately starts the planning process with the provided context
-- `/execute [context]` enters Execute mode and immediately starts implementation with the provided context
-- `/verify [context]` enters Verify mode and immediately starts verification with the provided context
+- `/plan [context]` enters Plan mode and starts the planning process with the provided context
+- `/execute [context]` enters Execute mode and starts implementation with the provided context
+- `/verify [context]` enters Verify mode and starts verification with the provided context
 - `/normal` exits workflow mode and restores ordinary Pi behavior
 
 The extension does not pre-create or preselect a workflow brief. Slash-command arguments are passed through to the agent, which decides whether to read, create, or refine plan files.
