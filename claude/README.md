@@ -71,8 +71,6 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 | Skill                     | Purpose                                                    |
 | ------------------------- | ---------------------------------------------------------- |
 | `frontend-design`         | Distinctive, production-grade frontend design and building |
-| `json-canvas`             | Create, read, modify, and validate JSON Canvas files       |
-| `launchd-agents`          | Manage macOS launchd user agents                           |
 | `playwright-cli`          | Browser automation for testing and data extraction         |
 | `skill-creator`           | Guide for creating new skills                              |
 | `test-driven-development` | TDD discipline: red-green-refactor cycle                   |
