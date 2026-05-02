@@ -53,6 +53,11 @@ test("renderFooterLine renders statusline segments in priority order", () => {
     stripAnsi(line),
     "~/Workspace/agent-config · Codex 45% (20%) 2h · ctx 42%/200k · gpt-5-codex · medium",
   );
+  assert.match(line, /Workspace\/agent-config/);
+  assert.match(line, /\x1b\[2mCodex\x1b\[0m \x1b\[2m45%\x1b\[0m/);
+  assert.match(line, /\x1b\[2m20%\x1b\[0m/);
+  assert.match(line, /\x1b\[2mctx\x1b\[0m \x1b\[2m42%\x1b\[0m/);
+  assert.match(line, /\x1b\[2mmedium\x1b\[0m/);
 });
 
 test("renderFooterLine colors statusline percentages above warning and error thresholds", () => {
@@ -73,7 +78,14 @@ test("renderFooterLine colors statusline percentages above warning and error thr
 
   assert.match(line, /\x1b\[33m71%\x1b\[0m/);
   assert.match(line, /\x1b\[31m91%\x1b\[0m/);
-  assert.match(line, /ctx \x1b\[31m92%\x1b\[0m\/200k/);
+  assert.match(line, /\x1b\[2mCodex\x1b\[0m \x1b\[33m71%\x1b\[0m/);
+  assert.match(
+    line,
+    /\x1b\[2mctx\x1b\[0m \x1b\[31m92%\x1b\[0m\x1b\[2m\/200k\x1b\[0m/,
+  );
+  assert.match(line, /\x1b\[2m2h\x1b\[0m/);
+  assert.match(line, /\x1b\[2mgpt-5-codex\x1b\[0m/);
+  assert.match(line, /\x1b\[2mhigh\x1b\[0m/);
 });
 
 test("renderFooterLine drops lower-priority statusline segments first when width is tight", () => {
@@ -153,4 +165,5 @@ test("renderFooterLine shows workflow base thinking only when overridden", () =>
     stripAnsi(line),
     "verify mode · /repo · gpt-5-codex · low (base: high)",
   );
+  assert.match(line, /\x1b\[2mlow\x1b\[0m \x1b\[2m\(base: high\)\x1b\[0m/);
 });

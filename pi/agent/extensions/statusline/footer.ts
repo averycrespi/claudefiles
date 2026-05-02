@@ -42,11 +42,15 @@ function formatTokens(value: number): string {
   return String(value);
 }
 
+function dim(text: string, theme: FooterTheme): string {
+  return theme.fg("dim", text);
+}
+
 function colorizePercent(percent: number, theme: FooterTheme): string {
   const text = `${Math.round(percent)}%`;
   if (percent > 90) return theme.fg("error", text);
   if (percent > 70) return theme.fg("warning", text);
-  return text;
+  return dim(text, theme);
 }
 
 function buildUsageSegment(
@@ -56,18 +60,19 @@ function buildUsageSegment(
   if (!usage) return undefined;
 
   const { label, stats } = usage;
+  const labelText = dim(label, theme);
   if (stats.balance !== undefined) {
     const reset = stats.primary?.resetAfterSeconds;
     return reset === undefined
-      ? `${label} $${stats.balance}`
-      : `${label} $${stats.balance} ${formatDuration(reset)}`;
+      ? `${labelText} $${stats.balance}`
+      : `${labelText} $${stats.balance} ${dim(formatDuration(reset), theme)}`;
   }
 
   if (stats.limitReached) {
     const reset = stats.primary?.resetAfterSeconds;
     return reset === undefined
-      ? `${label} limit`
-      : `${label} limit ${formatDuration(reset)}`;
+      ? `${labelText} limit`
+      : `${labelText} limit ${dim(formatDuration(reset), theme)}`;
   }
 
   const primaryPercent = stats.primary?.usedPercent;
@@ -75,12 +80,15 @@ function buildUsageSegment(
   const primaryReset = stats.primary?.resetAfterSeconds;
 
   if (primaryPercent === undefined && secondaryPercent === undefined) {
-    return label;
+    return labelText;
   }
 
   let percentText = "";
   if (primaryPercent !== undefined && secondaryPercent !== undefined) {
-    percentText = `${colorizePercent(primaryPercent, theme)} (${colorizePercent(secondaryPercent, theme)})`;
+    percentText = `${colorizePercent(primaryPercent, theme)}${dim(
+      " (",
+      theme,
+    )}${colorizePercent(secondaryPercent, theme)}${dim(")", theme)}`;
   } else if (primaryPercent !== undefined) {
     percentText = colorizePercent(primaryPercent, theme);
   } else if (secondaryPercent !== undefined) {
@@ -88,9 +96,11 @@ function buildUsageSegment(
   }
 
   const resetText =
-    primaryReset === undefined ? "" : ` ${formatDuration(primaryReset)}`;
+    primaryReset === undefined
+      ? ""
+      : ` ${dim(formatDuration(primaryReset), theme)}`;
 
-  return `${label} ${percentText}${resetText}`;
+  return `${labelText} ${percentText}${resetText}`;
 }
 
 function buildContextSegment(
@@ -105,7 +115,10 @@ function buildContextSegment(
       ? "?%"
       : colorizePercent(percent, theme);
 
-  return `ctx ${percentText}/${formatTokens(contextUsage.contextWindow)}`;
+  return `${dim("ctx", theme)} ${percentText}${dim(
+    `/${formatTokens(contextUsage.contextWindow)}`,
+    theme,
+  )}`;
 }
 
 function buildWorkflowModeSegment(
@@ -120,7 +133,10 @@ function buildWorkflowModeSegment(
   return theme.fg("warning", label);
 }
 
-function buildThinkingSegment(state: FooterState): string | undefined {
+function buildThinkingSegment(
+  state: FooterState,
+  theme: FooterTheme,
+): string | undefined {
   if (!state.thinking) return undefined;
   if (
     state.workflowMode &&
@@ -128,9 +144,12 @@ function buildThinkingSegment(state: FooterState): string | undefined {
     state.workflowBaseThinking &&
     state.thinking !== state.workflowBaseThinking
   ) {
-    return `${state.thinking} (base: ${state.workflowBaseThinking})`;
+    return `${dim(state.thinking, theme)} ${dim(
+      `(base: ${state.workflowBaseThinking})`,
+      theme,
+    )}`;
   }
-  return state.thinking;
+  return dim(state.thinking, theme);
 }
 
 export function renderFooterLine(
@@ -146,8 +165,8 @@ export function renderFooterLine(
     collapseHome(state.cwd, state.homeDir),
     buildUsageSegment(state.usage, theme),
     buildContextSegment(state.contextUsage, theme),
-    state.modelId,
-    buildThinkingSegment(state),
+    state.modelId ? dim(state.modelId, theme) : undefined,
+    buildThinkingSegment(state, theme),
   ].filter((segment): segment is string => Boolean(segment));
 
   let line = "";
