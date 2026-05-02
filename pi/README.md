@@ -29,6 +29,7 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | `autoformat`     | Format files after write and edit                                                             |
 | `mcp-broker`     | Broker CLI skill + guard for remote operations                                                |
 | `statusline`     | Single-line footer with cwd, quota, context, model, and thinking                              |
+| `startup-header` | Minimal colored startup header with Pi version, repo, branch, and recent commits              |
 | `subagents`      | Dynamic subagent loading and dispatch                                                         |
 | `todo`           | Session-persisted TODO tool with a sticky widget                                              |
 | `web-access`     | Web search, fetch, GitHub, and PDF tools                                                      |
