@@ -562,6 +562,49 @@ test("mode switch notifies and proceeds when pre-compaction fails", async () => 
   await rm(cwd, { recursive: true, force: true });
 });
 
+test("mode-to-mode pre-compaction summarizes the target mode", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-precompact-target-"),
+  );
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+  await pi._commands
+    .get("plan")!
+    .handler("Plan auth middleware", pi._ctx([], undefined, true, 49_999));
+
+  const transition = pi._commands
+    .get("execute")!
+    .handler("Implement auth middleware", pi._ctx([], undefined, true, 75_000));
+  await waitForCompactCall(pi);
+
+  const compact = pi._handlers.get("session_before_compact");
+  const result = await compact!(
+    {
+      type: "session_before_compact",
+      preparation: {
+        firstKeptEntryId: "keep-1",
+        tokensBefore: 75_000,
+      },
+      branchEntries: [],
+      signal: new AbortController().signal,
+    },
+    pi._ctx(),
+  );
+
+  assert.match(result.compaction.summary, /Mode: execute/);
+  assert.equal(result.compaction.details.workflowModes.mode, "execute");
+
+  pi._compactCalls[0]!.onComplete?.({
+    summary: "ok",
+    firstKeptEntryId: "keep-1",
+    tokensBefore: 75_000,
+  });
+  await transition;
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
 test("mode switch respects configured pre-compaction threshold", async () => {
   const cwd = await mkdtemp(
     join(tmpdir(), "workflow-modes-precompact-threshold-"),

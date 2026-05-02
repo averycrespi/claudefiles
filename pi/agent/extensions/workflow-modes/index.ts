@@ -28,6 +28,7 @@ import type { WorkflowMode } from "./types.ts";
 
 type RuntimeState = {
   mode: WorkflowMode;
+  pendingCompactionMode?: Exclude<WorkflowMode, "normal">;
   baselineTools?: string[];
   baselineThinking?: string;
 };
@@ -197,6 +198,7 @@ export function createWorkflowModesExtension(
         return;
       }
 
+      state.pendingCompactionMode = mode;
       await new Promise<void>((resolve) => {
         if (ctx.hasUI) {
           ctx.ui.notify(`Compacting before ${mode} mode`, "info");
@@ -204,12 +206,14 @@ export function createWorkflowModesExtension(
         ctx.compact({
           customInstructions: `Prepare the session for switching to ${mode} workflow mode. Preserve current goals, decisions, TODOs, changed files, and next actions.`,
           onComplete: () => {
+            state.pendingCompactionMode = undefined;
             if (ctx.hasUI) {
               ctx.ui.notify("Workflow mode pre-compaction completed", "info");
             }
             resolve();
           },
           onError: (error) => {
+            state.pendingCompactionMode = undefined;
             if (ctx.hasUI) {
               ctx.ui.notify(
                 `Workflow mode pre-compaction failed: ${error.message}`,
@@ -398,23 +402,24 @@ export function createWorkflowModesExtension(
       const todos = extractTodoItemsFromBranch(
         event.branchEntries as unknown[],
       );
+      const compactionMode = state.pendingCompactionMode ?? state.mode;
       const nextAction = deriveNextAction({
         todos,
-        mode: state.mode,
+        mode: compactionMode,
       });
       return {
         compaction: {
           firstKeptEntryId: event.preparation.firstKeptEntryId,
           tokensBefore: event.preparation.tokensBefore,
           summary: buildWorkflowCompactionSummary({
-            mode: state.mode,
+            mode: compactionMode,
             todos,
             nextAction,
           }),
           details: {
             version: 2,
             workflowModes: {
-              mode: state.mode,
+              mode: compactionMode,
               nextAction,
             },
           },

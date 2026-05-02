@@ -98,9 +98,9 @@ Workflow mode itself is in-memory session state. New or restored sessions start 
 
 By default, when an idle session has at least 50,000 context tokens, `/plan`, `/execute`, and `/verify` compact before changing tools/thinking and before sending the kickoff message. Pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the command is invoked while the agent is not idle. If compaction fails, the extension reports the error and continues with the requested mode switch.
 
-During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. The summary preserves:
+During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. For pre-switch compaction, the summary records the target mode so the compacted context matches the kickoff that follows. The summary preserves:
 
-- current mode
+- current or target mode
 - tactical TODO state
 - next intended action
 
