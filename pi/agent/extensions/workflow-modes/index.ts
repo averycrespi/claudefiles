@@ -6,6 +6,7 @@ import {
   type ExtensionCommandContext,
   type ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
+import { StringEnum } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import {
   mergeExtensionConfig,
@@ -31,11 +32,15 @@ type RuntimeState = {
   pendingCompactionMode?: Exclude<WorkflowMode, "normal">;
   baselineTools?: string[];
   baselineThinking?: string;
+  autoHandoffFixLoopsUsed: number;
 };
 
 type WorkflowModesConfig = {
   autoCompactOnModeSwitch: boolean;
   autoCompactMinTokens: number;
+  autoHandoffEnabled: boolean;
+  autoHandoffDenyTimeoutMs: number;
+  autoHandoffMaxFixLoops: number;
 };
 
 type WorkflowModesExtensionOptions = {
@@ -45,6 +50,9 @@ type WorkflowModesExtensionOptions = {
 const DEFAULT_CONFIG: WorkflowModesConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
+  autoHandoffEnabled: false,
+  autoHandoffDenyTimeoutMs: 10_000,
+  autoHandoffMaxFixLoops: 2,
 };
 
 const WRITE_PLAN_PARAMS = Type.Object({
@@ -54,6 +62,17 @@ const WRITE_PLAN_PARAMS = Type.Object({
   }),
   content: Type.String({
     description: "Full markdown content to write to the selected .plans file.",
+  }),
+});
+
+const HANDOFF_PARAMS = Type.Object({
+  target_mode: StringEnum(["execute", "verify"] as const, {
+    description:
+      "Workflow mode to hand off to. Execute mode may target verify; Verify mode may target execute.",
+  }),
+  reason: Type.String({
+    description:
+      "Concise reason for the handoff, used in the user-facing deny prompt and next mode kickoff context.",
   }),
 });
 
@@ -82,7 +101,10 @@ export function createWorkflowModesExtension(
   const loadWorkflowModesConfig = options.loadConfig ?? loadConfig;
 
   return function (pi: ExtensionAPI) {
-    const state: RuntimeState = { mode: "normal" };
+    const state: RuntimeState = {
+      mode: "normal",
+      autoHandoffFixLoopsUsed: 0,
+    };
 
     function getWorkflowModeState(): WorkflowModeState {
       return {
@@ -172,18 +194,62 @@ export function createWorkflowModesExtension(
       pi.sendUserMessage(message, { deliverAs: "steer" });
     }
 
+    function sendHandoffKickoffMessage(
+      mode: Exclude<WorkflowMode, "normal">,
+      args: string,
+    ): void {
+      pi.sendUserMessage(buildKickoffMessage(mode, args), {
+        deliverAs: "followUp",
+      });
+    }
+
+    async function updateAutoHandoffStatus(
+      ctx: ExtensionContext,
+    ): Promise<void> {
+      if (!ctx.hasUI) return;
+      const config = await loadWorkflowModesConfig(ctx.cwd);
+      if (!config.autoHandoffEnabled || state.mode === "normal") {
+        ctx.ui.setStatus("workflow-modes", undefined);
+        return;
+      }
+
+      const exhausted =
+        state.autoHandoffFixLoopsUsed >= config.autoHandoffMaxFixLoops;
+      const budget = `${state.autoHandoffFixLoopsUsed}/${config.autoHandoffMaxFixLoops}`;
+      ctx.ui.setStatus(
+        "workflow-modes",
+        exhausted ? `↻ exhausted ${budget}` : `↻ auto ${budget}`,
+      );
+    }
+
     async function transitionToMode(
       mode: Exclude<WorkflowMode, "normal">,
       args: string,
       ctx: ExtensionCommandContext,
     ): Promise<void> {
+      state.autoHandoffFixLoopsUsed = 0;
       if (state.mode !== mode) {
         await maybeCompactBeforeModeSwitch(mode, ctx);
         applyMode(mode);
       }
       state.mode = mode;
       publishWorkflowModeState();
+      await updateAutoHandoffStatus(ctx);
       sendKickoffMessage(mode, args, ctx);
+    }
+
+    async function transitionToModeFromHandoff(
+      mode: "execute" | "verify",
+      args: string,
+      ctx: ExtensionContext,
+    ): Promise<void> {
+      if (state.mode !== mode) {
+        applyMode(mode);
+      }
+      state.mode = mode;
+      publishWorkflowModeState();
+      await updateAutoHandoffStatus(ctx);
+      sendHandoffKickoffMessage(mode, args);
     }
 
     async function maybeCompactBeforeModeSwitch(
@@ -225,6 +291,123 @@ export function createWorkflowModesExtension(
         });
       });
     }
+
+    pi.registerTool({
+      name: "workflow_handoff",
+      label: "Workflow Handoff",
+      description:
+        "Request an automatic workflow mode handoff between Execute and Verify modes when auto handoff is enabled.",
+      parameters: HANDOFF_PARAMS,
+      async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+        const config = await loadWorkflowModesConfig(ctx.cwd);
+        if (!config.autoHandoffEnabled) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_handoff: automatic handoff is disabled by configuration",
+              },
+            ],
+            details: {},
+          };
+        }
+
+        const targetMode = params.target_mode;
+        if (state.mode === "execute" && targetMode !== "verify") {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_handoff: Execute mode can only hand off to Verify mode",
+              },
+            ],
+            details: {},
+          };
+        }
+        if (state.mode === "verify" && targetMode !== "execute") {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_handoff: Verify mode can only hand off to Execute mode",
+              },
+            ],
+            details: {},
+          };
+        }
+        if (state.mode !== "execute" && state.mode !== "verify") {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_handoff: only available while workflow modes are in Execute or Verify mode",
+              },
+            ],
+            details: {},
+          };
+        }
+
+        if (
+          state.mode === "verify" &&
+          state.autoHandoffFixLoopsUsed >= config.autoHandoffMaxFixLoops
+        ) {
+          await updateAutoHandoffStatus(ctx);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `workflow_handoff: automatic fix-loop cap reached (${state.autoHandoffFixLoopsUsed}/${config.autoHandoffMaxFixLoops})`,
+              },
+            ],
+            details: {
+              fixLoopsUsed: state.autoHandoffFixLoopsUsed,
+              maxFixLoops: config.autoHandoffMaxFixLoops,
+            },
+          };
+        }
+
+        const reason = params.reason.trim();
+        const displayReason = reason || "No reason provided.";
+        if (ctx.hasUI) {
+          const denied = await ctx.ui.confirm(
+            `Deny automatic handoff to ${capitalize(targetMode)} mode?`,
+            displayReason,
+            { timeout: config.autoHandoffDenyTimeoutMs },
+          );
+          if (denied) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: "workflow_handoff: handoff denied by user",
+                },
+              ],
+              details: { denied: true },
+            };
+          }
+        }
+
+        if (state.mode === "verify" && targetMode === "execute") {
+          state.autoHandoffFixLoopsUsed += 1;
+        }
+
+        await transitionToModeFromHandoff(targetMode, displayReason, ctx);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `workflow_handoff: handed off to ${targetMode} mode`,
+            },
+          ],
+          details: {
+            targetMode,
+            fixLoopsUsed: state.autoHandoffFixLoopsUsed,
+            maxFixLoops: config.autoHandoffMaxFixLoops,
+          },
+          terminate: true,
+        };
+      },
+    });
 
     pi.registerTool({
       name: "write_plan",
@@ -353,7 +536,9 @@ export function createWorkflowModesExtension(
           applyMode("normal");
         }
         state.mode = "normal";
+        state.autoHandoffFixLoopsUsed = 0;
         publishWorkflowModeState();
+        await updateAutoHandoffStatus(ctx);
       },
     });
 
@@ -366,25 +551,30 @@ export function createWorkflowModesExtension(
       });
     }
 
-    pi.on("session_start", async () => {
+    pi.on("session_start", async (_event, ctx) => {
       captureBaselines();
       if (state.mode !== "normal") {
         applyMode("normal");
       }
       state.mode = "normal";
+      state.autoHandoffFixLoopsUsed = 0;
       publishWorkflowModeState();
+      await updateAutoHandoffStatus(ctx);
     });
 
-    pi.on("session_tree", async () => {
+    pi.on("session_tree", async (_event, ctx) => {
       if (state.mode !== "normal") {
         applyMode("normal");
       }
       state.mode = "normal";
+      state.autoHandoffFixLoopsUsed = 0;
       publishWorkflowModeState();
+      await updateAutoHandoffStatus(ctx);
     });
 
     pi.on("session_shutdown", async () => {
       state.mode = "normal";
+      state.autoHandoffFixLoopsUsed = 0;
       publishWorkflowModeState();
     });
 
@@ -451,6 +641,22 @@ async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
       merged.autoCompactMinTokens >= 0
         ? merged.autoCompactMinTokens
         : DEFAULT_CONFIG.autoCompactMinTokens,
+    autoHandoffEnabled:
+      typeof merged.autoHandoffEnabled === "boolean"
+        ? merged.autoHandoffEnabled
+        : DEFAULT_CONFIG.autoHandoffEnabled,
+    autoHandoffDenyTimeoutMs:
+      typeof merged.autoHandoffDenyTimeoutMs === "number" &&
+      Number.isFinite(merged.autoHandoffDenyTimeoutMs) &&
+      merged.autoHandoffDenyTimeoutMs >= 0
+        ? merged.autoHandoffDenyTimeoutMs
+        : DEFAULT_CONFIG.autoHandoffDenyTimeoutMs,
+    autoHandoffMaxFixLoops:
+      typeof merged.autoHandoffMaxFixLoops === "number" &&
+      Number.isInteger(merged.autoHandoffMaxFixLoops) &&
+      merged.autoHandoffMaxFixLoops >= 0
+        ? merged.autoHandoffMaxFixLoops
+        : DEFAULT_CONFIG.autoHandoffMaxFixLoops,
   };
 }
 

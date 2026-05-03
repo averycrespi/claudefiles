@@ -28,13 +28,16 @@ type ToolDef = {
 const defaultTestConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
+  autoHandoffEnabled: false,
+  autoHandoffDenyTimeoutMs: 10_000,
+  autoHandoffMaxFixLoops: 2,
 };
 
 function createTestWorkflowModesExtension(
-  config = defaultTestConfig,
+  config: Partial<typeof defaultTestConfig> = {},
 ): ReturnType<typeof createWorkflowModesExtension> {
   return createWorkflowModesExtension({
-    loadConfig: async () => config,
+    loadConfig: async () => ({ ...defaultTestConfig, ...config }),
   });
 }
 
@@ -51,7 +54,9 @@ function makeCtx(options: {
   cwd: string;
   branch?: unknown[];
   inputResponse?: string | undefined;
+  confirmResponse?: boolean;
   notifications?: Array<{ msg: string; level: string }>;
+  statusCalls?: Array<{ key: string; text: string | undefined }>;
   widgetCalls?: Array<{
     key: string;
     lines: string[] | undefined;
@@ -59,6 +64,7 @@ function makeCtx(options: {
   }>;
   inputCalls?: string[];
   idle?: boolean;
+  hasUI?: boolean;
   usageTokens?: number | null;
   compactCalls?: Array<{
     customInstructions?: string;
@@ -67,7 +73,7 @@ function makeCtx(options: {
   }>;
 }): any {
   return {
-    hasUI: true,
+    hasUI: options.hasUI ?? true,
     cwd: options.cwd,
     model: undefined,
     isIdle: () => options.idle ?? true,
@@ -101,7 +107,7 @@ function makeCtx(options: {
         options.inputCalls?.push(title);
         return options.inputResponse;
       },
-      confirm: async () => true,
+      confirm: async () => options.confirmResponse ?? true,
       setWidget(
         key: string,
         content:
@@ -122,7 +128,9 @@ function makeCtx(options: {
           ...(usedFactory ? { usedFactory } : {}),
         });
       },
-      setStatus: () => {},
+      setStatus: (key: string, text: string | undefined) => {
+        options.statusCalls?.push({ key, text });
+      },
       setWorkingMessage: () => {},
       setHiddenThinkingLabel: () => {},
       setFooter: () => {},
@@ -155,6 +163,7 @@ function makePi(cwd: string) {
     lines: string[] | undefined;
     usedFactory?: boolean;
   }> = [];
+  const statusCalls: Array<{ key: string; text: string | undefined }> = [];
   const inputCalls: string[] = [];
   const sentUserMessages: Array<{ content: unknown; options?: unknown }> = [];
   const compactCalls: Array<{
@@ -262,6 +271,7 @@ function makePi(cwd: string) {
     _handlers: handlers,
     _notifications: notifications,
     _widgetCalls: widgetCalls,
+    _statusCalls: statusCalls,
     _inputCalls: inputCalls,
     _sentUserMessages: sentUserMessages,
     _compactCalls: compactCalls,
@@ -275,15 +285,20 @@ function makePi(cwd: string) {
       inputResponse?: string,
       idle = true,
       usageTokens?: number | null,
+      hasUI = true,
+      confirmResponse?: boolean,
     ) {
       return makeCtx({
         cwd,
         branch,
         inputResponse,
+        confirmResponse,
         notifications,
+        statusCalls,
         widgetCalls,
         inputCalls,
         idle,
+        hasUI,
         usageTokens,
         compactCalls,
       });
@@ -478,6 +493,7 @@ test("mode switch compacts above the default threshold before applying mode", as
     "write",
     "bash",
     "todo",
+    "workflow_handoff",
   ]);
   assert.equal(pi._sentUserMessages.length, 1);
   assert.match(String(pi._sentUserMessages[0]?.content), /execute mode/i);
@@ -508,6 +524,7 @@ test("mode switch skips pre-compaction when disabled by config", async () => {
     "write",
     "bash",
     "todo",
+    "workflow_handoff",
   ]);
 
   await rm(cwd, { recursive: true, force: true });
@@ -650,6 +667,141 @@ test("/execute and /verify send kickoff messages with mode-specific guidance", a
     String(pi._sentUserMessages[1]?.content),
     /Check typecheck and tests/,
   );
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff is disabled by default", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-disabled-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const result = await pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, false),
+  );
+
+  assert.match(result.content[0].text, /disabled/i);
+  assert.equal(pi._sentUserMessages.length, 1);
+  assert.equal(pi._thinkingLevel(), "low");
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff moves execute to verify when not denied", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-verify-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const result = await pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, false),
+  );
+
+  assert.equal(result.terminate, true);
+  assert.equal(pi._thinkingLevel(), "high");
+  assert.match(String(pi._sentUserMessages.at(-1)?.content), /verify mode/i);
+  assert.match(
+    String(pi._sentUserMessages.at(-1)?.content),
+    /Implementation complete/,
+  );
+  assert.deepEqual(pi._sentUserMessages.at(-1)?.options, {
+    deliverAs: "followUp",
+  });
+  assert.equal(pi._statusCalls.at(-1)?.text, "↻ auto 0/2");
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff denial keeps the current mode", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-denied-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const result = await pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, true),
+  );
+
+  assert.match(result.content[0].text, /denied/i);
+  assert.equal(pi._thinkingLevel(), "low");
+  assert.equal(pi._sentUserMessages.length, 1);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff skips denial prompt without UI", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-no-ui-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  await pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, false, true),
+  );
+
+  assert.equal(pi._thinkingLevel(), "high");
+  assert.match(String(pi._sentUserMessages.at(-1)?.content), /verify mode/i);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff caps verify to execute fix loops", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-cap-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({
+    autoHandoffEnabled: true,
+    autoHandoffMaxFixLoops: 1,
+  })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("verify")!.handler("Check", pi._ctx());
+
+  const handoff = pi._tools.get("workflow_handoff")!;
+  await handoff.execute!(
+    "call-1",
+    { target_mode: "execute", reason: "Fix failures" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, false),
+  );
+  await handoff.execute!(
+    "call-2",
+    { target_mode: "verify", reason: "Fixes complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, false),
+  );
+  const result = await handoff.execute!(
+    "call-3",
+    { target_mode: "execute", reason: "More fixes" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, false),
+  );
+
+  assert.match(result.content[0].text, /cap reached/i);
+  assert.equal(pi._thinkingLevel(), "high");
+  assert.equal(pi._statusCalls.at(-1)?.text, "↻ exhausted 1/1");
 
   await rm(cwd, { recursive: true, force: true });
 });

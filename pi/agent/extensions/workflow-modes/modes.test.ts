@@ -37,6 +37,20 @@ test("buildModeContract for execute mode encourages using relevant plan files wi
   assert.match(contract, /read relevant .*\.plans/i);
   assert.match(contract, /commit regularly/i);
   assert.match(contract, /logical checkpoints/i);
+  assert.match(contract, /workflow_handoff/i);
+  assert.match(contract, /target_mode="verify"/i);
+});
+
+test("buildModeContract for verify mode explains handoff outcomes", () => {
+  const contract = buildModeContract({
+    mode: "verify",
+  });
+
+  assert.match(contract, /workflow_handoff/i);
+  assert.match(contract, /target_mode="execute"/i);
+  assert.match(contract, /passes/i);
+  assert.match(contract, /blocked/i);
+  assert.match(contract, /unfixable/i);
 });
 
 test("mode helpers return the expected thinking defaults and tool sets", () => {
@@ -57,12 +71,14 @@ test("mode helpers return the expected thinking defaults and tool sets", () => {
   const executeTools = getManagedToolNamesForMode("execute");
   assert.ok(executeTools.includes("bash"));
   assert.ok(executeTools.includes("write"));
+  assert.ok(executeTools.includes("workflow_handoff"));
   assert.ok(!executeTools.includes("write_plan"));
   assert.ok(!executeTools.includes("ask_user"));
 
   const verifyTools = getManagedToolNamesForMode("verify");
   assert.ok(verifyTools.includes("bash"));
   assert.ok(verifyTools.includes("ask_user"));
+  assert.ok(verifyTools.includes("workflow_handoff"));
   assert.ok(!verifyTools.includes("write"));
   assert.ok(!verifyTools.includes("edit"));
 });

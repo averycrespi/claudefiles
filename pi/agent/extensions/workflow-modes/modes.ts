@@ -17,7 +17,14 @@ const PLAN_TOOLS = [
   "edit_plan",
 ] as const;
 
-const EXECUTE_TOOLS = ["read", "edit", "write", "bash", "todo"] as const;
+const EXECUTE_TOOLS = [
+  "read",
+  "edit",
+  "write",
+  "bash",
+  "todo",
+  "workflow_handoff",
+] as const;
 
 const VERIFY_TOOLS = [
   "read",
@@ -28,6 +35,7 @@ const VERIFY_TOOLS = [
   "mcp_describe",
   "mcp_call",
   "spawn_agents",
+  "workflow_handoff",
 ] as const;
 
 export function getManagedToolNamesForMode(mode: WorkflowMode): string[] {
@@ -101,6 +109,7 @@ export function buildModeContract(options: {
       "Keep changes aligned with the current conversation, acceptance criteria, and ordered tasks.",
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
+      'When implementation is complete and ready for verification, call workflow_handoff with target_mode="verify" and a concise reason instead of asking the user to run /verify.',
     ].join("\n");
   }
 
@@ -111,5 +120,7 @@ export function buildModeContract(options: {
     "Run deterministic checks first.",
     "Do not silently edit code in Verify mode.",
     "Turn findings into explicit next actions for a possible return to Execute mode.",
+    'If verification finds fixable issues, call workflow_handoff with target_mode="execute" and a concise reason describing the fixes needed.',
+    "If verification passes, is blocked, or finds unfixable issues, do not call workflow_handoff; report the outcome to the user.",
   ].join("\n");
 }
