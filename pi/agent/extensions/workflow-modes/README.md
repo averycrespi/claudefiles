@@ -65,6 +65,15 @@ When UI is available, handoff shows a timed prompt with the requested target mod
 
 Plan files are ordinary markdown files stored under `.plans/` in the repo root.
 
+The Plan-mode contract requires a discovery-first flow before durable plan writing:
+
+1. Discover: read relevant repo context and ask focused requirements questions.
+2. Explore: compare viable approaches with trade-offs and a recommendation.
+3. Validate: confirm the chosen direction and unresolved assumptions with the user.
+4. Author: write or update the `.plans/` markdown file.
+
+For non-trivial work, the agent should ask at least one requirements-discovery question before proposing or writing a plan. It should use `ask_user` for material decisions with multiple valid directions, and it should not call `write_plan` or `edit_plan` until discovery, exploration, and validation are complete unless the user explicitly asks to skip discovery or provides a complete implementation-ready plan.
+
 The Plan-mode contract tells the agent to usually include sections like:
 
 - `## Goal`
