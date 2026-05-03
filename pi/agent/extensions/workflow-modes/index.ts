@@ -96,11 +96,11 @@ const EDIT_PLAN_PARAMS = Type.Object({
   }),
   edits: Type.Array(
     Type.Object({
-      oldText: Type.String({
+      old_text: Type.String({
         description:
           "Exact text that must match a unique, non-overlapping region of the original plan file.",
       }),
-      newText: Type.String({
+      new_text: Type.String({
         description: "Replacement text for the matched region.",
       }),
     }),
@@ -534,7 +534,11 @@ export function createWorkflowModesExtension(
           };
         }
 
-        const edited = applyExactTextEdits(originalContent, params.edits);
+        const edits = params.edits.map((edit) => ({
+          oldText: edit.old_text,
+          newText: edit.new_text,
+        }));
+        const edited = applyExactTextEdits(originalContent, edits);
         if (!edited.ok) {
           return {
             content: [

@@ -41,7 +41,7 @@ Example settings:
 
 ## Temporary files
 
-For GitHub repository URLs, `web_fetch` shallow-clones the repository to `/tmp/pi-github-repos/<owner>/<repo>` and returns that clone path for follow-up exploration with Pi's built-in tools. If the clone already exists and contains a `.git` directory, it is reused. Clones are not actively cleaned up by the extension.
+For GitHub repository URLs, `web_fetch` shallow-clones the repository to `/tmp/pi-github-repos/<owner>/<repo>` and returns that clone path for follow-up exploration with Pi's built-in tools. If the clone already exists and contains a `.git` directory, it is reused. Clones are not actively cleaned up by the extension. These temp clones contain raw repository contents fetched from the requested public GitHub URL; raw file contents may also be returned directly for GitHub blob URLs.
 
 ## Logging
 

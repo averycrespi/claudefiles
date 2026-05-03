@@ -95,8 +95,7 @@ export async function spillIfNeeded(
   try {
     await mkdir(dir, { recursive: true });
     await writeFile(filePath, joinedText, { flag: "wx" });
-  } catch (err) {
-    console.warn("[mcp-broker] spillIfNeeded: failed to write spill file", err);
+  } catch {
     return { spilled: false, content };
   }
 

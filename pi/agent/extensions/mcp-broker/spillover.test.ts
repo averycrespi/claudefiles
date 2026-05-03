@@ -1,4 +1,4 @@
-import { after, before, describe, test } from "node:test";
+import { after, before, describe, mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -262,6 +262,18 @@ describe("spillIfNeeded", () => {
     const result = await spillIfNeeded(content, "call_fail", unwritableDir);
     assert.equal(result.spilled, false);
     assert.deepEqual(result.content, content);
+  });
+
+  test("writeFile failure does not write to console", async () => {
+    const warn = mock.method(console, "warn", () => {});
+    const bigText = "f".repeat(THRESHOLD_CHARS + 1);
+    const content = [{ type: "text" as const, text: bigText }];
+    const unwritableDir = join(scratchDir, "console-not-a-dir.txt");
+    await writeFile(unwritableDir, "blocker");
+
+    await spillIfNeeded(content, "call_no_console", unwritableDir);
+
+    assert.equal(warn.mock.callCount(), 0);
   });
 
   test("preview truncated to PREVIEW_BYTES with correct truncated-byte count", async () => {

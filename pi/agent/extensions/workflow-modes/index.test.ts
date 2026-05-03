@@ -915,8 +915,8 @@ test("write_plan and edit_plan are scoped to .plans", async () => {
       path: ".plans/auth.md",
       edits: [
         {
-          oldText: "Refactor auth middleware",
-          newText: "Refactor auth middleware safely",
+          old_text: "Refactor auth middleware",
+          new_text: "Refactor auth middleware safely",
         },
       ],
     },
