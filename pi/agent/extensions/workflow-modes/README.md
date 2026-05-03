@@ -26,7 +26,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 
 - intended for clarification, repo reading, approach comparison, and plan authoring
 - uses read-oriented tools plus `write_plan` and `edit_plan`
-- defaults thinking to `medium`
+- defaults thinking to `medium` (`planThinkingLevel`)
 - expects plan files to live under `.plans/` at the repo root
 - encourages one focused question at a time, multiple-choice questions when useful, 2-3 approaches with a recommendation, testable acceptance criteria, explicit documentation-impact decisions, and YAGNI planning
 
@@ -34,7 +34,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 
 - intended for code changes and deterministic local execution
 - uses `read`, `edit`, `write`, `bash`, and `todo`
-- defaults thinking to `low`
+- defaults thinking to `low` (`executeThinkingLevel`)
 - encourages regular commits at logical checkpoints instead of one large end-of-run commit
 - when auto handoff is enabled, can call `workflow_handoff` with `target_mode: "verify"` after implementation is ready for verification
 
@@ -42,7 +42,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 
 - intended for deterministic checks, review, and findings capture
 - stays read-mostly
-- defaults thinking to `high`
+- defaults thinking to `high` (`verifyThinkingLevel`)
 
 When auto handoff is enabled, Verify can call `workflow_handoff` with `target_mode: "execute"` only when it found fixable issues. If verification passes, is blocked, or finds unfixable issues, it should report the outcome instead of handing off.
 
@@ -116,12 +116,28 @@ Workflow modes reads extension-scoped settings from `~/.pi/agent/settings.json` 
     "autoCompactMinTokens": 50000,
     "autoHandoffEnabled": false,
     "autoHandoffDenyTimeoutMs": 10000,
-    "autoHandoffMaxFixLoops": 2
+    "autoHandoffMaxFixLoops": 2,
+    "planThinkingLevel": "medium",
+    "executeThinkingLevel": "low",
+    "verifyThinkingLevel": "high"
   }
 }
 ```
 
-`autoCompactOnModeSwitch` enables pre-switch compaction for `/plan`, `/execute`, and `/verify`. `autoCompactMinTokens` controls the context-token threshold. `autoHandoffEnabled` enables agent-requested Execute ↔ Verify handoffs. `autoHandoffDenyTimeoutMs` controls the UI denial window. `autoHandoffMaxFixLoops` caps Verify → Execute loopbacks. Project settings override global settings.
+Project settings override global settings.
+
+| Field                      | Default  | Description                                                                   |
+| -------------------------- | -------- | ----------------------------------------------------------------------------- |
+| `autoCompactOnModeSwitch`  | `true`   | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.         |
+| `autoCompactMinTokens`     | `50000`  | Context-token threshold for pre-switch compaction.                            |
+| `autoHandoffEnabled`       | `false`  | Enables agent-requested Execute ↔ Verify handoffs through `workflow_handoff`. |
+| `autoHandoffDenyTimeoutMs` | `10000`  | UI denial window for automatic handoffs; if it expires, the handoff proceeds. |
+| `autoHandoffMaxFixLoops`   | `2`      | Caps Verify → Execute loopbacks.                                              |
+| `planThinkingLevel`        | `medium` | Thinking level applied when entering Plan mode.                               |
+| `executeThinkingLevel`     | `low`    | Thinking level applied when entering Execute mode.                            |
+| `verifyThinkingLevel`      | `high`   | Thinking level applied when entering Verify mode.                             |
+
+Thinking-level fields accept `off`, `minimal`, `low`, `medium`, `high`, and `xhigh`.
 
 ## Logging
 

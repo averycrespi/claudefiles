@@ -22,11 +22,14 @@ Fetch and read web content as clean markdown. Intelligently routes by URL type:
 ## Configuration
 
 ```bash
-export TAVILY_API_KEY=tvly-...   # recommended for web_search
-export JINA_API_KEY=jina_...     # optional — improves Jina rate limits
+export TAVILY_API_KEY=tvly-...
+export JINA_API_KEY=jina_...
 ```
 
-If `TAVILY_API_KEY` is absent, `web_search` falls back to Jina Search. If `JINA_API_KEY` is absent, Jina-backed search/fetch still works where anonymous rate limits allow it.
+| Variable         | Default | Description                                                                                                                  |
+| ---------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `TAVILY_API_KEY` | unset   | Recommended for `web_search`; when absent, `web_search` falls back to Jina Search.                                           |
+| `JINA_API_KEY`   | unset   | Optional; improves Jina rate limits. When absent, Jina-backed search/fetch still works where anonymous rate limits allow it. |
 
 ## Temporary files
 

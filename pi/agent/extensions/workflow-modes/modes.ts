@@ -1,4 +1,8 @@
-import type { WorkflowMode } from "./types.ts";
+import type {
+  ThinkingLevel,
+  WorkflowMode,
+  WorkflowModeThinkingLevels,
+} from "./types.ts";
 
 const PLAN_TOOLS = [
   "read",
@@ -38,6 +42,12 @@ const VERIFY_TOOLS = [
   "workflow_handoff",
 ] as const;
 
+export const DEFAULT_THINKING_LEVELS: WorkflowModeThinkingLevels = {
+  plan: "medium",
+  execute: "low",
+  verify: "high",
+};
+
 export function getManagedToolNamesForMode(mode: WorkflowMode): string[] {
   switch (mode) {
     case "plan":
@@ -53,14 +63,15 @@ export function getManagedToolNamesForMode(mode: WorkflowMode): string[] {
 
 export function getThinkingLevelForMode(
   mode: WorkflowMode,
-): "medium" | "high" | "low" | undefined {
+  thinkingLevels: WorkflowModeThinkingLevels = DEFAULT_THINKING_LEVELS,
+): ThinkingLevel | undefined {
   switch (mode) {
     case "plan":
-      return "medium";
+      return thinkingLevels.plan;
     case "execute":
-      return "low";
+      return thinkingLevels.execute;
     case "verify":
-      return "high";
+      return thinkingLevels.verify;
     default:
       return undefined;
   }

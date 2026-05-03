@@ -21,17 +21,23 @@ import {
 } from "./compaction.ts";
 import {
   buildModeContract,
+  DEFAULT_THINKING_LEVELS,
   getManagedToolNamesForMode,
   getThinkingLevelForMode,
 } from "./modes.ts";
 import { WORKFLOW_MODE_CHANGED_EVENT, type WorkflowModeState } from "./api.ts";
-import type { WorkflowMode } from "./types.ts";
+import type {
+  ThinkingLevel,
+  WorkflowMode,
+  WorkflowModeThinkingLevels,
+} from "./types.ts";
 
 type RuntimeState = {
   mode: WorkflowMode;
   pendingCompactionMode?: Exclude<WorkflowMode, "normal">;
   baselineTools?: string[];
   baselineThinking?: string;
+  thinkingLevels: WorkflowModeThinkingLevels;
   autoHandoffFixLoopsUsed: number;
 };
 
@@ -41,6 +47,9 @@ type WorkflowModesConfig = {
   autoHandoffEnabled: boolean;
   autoHandoffDenyTimeoutMs: number;
   autoHandoffMaxFixLoops: number;
+  planThinkingLevel: ThinkingLevel;
+  executeThinkingLevel: ThinkingLevel;
+  verifyThinkingLevel: ThinkingLevel;
 };
 
 type WorkflowModesExtensionOptions = {
@@ -53,6 +62,9 @@ const DEFAULT_CONFIG: WorkflowModesConfig = {
   autoHandoffEnabled: false,
   autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
+  planThinkingLevel: DEFAULT_THINKING_LEVELS.plan,
+  executeThinkingLevel: DEFAULT_THINKING_LEVELS.execute,
+  verifyThinkingLevel: DEFAULT_THINKING_LEVELS.verify,
 };
 
 const WRITE_PLAN_PARAMS = Type.Object({
@@ -103,13 +115,14 @@ export function createWorkflowModesExtension(
   return function (pi: ExtensionAPI) {
     const state: RuntimeState = {
       mode: "normal",
+      thinkingLevels: { ...DEFAULT_THINKING_LEVELS },
       autoHandoffFixLoopsUsed: 0,
     };
 
     function getWorkflowModeState(): WorkflowModeState {
       return {
         mode: state.mode,
-        baseThinking: getThinkingLevelForMode(state.mode),
+        baseThinking: getThinkingLevelForMode(state.mode, state.thinkingLevels),
         baselineThinking:
           state.mode === "normal" ? undefined : state.baselineThinking,
       };
@@ -128,6 +141,14 @@ export function createWorkflowModesExtension(
       }
     }
 
+    function updateThinkingLevels(config: WorkflowModesConfig): void {
+      state.thinkingLevels = {
+        plan: config.planThinkingLevel,
+        execute: config.executeThinkingLevel,
+        verify: config.verifyThinkingLevel,
+      };
+    }
+
     function applyMode(mode: WorkflowMode): void {
       captureBaselines();
       if (!state.baselineTools || !state.baselineThinking) return;
@@ -143,7 +164,7 @@ export function createWorkflowModesExtension(
         available.has(name),
       );
       pi.setActiveTools(nextTools);
-      const thinking = getThinkingLevelForMode(mode);
+      const thinking = getThinkingLevelForMode(mode, state.thinkingLevels);
       if (thinking) {
         pi.setThinkingLevel(thinking as any);
       }
@@ -228,8 +249,10 @@ export function createWorkflowModesExtension(
       ctx: ExtensionCommandContext,
     ): Promise<void> {
       state.autoHandoffFixLoopsUsed = 0;
+      const config = await loadWorkflowModesConfig(ctx.cwd);
+      updateThinkingLevels(config);
       if (state.mode !== mode) {
-        await maybeCompactBeforeModeSwitch(mode, ctx);
+        await maybeCompactBeforeModeSwitch(mode, ctx, config);
         applyMode(mode);
       }
       state.mode = mode;
@@ -242,7 +265,9 @@ export function createWorkflowModesExtension(
       mode: "execute" | "verify",
       args: string,
       ctx: ExtensionContext,
+      config: WorkflowModesConfig,
     ): Promise<void> {
+      updateThinkingLevels(config);
       if (state.mode !== mode) {
         applyMode(mode);
       }
@@ -255,8 +280,8 @@ export function createWorkflowModesExtension(
     async function maybeCompactBeforeModeSwitch(
       mode: Exclude<WorkflowMode, "normal">,
       ctx: ExtensionCommandContext,
+      config: WorkflowModesConfig,
     ): Promise<void> {
-      const config = await loadWorkflowModesConfig(ctx.cwd);
       if (!config.autoCompactOnModeSwitch || !ctx.isIdle()) return;
 
       const tokens = ctx.getContextUsage()?.tokens;
@@ -300,6 +325,7 @@ export function createWorkflowModesExtension(
       parameters: HANDOFF_PARAMS,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         const config = await loadWorkflowModesConfig(ctx.cwd);
+        updateThinkingLevels(config);
         if (!config.autoHandoffEnabled) {
           return {
             content: [
@@ -391,7 +417,12 @@ export function createWorkflowModesExtension(
           state.autoHandoffFixLoopsUsed += 1;
         }
 
-        await transitionToModeFromHandoff(targetMode, displayReason, ctx);
+        await transitionToModeFromHandoff(
+          targetMode,
+          displayReason,
+          ctx,
+          config,
+        );
         return {
           content: [
             {
@@ -552,6 +583,7 @@ export function createWorkflowModesExtension(
     }
 
     pi.on("session_start", async (_event, ctx) => {
+      updateThinkingLevels(await loadWorkflowModesConfig(ctx.cwd));
       captureBaselines();
       if (state.mode !== "normal") {
         applyMode("normal");
@@ -581,6 +613,7 @@ export function createWorkflowModesExtension(
     pi.on("before_agent_start", async (event, ctx) => {
       if (state.mode === "normal") return undefined;
       const config = await loadWorkflowModesConfig(ctx.cwd);
+      updateThinkingLevels(config);
       return {
         systemPrompt: `${event.systemPrompt}\n\n${buildModeContract({
           mode: state.mode,
@@ -659,7 +692,30 @@ async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
       merged.autoHandoffMaxFixLoops >= 0
         ? merged.autoHandoffMaxFixLoops
         : DEFAULT_CONFIG.autoHandoffMaxFixLoops,
+    planThinkingLevel: parseThinkingLevel(
+      merged.planThinkingLevel,
+      DEFAULT_CONFIG.planThinkingLevel,
+    ),
+    executeThinkingLevel: parseThinkingLevel(
+      merged.executeThinkingLevel,
+      DEFAULT_CONFIG.executeThinkingLevel,
+    ),
+    verifyThinkingLevel: parseThinkingLevel(
+      merged.verifyThinkingLevel,
+      DEFAULT_CONFIG.verifyThinkingLevel,
+    ),
   };
+}
+
+function parseThinkingLevel(
+  value: unknown,
+  fallback: ThinkingLevel,
+): ThinkingLevel {
+  return typeof value === "string" && isThinkingLevel(value) ? value : fallback;
+}
+
+function isThinkingLevel(value: string): value is ThinkingLevel {
+  return ["off", "minimal", "low", "medium", "high", "xhigh"].includes(value);
 }
 
 function capitalize(value: string): string {

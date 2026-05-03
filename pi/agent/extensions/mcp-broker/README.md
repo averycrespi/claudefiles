@@ -22,10 +22,13 @@ Tool calls that require human approval block for up to 10 minutes, matching the 
 
 Set these environment variables before starting Pi:
 
-- `MCP_BROKER_ENDPOINT` — base URL of the broker (the extension connects to `${MCP_BROKER_ENDPOINT}/mcp`).
-- `MCP_BROKER_AUTH_TOKEN` — bearer token for the broker's MCP endpoint.
+| Variable                | Default | Description                                                                     |
+| ----------------------- | ------- | ------------------------------------------------------------------------------- |
+| `MCP_BROKER_ENDPOINT`   | unset   | Base URL of the broker; the extension connects to `${MCP_BROKER_ENDPOINT}/mcp`. |
+| `MCP_BROKER_AUTH_TOKEN` | unset   | Bearer token for the broker's MCP endpoint.                                     |
+| `MCP_BROKER_READONLY`   | unset   | Set to `1` to activate read-only mode.                                          |
 
-If either variable is missing, the meta-tools are still registered, but any call returns a clear configuration error — Pi remains usable on machines without a broker.
+If `MCP_BROKER_ENDPOINT` or `MCP_BROKER_AUTH_TOKEN` is missing, the meta-tools are still registered, but any call returns a clear configuration error — Pi remains usable on machines without a broker.
 
 ## Read-only mode
 

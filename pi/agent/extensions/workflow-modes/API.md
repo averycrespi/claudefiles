@@ -43,7 +43,7 @@ pi.events.on(WORKFLOW_MODE_CHANGED_EVENT, (data) => {
 ```ts
 interface WorkflowModeState {
   mode: "normal" | "plan" | "execute" | "verify";
-  baseThinking?: "medium" | "high" | "low";
+  baseThinking?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
   baselineThinking?: string;
 }
 ```
@@ -51,6 +51,6 @@ interface WorkflowModeState {
 Notes:
 
 - `mode` is always present.
-- `baseThinking` is the mode's default thinking level.
+- `baseThinking` is the mode's configured thinking level.
 - `baselineThinking` is the session's original thinking level captured before the first workflow-mode transition.
 - `baseThinking` and `baselineThinking` are `undefined` in `normal` mode.

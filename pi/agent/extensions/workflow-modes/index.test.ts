@@ -25,16 +25,32 @@ type ToolDef = {
   execute?: (...args: any[]) => Promise<any>;
 };
 
-const defaultTestConfig = {
+type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+
+type TestConfig = {
+  autoCompactOnModeSwitch: boolean;
+  autoCompactMinTokens: number;
+  autoHandoffEnabled: boolean;
+  autoHandoffDenyTimeoutMs: number;
+  autoHandoffMaxFixLoops: number;
+  planThinkingLevel: ThinkingLevel;
+  executeThinkingLevel: ThinkingLevel;
+  verifyThinkingLevel: ThinkingLevel;
+};
+
+const defaultTestConfig: TestConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
   autoHandoffEnabled: false,
   autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
+  planThinkingLevel: "medium",
+  executeThinkingLevel: "low",
+  verifyThinkingLevel: "high",
 };
 
 function createTestWorkflowModesExtension(
-  config: Partial<typeof defaultTestConfig> = {},
+  config: Partial<TestConfig> = {},
 ): ReturnType<typeof createWorkflowModesExtension> {
   return createWorkflowModesExtension({
     loadConfig: async () => ({ ...defaultTestConfig, ...config }),
@@ -384,6 +400,36 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
   assert.match(result.systemPrompt, /write_plan/i);
   assert.match(result.systemPrompt, /edit_plan/i);
   assert.match(result.systemPrompt, /\.plans\//i);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("mode thinking levels are configurable", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-thinking-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({
+    planThinkingLevel: "high",
+    executeThinkingLevel: "minimal",
+    verifyThinkingLevel: "xhigh",
+  })(pi as any);
+  await startSession(pi);
+
+  await pi._commands.get("plan")!.handler("Plan", pi._ctx());
+  assert.equal(pi._thinkingLevel(), "high");
+  assert.deepEqual(pi._emittedEvents.at(-1), {
+    event: "workflow-modes:changed",
+    data: {
+      mode: "plan",
+      baseThinking: "high",
+      baselineThinking: "medium",
+    },
+  });
+
+  await pi._commands.get("execute")!.handler("Build", pi._ctx());
+  assert.equal(pi._thinkingLevel(), "minimal");
+
+  await pi._commands.get("verify")!.handler("Check", pi._ctx());
+  assert.equal(pi._thinkingLevel(), "xhigh");
 
   await rm(cwd, { recursive: true, force: true });
 });
