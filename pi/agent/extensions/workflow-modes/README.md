@@ -137,7 +137,7 @@ Example settings:
 }
 ```
 
-Thinking-level fields accept `off`, `minimal`, `low`, `medium`, `high`, and `xhigh`.
+Boolean environment overrides accept `1`/`true` and `0`/`false`. Thinking-level fields accept `off`, `minimal`, `low`, `medium`, `high`, and `xhigh`.
 
 ## Logging
 

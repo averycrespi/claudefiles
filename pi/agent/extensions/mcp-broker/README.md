@@ -22,11 +22,11 @@ Tool calls that require human approval block for up to 10 minutes, matching the 
 
 Configure via `extension:mcp-broker` in Pi settings. Environment variables override settings when set.
 
-| Field       | Default | Environment override    | Description                                                                     |
-| ----------- | ------- | ----------------------- | ------------------------------------------------------------------------------- |
-| `endpoint`  | unset   | `MCP_BROKER_ENDPOINT`   | Base URL of the broker; the extension connects to `${endpoint}/mcp`.            |
-| `authToken` | unset   | `MCP_BROKER_AUTH_TOKEN` | Bearer token for the broker's MCP endpoint.                                     |
-| `readOnly`  | `false` | `MCP_BROKER_READONLY`   | Set to `true` in settings or `1` in the environment to activate read-only mode. |
+| Field       | Default | Environment override    | Description                                                                            |
+| ----------- | ------- | ----------------------- | -------------------------------------------------------------------------------------- |
+| `endpoint`  | unset   | `MCP_BROKER_ENDPOINT`   | Base URL of the broker; the extension connects to `${endpoint}/mcp`.                   |
+| `authToken` | unset   | `MCP_BROKER_AUTH_TOKEN` | Bearer token for the broker's MCP endpoint.                                            |
+| `readOnly`  | `false` | `MCP_BROKER_READONLY`   | Set to `true` in settings or `1`/`true` in the environment to activate read-only mode. |
 
 Example settings:
 
@@ -44,7 +44,7 @@ If `endpoint`/`MCP_BROKER_ENDPOINT` or `authToken`/`MCP_BROKER_AUTH_TOKEN` is mi
 
 ## Read-only mode
 
-Set `readOnly: true` in settings or `MCP_BROKER_READONLY=1` in the environment to activate read-only mode. In this mode:
+Set `readOnly: true` in settings or `MCP_BROKER_READONLY=1`/`true` in the environment to activate read-only mode. In this mode:
 
 - **Filtered tool list** — on `session_start`, only tools whose MCP `annotations.readOnlyHint === true` are fetched and cached. `mcp_search` and `mcp_describe` only see this filtered set.
 - **Defense-in-depth** — `mcp_call` checks the requested tool name against the cached list before forwarding. Any name not in the list is rejected immediately with the error `mcp_call: tool '<name>' is not available in read-only mode`. Because the list was already filtered at startup, this catches stale or injected names without a second network call.
