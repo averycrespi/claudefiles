@@ -14,19 +14,22 @@ export interface SearchResponse {
   provider: string;
 }
 
-const TAVILY_API_KEY = process.env.TAVILY_API_KEY ?? "";
-const JINA_API_KEY = process.env.JINA_API_KEY ?? "";
+type SearchConfig = {
+  tavilyApiKey?: string;
+  jinaApiKey?: string;
+};
 
 async function searchTavily(
   query: string,
   numResults: number,
   signal: AbortSignal,
+  apiKey: string,
 ): Promise<SearchResponse> {
   const response = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      api_key: TAVILY_API_KEY,
+      api_key: apiKey,
       query,
       max_results: numResults,
       include_answer: false,
@@ -58,13 +61,14 @@ async function searchJina(
   query: string,
   numResults: number,
   signal: AbortSignal,
+  apiKey?: string,
 ): Promise<SearchResponse> {
   const headers: Record<string, string> = {
     Accept: "application/json",
     "X-Retain-Images": "none",
   };
-  if (JINA_API_KEY) {
-    headers["Authorization"] = `Bearer ${JINA_API_KEY}`;
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
   const url = `https://s.jina.ai/${encodeURIComponent(query)}`;
@@ -96,15 +100,16 @@ export async function webSearch(
   query: string,
   numResults: number,
   signal: AbortSignal,
+  config: SearchConfig = {},
 ): Promise<SearchResponse> {
-  if (TAVILY_API_KEY) {
+  if (config.tavilyApiKey) {
     try {
-      return await searchTavily(query, numResults, signal);
+      return await searchTavily(query, numResults, signal, config.tavilyApiKey);
     } catch {
       // fall through to Jina
     }
   }
-  return searchJina(query, numResults, signal);
+  return searchJina(query, numResults, signal, config.jinaApiKey);
 }
 
 /** Format search results as markdown for the model. */

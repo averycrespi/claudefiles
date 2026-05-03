@@ -1,6 +1,12 @@
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { formatResults, type SearchResponse } from "./search.ts";
+import { formatResults, webSearch, type SearchResponse } from "./search.ts";
+
+const originalFetch = globalThis.fetch;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 test("formatResults returns 'No results found.' for empty response", () => {
   const response: SearchResponse = { results: [], provider: "tavily" };
@@ -61,4 +67,35 @@ test("formatResults separates entries with a blank line", () => {
   assert.equal(sections.length, 2);
   assert.match(sections[0], /^1\. \*\*A\*\*/);
   assert.match(sections[1], /^2\. \*\*B\*\*/);
+});
+
+test("webSearch uses configured Tavily and Jina keys", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+  globalThis.fetch = (async (
+    url: string | URL | Request,
+    init?: RequestInit,
+  ) => {
+    calls.push({ url: String(url), init });
+    if (String(url).includes("tavily")) {
+      return new Response("fail", { status: 500 });
+    }
+    return Response.json({
+      data: [{ title: "Jina", url: "https://example.com", description: "hit" }],
+    });
+  }) as typeof fetch;
+
+  const response = await webSearch("query", 1, new AbortController().signal, {
+    tavilyApiKey: "configured-tavily",
+    jinaApiKey: "configured-jina",
+  });
+
+  assert.equal(response.provider, "jina");
+  assert.equal(
+    JSON.parse(String(calls[0]!.init!.body)).api_key,
+    "configured-tavily",
+  );
+  assert.equal(
+    (calls[1]!.init!.headers as Record<string, string>).Authorization,
+    "Bearer configured-jina",
+  );
 });

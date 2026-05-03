@@ -21,15 +21,23 @@ Fetch and read web content as clean markdown. Intelligently routes by URL type:
 
 ## Configuration
 
-```bash
-export TAVILY_API_KEY=tvly-...
-export JINA_API_KEY=jina_...
-```
+Configure via `extension:web-access` in Pi settings. Environment variables override settings when set.
 
-| Variable         | Default | Description                                                                                                                  |
-| ---------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `TAVILY_API_KEY` | unset   | Recommended for `web_search`; when absent, `web_search` falls back to Jina Search.                                           |
-| `JINA_API_KEY`   | unset   | Optional; improves Jina rate limits. When absent, Jina-backed search/fetch still works where anonymous rate limits allow it. |
+| Field          | Default | Environment override | Description                                                                                                                  |
+| -------------- | ------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `tavilyApiKey` | unset   | `TAVILY_API_KEY`     | Recommended for `web_search`; when absent, `web_search` falls back to Jina Search.                                           |
+| `jinaApiKey`   | unset   | `JINA_API_KEY`       | Optional; improves Jina rate limits. When absent, Jina-backed search/fetch still works where anonymous rate limits allow it. |
+
+Example settings:
+
+```json
+{
+  "extension:web-access": {
+    "tavilyApiKey": "tvly-...",
+    "jinaApiKey": "jina_..."
+  }
+}
+```
 
 ## Temporary files
 

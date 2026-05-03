@@ -6,7 +6,9 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import TurndownService from "turndown";
 
-const JINA_API_KEY = process.env.JINA_API_KEY ?? "";
+type FetchConfig = {
+  jinaApiKey?: string;
+};
 
 /** Minimum extracted text length to consider Readability successful. */
 const MIN_READABLE_LENGTH = 200;
@@ -30,6 +32,7 @@ export async function webFetch(
   url: string,
   maxChars: number,
   signal: AbortSignal,
+  config: FetchConfig = {},
 ): Promise<FetchResponse> {
   // Try local extraction first
   try {
@@ -39,7 +42,7 @@ export async function webFetch(
     // fall through to Jina
   }
 
-  return fetchWithJina(url, maxChars, signal);
+  return fetchWithJina(url, maxChars, signal, config.jinaApiKey);
 }
 
 async function fetchWithReadability(
@@ -91,6 +94,7 @@ async function fetchWithJina(
   url: string,
   maxChars: number,
   signal: AbortSignal,
+  apiKey?: string,
 ): Promise<FetchResponse> {
   const jinaUrl = `https://r.jina.ai/${url}`;
   const headers: Record<string, string> = {
@@ -98,8 +102,8 @@ async function fetchWithJina(
     "X-Return-Format": "markdown",
     "X-Remove-Selector": "nav, header, footer, aside, .sidebar, .ads",
   };
-  if (JINA_API_KEY) {
-    headers["Authorization"] = `Bearer ${JINA_API_KEY}`;
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
   const response = await fetch(jinaUrl, { headers, signal });

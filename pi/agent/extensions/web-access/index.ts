@@ -1,14 +1,12 @@
 /**
  * Web access extension for Pi — provides web_search and web_fetch tools.
  *
- * Setup:
- *   export TAVILY_API_KEY=tvly-...   # recommended for web_search (Jina fallback if unset)
- *                                    # sign up free at https://app.tavily.com (1,000 searches/month)
- *   export JINA_API_KEY=jina_...     # optional — improves rate limits for fetch fallback
- *                                    # sign up free at https://jina.ai
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { type Static, Type } from "@sinclair/typebox";
 import {
@@ -19,6 +17,7 @@ import {
   partialElapsed,
   plural,
 } from "../_shared/render.ts";
+import { loadWebAccessConfig, type WebAccessConfig } from "./config.ts";
 import { webFetch } from "./fetch.ts";
 import { fetchGitHub, parseGitHubUrl } from "./github.ts";
 import { extractPdf } from "./pdf.ts";
@@ -37,6 +36,15 @@ function isPdfUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+let config: WebAccessConfig = {};
+let configuredCwd: string | undefined;
+
+async function ensureConfig(ctx: ExtensionContext): Promise<void> {
+  if (configuredCwd === ctx.cwd) return;
+  config = await loadWebAccessConfig(ctx.cwd);
+  configuredCwd = ctx.cwd;
 }
 
 // ── web_search ───────────────────────────────────────────────────────
@@ -108,15 +116,17 @@ const searchTool = {
     params: Static<typeof searchParams>,
     signal: AbortSignal | undefined,
     _onUpdate: unknown,
-    _ctx: unknown,
+    ctx: ExtensionContext,
   ) {
     const numResults = Math.max(1, Math.min(params.num_results ?? 5, 10));
 
     try {
+      await ensureConfig(ctx);
       const response = await webSearch(
         params.query,
         numResults,
         signal ?? AbortSignal.timeout(15_000),
+        config,
       );
       return {
         content: [{ type: "text" as const, text: formatResults(response) }],
@@ -229,12 +239,13 @@ const fetchTool = {
     params: Static<typeof fetchParams>,
     signal: AbortSignal | undefined,
     _onUpdate: unknown,
-    _ctx: unknown,
+    ctx: ExtensionContext,
   ) {
     const maxChars = Math.min(params.max_chars ?? 8_000, 32_000);
     const fetchSignal = signal ?? AbortSignal.timeout(20_000);
 
     try {
+      await ensureConfig(ctx);
       // GitHub URL → clone
       const gh = parseGitHubUrl(params.url);
       if (gh) {
@@ -272,7 +283,7 @@ const fetchTool = {
       }
 
       // Regular URL → Readability + Jina fallback
-      const result = await webFetch(params.url, maxChars, fetchSignal);
+      const result = await webFetch(params.url, maxChars, fetchSignal, config);
       return {
         content: [{ type: "text" as const, text: result.text }],
         details: { method: result.method, title: result.title },
@@ -291,4 +302,13 @@ const fetchTool = {
 export default function (pi: ExtensionAPI) {
   pi.registerTool(searchTool as any);
   pi.registerTool(fetchTool as any);
+
+  pi.on("session_start", async (_event, ctx) => {
+    await ensureConfig(ctx);
+  });
+
+  pi.on("before_agent_start", async (_event, ctx) => {
+    await ensureConfig(ctx);
+    return undefined;
+  });
 }
