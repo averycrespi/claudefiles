@@ -678,6 +678,14 @@ test("workflow_handoff is disabled by default", async () => {
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
+  const beforeAgentStart = pi._handlers.get("before_agent_start");
+  const promptResult = await beforeAgentStart!(
+    { type: "before_agent_start", prompt: "hi", systemPrompt: "base" },
+    pi._ctx(),
+  );
+  assert.doesNotMatch(promptResult.systemPrompt, /call workflow_handoff/i);
+  assert.match(promptResult.systemPrompt, /report that outcome to the user/i);
+
   const result = await pi._tools.get("workflow_handoff")!.execute!(
     "call-1",
     { target_mode: "verify", reason: "Implementation complete" },
@@ -699,6 +707,13 @@ test("workflow_handoff moves execute to verify when not denied", async () => {
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const beforeAgentStart = pi._handlers.get("before_agent_start");
+  const promptResult = await beforeAgentStart!(
+    { type: "before_agent_start", prompt: "hi", systemPrompt: "base" },
+    pi._ctx(),
+  );
+  assert.match(promptResult.systemPrompt, /call workflow_handoff/i);
 
   const result = await pi._tools.get("workflow_handoff")!.execute!(
     "call-1",

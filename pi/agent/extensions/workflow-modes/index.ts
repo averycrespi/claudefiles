@@ -578,11 +578,13 @@ export function createWorkflowModesExtension(
       publishWorkflowModeState();
     });
 
-    pi.on("before_agent_start", async (event) => {
+    pi.on("before_agent_start", async (event, ctx) => {
       if (state.mode === "normal") return undefined;
+      const config = await loadWorkflowModesConfig(ctx.cwd);
       return {
         systemPrompt: `${event.systemPrompt}\n\n${buildModeContract({
           mode: state.mode,
+          autoHandoffEnabled: config.autoHandoffEnabled,
         })}`,
       };
     });

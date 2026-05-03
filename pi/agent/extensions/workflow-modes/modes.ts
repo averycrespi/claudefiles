@@ -68,6 +68,7 @@ export function getThinkingLevelForMode(
 
 export function buildModeContract(options: {
   mode: Exclude<WorkflowMode, "normal">;
+  autoHandoffEnabled?: boolean;
 }): string {
   const shared = [
     "## Workflow modes",
@@ -109,7 +110,9 @@ export function buildModeContract(options: {
       "Keep changes aligned with the current conversation, acceptance criteria, and ordered tasks.",
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
-      'When implementation is complete and ready for verification, call workflow_handoff with target_mode="verify" and a concise reason instead of asking the user to run /verify.',
+      options.autoHandoffEnabled
+        ? 'When implementation is complete and ready for verification, call workflow_handoff with target_mode="verify" and a concise reason instead of asking the user to run /verify.'
+        : "When implementation is complete and ready for verification, report that outcome to the user instead of requesting an automatic workflow handoff.",
     ].join("\n");
   }
 
@@ -120,7 +123,9 @@ export function buildModeContract(options: {
     "Run deterministic checks first.",
     "Do not silently edit code in Verify mode.",
     "Turn findings into explicit next actions for a possible return to Execute mode.",
-    'If verification finds fixable issues, call workflow_handoff with target_mode="execute" and a concise reason describing the fixes needed.',
+    options.autoHandoffEnabled
+      ? 'If verification finds fixable issues, call workflow_handoff with target_mode="execute" and a concise reason describing the fixes needed.'
+      : "If verification finds fixable issues, report the needed fixes to the user instead of requesting an automatic workflow handoff.",
     "If verification passes, is blocked, or finds unfixable issues, do not call workflow_handoff; report the outcome to the user.",
   ].join("\n");
 }

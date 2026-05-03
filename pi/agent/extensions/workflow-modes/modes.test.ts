@@ -31,6 +31,7 @@ test("buildModeContract for plan mode includes collaborative discovery and plan-
 test("buildModeContract for execute mode encourages using relevant plan files without requiring one", () => {
   const contract = buildModeContract({
     mode: "execute",
+    autoHandoffEnabled: true,
   });
 
   assert.match(contract, /current mode: execute/i);
@@ -41,9 +42,19 @@ test("buildModeContract for execute mode encourages using relevant plan files wi
   assert.match(contract, /target_mode="verify"/i);
 });
 
+test("buildModeContract for execute mode avoids disabled automatic handoff guidance", () => {
+  const contract = buildModeContract({
+    mode: "execute",
+  });
+
+  assert.doesNotMatch(contract, /call workflow_handoff/i);
+  assert.match(contract, /report that outcome to the user/i);
+});
+
 test("buildModeContract for verify mode explains handoff outcomes", () => {
   const contract = buildModeContract({
     mode: "verify",
+    autoHandoffEnabled: true,
   });
 
   assert.match(contract, /workflow_handoff/i);
@@ -51,6 +62,15 @@ test("buildModeContract for verify mode explains handoff outcomes", () => {
   assert.match(contract, /passes/i);
   assert.match(contract, /blocked/i);
   assert.match(contract, /unfixable/i);
+});
+
+test("buildModeContract for verify mode avoids disabled automatic handoff guidance", () => {
+  const contract = buildModeContract({
+    mode: "verify",
+  });
+
+  assert.doesNotMatch(contract, /target_mode="execute"/i);
+  assert.match(contract, /report the needed fixes to the user/i);
 });
 
 test("mode helpers return the expected thinking defaults and tool sets", () => {
