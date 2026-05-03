@@ -10,6 +10,7 @@ import { StringEnum } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import {
   mergeExtensionConfig,
+  parseBooleanEnv,
   readExtensionSettings,
   readPiSettingsFiles,
 } from "../_shared/config.ts";
@@ -654,7 +655,7 @@ export function createWorkflowModesExtension(
   };
 }
 
-async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
+export async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
   const { globalSettings, projectSettings } = await readPiSettingsFiles({
     agentDir: getAgentDir(),
     cwd,
@@ -663,6 +664,7 @@ async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
     defaults: DEFAULT_CONFIG,
     globalSettings: readExtensionSettings(globalSettings, "workflow-modes"),
     projectSettings: readExtensionSettings(projectSettings, "workflow-modes"),
+    envSettings: readEnvSettings(),
   });
 
   return {
@@ -705,6 +707,92 @@ async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
       DEFAULT_CONFIG.verifyThinkingLevel,
     ),
   };
+}
+
+export function readEnvSettings(): Partial<WorkflowModesConfig> {
+  const settings: Partial<WorkflowModesConfig> = {};
+  setBooleanEnv(
+    settings,
+    "autoCompactOnModeSwitch",
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH,
+  );
+  setNumberEnv(
+    settings,
+    "autoCompactMinTokens",
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS,
+    false,
+  );
+  setBooleanEnv(
+    settings,
+    "autoHandoffEnabled",
+    process.env.WORKFLOW_MODES_AUTO_HANDOFF_ENABLED,
+  );
+  setNumberEnv(
+    settings,
+    "autoHandoffDenyTimeoutMs",
+    process.env.WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS,
+    false,
+  );
+  setNumberEnv(
+    settings,
+    "autoHandoffMaxFixLoops",
+    process.env.WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS,
+    true,
+  );
+  setThinkingLevelEnv(
+    settings,
+    "planThinkingLevel",
+    process.env.WORKFLOW_MODES_PLAN_THINKING_LEVEL,
+  );
+  setThinkingLevelEnv(
+    settings,
+    "executeThinkingLevel",
+    process.env.WORKFLOW_MODES_EXECUTE_THINKING_LEVEL,
+  );
+  setThinkingLevelEnv(
+    settings,
+    "verifyThinkingLevel",
+    process.env.WORKFLOW_MODES_VERIFY_THINKING_LEVEL,
+  );
+  return settings;
+}
+
+function setBooleanEnv<K extends keyof WorkflowModesConfig>(
+  settings: Partial<WorkflowModesConfig>,
+  key: K,
+  value: string | undefined,
+): void {
+  const parsed = parseBooleanEnv(value);
+  if (parsed !== undefined) {
+    (settings as Record<string, unknown>)[key] = parsed;
+  }
+}
+
+function setNumberEnv<K extends keyof WorkflowModesConfig>(
+  settings: Partial<WorkflowModesConfig>,
+  key: K,
+  value: string | undefined,
+  integer: boolean,
+): void {
+  if (value === undefined || value.trim() === "") return;
+  const parsed = Number(value);
+  if (
+    Number.isFinite(parsed) &&
+    parsed >= 0 &&
+    (!integer || Number.isInteger(parsed))
+  ) {
+    (settings as Record<string, unknown>)[key] = parsed;
+  }
+}
+
+function setThinkingLevelEnv<K extends keyof WorkflowModesConfig>(
+  settings: Partial<WorkflowModesConfig>,
+  key: K,
+  value: string | undefined,
+): void {
+  if (value !== undefined && isThinkingLevel(value.trim())) {
+    (settings as Record<string, unknown>)[key] = value.trim();
+  }
 }
 
 function parseThinkingLevel(

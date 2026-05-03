@@ -107,7 +107,20 @@ The extension publishes workflow-mode state changes over `pi.events` so other ex
 
 ## Configuration
 
-Workflow modes reads extension-scoped settings from `~/.pi/agent/settings.json` and `<project>/.pi/settings.json`:
+Configure via `extension:workflow-modes` in Pi settings. Environment variables override settings when set.
+
+| Field                      | Default  | Environment override                          | Description                                                                   |
+| -------------------------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `autoCompactOnModeSwitch`  | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH`  | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.         |
+| `autoCompactMinTokens`     | `50000`  | `WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS`      | Context-token threshold for pre-switch compaction.                            |
+| `autoHandoffEnabled`       | `false`  | `WORKFLOW_MODES_AUTO_HANDOFF_ENABLED`         | Enables agent-requested Execute ↔ Verify handoffs through `workflow_handoff`. |
+| `autoHandoffDenyTimeoutMs` | `10000`  | `WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS` | UI denial window for automatic handoffs; if it expires, the handoff proceeds. |
+| `autoHandoffMaxFixLoops`   | `2`      | `WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS`   | Caps Verify → Execute loopbacks.                                              |
+| `planThinkingLevel`        | `medium` | `WORKFLOW_MODES_PLAN_THINKING_LEVEL`          | Thinking level applied when entering Plan mode.                               |
+| `executeThinkingLevel`     | `low`    | `WORKFLOW_MODES_EXECUTE_THINKING_LEVEL`       | Thinking level applied when entering Execute mode.                            |
+| `verifyThinkingLevel`      | `high`   | `WORKFLOW_MODES_VERIFY_THINKING_LEVEL`        | Thinking level applied when entering Verify mode.                             |
+
+Example settings:
 
 ```json
 {
@@ -123,19 +136,6 @@ Workflow modes reads extension-scoped settings from `~/.pi/agent/settings.json` 
   }
 }
 ```
-
-Project settings override global settings.
-
-| Field                      | Default  | Description                                                                   |
-| -------------------------- | -------- | ----------------------------------------------------------------------------- |
-| `autoCompactOnModeSwitch`  | `true`   | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.         |
-| `autoCompactMinTokens`     | `50000`  | Context-token threshold for pre-switch compaction.                            |
-| `autoHandoffEnabled`       | `false`  | Enables agent-requested Execute ↔ Verify handoffs through `workflow_handoff`. |
-| `autoHandoffDenyTimeoutMs` | `10000`  | UI denial window for automatic handoffs; if it expires, the handoff proceeds. |
-| `autoHandoffMaxFixLoops`   | `2`      | Caps Verify → Execute loopbacks.                                              |
-| `planThinkingLevel`        | `medium` | Thinking level applied when entering Plan mode.                               |
-| `executeThinkingLevel`     | `low`    | Thinking level applied when entering Execute mode.                            |
-| `verifyThinkingLevel`      | `high`   | Thinking level applied when entering Verify mode.                             |
 
 Thinking-level fields accept `off`, `minimal`, `low`, `medium`, `high`, and `xhigh`.
 
