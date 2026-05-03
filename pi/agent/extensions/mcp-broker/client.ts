@@ -35,21 +35,51 @@ export class BrokerClient {
   private connecting: Promise<Client> | null = null;
   private cachedTools: BrokerTool[] | null = null;
   private cachedProviders: string[] | null = null;
+  private endpoint: string | undefined;
+  private authToken: string | undefined;
   private readOnly: boolean;
 
-  constructor(opts: { readOnly?: boolean } = {}) {
+  constructor(
+    opts: {
+      endpoint?: string;
+      authToken?: string;
+      readOnly?: boolean;
+    } = {},
+  ) {
+    this.endpoint = opts.endpoint;
+    this.authToken = opts.authToken;
     this.readOnly = opts.readOnly ?? false;
+  }
+
+  configure(opts: {
+    endpoint?: string;
+    authToken?: string;
+    readOnly?: boolean;
+  }): void {
+    const nextReadOnly = opts.readOnly ?? false;
+    const changed =
+      this.endpoint !== opts.endpoint ||
+      this.authToken !== opts.authToken ||
+      this.readOnly !== nextReadOnly;
+    this.endpoint = opts.endpoint;
+    this.authToken = opts.authToken;
+    this.readOnly = nextReadOnly;
+    if (changed) this.reset();
+  }
+
+  getReadOnly(): boolean {
+    return this.readOnly;
   }
 
   private async getClient(): Promise<Client> {
     if (this.client) return this.client;
     if (this.connecting) return this.connecting;
 
-    const endpoint = process.env.MCP_BROKER_ENDPOINT;
-    const token = process.env.MCP_BROKER_AUTH_TOKEN;
+    const endpoint = this.endpoint;
+    const token = this.authToken;
     if (!endpoint || !token) {
       throw new Error(
-        "broker endpoint not configured — set MCP_BROKER_ENDPOINT and MCP_BROKER_AUTH_TOKEN",
+        "broker endpoint not configured — set endpoint/authToken or MCP_BROKER_ENDPOINT/MCP_BROKER_AUTH_TOKEN",
       );
     }
 

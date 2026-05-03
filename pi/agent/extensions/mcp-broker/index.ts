@@ -8,23 +8,34 @@
  * into the system prompt at agent start so the agent can pick a tool
  * directly without an mcp_search round-trip.
  */
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { BrokerClient, type BrokerTool } from "./client.ts";
+import { loadMcpBrokerConfig } from "./config.ts";
 import initGuard from "./guard.ts";
 import { registerTools } from "./tools.ts";
 
 export default function (pi: ExtensionAPI) {
-  const readOnly = process.env.MCP_BROKER_READONLY === "1";
-  const client = new BrokerClient({ readOnly });
+  const client = new BrokerClient();
+  let configuredCwd: string | undefined;
 
-  registerTools(pi, client, readOnly);
+  async function ensureConfig(ctx: ExtensionContext): Promise<void> {
+    if (configuredCwd === ctx.cwd) return;
+    client.configure(await loadMcpBrokerConfig(ctx.cwd));
+    configuredCwd = ctx.cwd;
+  }
+
+  registerTools(pi, client, ensureConfig);
   initGuard(pi, client);
 
   // Pre-fetch the tool list on session start so the broker prompt menu
   // is ready by the time before_agent_start fires. Silently skip on
   // failure — the meta-tools still work, and the prompt is a nice-to-have.
-  pi.on("session_start", async () => {
+  pi.on("session_start", async (_event, ctx) => {
     try {
+      await ensureConfig(ctx);
       await client.listTools();
     } catch {
       // Broker unreachable or env unset. mcp_search will surface the real
@@ -39,13 +50,14 @@ export default function (pi: ExtensionAPI) {
   // Inject the broker tool menu and decision rules into the system
   // prompt. Cache-safe: the tools array stays static, and the system
   // prompt is stable within a session.
-  pi.on("before_agent_start", async (event) => {
+  pi.on("before_agent_start", async (event, ctx) => {
+    await ensureConfig(ctx);
     const tools = client.getCachedTools();
     if (!tools || tools.length === 0) {
       return undefined;
     }
     return {
-      systemPrompt: `${event.systemPrompt}\n\n${buildBrokerPrompt(tools, readOnly)}`,
+      systemPrompt: `${event.systemPrompt}\n\n${buildBrokerPrompt(tools, client.getReadOnly())}`,
     };
   });
 }

@@ -20,19 +20,31 @@ Tool calls that require human approval block for up to 10 minutes, matching the 
 
 ## Configuration
 
-Set these environment variables before starting Pi:
+Configure via `extension:mcp-broker` in Pi settings. Environment variables override settings when set.
 
-| Variable                | Default | Description                                                                     |
-| ----------------------- | ------- | ------------------------------------------------------------------------------- |
-| `MCP_BROKER_ENDPOINT`   | unset   | Base URL of the broker; the extension connects to `${MCP_BROKER_ENDPOINT}/mcp`. |
-| `MCP_BROKER_AUTH_TOKEN` | unset   | Bearer token for the broker's MCP endpoint.                                     |
-| `MCP_BROKER_READONLY`   | unset   | Set to `1` to activate read-only mode.                                          |
+| Field       | Default | Environment override    | Description                                                                     |
+| ----------- | ------- | ----------------------- | ------------------------------------------------------------------------------- |
+| `endpoint`  | unset   | `MCP_BROKER_ENDPOINT`   | Base URL of the broker; the extension connects to `${endpoint}/mcp`.            |
+| `authToken` | unset   | `MCP_BROKER_AUTH_TOKEN` | Bearer token for the broker's MCP endpoint.                                     |
+| `readOnly`  | `false` | `MCP_BROKER_READONLY`   | Set to `true` in settings or `1` in the environment to activate read-only mode. |
 
-If `MCP_BROKER_ENDPOINT` or `MCP_BROKER_AUTH_TOKEN` is missing, the meta-tools are still registered, but any call returns a clear configuration error — Pi remains usable on machines without a broker.
+Example settings:
+
+```json
+{
+  "extension:mcp-broker": {
+    "endpoint": "https://broker.example.com",
+    "authToken": "<token>",
+    "readOnly": false
+  }
+}
+```
+
+If `endpoint`/`MCP_BROKER_ENDPOINT` or `authToken`/`MCP_BROKER_AUTH_TOKEN` is missing, the meta-tools are still registered, but any call returns a clear configuration error — Pi remains usable on machines without a broker.
 
 ## Read-only mode
 
-Set `MCP_BROKER_READONLY=1` (strict equality on `"1"`) to activate read-only mode. In this mode:
+Set `readOnly: true` in settings or `MCP_BROKER_READONLY=1` in the environment to activate read-only mode. In this mode:
 
 - **Filtered tool list** — on `session_start`, only tools whose MCP `annotations.readOnlyHint === true` are fetched and cached. `mcp_search` and `mcp_describe` only see this filtered set.
 - **Defense-in-depth** — `mcp_call` checks the requested tool name against the cached list before forwarding. Any name not in the list is rejected immediately with the error `mcp_call: tool '<name>' is not available in read-only mode`. Because the list was already filtered at startup, this catches stale or injected names without a second network call.
@@ -92,7 +104,8 @@ If the broker is unreachable (no cached tool list), the hint falls back to sugge
 
 ## File layout
 
-- `index.ts` — entry point, instantiates `BrokerClient`, wires up tools, guard, and the broker tool menu in the system prompt
+- `index.ts` — entry point, loads configuration, instantiates `BrokerClient`, wires up tools, guard, and the broker tool menu in the system prompt
+- `config.ts` — settings/env merge and validation
 - `client.ts` — `BrokerClient` wrapping `@modelcontextprotocol/sdk`'s `StreamableHTTPClientTransport`
 - `tools.ts` — `mcp_search`, `mcp_describe`, `mcp_call` definitions
 - `spillover.ts` — large-output spill-to-file logic (`joinText`, `buildEnvelope`, `spillIfNeeded`)

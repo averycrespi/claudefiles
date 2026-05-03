@@ -10,6 +10,7 @@
 import type {
   AgentToolResult,
   ExtensionAPI,
+  ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
@@ -190,7 +191,7 @@ export async function callBrokerTool(
 export function registerTools(
   pi: ExtensionAPI,
   client: BrokerClient,
-  readOnly: boolean = false,
+  ensureConfig?: (ctx: ExtensionContext) => Promise<void>,
 ): void {
   pi.registerTool({
     name: "mcp_search",
@@ -198,9 +199,10 @@ export function registerTools(
     description:
       "Search tools exposed by the MCP broker. Tool names follow <provider>.<tool>. Pass a substring query to filter by name or description, or an empty string to list everything.",
     parameters: SEARCH_PARAMS,
-    async execute(_id, params, _signal, _onUpdate, _ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       let tools: BrokerTool[];
       try {
+        await ensureConfig?.(ctx);
         tools = await client.listTools();
       } catch (err) {
         return errorResult(
@@ -267,9 +269,10 @@ export function registerTools(
     description:
       "Return the full description and JSON Schema input for a named broker tool. Use mcp_search first to discover names.",
     parameters: DESCRIBE_PARAMS,
-    async execute(_id, params, _signal, _onUpdate, _ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       let tools: BrokerTool[];
       try {
+        await ensureConfig?.(ctx);
         tools = await client.listTools();
       } catch (err) {
         return errorResult(
@@ -344,7 +347,8 @@ export function registerTools(
     description:
       "Invoke a broker tool. Use mcp_describe to learn the input schema first. Calls that need human approval block for up to 10 minutes.",
     parameters: CALL_PARAMS,
-    async execute(toolCallId, params, signal, _onUpdate, _ctx) {
+    async execute(toolCallId, params, signal, _onUpdate, ctx) {
+      await ensureConfig?.(ctx);
       const sig = signal ?? new AbortController().signal;
       return callBrokerTool(
         client,
@@ -352,7 +356,7 @@ export function registerTools(
         toolCallId,
         sig,
         undefined,
-        readOnly,
+        client.getReadOnly(),
       );
     },
     renderCall(args, theme, _context) {
