@@ -59,7 +59,7 @@ The `workflow_handoff` tool is active in Execute and Verify modes. It accepts:
 
 Execute mode may hand off only to Verify. Verify mode may hand off only to Execute. The tool validates the current mode, configuration, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
 
-When UI is available, handoff shows an inverted timed confirmation asking whether to deny the transition. If the user does nothing before `autoHandoffDenyTimeoutMs`, the handoff proceeds. If no UI is available, the denial prompt and timeout are skipped. Verify → Execute handoffs consume the configured fix-loop budget; Execute → Verify handoffs do not.
+When UI is available, handoff shows a timed prompt with the requested target mode and reason, plus a single `Cancel` option. If the user does nothing before `autoHandoffDenyTimeoutMs`, the handoff proceeds. If no UI is available, the denial prompt and timeout are skipped. Verify → Execute handoffs consume the configured fix-loop budget; Execute → Verify handoffs do not.
 
 ## Plan files
 

@@ -55,6 +55,7 @@ function makeCtx(options: {
   branch?: unknown[];
   inputResponse?: string | undefined;
   confirmResponse?: boolean;
+  selectResponse?: string;
   notifications?: Array<{ msg: string; level: string }>;
   statusCalls?: Array<{ key: string; text: string | undefined }>;
   widgetCalls?: Array<{
@@ -63,6 +64,7 @@ function makeCtx(options: {
     usedFactory?: boolean;
   }>;
   inputCalls?: string[];
+  selectCalls?: Array<{ title: string; options: string[] }>;
   idle?: boolean;
   hasUI?: boolean;
   usageTokens?: number | null;
@@ -107,6 +109,10 @@ function makeCtx(options: {
         options.inputCalls?.push(title);
         return options.inputResponse;
       },
+      select: async (title: string, selectOptions: string[]) => {
+        options.selectCalls?.push({ title, options: selectOptions });
+        return options.selectResponse;
+      },
       confirm: async () => options.confirmResponse ?? true,
       setWidget(
         key: string,
@@ -148,7 +154,6 @@ function makeCtx(options: {
       setTheme: () => ({ success: true }),
       getToolsExpanded: () => false,
       setToolsExpanded: () => {},
-      select: async () => undefined,
     },
   };
 }
@@ -165,6 +170,7 @@ function makePi(cwd: string) {
   }> = [];
   const statusCalls: Array<{ key: string; text: string | undefined }> = [];
   const inputCalls: string[] = [];
+  const selectCalls: Array<{ title: string; options: string[] }> = [];
   const sentUserMessages: Array<{ content: unknown; options?: unknown }> = [];
   const compactCalls: Array<{
     customInstructions?: string;
@@ -273,6 +279,7 @@ function makePi(cwd: string) {
     _widgetCalls: widgetCalls,
     _statusCalls: statusCalls,
     _inputCalls: inputCalls,
+    _selectCalls: selectCalls,
     _sentUserMessages: sentUserMessages,
     _compactCalls: compactCalls,
     _setActiveToolsCalls: setActiveToolsCalls,
@@ -287,16 +294,19 @@ function makePi(cwd: string) {
       usageTokens?: number | null,
       hasUI = true,
       confirmResponse?: boolean,
+      selectResponse?: string,
     ) {
       return makeCtx({
         cwd,
         branch,
         inputResponse,
         confirmResponse,
+        selectResponse,
         notifications,
         statusCalls,
         widgetCalls,
         inputCalls,
+        selectCalls,
         idle,
         hasUI,
         usageTokens,
@@ -750,9 +760,13 @@ test("workflow_handoff denial keeps the current mode", async () => {
     { target_mode: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
-    pi._ctx([], undefined, true, undefined, true, true),
+    pi._ctx([], undefined, true, undefined, true, undefined, "Cancel"),
   );
 
+  assert.deepEqual(pi._selectCalls.at(-1), {
+    title: "Agent triggered handoff to Verify mode: Implementation complete",
+    options: ["Cancel"],
+  });
   assert.match(result.content[0].text, /denied/i);
   assert.equal(pi._thinkingLevel(), "low");
   assert.equal(pi._sentUserMessages.length, 1);

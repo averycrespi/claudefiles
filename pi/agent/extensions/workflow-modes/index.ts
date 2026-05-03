@@ -369,12 +369,12 @@ export function createWorkflowModesExtension(
         const reason = params.reason.trim();
         const displayReason = reason || "No reason provided.";
         if (ctx.hasUI) {
-          const denied = await ctx.ui.confirm(
-            `Deny automatic handoff to ${capitalize(targetMode)} mode?`,
-            displayReason,
+          const choice = await ctx.ui.select(
+            `Agent triggered handoff to ${capitalize(targetMode)} mode: ${displayReason}`,
+            ["Cancel"],
             { timeout: config.autoHandoffDenyTimeoutMs },
           );
-          if (denied) {
+          if (choice === "Cancel") {
             return {
               content: [
                 {
