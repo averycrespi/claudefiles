@@ -48,6 +48,16 @@ Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This 
 - **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)
 - **Reference skills** (provide information/context): use nouns (e.g., `playwright-cli`, `tdd`)
 
+## Notes Format
+
+Markdown notes in `notes/` use a consistent essay format:
+
+- Start with a single H1 title; do not use frontmatter or metadata.
+- Lead with a clear thesis or framing section, then develop the argument under short H2 headings.
+- Keep the tone concise, opinionated, and evidence-backed; prefer concrete examples over generic explanation.
+- Include counterarguments as `## The steelman`, `## Caveats`, or a similarly direct H2 when relevant.
+- End with `## References` containing links and short descriptions; use relative links to other notes when relevant.
+
 ## Pi Extension Conventions
 
 Use directory-based Pi extensions under `pi/agent/extensions/<name>/`.
