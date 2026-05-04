@@ -12,7 +12,8 @@ Sections:
 6. [SWE-bench and benchmarks](#6-swe-bench-and-benchmarks)
 7. [Production case studies](#7-production-case-studies)
 8. [Engineering blog posts and write-ups](#8-engineering-blog-posts-and-write-ups)
-9. [Curated lists](#9-curated-lists)
+9. [Evidence labels and maintenance](#9-evidence-labels-and-maintenance)
+10. [Curated lists](#10-curated-lists)
 
 Citations marked with **[caveat]** have a known limitation flagged inline. Treat with appropriate skepticism.
 
@@ -272,7 +273,19 @@ A high-leverage set of harness-pattern repos from the survey for this skill.
 - [TokenMix — GPT-5.5 Migration Checklist](https://tokenmix.ai/blog/gpt-5-5-migration-checklist)
 - [Simon Willison — GPT-5.5 prompting guide notes](https://simonwillison.net/2026/apr/25/gpt-5-5-prompting-guide/)
 
-## 9. Curated lists
+## 9. Evidence labels and maintenance
+
+Use these evidence labels throughout the skill when a claim could otherwise sound universal:
+
+- **Primary doc** — vendor API/platform docs or source code. Strong for current behavior; revalidate after version changes.
+- **Research-backed** — paper or benchmark with methodology. Strongest inside its measured scope; caveats matter.
+- **Production report** — vendor/customer/blog case study. Useful signal, often selective or anecdotal.
+- **Ecosystem pattern** — repeated open-source harness pattern. Good design prior, not proof.
+- **Local convention** — this repo's rule. Follow here; don't generalize blindly.
+
+Maintenance rule: model names, platform capabilities, beta headers, context sizes, pricing thresholds, and SDK/CLI behavior are revalidation targets. Prefer primary docs over cached summaries when making a concrete implementation decision.
+
+## 10. Curated lists
 
 - [VoltAgent/awesome-ai-agent-papers](https://github.com/VoltAgent/awesome-ai-agent-papers) — Auto-updated paper feed; surfaces niche items like RealMem and Replayable Financial Agents.
 - [ai-boost/awesome-harness-engineering](https://github.com/ai-boost/awesome-harness-engineering) — Curated harness-specific list.
@@ -286,5 +299,6 @@ A high-leverage set of harness-pattern repos from the survey for this skill.
 - Looking for a primary source for a specific claim made in this skill? Search for the claim's keyword and the citation should be marked.
 - Looking for "the" reference for a topic? Section 1 (lab pubs) is your starting point; sections 2 (model guides) and 3 (platform docs) when you need authoritative API surface.
 - Looking for evidence at the methodology level? Section 5 (research papers) — but flag the **[caveat]** entries.
-- Looking for production validation? Section 7 (case studies) is the load-bearing section for "this works at scale" claims.
+- Looking for production validation? Section 7 (case studies) is the load-bearing section for "this works at scale" claims, but still label it as production-report evidence unless independently measured.
 - Looking for ecosystem patterns to steal? Section 4 (Pi extension repos), with `roach-pi` as a particularly rich source.
+- Looking for safety, replay, and operational checklists? Read `operations-safety.md` alongside this bibliography.

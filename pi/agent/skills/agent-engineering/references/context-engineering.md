@@ -2,7 +2,7 @@
 
 Long pipelines lose information mid-run. The question is whether the harness controls _how_. Anthropic's [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) names three load-bearing techniques: **compaction**, **structured note-taking**, **just-in-time retrieval**. OpenAI's [compaction guide](https://developers.openai.com/api/docs/guides/compaction) treats compaction as a first-class API surface. This document covers all three plus the practical issues that show up in production.
 
-A useful directional signal from the Zylos and Harness vendor reports: **context drift / memory loss appears to drive more enterprise agent failures than raw context exhaustion.** ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Bigger context windows make compaction _more_ important, not less.
+A useful directional signal from the Zylos and Harness vendor reports: **context drift / memory loss may drive more enterprise agent failures than raw context exhaustion.** ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). These are vendor reports, so treat them as production signals rather than controlled evidence. Bigger context windows make compaction _more_ important, not less.
 
 ## The three techniques
 
@@ -23,7 +23,7 @@ What compaction loses: low-salience details that the summarizer judges unimporta
 
 ### 2. Structured note-taking
 
-Write workflow state to known files, referenced _by path_ in subagent prompts. The single most under-used pattern.
+Write workflow context to known files, referenced _by path_ in subagent prompts. Pair these files with durable orchestrator state for phase, attempts, commits, and cleanup handles (see `operations-safety.md`). This is one of the highest-leverage under-used patterns.
 
 Standard artifacts:
 
@@ -41,7 +41,7 @@ Why subagent prompts say "read `<workflowDir>/PLAN.md` for the plan" instead of 
 
 - **Token cost.** Inlining a 5K-token plan into N subagent prompts costs N×5K. Reading from disk costs ~50 tokens to mention the path.
 - **Compaction-survivability.** A path is a 50-token constant; the plan body that the path resolves to is fresh on every read.
-- **Forensic trail.** When something goes wrong, the human has the artifacts to reconstruct what the agent saw.
+- **Forensic trail.** When something goes wrong, the human has the artifacts to reconstruct what the agent saw. Add phase traces and tool-call logs when the harness needs replay, not just explanation.
 - **Cross-subagent consistency.** Every subagent reads the same artifact; no drift from copy-paste.
 
 The Claude Agent SDK [Memory tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool) is the SDK-blessed surface for this — `BetaAbstractMemoryTool` (Python) / `betaMemoryTool` (TS), client-side `/memories` directory you back with whatever store you want.
@@ -96,7 +96,7 @@ The harness-relevant takeaways (caveat: high-leverage hypotheses, not measured-o
 - [GAM: Hierarchical Graph-based Agentic Memory](https://arxiv.org/html/2604.12285) — two-layer topic→episodic retrieval keeps inference tokens flat as memory grows.
 - [Rethinking Memory Mechanisms of Foundation Agents in the Second Half](https://arxiv.org/html/2602.06052v3) — companion survey to Anthropic's posts.
 
-These are useful when designing custom memory layers; for most harnesses, the structured note-taking pattern + the SDK's memory tool is enough.
+These are useful when designing custom memory layers; for most harnesses, structured note-taking + durable phase state + the SDK's memory tool is enough.
 
 ## Practical pacing constraints
 
@@ -142,7 +142,7 @@ If your harness runs through compaction events (Claude Agent SDK loops or OpenAI
 
 If you're starting a new harness:
 
-1. **Always write structured artifacts.** `ac.json`, `PLAN.md`, `DECISIONS.md` minimum. Subagent prompts reference them by path.
+1. **Always write structured artifacts and durable state.** `ac.json`, `PLAN.md`, `DECISIONS.md` minimum, plus phase/attempt/completion state outside the conversation. Subagent prompts reference artifacts by path.
 2. **Compact at phase boundaries.** OpenAI: `/responses/compact`. Anthropic: rely on the Agent SDK's automatic compaction unless you have a specific reason not to.
 3. **Pace polling loops to either ≤270s or ≥1200s.** Cache TTL drives cost.
 4. **Re-state hard constraints at every phase entry.** Not paranoia — the [Long-Horizon Task Mirage](https://arxiv.org/html/2604.11978v1) catastrophic-forgetting evidence is real.

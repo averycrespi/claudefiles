@@ -4,9 +4,9 @@ Three platforms dominate the agent-config ecosystem in this repo: **Claude Code*
 
 ## Claude Code
 
-Claude Code is a deterministic harness around the Claude Agent loop. One retrospective estimated that ~98.4% of the codebase is non-LLM infra (per [Anthropic's Claude Code retrospective](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built)). The extension surface that you, as a harness engineer, work with is:
+Claude Code is a deterministic harness around the Claude Agent loop. One retrospective estimated that ~98.4% of the codebase is non-LLM infra (per [Anthropic's Claude Code retrospective](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built)); treat that number as an illustrative retrospective claim, not a public API guarantee. The extension surface that you, as a harness engineer, work with is:
 
-- **Hooks** — deterministic shell commands run on lifecycle events.
+- **Hooks** — deterministic shell commands run on lifecycle events; useful as enforcement points for safety policy.
 - **Skills** — instruction packages loaded on demand.
 - **Subagents** — separate agent definitions with their own context window, invoked through the `Agent` tool.
 - **Slash commands** — user-triggered or model-invocable named commands.
@@ -29,7 +29,7 @@ Hooks fire on lifecycle events: `SessionStart`, `SessionEnd`, `UserPromptSubmit`
 
 Use exit 2 when you actually want to stop something. Exit 1 is observability only.
 
-When something _must_ run on every action, hooks are the right tool — `CLAUDE.md` instructions are advisory and the model can ignore them. Hooks are deterministic.
+When something _must_ run on every action, hooks or permission callbacks are the right tool — `CLAUDE.md` instructions are advisory and the model can ignore them. Hooks are deterministic.
 
 **Common hook gotchas:**
 
@@ -69,7 +69,7 @@ Subagents are markdown files in `.claude/agents/*.md` (project) or `~/.claude/ag
 
 - `isolation: worktree` in the frontmatter creates a temporary git worktree for the subagent. **At the time of writing, issue reports say it silently no-ops outside a git repo** ([issue #39886](https://github.com/anthropics/claude-code/issues/39886)).
 - At the time of writing, issue reports say worktree subagents branch from `origin/main`, not the parent's HEAD ([issue #50850](https://github.com/anthropics/claude-code/issues/50850)). Surprises workflows that assume the subagent inherits parent's branch state.
-- Tools available to the subagent are configured in its frontmatter; default is all tools.
+- Tools available to the subagent are configured in its frontmatter; avoid the default-all surface for specialized agents when a narrower tool set is possible.
 - The subagent's prompt should be self-contained — it has no access to prior conversation.
 
 **When to use them:**
@@ -77,6 +77,7 @@ Subagents are markdown files in `.claude/agents/*.md` (project) or `~/.claude/ag
 - Read-only fan-out: search, retrieval, review, classification.
 - Anything verbose where you only need a summary.
 - Anything that would pollute the parent context if inlined.
+- Cross-family review only when an external orchestrator or bridge actually routes the review to a non-Claude model; ordinary Claude Code subagents should not be assumed to do this.
 
 **When not to:**
 
@@ -231,7 +232,7 @@ These showed up repeatedly across the Pi extensions surveyed for this skill:
 
 From this repo's `CLAUDE.md` and the broader ecosystem:
 
-- **Extensions run with full system permissions.** `extensions.md` explicitly warns. Only install trusted code.
+- **Extensions run with full system permissions.** `extensions.md` explicitly warns. Only install trusted code, and enforce risky actions in tools rather than relying on prompt instructions.
 - **`mock.method` from `node:test` can't replace ESM module exports** — they're non-configurable bindings. To stub something like `child_process.spawn`, wrap in an exported holder (`export const _spawn = { fn: _nodeSpawn }`) and call through `_spawn.fn(...)`. Tests then `mock.method(_spawn, "fn", stub)`. Reference pattern in this repo: `pi/agent/extensions/subagents/spawn.ts`.
 - **RPC mode loses component-factory widgets** — only string arrays cross the RPC boundary. Design any widget you want RPC-portable as line arrays.
 - **Events stream as JSON lines without an `id` field** (responses do); host code parsing the stream must not key on `id` for events.
@@ -247,6 +248,10 @@ Patterns specific to `pi/agent/extensions/`:
 - An extension can expose a curated public surface via `api.ts` that other extensions import from; `pi/agent/extensions/subagents/api.ts` is the current in-repo example.
 - Module-level singletons are shared through Node's module caching, so shared state created once in a module will be seen by every importer.
 - Keep public cross-extension imports intentional: prefer a small `api.ts` surface over importing deep internal files.
+
+### Tool and operations contracts
+
+Platform choice does not remove the need for explicit tool contracts. For tools with side effects, document idempotency, retry safety, timeout/cancellation behavior, and whether the action is local, destructive, networked, or externally visible. For long-running workflows, persist phase state outside the conversation so sessions can be explained, resumed, or rolled back. See `operations-safety.md` for a checklist.
 
 ## Picking a platform
 

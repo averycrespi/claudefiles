@@ -2,11 +2,11 @@
 
 This document covers multi-phase agent workflow design — the patterns deterministic orchestrators use to drive a sequence of LLM calls toward a complete artifact (a PR, a refactor, a migration). Single-agent harness patterns are in `platforms.md` and `models.md`; this document is about what happens between agents.
 
-The reference architecture is a code-orchestrated pipeline of fresh subagents with strict structured output at each phase boundary.
+The reference architecture is a code-orchestrated pipeline of fresh subagents with validated machine-readable output at each phase boundary: strict JSON where the API supports it, parsed tags where CLI ergonomics make JSON brittle.
 
 ## The canonical phase sequence
 
-The richest pipelines in 2026 use some subset of:
+The richest pipelines surveyed in 2026 use some subset of:
 
 ```
 extract-AC  →  localize  →  plan  →  plan-repair  →  implement  →  validate  →  review  →  fix  →  emit-report
@@ -26,7 +26,7 @@ Brief description of each:
 | validate    | All commits            | Pass/fail of deterministic gates (tests, types, lints, build) | Cheap, fast, infallible-on-true-pass.                                                       |
 | review      | All commits + AC       | Per-criterion verdicts + any findings                         | Multiple reviewers, diverse lenses, ideally cross-family. Read-only.                        |
 | fix         | Review findings        | Code changes                                                  | 2-round cap. Sticky completion.                                                             |
-| emit-report | Everything             | Structured JSON + human-readable summary                      | Always emits. No verify→implement loopback.                                                 |
+| emit-report | Everything             | Structured JSON + human-readable summary                      | Always emits. No unbounded verify→implement loopback.                                       |
 
 ## Acceptance criteria as the canonical rubric
 
@@ -46,7 +46,7 @@ In this repo, the live `workflow-modes` brief format persists AC in a dedicated 
 
 ## Localization
 
-A read-only fan-out phase that produces a ranked file list and entry points before planning starts. Top SWE-bench scaffolds (AutoCodeRover, SWE-agent, Augment) all have this and it's their largest single score contributor.
+A read-only fan-out phase that produces a ranked file list and entry points before planning starts. Top SWE-bench scaffolds (AutoCodeRover, SWE-agent, Augment) all have localization-style machinery; public analyses often identify it as one of the largest scaffold contributors.
 
 Implementation:
 
@@ -73,7 +73,7 @@ Maps to `ralph-meets-rex`'s "planner can reject upfront" pattern, applied betwee
 
 ## Sequential implement, parallel review
 
-The consensus pattern.
+The default pattern for most coding workflows.
 
 **Sequential implement**, because actions carry implicit decisions ([Cognition principle 2](https://cognition.ai/blog/dont-build-multi-agents)). Two implementers working on different tasks in parallel will fork micro-decisions that conflict at merge. The exception is **worktree-per-task with no overlap**, but this is rarely as cheap as it sounds — shared ports, databases, services bite hard.
 
@@ -87,7 +87,7 @@ The consensus pattern.
 | Test quality      | Coverage of new behavior; no flaky / brittle / mock-heavy tests       |
 | Performance       | Hot paths, N+1 queries, unbounded loops                               |
 
-`roach-pi` runs 5 lenses × 2 seeds = 10 reviewers. `ruizrica/agent-pi` runs 5 lenses. SOTA SWE-bench scaffolds use ≥3.
+`roach-pi` runs 5 lenses × 2 seeds = 10 reviewers. `ruizrica/agent-pi` runs 5 lenses. Several high-performing SWE-bench scaffolds use multiple review/evaluation passes.
 
 Cap fix-loops at **2 rounds**. Without a cap, verifiers nitpick on style indefinitely. Sticky completion: once a phase reaches `done`, no edge out — failing checks become "known issues" in the report.
 
@@ -117,7 +117,7 @@ Adapt for your harness: have the verify subagent's prompt populated by orchestra
 
 ## Worktree per run
 
-The 2026 standard for parallel agents: one worktree per agent run, shared `.git` object store, isolated working tree and branch. References: [Augment](https://www.augmentcode.com/guides/git-worktrees-parallel-ai-agent-execution), [appxlab](https://blog.appxlab.io/2026/03/31/multi-agent-ai-coding-workflow-git-worktrees/), [Penligent](https://www.penligent.ai/hackinglabs/git-worktrees-need-runtime-isolation-for-parallel-ai-agent-development/).
+A strong emerging pattern for parallel write-capable agents: one worktree per agent run, shared `.git` object store, isolated working tree and branch. References: [Augment](https://www.augmentcode.com/guides/git-worktrees-parallel-ai-agent-execution), [appxlab](https://blog.appxlab.io/2026/03/31/multi-agent-ai-coding-workflow-git-worktrees/), [Penligent](https://www.penligent.ai/hackinglabs/git-worktrees-need-runtime-isolation-for-parallel-ai-agent-development/).
 
 What you get:
 
@@ -151,6 +151,8 @@ The important part is the prompt shape: tell subagents to read `<workflowDir>/PL
 
 `roach-pi` uses this pattern with a shared diff artifact. `pi-coordination` shows the same idea in a different form: a large context document plus a smaller synthesized meta-prompt.
 
+For crash-safe execution, pair these artifacts with a durable state machine: current phase, attempt count, completed task IDs, commit/diff handles, gate results, reviewer findings, and cleanup handles. See `operations-safety.md` for resume and rollback rules.
+
 ## Diff budgets and idle-iteration kill switches
 
 Two independent guardrails that catch the "implementer wandered off" failure mode mechanically, before fix-loops kick in.
@@ -169,14 +171,14 @@ The orchestrator's job is to **terminate**. Always emit a final report — pass,
 
 Don't:
 
-- Allow `verify → implement` loopback. The exact open-ended loop GPT-5/Claude-4-class models thrash in.
+- Allow unbounded `verify → implement` loopback. The exact open-ended loop GPT-5/Claude-4-class models thrash in.
 - Allow free-text completion markers. `<promise>COMPLETE</promise>` is fragile.
 - Skip the report on cancel. A canceled run that emits a "what was done so far" report is salvageable; one that doesn't is throwaway work.
 
 Do:
 
-- Use structured-output completion signals (JSON schemas, tagged outputs).
-- Cap fix loops at 2 rounds.
+- Use validated machine-readable completion signals (JSON schemas or parsed tagged outputs).
+- Cap fix loops at 2 rounds by default, then record remaining findings as known issues.
 - Make completion sticky — no edge out of `done`.
 - Halt instead of skip on first task failure (`ralph-meets-rex` halts at `human_intervention_required`; `roach-pi` halts after 3 clarification rounds).
 
@@ -202,7 +204,7 @@ Other Pi extensions worth studying for specific patterns:
 Patterns from production deployments not in most pipelines today:
 
 - **Acceptance-criteria extraction** as a first-class phase (covered above).
-- **Requirement clarification gate.** Before planning, ask: "are the AC unambiguous and testable?" If not, halt with specific clarifying questions, or commit a `CLARIFICATIONS.md` documenting assumptions.
+- **Requirement clarification gate.** Before planning, ask: "are the AC unambiguous and testable?" If not, halt with specific clarifying questions, or commit a `CLARIFICATIONS.md` / `OPEN_QUESTIONS.md` documenting assumptions.
 - **Ticket comment as audit trail.** Post plan summary + diff stats + verifier rubric outcome back to the ticket on completion.
 - **PR description generated from the plan, not the diff.** The diff lies; the plan tells the story.
 - **AC-traceability in the PR body.** Each AC item explicitly mapped to test/code locations.

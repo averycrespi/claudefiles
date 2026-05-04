@@ -1,6 +1,6 @@
 # Verification
 
-How to know if the agent's output is correct. The 2026 consensus is a three-layer stack: deterministic gates first, agentic rubrics second, multiple reviewers third. This document covers each layer, the biases that plague LLM-as-judge, and how to mitigate them.
+How to know if the agent's output is correct. A strong emerging 2026 pattern is a three-layer stack: deterministic gates first, agentic rubrics second, multiple reviewers third. This document covers each layer, the biases that plague LLM-as-judge, and how to mitigate them.
 
 ## The three-layer stack
 
@@ -41,7 +41,7 @@ Why this works: contextual rubrics are grounded in the specific change. Generic 
 
 ### Layer 3: Multiple reviewers, diverse lenses
 
-Industry consensus: 3–5 reviewers, each with a distinct lens, each carrying a _short_ rubric.
+Strong emerging practice: use 3–5 reviewers for high-stakes changes, each with a distinct lens and a _short_ rubric. Smaller or lower-risk workflows often collapse this to one or two reviewers.
 
 Standard lens set:
 
@@ -59,13 +59,13 @@ Calibrate against a golden dataset to 75–90% human agreement before deployment
 
 ## The four LLM-judge biases
 
-Every untreated judge exhibits these. Listed in order of severity for verify-loops:
+Untreated judges commonly exhibit these. Listed in rough order of severity for verify-loops:
 
 ### Self-preference bias (most dangerous)
 
 Judges are ~50% more likely to pass output from their own model family on objective rubrics. On subjective rubrics, the skew is worse. Reference: [Self-Preference Bias in Rubric-Based Evaluation](https://arxiv.org/abs/2604.06996) — quantifies SPB on objective IFEval rubrics and subjective HealthBench (10-point skew).
 
-Mitigation: **never use the same model for implement and verify if avoidable**. Route implementer through GPT-5.x, reviewer through Claude (or vice versa). The Pi `subagents` extension supports per-subagent provider/model selection — config change, not architecture change. Same for the Claude Agent SDK's `AgentDefinition.model`.
+Mitigation: **never use the same model for implement and verify if avoidable**. Route implementer through GPT-5.x, reviewer through Claude (or vice versa). The Pi `subagents` extension supports per-subagent provider/model selection. In Claude Code CLI and the Claude Agent SDK, `AgentDefinition.model` / subagent model settings should be treated as Claude-family selection unless current primary docs and environment configuration prove otherwise; use an external orchestrator, broker/MCP bridge, or separate process for true cross-family review.
 
 Caveat: rubric biases can transfer across judge families. Reference: [Rubrics as an Attack Surface: Stealthy Preference Drift](https://arxiv.org/abs/2602.13576) — learned rubric biases transfer across judge models. Cross-model is a strong mitigation, not a complete one.
 
@@ -95,9 +95,9 @@ Mitigation: reviewer prompt says "do not give credit for citations or appeals to
 
 The cheapest single-action mitigation against self-preference bias.
 
-Pattern: route implementer through one provider, reviewer through another. On Claude Code, this means configuring the reviewer subagent's `AgentDefinition.model` to a non-Claude provider (or vice versa for a GPT-5-driven harness). On Pi, the `subagents` extension supports per-subagent provider/model selection.
+Pattern: route implementer through one provider, reviewer through another. On Pi, the `subagents` extension supports per-subagent provider/model selection. In Claude Code CLI and the Claude Agent SDK, ordinary `.claude/agents/` / `AgentDefinition` reviewers should be treated as Claude-family unless current primary docs and environment configuration prove otherwise; use an external orchestrator, broker/MCP bridge, or separate process to route review to a non-Claude model.
 
-Cost: minimal. You already have the models.
+Cost: minimal when the deployment already has both providers wired in; otherwise it adds integration and credential-management complexity.
 
 When you can't (single-provider deployment, latency, cost), fall back to **two-seed reviewers** (`roach-pi`'s pattern). Doubles cost, halves variance, doesn't address self-preference but does address single-run noise.
 
@@ -120,7 +120,7 @@ The single under-used technique. Pattern:
 5. If agreement is low, look at false positives and false negatives separately — they have different fixes.
 6. Iterate on the rubric until agreement crosses threshold.
 
-Without calibration you don't have a verifier — you have a vibe-checker.
+Without calibration, treat the verifier as a useful triage signal rather than an authority.
 
 Reference: [Adnan Masood — Rubric-Based Evals: LLM-as-a-Judge Methodologies](https://medium.com/@adnanmasood/rubric-based-evals-llm-as-a-judge-methodologies-and-empirical-validation-in-domain-context-71936b989e80) — practical methodology.
 
@@ -187,8 +187,8 @@ If you're starting a new harness today and want defaults that work:
 1. Wire deterministic gates first. Don't add an LLM verifier until tests/types/lints are passing.
 2. Two reviewers minimum: plan-completeness + integration. Add security if untrusted input is in scope; performance if you have hot paths.
 3. Cross-family if both providers are available. Two-seed if not. One reviewer is rarely enough.
-4. Per-criterion verdicts in strict JSON. No free-text "looks good" outputs.
-5. Calibrate on 50+ examples before declaring the verifier ready.
+4. Per-criterion verdicts in strict JSON where supported, otherwise parsed tags. No free-text "looks good" outputs.
+5. Calibrate on 50+ examples before declaring the verifier authoritative; otherwise label it as triage.
 6. Inline anti-bias instructions in the reviewer prompt.
 7. 2-round fix-loop cap with sticky completion.
 

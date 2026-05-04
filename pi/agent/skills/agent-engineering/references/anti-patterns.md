@@ -12,7 +12,7 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **Why it fails**: Agents lack the shared grounding that makes human debate productive. They drift, agree spuriously, or argue past each other. It does not appear in the mainstream production harnesses surveyed for this skill.
 
-**Instead**: Code orchestrator coordinating fresh subagents with strict structured outputs. Reviewer reads spec + code, returns rubric verdict; orchestrator decides what to do.
+**Instead**: Code orchestrator coordinating fresh subagents with validated machine-readable outputs. Reviewer reads spec + code, returns rubric verdict; orchestrator decides what to do.
 
 **Citation**: [Cognition — Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents) (2025). Reinforced by Claude Code's own architecture: subagents are used almost exclusively for read-only work.
 
@@ -54,7 +54,7 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **Why it fails**: Beaten consistently by rubric-based + cross-family verifiers in every benchmark since 2025. Generic judges produce generic verdicts; they don't catch specific bugs.
 
-**Instead**: Per-criterion rubric grounded in acceptance criteria. Strict structured output (`{criterion_id, verdict, evidence}`). Cross-family if available. See `verification.md`.
+**Instead**: Per-criterion rubric grounded in acceptance criteria. Validated machine-readable output (`{criterion_id, verdict, evidence}` where JSON is supported). Cross-family if available. See `verification.md`.
 
 **Citation**: [Agentic Rubrics as Contextual Verifiers](https://arxiv.org/pdf/2601.04171).
 
@@ -64,17 +64,17 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **Why it fails**: Models sometimes emit the marker conversationally ("I'll signal `<promise>COMPLETE</promise>` when done"). Models sometimes don't emit it when actually done. Models sometimes emit it followed by more work.
 
-**Instead**: Structured output (JSON schema, tagged-output protocol like `<rmr:next_state>done</rmr:next_state>` parsed structurally).
+**Instead**: Validated machine-readable output (JSON schema where supported, or a tagged-output protocol like `<rmr:next_state>done</rmr:next_state>` parsed structurally).
 
 **Citation**: `klaudworks/ralph-meets-rex` documents this in its design notes.
 
 ### Verify → implement loopback
 
-**What**: Verifier finds an issue; orchestrator routes back to implementer; implementer fixes; verifier re-runs; loop.
+**What**: Verifier finds an issue; orchestrator routes back to implementer; implementer fixes; verifier re-runs with no hard cap or termination policy.
 
 **Why it fails**: The exact open-ended loop GPT-5/Claude-4-class models thrash in. Verifier finds new issues with each iteration; perfectionism prevents termination.
 
-**Instead**: Cap fix loops at 2 rounds. After cap, surface remaining issues as known issues in the report. Always emit a final report. Sticky completion: once a phase reaches `done`, no edge out.
+**Instead**: Use an explicit fix phase with a hard cap (2 rounds by default). After cap, surface remaining issues as known issues in the report. Always emit a final report. Sticky completion: once a phase reaches `done`, no edge out.
 
 **Citation**: `klaudworks/ralph-meets-rex` ships the loopback design with explicit warnings and a `HUMAN_INTERVENTION_REQUIRED` escape hatch.
 
@@ -124,7 +124,7 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **What**: "We have 1M context, just put everything in."
 
-**Why it fails**: Vendor reports from Zylos and Harness argue that context drift causes more enterprise failures than raw context exhaustion ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Bigger windows make compaction _more_ important, not less. Models get worse at finding the relevant signal in a large window, not better.
+**Why it fails**: Vendor reports from Zylos and Harness argue that context drift may cause more enterprise failures than raw context exhaustion ([Zylos](https://zylos.ai/research/2026-02-28-ai-agent-context-compression-strategies), [Harness](https://www.harness.io/blog/defeating-context-rot-mastering-the-flow-of-ai-sessions)). Treat this as a production signal, not controlled evidence. Bigger windows make compaction _more_ important, not less. Models get worse at finding the relevant signal in a large window, not better.
 
 **Instead**: Just-in-time retrieval. Lightweight identifiers (paths, function names) resolved on demand via tools. Big windows are a _capacity_ lever, not a _correctness_ lever.
 
@@ -146,7 +146,7 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **Why it fails**: Token cost (N×plan_size). Compaction hostility. Drift between subagents if the orchestrator's copy of the plan changes mid-run.
 
-**Instead**: Write artifacts to `<workflowDir>/`. Subagent prompts say "read `<workflowDir>/PLAN.md`."
+**Instead**: Write artifacts to `<workflowDir>/`. Subagent prompts say "read `<workflowDir>/PLAN.md`." Persist phase state separately so the orchestrator can resume without trusting conversation history.
 
 **Citation**: [Anthropic on context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents); roach-pi's shared-diff-artifact pattern.
 
@@ -202,7 +202,7 @@ Mitigations map to patterns elsewhere in this skill:
 
 **Instead**: Always run deterministic gates first. The LLM verifier picks up where the gates leave off (architectural fit, spec compliance, test quality).
 
-**Citation**: 2026 verification consensus across [Anthropic](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents), [Augment](https://www.augmentcode.com/guides/harness-engineering-ai-coding-agents), [Datadog](https://www.datadoghq.com/blog/ai/harness-first-agents/).
+**Citation**: Strong 2026 verification pattern across [Anthropic](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents), [Augment](https://www.augmentcode.com/guides/harness-engineering-ai-coding-agents), [Datadog](https://www.datadoghq.com/blog/ai/harness-first-agents/).
 
 ### Same model for implement and verify
 
@@ -223,6 +223,26 @@ Mitigations map to patterns elsewhere in this skill:
 **Instead**: Plan = intent. "Tighten the auth check in `auth.ts` to require both X and Y conditions; cover the existing test cases plus add one for the new condition."
 
 **Citation**: Universal across [`roach-pi`](https://github.com/tmdgusya/roach-pi), [`ralph-meets-rex`](https://github.com/klaudworks/ralph-meets-rex), [`agent-pi`](https://github.com/ruizrica/agent-pi).
+
+### Prompt-only safety policy
+
+**What**: The system prompt says "do not push," "do not delete," or "do not access secrets," but the tool surface still allows those actions.
+
+**Why it fails**: Instructions are advisory. Tool outputs, repo files, tickets, and web pages can contain prompt-injection text. Even without malicious input, models make mistakes under long-horizon pressure.
+
+**Instead**: Enforce policy in hooks, permission callbacks, tool allow lists, broker scopes, sandboxing, and approval gates. See `operations-safety.md`.
+
+**Citation**: Claude Code hooks/settings docs; Pi extension docs warn that extensions run with full system permissions.
+
+### No observability or replay
+
+**What**: A run fails, but the only record is the final chat transcript.
+
+**Why it fails**: Long-running harness bugs are phase/state bugs. Without tool-call traces, artifact versions, model versions, token usage, and state transitions, failures cannot be debugged or regression-tested.
+
+**Instead**: Record phase-level traces, redacted tool arguments/results, state transitions, artifact hashes, and final structured reports. Keep golden traces for replay with side effects stubbed.
+
+**Citation**: Datadog's observability-driven harness framing; this skill's `operations-safety.md` checklist.
 
 ### No idle-iteration kill switch
 
