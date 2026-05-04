@@ -15,10 +15,16 @@ test("buildModeContract for plan mode includes collaborative discovery and plan-
   assert.match(contract, /Plan mode has four phases/i);
   assert.match(contract, /Discover, Explore, Validate, and Author/i);
   assert.match(contract, /clarify ambiguous requests/i);
-  assert.match(contract, /ask at least one requirements-discovery question/i);
+  assert.match(contract, /bounded grilling loop/i);
+  assert.match(contract, /requirements-discovery questions until/i);
   assert.match(contract, /ask one focused question at a time/i);
+  assert.match(contract, /recommended answer/i);
   assert.match(contract, /multiple-choice/i);
-  assert.match(contract, /purpose, constraints, and success criteria/i);
+  assert.match(contract, /exploring the repo/i);
+  assert.match(
+    contract,
+    /purpose, constraints, success criteria, major trade-offs, and acceptance criteria/i,
+  );
   assert.match(contract, /2-3 approaches/i);
   assert.match(contract, /Use ask_user for material decisions/i);
   assert.match(contract, /confirm the chosen direction/i);

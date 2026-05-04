@@ -28,7 +28,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - uses read-oriented tools plus `write_plan` and `edit_plan`
 - defaults thinking to `medium` (`planThinkingLevel`)
 - expects plan files to live under `.plans/` at the repo root
-- encourages one focused question at a time, multiple-choice questions when useful, 2-3 approaches with a recommendation, testable acceptance criteria, explicit documentation-impact decisions, and YAGNI planning
+- encourages a bounded grilling loop for non-trivial work: one focused question at a time, recommended answers, repo exploration before asking repo-answerable questions, 2-3 approaches with a recommendation, testable acceptance criteria, explicit documentation-impact decisions, and YAGNI planning
 
 ### Execute
 
@@ -67,12 +67,12 @@ Plan files are ordinary markdown files stored under `.plans/` in the repo root.
 
 The Plan-mode contract requires a discovery-first flow before durable plan writing:
 
-1. Discover: read relevant repo context and ask focused requirements questions.
+1. Discover: read relevant repo context and run a bounded grilling loop.
 2. Explore: compare viable approaches with trade-offs and a recommendation.
 3. Validate: confirm the chosen direction and unresolved assumptions with the user.
 4. Author: write or update the `.plans/` markdown file.
 
-For non-trivial work, the agent should ask at least one requirements-discovery question before proposing or writing a plan. It should use `ask_user` for material decisions with multiple valid directions, and it should not call `write_plan` or `edit_plan` until discovery, exploration, and validation are complete unless the user explicitly asks to skip discovery or provides a complete implementation-ready plan.
+For non-trivial work, the agent should ask requirements-discovery questions until the purpose, constraints, success criteria, major trade-offs, and acceptance criteria are clear enough to execute. It should ask one focused question at a time, include a recommended answer, resolve upstream decisions before downstream questions, and explore the repo instead of asking whenever the repo can answer the question. This grilling behavior is inspired by Matt Pocock's [`grill-me` skill](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me). The agent should use `ask_user` for material decisions with multiple valid directions, and it should not call `write_plan` or `edit_plan` until discovery, exploration, and validation are complete unless the user explicitly asks to skip discovery or provides a complete implementation-ready plan.
 
 The Plan-mode contract tells the agent to usually include sections like:
 
