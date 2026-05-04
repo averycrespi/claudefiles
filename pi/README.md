@@ -50,6 +50,7 @@ Markdown skill packages that load on demand via progressive disclosure — only 
 | Skill                     | Use when                                                                                          |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |
 | `agent-engineering`       | Designing, building, debugging, or reviewing AI coding agent harnesses and multi-phase workflows  |
+| `challenging-plans`       | Stress-testing, challenging, reviewing, repairing, or grilling a plan before execution            |
 | `creating-jira-tickets`   | Drafting and creating a Jira ticket via the `mcp-broker` extension's Atlassian namespace          |
 | `diagnosing`              | Debugging bugs, failures, flaky behavior, regressions, or performance problems                    |
 | `frontend-design`         | Building web components, pages, or applications that need distinctive, production-grade frontends |
