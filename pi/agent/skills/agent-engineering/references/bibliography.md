@@ -53,8 +53,8 @@ These are the load-bearing references. Read them directly when you need to groun
 - [GPT-5 Prompting Guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5_prompting_guide)
 - [GPT-5.1 Prompting Guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5-1_prompting_guide)
 - [GPT-5.2 Prompting Guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5-2_prompting_guide) — `<planning>` block (compaction-discardable); strict JSON schemas; tighter scope discipline.
-- [GPT-5.4 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance) — "Bias to action" default; per-plan-item closure.
-- [Using GPT-5.5](https://developers.openai.com/api/docs/guides/latest-model) — **The highest-signal page in the GPT-5 family.** Migration directives: rebaseline, move tool guidance to descriptions, replace prose procedure with outcome+criteria, drop schemas from prose, use Responses API.
+- [GPT-5.4 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.4) — "Bias to action" default; per-plan-item closure.
+- [GPT-5.5 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.5) — **The highest-signal page in the GPT-5 family.** Migration directives: rebaseline, move tool guidance to descriptions, replace prose procedure with outcome+criteria, drop schemas from prose, use Responses API.
 - [GPT-5.5 model page](https://developers.openai.com/api/docs/models/gpt-5.5) — 1.05M context, default `reasoning_effort=medium`.
 - [GPT-5.5 system card](https://openai.com/index/gpt-5-5-system-card/) — Persistence delta; harness-relevant signal that 5.5 keeps going where 5.4 gave up.
 - [Introducing GPT-5.5](https://openai.com/index/introducing-gpt-5-5/) — Release post. New default Codex model.

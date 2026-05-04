@@ -99,14 +99,14 @@ Prompting guides (each release tightens rather than reinvents):
 - [GPT-5 Prompting Guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5_prompting_guide)
 - [GPT-5.1 Prompting Guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5-1_prompting_guide)
 - [GPT-5.2 Prompting Guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5-2_prompting_guide)
-- [GPT-5.4 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance)
-- [Using GPT-5.5](https://developers.openai.com/api/docs/guides/latest-model) — **the highest-signal page in the family**
+- [GPT-5.4 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.4)
+- [GPT-5.5 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.5) — **the highest-signal page in the family**
 
 ### GPT-5.5 specifics (most relevant for new harnesses)
 
-Released 2026-04-23. Default `reasoning_effort=medium`. Authoritative pages: [model page](https://developers.openai.com/api/docs/models/gpt-5.5), [system card](https://openai.com/index/gpt-5-5-system-card/), [Using GPT-5.5 guide](https://developers.openai.com/api/docs/guides/latest-model), [introducing GPT-5.5](https://openai.com/index/introducing-gpt-5-5/).
+Released 2026-04-23. Default `reasoning_effort=medium`. Authoritative pages: [model page](https://developers.openai.com/api/docs/models/gpt-5.5), [system card](https://openai.com/index/gpt-5-5-system-card/), [GPT-5.5 prompt guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.5), [introducing GPT-5.5](https://openai.com/index/introducing-gpt-5-5/).
 
-OpenAI's explicit migration directives (from the "Using GPT-5.5" guide):
+OpenAI's explicit migration directives (from the GPT-5.5 prompt guidance):
 
 1. **Don't drop-in replace.** Rebaseline. The-decoder summarizes OpenAI's framing: legacy 5.2/5.4 prompts overspecify and "narrow the model's search space." ([the-decoder migration writeup](https://the-decoder.com/openai-says-old-prompts-are-holding-gpt-5-5-back-and-developers-need-a-fresh-baseline/))
 2. **Move tool-specific guidance OUT of the system prompt and INTO tool descriptions.** When to use, side effects, retry safety, error modes — all belong in the tool description. The system prompt should describe the _agent's role_, not how each tool works.
@@ -177,6 +177,6 @@ These apply regardless of which model family you're using:
 
 1. **Never use the same model for implement and verify if avoidable.** Self-preference bias is the most damaging judge bias. Cross-family routing is the cheapest mitigation. ([Self-Preference Bias paper](https://arxiv.org/abs/2604.06996))
 2. **Pin thinking/reasoning config across a single loop.** Mid-loop changes invalidate caches and (on Claude) break thinking-block continuity.
-3. **Read the model's own most recent prompting/migration guide before reusing prompts.** Both families have published "your old prompts are wrong" notices for major releases (Anthropic via the 4.7 best-practices post; OpenAI via "Using GPT-5.5"). The advice is genuinely different version-to-version.
+3. **Read the model's own most recent prompting/migration guide before reusing prompts.** Both families have published "your old prompts are wrong" notices for major releases (Anthropic via the 4.7 best-practices post; OpenAI via GPT-5.5 prompt guidance). The advice is genuinely different version-to-version.
 4. **Cache strategy is model-specific.** Anthropic: 5-min ephemeral TTL by default; place `cache_control` on the last tool. OpenAI: server-side compaction with opaque items chained via `previous_response_id`.
 5. **Tokenizers change.** Recompute context budgets on model upgrades. Opus 4.7's tokenizer is ~1.0–1.35x more tokens than 4.6.

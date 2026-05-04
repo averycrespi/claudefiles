@@ -92,11 +92,11 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **What**: System prompt micro-specifies the procedure: "First do X, then Y, then Z."
 
-**Why it fails on GPT-5.5**: OpenAI's [Using GPT-5.5 guide](https://developers.openai.com/api/docs/guides/latest-model) explicitly says replace step-by-step prose with outcome + success criteria. Tighter instruction-following means the model now over-literally follows the procedure even when a better path exists. Old prompts "narrow the model's search space."
+**Why it fails on GPT-5.5**: OpenAI's [GPT-5.5 prompt guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.5) explicitly says replace step-by-step prose with outcome + success criteria. Tighter instruction-following means the model now over-literally follows the procedure even when a better path exists. Old prompts "narrow the model's search space."
 
 **Instead**: "Achieve X with these criteria for done: ..."
 
-**Citation**: [Using GPT-5.5](https://developers.openai.com/api/docs/guides/latest-model); [the-decoder summary](https://the-decoder.com/openai-says-old-prompts-are-holding-gpt-5-5-back-and-developers-need-a-fresh-baseline/).
+**Citation**: [GPT-5.5 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.5); [the-decoder summary](https://the-decoder.com/openai-says-old-prompts-are-holding-gpt-5-5-back-and-developers-need-a-fresh-baseline/).
 
 ### Tool guidance in the system prompt
 
@@ -106,7 +106,7 @@ This document is for _debugging an existing harness_. If a harness is misbehavin
 
 **Instead**: Move per-tool guidance into the tool description: when to use, side effects, retry safety, error modes. System prompt describes the agent's _role_.
 
-**Citation**: [Using GPT-5.5](https://developers.openai.com/api/docs/guides/latest-model).
+**Citation**: [GPT-5.5 Prompt Guidance](https://developers.openai.com/api/docs/guides/prompt-guidance?model=gpt-5.5).
 
 ### Old "double-check" / "be careful" scaffolding on Claude Opus 4.7
 
