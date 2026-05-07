@@ -45,6 +45,8 @@ type RuntimeState = {
 type WorkflowModesConfig = {
   autoCompactOnModeSwitch: boolean;
   autoCompactMinTokens: number;
+  autoCompactOnHandoff: boolean;
+  autoCompactHandoffMinTokens: number;
   autoHandoffEnabled: boolean;
   autoHandoffDenyTimeoutMs: number;
   autoHandoffMaxFixLoops: number;
@@ -60,6 +62,8 @@ type WorkflowModesExtensionOptions = {
 const DEFAULT_CONFIG: WorkflowModesConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
+  autoCompactOnHandoff: true,
+  autoCompactHandoffMinTokens: 30_000,
   autoHandoffEnabled: false,
   autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
@@ -253,7 +257,11 @@ export function createWorkflowModesExtension(
       const config = await loadWorkflowModesConfig(ctx.cwd);
       updateThinkingLevels(config);
       if (state.mode !== mode) {
-        await maybeCompactBeforeModeSwitch(mode, ctx, config);
+        await maybeCompactBeforeModeSwitch(mode, ctx, {
+          enabled: config.autoCompactOnModeSwitch,
+          minTokens: config.autoCompactMinTokens,
+          label: "Workflow mode",
+        });
         applyMode(mode);
       }
       state.mode = mode;
@@ -270,6 +278,11 @@ export function createWorkflowModesExtension(
     ): Promise<void> {
       updateThinkingLevels(config);
       if (state.mode !== mode) {
+        await maybeCompactBeforeModeSwitch(mode, ctx, {
+          enabled: config.autoCompactOnHandoff,
+          minTokens: config.autoCompactHandoffMinTokens,
+          label: "Workflow handoff",
+        });
         applyMode(mode);
       }
       state.mode = mode;
@@ -280,13 +293,17 @@ export function createWorkflowModesExtension(
 
     async function maybeCompactBeforeModeSwitch(
       mode: Exclude<WorkflowMode, "normal">,
-      ctx: ExtensionCommandContext,
-      config: WorkflowModesConfig,
+      ctx: ExtensionContext,
+      options: {
+        enabled: boolean;
+        minTokens: number;
+        label: "Workflow mode" | "Workflow handoff";
+      },
     ): Promise<void> {
-      if (!config.autoCompactOnModeSwitch || !ctx.isIdle()) return;
+      if (!options.enabled || !ctx.isIdle()) return;
 
       const tokens = ctx.getContextUsage()?.tokens;
-      if (typeof tokens !== "number" || tokens < config.autoCompactMinTokens) {
+      if (typeof tokens !== "number" || tokens < options.minTokens) {
         return;
       }
 
@@ -300,7 +317,10 @@ export function createWorkflowModesExtension(
           onComplete: () => {
             state.pendingCompactionMode = undefined;
             if (ctx.hasUI) {
-              ctx.ui.notify("Workflow mode pre-compaction completed", "info");
+              ctx.ui.notify(
+                `${options.label} pre-compaction completed`,
+                "info",
+              );
             }
             resolve();
           },
@@ -308,7 +328,7 @@ export function createWorkflowModesExtension(
             state.pendingCompactionMode = undefined;
             if (ctx.hasUI) {
               ctx.ui.notify(
-                `Workflow mode pre-compaction failed: ${error.message}`,
+                `${options.label} pre-compaction failed: ${error.message}`,
                 "error",
               );
             }
@@ -682,6 +702,16 @@ export async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
       merged.autoCompactMinTokens >= 0
         ? merged.autoCompactMinTokens
         : DEFAULT_CONFIG.autoCompactMinTokens,
+    autoCompactOnHandoff:
+      typeof merged.autoCompactOnHandoff === "boolean"
+        ? merged.autoCompactOnHandoff
+        : DEFAULT_CONFIG.autoCompactOnHandoff,
+    autoCompactHandoffMinTokens:
+      typeof merged.autoCompactHandoffMinTokens === "number" &&
+      Number.isFinite(merged.autoCompactHandoffMinTokens) &&
+      merged.autoCompactHandoffMinTokens >= 0
+        ? merged.autoCompactHandoffMinTokens
+        : DEFAULT_CONFIG.autoCompactHandoffMinTokens,
     autoHandoffEnabled:
       typeof merged.autoHandoffEnabled === "boolean"
         ? merged.autoHandoffEnabled
@@ -724,6 +754,17 @@ export function readEnvSettings(): Partial<WorkflowModesConfig> {
     settings,
     "autoCompactMinTokens",
     process.env.WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS,
+    false,
+  );
+  setBooleanEnv(
+    settings,
+    "autoCompactOnHandoff",
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF,
+  );
+  setNumberEnv(
+    settings,
+    "autoCompactHandoffMinTokens",
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS,
     false,
   );
   setBooleanEnv(

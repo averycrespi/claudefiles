@@ -30,6 +30,8 @@ type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 type TestConfig = {
   autoCompactOnModeSwitch: boolean;
   autoCompactMinTokens: number;
+  autoCompactOnHandoff: boolean;
+  autoCompactHandoffMinTokens: number;
   autoHandoffEnabled: boolean;
   autoHandoffDenyTimeoutMs: number;
   autoHandoffMaxFixLoops: number;
@@ -41,6 +43,8 @@ type TestConfig = {
 const defaultTestConfig: TestConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
+  autoCompactOnHandoff: true,
+  autoCompactHandoffMinTokens: 30_000,
   autoHandoffEnabled: false,
   autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
@@ -753,6 +757,163 @@ test("workflow_handoff is disabled by default", async () => {
   assert.match(result.content[0].text, /disabled/i);
   assert.equal(pi._sentUserMessages.length, 1);
   assert.equal(pi._thinkingLevel(), "low");
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff compacts above handoff threshold before applying target mode", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-compact-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  let resolved = false;
+  const handoff = pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, 30_000, true, false),
+  ).then((result) => {
+    resolved = true;
+    return result;
+  });
+  await waitForCompactCall(pi);
+
+  assert.equal(pi._compactCalls.length, 1);
+  assert.equal(resolved, false);
+  assert.equal(pi._thinkingLevel(), "low");
+  assert.equal(pi._sentUserMessages.length, 1);
+
+  pi._compactCalls[0]!.onComplete?.({
+    summary: "ok",
+    firstKeptEntryId: "keep-1",
+    tokensBefore: 30_000,
+  });
+  const result = await handoff;
+
+  assert.equal(resolved, true);
+  assert.equal(result.terminate, true);
+  assert.equal(pi._thinkingLevel(), "high");
+  assert.match(String(pi._sentUserMessages.at(-1)?.content), /verify mode/i);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff compaction summary uses the target mode", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-handoff-compact-target-"),
+  );
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const handoff = pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, 35_000, true, false),
+  );
+  await waitForCompactCall(pi);
+
+  const compact = pi._handlers.get("session_before_compact");
+  const result = await compact!(
+    {
+      type: "session_before_compact",
+      preparation: {
+        firstKeptEntryId: "keep-1",
+        tokensBefore: 35_000,
+      },
+      branchEntries: [],
+      signal: new AbortController().signal,
+    },
+    pi._ctx(),
+  );
+
+  assert.match(result.compaction.summary, /Mode: verify/);
+  assert.equal(result.compaction.details.workflowModes.mode, "verify");
+
+  pi._compactCalls[0]!.onComplete?.({
+    summary: "ok",
+    firstKeptEntryId: "keep-1",
+    tokensBefore: 35_000,
+  });
+  await handoff;
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff skips compaction below threshold or when disabled", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-handoff-compact-skip-"),
+  );
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  await pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, 29_999, true, false),
+  );
+
+  const disabledPi = makePi(cwd);
+  createTestWorkflowModesExtension({
+    autoHandoffEnabled: true,
+    autoCompactOnHandoff: false,
+  } as any)(disabledPi as any);
+  await startSession(disabledPi);
+  await disabledPi._commands
+    .get("execute")!
+    .handler("Implement", disabledPi._ctx());
+  await disabledPi._tools.get("workflow_handoff")!.execute!(
+    "call-2",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    disabledPi._ctx([], undefined, true, 100_000, true, false),
+  );
+
+  assert.equal(pi._compactCalls.length, 0);
+  assert.equal(disabledPi._compactCalls.length, 0);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff notifies and continues when compaction fails", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-handoff-compact-error-"),
+  );
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const handoff = pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, 30_000, true, false),
+  );
+  await waitForCompactCall(pi);
+
+  pi._compactCalls[0]!.onError?.(new Error("provider unavailable"));
+  const result = await handoff;
+
+  assert.equal(result.terminate, true);
+  assert.equal(pi._thinkingLevel(), "high");
+  assert.match(String(pi._sentUserMessages.at(-1)?.content), /verify mode/i);
+  assert.deepEqual(pi._notifications.at(-1), {
+    msg: "Workflow handoff pre-compaction failed: provider unavailable",
+    level: "error",
+  });
 
   await rm(cwd, { recursive: true, force: true });
 });

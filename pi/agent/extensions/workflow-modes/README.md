@@ -13,7 +13,7 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 - compacts large idle sessions before `/plan`, `/execute`, and `/verify` mode switches to reduce expensive cache misses after the tool set changes
 - provides Plan-mode-only `write_plan` and `edit_plan` tools scoped to `.plans/` at the repo root
 - builds a custom compaction summary so long-running workflow sessions keep their mode and TODO context
-- optionally lets the agent request capped Execute ↔ Verify handoffs through `workflow_handoff`, with a 10s user deny window in UI sessions
+- optionally lets the agent request capped Execute ↔ Verify handoffs through `workflow_handoff`, with a 10s user deny window in UI sessions and handoff-specific pre-switch compaction
 - currently leaves `mcp_call` available in Plan and Verify mode; read-only broker filtering is deferred to a later revision
 
 ## Modes
@@ -60,6 +60,8 @@ The `workflow_handoff` tool is active in Execute and Verify modes. It accepts:
 Execute mode may hand off only to Verify. Verify mode may hand off only to Execute. The tool validates the current mode, configuration, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
 
 When UI is available, handoff shows a timed prompt with the requested target mode and reason, plus a single `Cancel` option. If the user does nothing before `autoHandoffDenyTimeoutMs`, the handoff proceeds. If no UI is available, the denial prompt and timeout are skipped. Verify → Execute handoffs consume the configured fix-loop budget; Execute → Verify handoffs do not.
+
+Accepted handoffs compact before changing tools/thinking when `autoCompactOnHandoff` is enabled and current context usage is at least `autoCompactHandoffMinTokens`. If handoff compaction fails, the extension reports the failure when UI is available and continues with the handoff.
 
 ## Plan files
 
@@ -109,16 +111,18 @@ The extension publishes workflow-mode state changes over `pi.events` so other ex
 
 Configure via `extension:workflow-modes` in Pi settings. Environment variables override settings when set.
 
-| Field                      | Default  | Environment override                          | Description                                                                   |
-| -------------------------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
-| `autoCompactOnModeSwitch`  | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH`  | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.         |
-| `autoCompactMinTokens`     | `50000`  | `WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS`      | Context-token threshold for pre-switch compaction.                            |
-| `autoHandoffEnabled`       | `false`  | `WORKFLOW_MODES_AUTO_HANDOFF_ENABLED`         | Enables agent-requested Execute ↔ Verify handoffs through `workflow_handoff`. |
-| `autoHandoffDenyTimeoutMs` | `10000`  | `WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS` | UI denial window for automatic handoffs; if it expires, the handoff proceeds. |
-| `autoHandoffMaxFixLoops`   | `2`      | `WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS`   | Caps Verify → Execute loopbacks.                                              |
-| `planThinkingLevel`        | `medium` | `WORKFLOW_MODES_PLAN_THINKING_LEVEL`          | Thinking level applied when entering Plan mode.                               |
-| `executeThinkingLevel`     | `low`    | `WORKFLOW_MODES_EXECUTE_THINKING_LEVEL`       | Thinking level applied when entering Execute mode.                            |
-| `verifyThinkingLevel`      | `high`   | `WORKFLOW_MODES_VERIFY_THINKING_LEVEL`        | Thinking level applied when entering Verify mode.                             |
+| Field                         | Default  | Environment override                             | Description                                                                   |
+| ----------------------------- | -------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `autoCompactOnModeSwitch`     | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH`     | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.         |
+| `autoCompactMinTokens`        | `50000`  | `WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS`         | Context-token threshold for slash-command pre-switch compaction.              |
+| `autoCompactOnHandoff`        | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF`         | Enables pre-switch compaction for accepted `workflow_handoff` transitions.    |
+| `autoCompactHandoffMinTokens` | `30000`  | `WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS` | Context-token threshold for handoff pre-switch compaction.                    |
+| `autoHandoffEnabled`          | `false`  | `WORKFLOW_MODES_AUTO_HANDOFF_ENABLED`            | Enables agent-requested Execute ↔ Verify handoffs through `workflow_handoff`. |
+| `autoHandoffDenyTimeoutMs`    | `10000`  | `WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS`    | UI denial window for automatic handoffs; if it expires, the handoff proceeds. |
+| `autoHandoffMaxFixLoops`      | `2`      | `WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS`      | Caps Verify → Execute loopbacks.                                              |
+| `planThinkingLevel`           | `medium` | `WORKFLOW_MODES_PLAN_THINKING_LEVEL`             | Thinking level applied when entering Plan mode.                               |
+| `executeThinkingLevel`        | `low`    | `WORKFLOW_MODES_EXECUTE_THINKING_LEVEL`          | Thinking level applied when entering Execute mode.                            |
+| `verifyThinkingLevel`         | `high`   | `WORKFLOW_MODES_VERIFY_THINKING_LEVEL`           | Thinking level applied when entering Verify mode.                             |
 
 Example settings:
 
@@ -127,6 +131,8 @@ Example settings:
   "extension:workflow-modes": {
     "autoCompactOnModeSwitch": true,
     "autoCompactMinTokens": 50000,
+    "autoCompactOnHandoff": true,
+    "autoCompactHandoffMinTokens": 30000,
     "autoHandoffEnabled": false,
     "autoHandoffDenyTimeoutMs": 10000,
     "autoHandoffMaxFixLoops": 2,
@@ -141,15 +147,17 @@ Boolean environment overrides accept `1`/`true` and `0`/`false`. Thinking-level 
 
 ## Logging
 
-This extension does not write retained logs or diagnostic files. Pre-switch compaction failures are reported to the user and the requested mode switch continues. Automatic handoff prompts and denials are UI-only and are not retained as separate log files.
+This extension does not write retained logs or diagnostic files. Pre-switch compaction failures, including handoff pre-compaction failures, are reported to the user and the requested mode switch continues. Automatic handoff prompts and denials are UI-only and are not retained as separate log files.
 
 ## Persistence and compaction
 
 Workflow mode and automatic handoff loop counters are in-memory session state. New or restored sessions start in Normal mode with the fix-loop counter reset.
 
-By default, when an idle session has at least 50,000 context tokens, `/plan`, `/execute`, and `/verify` compact before changing tools/thinking and before sending the kickoff message. Pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the command is invoked while the agent is not idle. If compaction fails, the extension reports the error and continues with the requested mode switch. Tool-driven automatic handoffs occur during an agent turn and do not run pre-switch compaction.
+By default, when an idle session has at least 50,000 context tokens, `/plan`, `/execute`, and `/verify` compact before changing tools/thinking and before sending the kickoff message. Slash-command pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the command is invoked while the agent is not idle. If compaction fails, the extension reports the error and continues with the requested mode switch.
 
-During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. For pre-switch compaction, the summary records the target mode so the compacted context matches the kickoff that follows. The summary preserves:
+Accepted tool-driven automatic handoffs use a separate threshold. By default, when current context usage has at least 30,000 tokens, `workflow_handoff` compacts before changing tools/thinking and before queueing the follow-up kickoff. Handoff pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the handoff is denied or rejected. If handoff compaction fails, the extension reports the error and continues with the handoff.
+
+During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. For pre-switch compaction, including handoff compaction, the summary records the target mode so the compacted context matches the kickoff that follows. The summary preserves:
 
 - current or target mode
 - tactical TODO state
