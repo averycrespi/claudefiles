@@ -14,6 +14,7 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 - provides Plan-mode-only `write_plan` and `edit_plan` tools scoped to `.plans/` at the repo root
 - builds a custom compaction summary so long-running workflow sessions keep their mode and TODO context
 - optionally lets the agent request capped Execute ↔ Verify handoffs through `workflow_handoff`, with a 10s user deny window in UI sessions and handoff-specific pre-switch compaction
+- injects an Execute-mode-only hidden reminder when the agent has gone several turns without using `todo`
 - currently leaves `mcp_call` available in Plan and Verify mode; read-only broker filtering is deferred to a later revision
 
 ## Modes
@@ -36,6 +37,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - uses `read`, `edit`, `write`, `bash`, and `todo`
 - defaults thinking to `low` (`executeThinkingLevel`)
 - encourages regular commits at logical checkpoints instead of one large end-of-run commit
+- reminds the agent to use `todo` after a configurable number of Execute-mode turns without TODO activity; the reminder is injected only into model context and tells the agent not to mention it to the user
 - when auto handoff is enabled, can call `workflow_handoff` with `target_mode: "verify"` after implementation is ready for verification
 
 ### Verify
@@ -111,18 +113,21 @@ The extension publishes workflow-mode state changes over `pi.events` so other ex
 
 Configure via `extension:workflow-modes` in Pi settings. Environment variables override settings when set.
 
-| Field                         | Default  | Environment override                             | Description                                                                   |
-| ----------------------------- | -------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
-| `autoCompactOnModeSwitch`     | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH`     | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.         |
-| `autoCompactMinTokens`        | `50000`  | `WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS`         | Context-token threshold for slash-command pre-switch compaction.              |
-| `autoCompactOnHandoff`        | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF`         | Enables pre-switch compaction for accepted `workflow_handoff` transitions.    |
-| `autoCompactHandoffMinTokens` | `30000`  | `WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS` | Context-token threshold for handoff pre-switch compaction.                    |
-| `autoHandoffEnabled`          | `false`  | `WORKFLOW_MODES_AUTO_HANDOFF_ENABLED`            | Enables agent-requested Execute ↔ Verify handoffs through `workflow_handoff`. |
-| `autoHandoffDenyTimeoutMs`    | `10000`  | `WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS`    | UI denial window for automatic handoffs; if it expires, the handoff proceeds. |
-| `autoHandoffMaxFixLoops`      | `2`      | `WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS`      | Caps Verify → Execute loopbacks.                                              |
-| `planThinkingLevel`           | `medium` | `WORKFLOW_MODES_PLAN_THINKING_LEVEL`             | Thinking level applied when entering Plan mode.                               |
-| `executeThinkingLevel`        | `low`    | `WORKFLOW_MODES_EXECUTE_THINKING_LEVEL`          | Thinking level applied when entering Execute mode.                            |
-| `verifyThinkingLevel`         | `high`   | `WORKFLOW_MODES_VERIFY_THINKING_LEVEL`           | Thinking level applied when entering Verify mode.                             |
+| Field                               | Default  | Environment override                                   | Description                                                                           |
+| ----------------------------------- | -------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `autoCompactOnModeSwitch`           | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH`           | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.                 |
+| `autoCompactMinTokens`              | `50000`  | `WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS`               | Context-token threshold for slash-command pre-switch compaction.                      |
+| `autoCompactOnHandoff`              | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF`               | Enables pre-switch compaction for accepted `workflow_handoff` transitions.            |
+| `autoCompactHandoffMinTokens`       | `30000`  | `WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS`       | Context-token threshold for handoff pre-switch compaction.                            |
+| `autoHandoffEnabled`                | `false`  | `WORKFLOW_MODES_AUTO_HANDOFF_ENABLED`                  | Enables agent-requested Execute ↔ Verify handoffs through `workflow_handoff`.         |
+| `autoHandoffDenyTimeoutMs`          | `10000`  | `WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS`          | UI denial window for automatic handoffs; if it expires, the handoff proceeds.         |
+| `autoHandoffMaxFixLoops`            | `2`      | `WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS`            | Caps Verify → Execute loopbacks.                                                      |
+| `todoReminderEnabled`               | `true`   | `WORKFLOW_MODES_TODO_REMINDER_ENABLED`                 | Enables the Execute-mode-only hidden reminder when `todo` has not been used recently. |
+| `todoReminderTurnsSinceTodo`        | `3`      | `WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO`        | Execute-mode assistant turns without a `todo` result before the reminder may fire.    |
+| `todoReminderTurnsBetweenReminders` | `3`      | `WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS` | Minimum Execute-mode assistant turns between reminder injections.                     |
+| `planThinkingLevel`                 | `medium` | `WORKFLOW_MODES_PLAN_THINKING_LEVEL`                   | Thinking level applied when entering Plan mode.                                       |
+| `executeThinkingLevel`              | `low`    | `WORKFLOW_MODES_EXECUTE_THINKING_LEVEL`                | Thinking level applied when entering Execute mode.                                    |
+| `verifyThinkingLevel`               | `high`   | `WORKFLOW_MODES_VERIFY_THINKING_LEVEL`                 | Thinking level applied when entering Verify mode.                                     |
 
 Example settings:
 
@@ -136,6 +141,9 @@ Example settings:
     "autoHandoffEnabled": false,
     "autoHandoffDenyTimeoutMs": 10000,
     "autoHandoffMaxFixLoops": 2,
+    "todoReminderEnabled": true,
+    "todoReminderTurnsSinceTodo": 3,
+    "todoReminderTurnsBetweenReminders": 3,
     "planThinkingLevel": "medium",
     "executeThinkingLevel": "low",
     "verifyThinkingLevel": "high"
@@ -147,11 +155,11 @@ Boolean environment overrides accept `1`/`true` and `0`/`false`. Thinking-level 
 
 ## Logging
 
-This extension does not write retained logs or diagnostic files. Pre-switch compaction failures, including handoff pre-compaction failures, are reported to the user and the requested mode switch continues. Automatic handoff prompts and denials are UI-only and are not retained as separate log files.
+This extension does not write retained logs or diagnostic files. Pre-switch compaction failures, including handoff pre-compaction failures, are reported to the user and the requested mode switch continues. Automatic handoff prompts and denials are UI-only and are not retained as separate log files. TODO reminders are injected as hidden context for the model, not as retained log files or user-visible messages.
 
 ## Persistence and compaction
 
-Workflow mode and automatic handoff loop counters are in-memory session state. New or restored sessions start in Normal mode with the fix-loop counter reset.
+Workflow mode, automatic handoff loop counters, and TODO reminder counters are in-memory session state. New or restored sessions start in Normal mode with these counters reset.
 
 By default, when an idle session has at least 50,000 context tokens, `/plan`, `/execute`, and `/verify` compact before changing tools/thinking and before sending the kickoff message. Slash-command pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the command is invoked while the agent is not idle. If compaction fails, the extension reports the error and continues with the requested mode switch.
 

@@ -13,6 +13,9 @@ const ENV_NAMES = [
   "WORKFLOW_MODES_AUTO_HANDOFF_ENABLED",
   "WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS",
   "WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS",
+  "WORKFLOW_MODES_TODO_REMINDER_ENABLED",
+  "WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO",
+  "WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS",
   "WORKFLOW_MODES_PLAN_THINKING_LEVEL",
   "WORKFLOW_MODES_EXECUTE_THINKING_LEVEL",
   "WORKFLOW_MODES_VERIFY_THINKING_LEVEL",
@@ -38,6 +41,9 @@ test("readEnvSettings maps every workflow-modes environment override", () => {
   process.env.WORKFLOW_MODES_AUTO_HANDOFF_ENABLED = "1";
   process.env.WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS = "2500";
   process.env.WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS = "4";
+  process.env.WORKFLOW_MODES_TODO_REMINDER_ENABLED = "0";
+  process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO = "5";
+  process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS = "6";
   process.env.WORKFLOW_MODES_PLAN_THINKING_LEVEL = "high";
   process.env.WORKFLOW_MODES_EXECUTE_THINKING_LEVEL = "medium";
   process.env.WORKFLOW_MODES_VERIFY_THINKING_LEVEL = "xhigh";
@@ -50,6 +56,9 @@ test("readEnvSettings maps every workflow-modes environment override", () => {
     autoHandoffEnabled: true,
     autoHandoffDenyTimeoutMs: 2500,
     autoHandoffMaxFixLoops: 4,
+    todoReminderEnabled: false,
+    todoReminderTurnsSinceTodo: 5,
+    todoReminderTurnsBetweenReminders: 6,
     planThinkingLevel: "high",
     executeThinkingLevel: "medium",
     verifyThinkingLevel: "xhigh",
@@ -81,6 +90,9 @@ test("loadConfig lets env settings override project and global settings", async 
           autoHandoffEnabled: false,
           autoHandoffDenyTimeoutMs: 10000,
           autoHandoffMaxFixLoops: 2,
+          todoReminderEnabled: true,
+          todoReminderTurnsSinceTodo: 3,
+          todoReminderTurnsBetweenReminders: 3,
           planThinkingLevel: "medium",
           executeThinkingLevel: "low",
           verifyThinkingLevel: "high",

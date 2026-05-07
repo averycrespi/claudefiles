@@ -40,6 +40,8 @@ type RuntimeState = {
   baselineThinking?: string;
   thinkingLevels: WorkflowModeThinkingLevels;
   autoHandoffFixLoopsUsed: number;
+  todoReminderTurnsSinceTodo: number;
+  todoReminderTurnsSinceReminder: number;
 };
 
 type WorkflowModesConfig = {
@@ -50,6 +52,9 @@ type WorkflowModesConfig = {
   autoHandoffEnabled: boolean;
   autoHandoffDenyTimeoutMs: number;
   autoHandoffMaxFixLoops: number;
+  todoReminderEnabled: boolean;
+  todoReminderTurnsSinceTodo: number;
+  todoReminderTurnsBetweenReminders: number;
   planThinkingLevel: ThinkingLevel;
   executeThinkingLevel: ThinkingLevel;
   verifyThinkingLevel: ThinkingLevel;
@@ -67,6 +72,9 @@ const DEFAULT_CONFIG: WorkflowModesConfig = {
   autoHandoffEnabled: false,
   autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
+  todoReminderEnabled: true,
+  todoReminderTurnsSinceTodo: 3,
+  todoReminderTurnsBetweenReminders: 3,
   planThinkingLevel: DEFAULT_THINKING_LEVELS.plan,
   executeThinkingLevel: DEFAULT_THINKING_LEVELS.execute,
   verifyThinkingLevel: DEFAULT_THINKING_LEVELS.verify,
@@ -122,6 +130,8 @@ export function createWorkflowModesExtension(
       mode: "normal",
       thinkingLevels: { ...DEFAULT_THINKING_LEVELS },
       autoHandoffFixLoopsUsed: 0,
+      todoReminderTurnsSinceTodo: 0,
+      todoReminderTurnsSinceReminder: 0,
     };
 
     function getWorkflowModeState(): WorkflowModeState {
@@ -152,6 +162,11 @@ export function createWorkflowModesExtension(
         execute: config.executeThinkingLevel,
         verify: config.verifyThinkingLevel,
       };
+    }
+
+    function resetTodoReminder(): void {
+      state.todoReminderTurnsSinceTodo = 0;
+      state.todoReminderTurnsSinceReminder = 0;
     }
 
     function applyMode(mode: WorkflowMode): void {
@@ -229,6 +244,26 @@ export function createWorkflowModesExtension(
       });
     }
 
+    function buildTodoReminderMessage(ctx: ExtensionContext): string {
+      const todos = extractTodoItemsFromBranch(ctx.sessionManager.getBranch());
+      const lines = [
+        "The todo tool has not been used recently in Execute mode. If this implementation work benefits from progress tracking, call todo now to create, refresh, or clean up the working checklist. Keep exactly one item in_progress while working. If the current task is trivial or tracking would add no value, ignore this reminder.",
+        "Do not mention this reminder to the user.",
+      ];
+
+      if (todos.length > 0) {
+        lines.push(
+          "Current TODO list:",
+          ...todos.map(
+            (todo) =>
+              `- [${todo.status}] ${todo.text}${todo.notes ? ` · ${todo.notes}` : ""}`,
+          ),
+        );
+      }
+
+      return lines.join("\n");
+    }
+
     async function updateAutoHandoffStatus(
       ctx: ExtensionContext,
     ): Promise<void> {
@@ -265,6 +300,7 @@ export function createWorkflowModesExtension(
         applyMode(mode);
       }
       state.mode = mode;
+      resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
       sendKickoffMessage(mode, args, ctx);
@@ -286,6 +322,7 @@ export function createWorkflowModesExtension(
         applyMode(mode);
       }
       state.mode = mode;
+      resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
       sendHandoffKickoffMessage(mode, args);
@@ -593,6 +630,7 @@ export function createWorkflowModesExtension(
         }
         state.mode = "normal";
         state.autoHandoffFixLoopsUsed = 0;
+        resetTodoReminder();
         publishWorkflowModeState();
         await updateAutoHandoffStatus(ctx);
       },
@@ -615,6 +653,7 @@ export function createWorkflowModesExtension(
       }
       state.mode = "normal";
       state.autoHandoffFixLoopsUsed = 0;
+      resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
     });
@@ -625,6 +664,7 @@ export function createWorkflowModesExtension(
       }
       state.mode = "normal";
       state.autoHandoffFixLoopsUsed = 0;
+      resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
     });
@@ -644,6 +684,44 @@ export function createWorkflowModesExtension(
           mode: state.mode,
           autoHandoffEnabled: config.autoHandoffEnabled,
         })}`,
+      };
+    });
+
+    pi.on("tool_result", async (event) => {
+      if (event.toolName === "todo") {
+        resetTodoReminder();
+      }
+    });
+
+    pi.on("turn_end", async () => {
+      if (state.mode !== "execute") return;
+      state.todoReminderTurnsSinceTodo += 1;
+      state.todoReminderTurnsSinceReminder += 1;
+    });
+
+    (pi as any).on("context", async (event: any, ctx: ExtensionContext) => {
+      if (state.mode !== "execute") return undefined;
+      if (!pi.getActiveTools().includes("todo")) return undefined;
+
+      const config = await loadWorkflowModesConfig(ctx.cwd);
+      if (!config.todoReminderEnabled) return undefined;
+      if (
+        state.todoReminderTurnsSinceTodo < config.todoReminderTurnsSinceTodo ||
+        state.todoReminderTurnsSinceReminder <
+          config.todoReminderTurnsBetweenReminders
+      ) {
+        return undefined;
+      }
+
+      state.todoReminderTurnsSinceReminder = 0;
+      return {
+        messages: [
+          ...event.messages,
+          {
+            role: "user",
+            content: [{ type: "text", text: buildTodoReminderMessage(ctx) }],
+          },
+        ],
       };
     });
 
@@ -728,6 +806,22 @@ export async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
       merged.autoHandoffMaxFixLoops >= 0
         ? merged.autoHandoffMaxFixLoops
         : DEFAULT_CONFIG.autoHandoffMaxFixLoops,
+    todoReminderEnabled:
+      typeof merged.todoReminderEnabled === "boolean"
+        ? merged.todoReminderEnabled
+        : DEFAULT_CONFIG.todoReminderEnabled,
+    todoReminderTurnsSinceTodo:
+      typeof merged.todoReminderTurnsSinceTodo === "number" &&
+      Number.isInteger(merged.todoReminderTurnsSinceTodo) &&
+      merged.todoReminderTurnsSinceTodo >= 1
+        ? merged.todoReminderTurnsSinceTodo
+        : DEFAULT_CONFIG.todoReminderTurnsSinceTodo,
+    todoReminderTurnsBetweenReminders:
+      typeof merged.todoReminderTurnsBetweenReminders === "number" &&
+      Number.isInteger(merged.todoReminderTurnsBetweenReminders) &&
+      merged.todoReminderTurnsBetweenReminders >= 1
+        ? merged.todoReminderTurnsBetweenReminders
+        : DEFAULT_CONFIG.todoReminderTurnsBetweenReminders,
     planThinkingLevel: parseThinkingLevel(
       merged.planThinkingLevel,
       DEFAULT_CONFIG.planThinkingLevel,
@@ -782,6 +876,23 @@ export function readEnvSettings(): Partial<WorkflowModesConfig> {
     settings,
     "autoHandoffMaxFixLoops",
     process.env.WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS,
+    true,
+  );
+  setBooleanEnv(
+    settings,
+    "todoReminderEnabled",
+    process.env.WORKFLOW_MODES_TODO_REMINDER_ENABLED,
+  );
+  setNumberEnv(
+    settings,
+    "todoReminderTurnsSinceTodo",
+    process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO,
+    true,
+  );
+  setNumberEnv(
+    settings,
+    "todoReminderTurnsBetweenReminders",
+    process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS,
     true,
   );
   setThinkingLevelEnv(

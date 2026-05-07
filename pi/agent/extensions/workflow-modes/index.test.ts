@@ -35,6 +35,9 @@ type TestConfig = {
   autoHandoffEnabled: boolean;
   autoHandoffDenyTimeoutMs: number;
   autoHandoffMaxFixLoops: number;
+  todoReminderEnabled: boolean;
+  todoReminderTurnsSinceTodo: number;
+  todoReminderTurnsBetweenReminders: number;
   planThinkingLevel: ThinkingLevel;
   executeThinkingLevel: ThinkingLevel;
   verifyThinkingLevel: ThinkingLevel;
@@ -48,6 +51,9 @@ const defaultTestConfig: TestConfig = {
   autoHandoffEnabled: false,
   autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
+  todoReminderEnabled: true,
+  todoReminderTurnsSinceTodo: 3,
+  todoReminderTurnsBetweenReminders: 3,
   planThinkingLevel: "medium",
   executeThinkingLevel: "low",
   verifyThinkingLevel: "high",
@@ -726,6 +732,111 @@ test("/execute and /verify send kickoff messages with mode-specific guidance", a
   assert.match(
     String(pi._sentUserMessages[1]?.content),
     /Check typecheck and tests/,
+  );
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("execute mode injects a hidden todo reminder after configured turns without todo", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-todo-reminder-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({
+    todoReminderTurnsSinceTodo: 2,
+    todoReminderTurnsBetweenReminders: 2,
+  })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const context = pi._handlers.get("context");
+  const turnEnd = pi._handlers.get("turn_end");
+  assert.ok(context);
+  assert.ok(turnEnd);
+
+  await turnEnd!({ type: "turn_end" }, pi._ctx());
+  assert.equal(
+    await context!({ type: "context", messages: [] }, pi._ctx()),
+    undefined,
+  );
+
+  await turnEnd!({ type: "turn_end" }, pi._ctx());
+  const branch = [
+    {
+      type: "message",
+      message: {
+        role: "toolResult",
+        toolName: "todo",
+        details: {
+          items: [
+            {
+              id: 1,
+              text: "Implement feature",
+              status: "in_progress",
+              notes: "editing index.ts",
+            },
+          ],
+        },
+      },
+    },
+  ];
+  const result = await context!(
+    { type: "context", messages: [{ role: "user", content: [] }] },
+    pi._ctx(branch),
+  );
+
+  assert.equal(result.messages.length, 2);
+  const reminder = result.messages[1].content[0].text;
+  assert.match(reminder, /todo tool has not been used recently/i);
+  assert.match(reminder, /Do not mention this reminder to the user/);
+  assert.match(reminder, /Implement feature/);
+  assert.match(reminder, /editing index\.ts/);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("todo reminders are execute-only, cooldown-gated, and reset by todo results", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-todo-cooldown-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({
+    todoReminderTurnsSinceTodo: 1,
+    todoReminderTurnsBetweenReminders: 2,
+  })(pi as any);
+  await startSession(pi);
+
+  const context = pi._handlers.get("context")!;
+  const turnEnd = pi._handlers.get("turn_end")!;
+  const toolResult = pi._handlers.get("tool_result")!;
+
+  await turnEnd({ type: "turn_end" }, pi._ctx());
+  assert.equal(
+    await context({ type: "context", messages: [] }, pi._ctx()),
+    undefined,
+  );
+
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+  await turnEnd({ type: "turn_end" }, pi._ctx());
+  assert.equal(
+    await context({ type: "context", messages: [] }, pi._ctx()),
+    undefined,
+  );
+
+  await turnEnd({ type: "turn_end" }, pi._ctx());
+  assert.ok(await context({ type: "context", messages: [] }, pi._ctx()));
+  assert.equal(
+    await context({ type: "context", messages: [] }, pi._ctx()),
+    undefined,
+  );
+
+  await turnEnd({ type: "turn_end" }, pi._ctx());
+  assert.equal(
+    await context({ type: "context", messages: [] }, pi._ctx()),
+    undefined,
+  );
+
+  await toolResult({ type: "tool_result", toolName: "todo" }, pi._ctx());
+  await turnEnd({ type: "turn_end" }, pi._ctx());
+  assert.equal(
+    await context({ type: "context", messages: [] }, pi._ctx()),
+    undefined,
   );
 
   await rm(cwd, { recursive: true, force: true });
