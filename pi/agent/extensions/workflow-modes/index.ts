@@ -196,7 +196,7 @@ export function createWorkflowModesExtension(
         );
       } else if (mode === "execute") {
         lines.push(
-          "Start implementing now. Use the available conversation context and any relevant .plans/*.md files you discover or that the user referenced.",
+          "Start implementing now. Use the available conversation context and any relevant .plans/*.md files you discover or that the user referenced. If this is non-trivial or has multiple steps, call todo now to create or update the working checklist before editing files. Keep exactly one item in_progress while working.",
         );
       } else {
         lines.push(

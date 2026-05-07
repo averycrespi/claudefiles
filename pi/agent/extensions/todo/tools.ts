@@ -116,7 +116,10 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
       "Create, replace, update, remove, clear, or list the active TODO list.",
     promptSnippet: "Manage the current ordered TODO list",
     promptGuidelines: [
-      "Use todo when you want to create or update a short working plan for the current session.",
+      "Use todo proactively for non-trivial coding work: 3+ distinct steps, multi-file changes, explicit user task lists, or Execute-mode work from a plan.",
+      "Skip todo for a single trivial step, pure conversation, or one immediate command where tracking adds no value.",
+      "Before starting tracked work, create or update the list and keep exactly one item in_progress.",
+      "Mark tasks done immediately after finishing them; do not batch status updates at the end.",
       "After changing a task, rely on the returned list to see current ids and ordering.",
     ],
     parameters: todoParamsSchema,
