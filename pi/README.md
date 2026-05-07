@@ -55,6 +55,7 @@ Markdown skill packages that load on demand via progressive disclosure — only 
 | `diagnosing`              | Debugging bugs, failures, flaky behavior, regressions, or performance problems                    |
 | `frontend-design`         | Building web components, pages, or applications that need distinctive, production-grade frontends |
 | `playwright-cli`          | Driving a browser for testing, form filling, screenshots, or data extraction                      |
+| `reviewing-prs`           | Reviewing a pull request or branch holistically across correctness, security, and quality         |
 | `skill-creator`           | Creating a new skill or updating an existing one                                                  |
 | `test-driven-development` | Implementing a feature or bugfix that involves writing meaningful application logic               |
 
