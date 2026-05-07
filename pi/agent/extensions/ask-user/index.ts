@@ -13,6 +13,7 @@ import {
   matchesKey,
   Text,
   truncateToWidth,
+  wrapTextWithAnsi,
 } from "@mariozechner/pi-tui";
 import { Type, type Static } from "@sinclair/typebox";
 import { firstLine, getResultText } from "../_shared/render.ts";
@@ -132,6 +133,7 @@ export default function (pi: ExtensionAPI) {
         let optionIndex = 0;
         let editMode = false;
         let cachedLines: string[] | undefined;
+        let cachedWidth: number | undefined;
 
         const editorTheme: EditorTheme = {
           borderColor: (s) => theme.fg("accent", s),
@@ -158,6 +160,7 @@ export default function (pi: ExtensionAPI) {
 
         function refresh() {
           cachedLines = undefined;
+          cachedWidth = undefined;
           tui.requestRender();
         }
 
@@ -204,17 +207,22 @@ export default function (pi: ExtensionAPI) {
         }
 
         function render(width: number): string[] {
-          if (cachedLines) return cachedLines;
+          if (cachedLines && cachedWidth === width) return cachedLines;
 
           const lines: string[] = [];
           const add = (s: string) => lines.push(truncateToWidth(s, width));
+          const addWrapped = (s: string) => {
+            for (const line of wrapTextWithAnsi(s, Math.max(1, width))) {
+              lines.push(line);
+            }
+          };
 
           add(theme.fg("accent", "─".repeat(width)));
-          add(theme.fg("text", ` ${params.question}`));
+          addWrapped(theme.fg("text", ` ${params.question}`));
 
           if (params.context) {
             lines.push("");
-            add(theme.fg("muted", ` ${params.context}`));
+            addWrapped(theme.fg("muted", ` ${params.context}`));
           }
 
           lines.push("");
@@ -259,6 +267,7 @@ export default function (pi: ExtensionAPI) {
           add(theme.fg("accent", "─".repeat(width)));
 
           cachedLines = lines;
+          cachedWidth = width;
           return lines;
         }
 
@@ -266,6 +275,7 @@ export default function (pi: ExtensionAPI) {
           render,
           invalidate: () => {
             cachedLines = undefined;
+            cachedWidth = undefined;
           },
           handleInput,
         };
