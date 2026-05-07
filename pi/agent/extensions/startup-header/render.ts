@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { truncateToWidth } from "@mariozechner/pi-tui";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 
 export type HeaderTheme = {
   fg(color: string, text: string): string;

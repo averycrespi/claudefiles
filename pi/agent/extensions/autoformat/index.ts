@@ -5,8 +5,8 @@
  * prettier (everything else Prettier understands) against the file.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { withFileMutationQueue } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { extname, resolve } from "node:path";
 
 import { formatGoFile } from "./gofmt.ts";

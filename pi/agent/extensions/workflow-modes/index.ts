@@ -5,9 +5,8 @@ import {
   type ExtensionAPI,
   type ExtensionCommandContext,
   type ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
-import { StringEnum } from "@mariozechner/pi-ai";
-import { Type } from "@sinclair/typebox";
+} from "@earendil-works/pi-coding-agent";
+import { Type, type Static } from "@sinclair/typebox";
 import {
   mergeExtensionConfig,
   parseBooleanEnv,
@@ -91,7 +90,7 @@ const WRITE_PLAN_PARAMS = Type.Object({
 });
 
 const HANDOFF_PARAMS = Type.Object({
-  target_mode: StringEnum(["execute", "verify"] as const, {
+  target_mode: Type.Union([Type.Literal("execute"), Type.Literal("verify")], {
     description:
       "Workflow mode to hand off to. Execute mode may target verify; Verify mode may target execute.",
   }),
@@ -100,6 +99,8 @@ const HANDOFF_PARAMS = Type.Object({
       "Concise reason for the handoff, used in the user-facing deny prompt and next mode kickoff context.",
   }),
 });
+
+type HandoffParams = Static<typeof HANDOFF_PARAMS>;
 
 const EDIT_PLAN_PARAMS = Type.Object({
   path: Type.String({
@@ -381,7 +382,8 @@ export function createWorkflowModesExtension(
       description:
         "Request an automatic workflow mode handoff between Execute and Verify modes when auto handoff is enabled.",
       parameters: HANDOFF_PARAMS,
-      async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      async execute(_toolCallId, rawParams, _signal, _onUpdate, ctx) {
+        const params = rawParams as HandoffParams;
         const config = await loadWorkflowModesConfig(ctx.cwd);
         updateThinkingLevels(config);
         if (!config.autoHandoffEnabled) {

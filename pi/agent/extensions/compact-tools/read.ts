@@ -5,8 +5,8 @@
  * delegated to Pi's built-in read tool unchanged.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createReadTool } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createReadTool } from "@earendil-works/pi-coding-agent";
 import {
   clearPartialTimer,
   firstLine,

@@ -5,7 +5,7 @@
  * current model, and thinking level in a single footer line.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   WORKFLOW_MODE_CHANGED_EVENT,
   type WorkflowModeState,

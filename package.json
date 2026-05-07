@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "^0.65.0",
+    "@earendil-works/pi-coding-agent": "^0.74.0",
     "@sinclair/typebox": "^0.34.0",
     "@types/turndown": "^5.0.6",
     "prettier": "^3.8.1",

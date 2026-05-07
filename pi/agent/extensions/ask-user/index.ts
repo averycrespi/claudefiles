@@ -5,7 +5,7 @@
  * numbered options, and an inline free-text fallback with escape-to-back support.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   Editor,
   type EditorTheme,
@@ -14,7 +14,7 @@ import {
   Text,
   truncateToWidth,
   wrapTextWithAnsi,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import { Type, type Static } from "@sinclair/typebox";
 import { firstLine, getResultText } from "../_shared/render.ts";
 import { OTHER_LABEL, validateAskParams } from "./validate.ts";

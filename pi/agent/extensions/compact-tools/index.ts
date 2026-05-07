@@ -14,7 +14,7 @@
  * force-enabling them at startup.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import registerBash from "./bash.ts";
 import registerFind from "./find.ts";
 import registerGrep from "./grep.ts";

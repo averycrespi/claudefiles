@@ -11,8 +11,8 @@
  * extension guidance in `AGENTS.md`.
  */
 
-import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { truncateToWidth, type Component } from "@mariozechner/pi-tui";
+import type { AgentToolResult } from "@earendil-works/pi-agent-core";
+import { truncateToWidth, type Component } from "@earendil-works/pi-tui";
 import { isAbsolute, relative, resolve } from "node:path";
 
 // Pi tool boxes apply background after child rendering; full resets inside

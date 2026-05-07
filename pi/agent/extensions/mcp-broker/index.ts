@@ -11,7 +11,7 @@
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { BrokerClient, type BrokerTool } from "./client.ts";
 import { loadMcpBrokerConfig } from "./config.ts";
 import initGuard from "./guard.ts";

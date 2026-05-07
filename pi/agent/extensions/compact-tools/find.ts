@@ -5,8 +5,8 @@
  * Execution is delegated to Pi's built-in find tool unchanged.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createFindTool } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createFindTool } from "@earendil-works/pi-coding-agent";
 import {
   clearPartialTimer,
   countNonEmptyLines,

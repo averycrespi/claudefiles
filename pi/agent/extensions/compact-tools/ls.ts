@@ -5,8 +5,8 @@
  * Execution is delegated to Pi's built-in ls tool unchanged.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createLsTool } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createLsTool } from "@earendil-works/pi-coding-agent";
 import {
   clearPartialTimer,
   countNonEmptyLines,

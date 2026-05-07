@@ -7,7 +7,7 @@
  * indirectly via the extension's tool registrations in `index.ts`.
  */
 
-import { Text } from "@mariozechner/pi-tui";
+import { Text } from "@earendil-works/pi-tui";
 import {
   clearPartialTimer,
   firstLine,

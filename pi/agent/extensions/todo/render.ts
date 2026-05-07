@@ -1,4 +1,4 @@
-import { truncateToWidth } from "@mariozechner/pi-tui";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 import type { TodoItem, TodoStatus } from "./state.ts";
 
 const WIDGET_SEPARATOR = "─";

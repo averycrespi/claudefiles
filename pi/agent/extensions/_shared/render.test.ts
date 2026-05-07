@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { visibleWidth } from "@mariozechner/pi-tui";
+import type { AgentToolResult } from "@earendil-works/pi-agent-core";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import {
   ELAPSED_THRESHOLD_MS,
   TruncatedText,

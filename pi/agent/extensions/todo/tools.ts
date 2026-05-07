@@ -1,5 +1,4 @@
-import { StringEnum } from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@sinclair/typebox";
 import {
   formatTodoList,
@@ -8,12 +7,12 @@ import {
   type TodoStore,
 } from "./state.ts";
 
-const todoStatusSchema = StringEnum([
-  "todo",
-  "in_progress",
-  "done",
-  "blocked",
-] as const);
+const todoStatusSchema = Type.Union([
+  Type.Literal("todo"),
+  Type.Literal("in_progress"),
+  Type.Literal("done"),
+  Type.Literal("blocked"),
+]);
 
 const todoItemInputSchema = Type.Object({
   text: Type.String({ description: "Task text" }),
@@ -22,14 +21,14 @@ const todoItemInputSchema = Type.Object({
 });
 
 const todoParamsSchema = Type.Object({
-  action: StringEnum([
-    "list",
-    "set",
-    "add",
-    "update",
-    "remove",
-    "clear",
-  ] as const),
+  action: Type.Union([
+    Type.Literal("list"),
+    Type.Literal("set"),
+    Type.Literal("add"),
+    Type.Literal("update"),
+    Type.Literal("remove"),
+    Type.Literal("clear"),
+  ]),
   items: Type.Optional(
     Type.Array(todoItemInputSchema, { description: "Items for set" }),
   ),
@@ -123,7 +122,8 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
       "After changing a task, rely on the returned list to see current ids and ordering.",
     ],
     parameters: todoParamsSchema,
-    async execute(_toolCallId, params: TodoParams, _signal, _onUpdate, _ctx) {
+    async execute(_toolCallId, rawParams, _signal, _onUpdate, _ctx) {
+      const params = rawParams as TodoParams;
       switch (params.action) {
         case "list":
           return textResult(formatTodoList(store.list()), store);
@@ -193,6 +193,8 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           store.clear();
           return textResult(formatTodoList(store.list()), store);
       }
+
+      return errorResult(`unknown action \"${String(params.action)}\".`, store);
     },
   });
 }

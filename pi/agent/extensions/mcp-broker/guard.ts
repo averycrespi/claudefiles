@@ -18,7 +18,7 @@
  * negatives just mean the broker prompt menu in `index.ts` is the only
  * signal for that call.
  */
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { BrokerClient, BrokerTool } from "./client.ts";
 
 export type BrokerCommandKind = "github-cli" | "git-remote";
