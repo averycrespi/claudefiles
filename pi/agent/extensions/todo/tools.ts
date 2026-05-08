@@ -32,7 +32,7 @@ const todoParamsSchema = Type.Object({
   items: Type.Optional(
     Type.Array(todoItemInputSchema, { description: "Items for set" }),
   ),
-  id: Type.Optional(Type.Number({ description: "TODO id for update/remove" })),
+  id: Type.Optional(Type.Integer({ description: "TODO id for update/remove" })),
   text: Type.Optional(Type.String({ description: "TODO text for add/update" })),
   status: Type.Optional(todoStatusSchema),
   notes: Type.Optional(

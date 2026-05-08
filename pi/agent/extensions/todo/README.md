@@ -11,6 +11,33 @@ Session-scoped Pi extension that adds a lightweight `todo` tool plus a compact s
 - renders status-specific glyphs for `todo`, `in_progress`, `done`, and `blocked`
 - caps the widget to the first five items and shows a `+N more` overflow line when needed
 
+## Tool usage
+
+### `todo`
+
+Create, replace, update, remove, clear, or list the active TODO list.
+
+| Parameter | Type                                                          | Required                         | Description                                                                  |
+| --------- | ------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| `action`  | `"list" \| "set" \| "add" \| "update" \| "remove" \| "clear"` | yes                              | Operation to perform                                                         |
+| `items`   | array                                                         | for `set`                        | Replacement items, each with `text`, optional `status`, and optional `notes` |
+| `id`      | integer                                                       | for `update` / `remove`          | Existing TODO id                                                             |
+| `text`    | string                                                        | for `add`; optional for `update` | Task text                                                                    |
+| `status`  | `"todo" \| "in_progress" \| "done" \| "blocked"`              | no                               | Task status                                                                  |
+| `notes`   | string                                                        | no                               | Optional task notes; set to an empty string on `update` to clear notes       |
+
+Examples:
+
+```json
+{ "action": "add", "text": "Write tests", "status": "in_progress" }
+{ "action": "update", "id": 1, "status": "done" }
+{ "action": "clear" }
+```
+
+### `/todo-clear`
+
+Clears all TODO items in the current session and persists the empty snapshot.
+
 ## Data model
 
 ```ts
