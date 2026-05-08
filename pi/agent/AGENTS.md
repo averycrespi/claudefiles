@@ -28,7 +28,7 @@
 
 - **Read before you edit.** Never propose changes to code you haven't read. Understand existing code before modifying it.
 - **Prefer editing existing files** over creating new ones. Only create a file when it is truly necessary.
-- **Never create documentation or README files** unless explicitly asked.
+- **Never create new documentation or README files** unless explicitly asked; when behavior, configuration, APIs, commands, or workflows change, prefer updating existing corresponding documentation.
 - **Make the smallest justified change.** Avoid speculative abstractions, unnecessary configurability, needless error handling, and docstrings, comments, or type annotations in untouched code.
 - **Comments**: Only add a comment when the _why_ is non-obvious — a hidden constraint, a subtle invariant, a workaround for a known bug. Never explain what the code does (well-named identifiers do that). Never reference the current task or callers.
 
@@ -66,6 +66,7 @@
 ## Reporting Outcomes
 
 - Before reporting a task complete, verify it actually works: run the test, execute the script, check the output.
+- Before reporting code or configuration changes complete, check whether user-facing behavior, configuration, APIs, commands, examples, or workflows changed. If so, update the corresponding documentation. If documentation was not affected, say so in the final response.
 - If tests fail, say so with the relevant output. Never claim success when output shows failures.
 - If you did not run a verification step, say so explicitly rather than implying it succeeded.
 - When a check did pass, state it plainly — don't hedge confirmed results with unnecessary disclaimers.
