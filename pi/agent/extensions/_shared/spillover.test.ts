@@ -9,7 +9,7 @@ import {
   buildEnvelope,
   joinText,
   spillIfNeeded,
-} from "../_shared/spillover.ts";
+} from "./spillover.ts";
 
 // ---------------------------------------------------------------------------
 // joinText
