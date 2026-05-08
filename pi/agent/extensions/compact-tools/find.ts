@@ -1,7 +1,7 @@
 /**
  * Compact renderer for the built-in `find` tool.
  *
- * Shows a one-line glob pattern label and a count of results on success.
+ * Shows a one-line glob pattern label and a short preview on success.
  * Execution is delegated to Pi's built-in find tool unchanged.
  */
 

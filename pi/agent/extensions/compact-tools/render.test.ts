@@ -64,23 +64,29 @@ function renderResult(
     isPartial?: boolean;
   } = {},
 ): string[] {
-  return tool
-    .renderResult(
-      {
-        content: [{ type: "text", text }],
-      } as unknown as AgentToolResult<unknown>,
-      { isPartial: options.isPartial ?? false },
-      identityTheme,
-      {
-        cwd: "/repo",
-        args: options.args ?? {},
-        isError: options.isError ?? false,
-        state: {},
-        invalidate() {},
-        lastComponent: undefined,
-      },
-    )
-    .render(width);
+  const context = {
+    cwd: "/repo",
+    args: options.args ?? {},
+    isError: options.isError ?? false,
+    state: {} as Record<string, unknown>,
+    invalidate() {},
+    lastComponent: undefined,
+  };
+  try {
+    return tool
+      .renderResult(
+        {
+          content: [{ type: "text", text }],
+        } as unknown as AgentToolResult<unknown>,
+        { isPartial: options.isPartial ?? false },
+        identityTheme,
+        context,
+      )
+      .render(width);
+  } finally {
+    const timer = context.state.renderTimer;
+    if (timer) clearInterval(timer as ReturnType<typeof setInterval>);
+  }
 }
 
 function assertRenderedWidth(lines: string[], width: number) {
@@ -193,4 +199,135 @@ test("grep error rendering truncates long messages instead of wrapping", () => {
 
   assert.equal(lines.length, 1);
   assertRenderedWidth(lines, 22);
+});
+
+test("read success renders no result body", () => {
+  const tool = captureTool(registerRead);
+
+  assert.deepEqual(
+    renderResult(tool, "file contents", 80, { args: { path: "src/file.ts" } }),
+    [],
+  );
+});
+
+test("bash success renders the last three non-empty output lines", () => {
+  const tool = captureTool(registerBash);
+
+  assert.deepEqual(
+    renderResult(tool, "one\n\ntwo\nthree\nfour", 80, {
+      args: { command: "echo test" },
+    }),
+    ["two", "three", "four"],
+  );
+});
+
+test("bash error renders the first non-empty error line", () => {
+  const tool = captureTool(registerBash);
+
+  assert.deepEqual(
+    renderResult(tool, "\nfirst failure\nsecond failure", 80, {
+      args: { command: "false" },
+      isError: true,
+    }),
+    ["first failure"],
+  );
+});
+
+test("ls empty success renders empty", () => {
+  const tool = captureTool(registerLs);
+
+  assert.deepEqual(renderResult(tool, "", 80, { args: { path: "." } }), [
+    "empty",
+  ]);
+});
+
+test("ls error renders the first non-empty error line", () => {
+  const tool = captureTool(registerLs);
+
+  assert.deepEqual(
+    renderResult(tool, "\npermission denied", 80, {
+      args: { path: "private" },
+      isError: true,
+    }),
+    ["permission denied"],
+  );
+});
+
+test("find no-match success renders no matches", () => {
+  const tool = captureTool(registerFind);
+
+  assert.deepEqual(
+    renderResult(tool, "", 80, { args: { pattern: "*.missing" } }),
+    ["no matches"],
+  );
+});
+
+test("find error renders the first non-empty error line", () => {
+  const tool = captureTool(registerFind);
+
+  assert.deepEqual(
+    renderResult(tool, "\nfind failed", 80, {
+      args: { pattern: "*.ts" },
+      isError: true,
+    }),
+    ["find failed"],
+  );
+});
+
+test("grep success renders a match count", () => {
+  const tool = captureTool(registerGrep);
+
+  assert.deepEqual(
+    renderResult(tool, "a.ts:1:needle\nb.ts:2:needle", 80, {
+      args: { pattern: "needle" },
+    }),
+    ["2 matches"],
+  );
+});
+
+test("grep no-match success renders no matches", () => {
+  const tool = captureTool(registerGrep);
+
+  assert.deepEqual(
+    renderResult(tool, "", 80, { args: { pattern: "needle" } }),
+    ["no matches"],
+  );
+});
+
+test("running renderers show compact in-progress labels", () => {
+  const cases: Array<
+    [string, RegisteredTool, Record<string, unknown>, RegExp]
+  > = [
+    [
+      "read",
+      captureTool(registerRead),
+      { path: "src/file.ts" },
+      /^Reading src\/file\.ts\.\.\.$/,
+    ],
+    [
+      "bash",
+      captureTool(registerBash),
+      { command: "npm test" },
+      /^Running npm test\.\.\.$/,
+    ],
+    ["ls", captureTool(registerLs), { path: "src" }, /^Listing src\.\.\.$/],
+    [
+      "find",
+      captureTool(registerFind),
+      { pattern: "*.ts" },
+      /^Finding \*\.ts\.\.\.$/,
+    ],
+    [
+      "grep",
+      captureTool(registerGrep),
+      { pattern: "needle" },
+      /^Searching \/needle\/\.\.\.$/,
+    ],
+  ];
+
+  for (const [name, tool, args, expected] of cases) {
+    const lines = renderResult(tool, "", 80, { args, isPartial: true });
+    assert.equal(lines.length, 1, name);
+    assert.match(lines[0], expected, name);
+  }
 });

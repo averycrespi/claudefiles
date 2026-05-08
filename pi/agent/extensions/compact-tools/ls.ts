@@ -1,7 +1,7 @@
 /**
  * Compact renderer for the built-in `ls` tool.
  *
- * Shows a one-line path label and a count of entries on success.
+ * Shows a one-line path label and a short preview on success.
  * Execution is delegated to Pi's built-in ls tool unchanged.
  */
 
