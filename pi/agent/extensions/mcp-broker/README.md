@@ -22,11 +22,11 @@ Tool calls that require human approval block for up to 10 minutes, matching the 
 
 Configure via `extension:mcp-broker` in Pi settings. Environment variables override settings when set.
 
-| Field       | Default | Environment override    | Description                                                                            |
-| ----------- | ------- | ----------------------- | -------------------------------------------------------------------------------------- |
-| `endpoint`  | unset   | `MCP_BROKER_ENDPOINT`   | Base URL of the broker; the extension connects to `${endpoint}/mcp`.                   |
-| `authToken` | unset   | `MCP_BROKER_AUTH_TOKEN` | Bearer token for the broker's MCP endpoint.                                            |
-| `readOnly`  | `false` | `MCP_BROKER_READONLY`   | Set to `true` in settings or `1`/`true` in the environment to activate read-only mode. |
+| Field       | Default | Environment override    | Description                                                                                                     |
+| ----------- | ------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `endpoint`  | unset   | `MCP_BROKER_ENDPOINT`   | Base URL of the broker; the extension connects to `${endpoint}/mcp`.                                            |
+| `authToken` | unset   | `MCP_BROKER_AUTH_TOKEN` | Bearer token for the broker's MCP endpoint.                                                                     |
+| `readOnly`  | `false` | `MCP_BROKER_READONLY`   | Set to `true` in settings or `1`/`true` in the environment to activate read-only mode; `0`/`false` disables it. |
 
 Example settings:
 
@@ -66,7 +66,7 @@ When an `mcp_call` result exceeds **25,000 characters** of joined text, the exte
 
 ```
 <persisted-output>
-Output too large (46.2 KB / 47312 chars). Full output saved to: `/tmp/pi-mcp-broker/call_abc123.txt`
+Output too large (46.2 KB / 47312 chars). Full output saved to: `/tmp/pi-extension-spillover/call_abc123.txt`
 
 Preview (first 2.0 KB):
 …
@@ -77,7 +77,7 @@ Use the read tool on the path above to fetch the full content.
 </persisted-output>
 ```
 
-File location: `${tmpdir()}/pi-mcp-broker/<toolCallId>.txt`. Files are written with the `wx` flag and left for OS temp-dir reaping; no active cleanup.
+File location: `${tmpdir()}/pi-extension-spillover/<toolCallId>.txt`. Files are written with the `wx` flag and left for OS temp-dir reaping; no active cleanup.
 
 **Scope and edge cases:**
 

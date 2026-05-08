@@ -35,6 +35,14 @@ test("readEnvSettings maps broker environment overrides", () => {
   });
 });
 
+test("readEnvSettings ignores invalid readonly environment values", () => {
+  delete process.env.MCP_BROKER_ENDPOINT;
+  delete process.env.MCP_BROKER_AUTH_TOKEN;
+  process.env.MCP_BROKER_READONLY = "sometimes";
+
+  assert.deepEqual(readEnvSettings(), {});
+});
+
 test("loadMcpBrokerConfig merges global, project, and env settings", async () => {
   delete process.env.MCP_BROKER_ENDPOINT;
   delete process.env.MCP_BROKER_AUTH_TOKEN;

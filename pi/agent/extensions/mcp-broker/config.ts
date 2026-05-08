@@ -51,8 +51,8 @@ export function readEnvSettings(): Partial<McpBrokerConfig> {
     settings.authToken = normalizeString(process.env.MCP_BROKER_AUTH_TOKEN);
   }
   if (process.env.MCP_BROKER_READONLY !== undefined) {
-    settings.readOnly =
-      parseBooleanEnv(process.env.MCP_BROKER_READONLY) ?? false;
+    const readOnly = parseBooleanEnv(process.env.MCP_BROKER_READONLY);
+    if (readOnly !== undefined) settings.readOnly = readOnly;
   }
   return settings;
 }
