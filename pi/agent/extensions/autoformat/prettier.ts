@@ -1,10 +1,25 @@
-import { execFile as execFileCb } from "node:child_process";
+import {
+  execFile as execFileCb,
+  type ExecFileException,
+} from "node:child_process";
 import { resolve } from "node:path";
-import { promisify } from "node:util";
 import type { NotifyContext } from "./utils.ts";
 import { logFormattingIssue } from "./utils.ts";
 
-const execFile = promisify(execFileCb);
+export const _execFile = { fn: execFileCb };
+
+function execFile(
+  file: string,
+  args: string[],
+  options: { signal: AbortSignal },
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    _execFile.fn(file, args, options, (error: ExecFileException | null) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
 
 function prettierBinaryCandidates(cwd: string): string[] {
   return [resolve(cwd, "node_modules/.bin/prettier"), "prettier"];

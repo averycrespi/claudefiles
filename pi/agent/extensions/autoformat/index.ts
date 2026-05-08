@@ -53,6 +53,7 @@ export default function (pi: ExtensionAPI) {
       cwd: ctx.cwd,
       hasUI: ctx.hasUI,
       ui: ctx.ui,
+      signal: ctx.signal,
     };
 
     try {
