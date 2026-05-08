@@ -157,6 +157,11 @@ export function createWorkflowModesExtension(
       }
     }
 
+    function resetBaselines(): void {
+      state.baselineTools = undefined;
+      state.baselineThinking = undefined;
+    }
+
     function updateThinkingLevels(config: WorkflowModesConfig): void {
       state.thinkingLevels = {
         plan: config.planThinkingLevel,
@@ -649,6 +654,7 @@ export function createWorkflowModesExtension(
 
     pi.on("session_start", async (_event, ctx) => {
       updateThinkingLevels(await loadWorkflowModesConfig(ctx.cwd));
+      resetBaselines();
       captureBaselines();
       if (state.mode !== "normal") {
         applyMode("normal");
@@ -674,6 +680,7 @@ export function createWorkflowModesExtension(
     pi.on("session_shutdown", async () => {
       state.mode = "normal";
       state.autoHandoffFixLoopsUsed = 0;
+      resetBaselines();
       publishWorkflowModeState();
     });
 

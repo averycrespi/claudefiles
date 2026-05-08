@@ -467,6 +467,24 @@ test("re-entering the same mode does not reapply tools or thinking defaults", as
   await rm(cwd, { recursive: true, force: true });
 });
 
+test("session_start resets stale workflow baselines before restoring normal mode", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-baseline-reset-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+
+  await pi._commands.get("plan")!.handler("Plan", pi._ctx());
+  pi.setActiveTools(["read"]);
+  pi.setThinkingLevel("high");
+
+  await startSession(pi);
+
+  assert.deepEqual(pi._currentTools(), ["read"]);
+  assert.equal(pi._thinkingLevel(), "high");
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
 test("/normal restores baseline tools, clears workflow state, and does not send a kickoff message", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-normal-"));
   const pi = makePi(cwd);
