@@ -1,16 +1,3 @@
-/**
- * Shared rendering helpers for pi extensions.
- *
- * Imported by sibling extensions via `../_shared/render.js`. This
- * directory has no `index.ts` / `package.json`, so pi's extension
- * loader silently skips it — see `resolveExtensionEntries` in
- * `packages/coding-agent/src/core/extensions/loader.ts`. Keep it that
- * way: do not add an `index.ts` here.
- *
- * Keep shared rendering conventions aligned with this repo's Pi
- * extension guidance in `AGENTS.md`.
- */
-
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { truncateToWidth, type Component } from "@earendil-works/pi-tui";
 import { isAbsolute, relative, resolve } from "node:path";

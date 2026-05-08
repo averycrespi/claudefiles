@@ -1,11 +1,3 @@
-/**
- * Spillover module for mcp_call large-output handling.
- *
- * When joined text content exceeds THRESHOLD_CHARS, the text is written to a
- * temp file and the returned content is replaced with a short envelope referencing
- * the file. Image blocks are preserved inline. On write failure, falls back to
- * returning content unchanged.
- */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
