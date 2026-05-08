@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { codexAdapter, parseWindow } from "./codex.ts";
 
@@ -34,5 +34,32 @@ test("parseWindow passes through missing subfields as undefined", () => {
   assert.deepEqual(parseWindow({ used_percent: 10 }), {
     usedPercent: 10,
     resetAfterSeconds: undefined,
+  });
+});
+
+test("codexAdapter.fetchUsage forwards registry auth headers", async () => {
+  const fetchStub = mock.method(
+    globalThis,
+    "fetch",
+    async (_url: string | URL | Request, init?: RequestInit) =>
+      ({
+        ok: true,
+        async json() {
+          return { rate_limit: {} };
+        },
+        _headers: init?.headers,
+      }) as unknown as Response,
+  );
+
+  try {
+    await codexAdapter.fetchUsage("token", { "X-Account": "abc" });
+  } finally {
+    fetchStub.mock.restore();
+  }
+
+  assert.equal(fetchStub.mock.callCount(), 1);
+  assert.deepEqual(fetchStub.mock.calls[0].arguments[1]?.headers, {
+    "X-Account": "abc",
+    Authorization: "Bearer token",
   });
 });

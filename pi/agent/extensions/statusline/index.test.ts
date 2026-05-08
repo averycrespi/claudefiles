@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import statuslineExtension from "./index.ts";
 
 const identityTheme = {
@@ -140,4 +140,34 @@ test("workflow mode events rerender the statusline with mode badge and base thin
       "execute mode · /repo/agent-config · ctx 42%/200k · gpt-5-codex · low (base: high)",
     ],
   ]);
+});
+
+test("failed usage fetches are not debounced as successful fetches", async () => {
+  const pi = makePi();
+  statuslineExtension(pi as any);
+  const turnEnd = pi._handlers.get("turn_end");
+  assert.ok(turnEnd, "turn_end handler should be registered");
+
+  const ctx = {
+    ...makeCtx(),
+    modelRegistry: {
+      async getApiKeyAndHeaders() {
+        return { ok: true, apiKey: "token", headers: {} };
+      },
+    },
+  };
+  const fetchStub = mock.method(
+    globalThis,
+    "fetch",
+    async () => ({ ok: false }) as Response,
+  );
+
+  try {
+    await turnEnd!({}, ctx);
+    await turnEnd!({}, ctx);
+  } finally {
+    fetchStub.mock.restore();
+  }
+
+  assert.equal(fetchStub.mock.callCount(), 2);
 });

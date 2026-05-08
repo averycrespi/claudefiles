@@ -12,11 +12,11 @@ export const codexAdapter: ProviderAdapter = {
   label: "Codex",
   handles: (provider) => provider === "openai-codex",
 
-  async fetchUsage(apiKey) {
+  async fetchUsage(apiKey, headers) {
     let res: Response;
     try {
       res = await fetch("https://chatgpt.com/backend-api/wham/usage", {
-        headers: { Authorization: `Bearer ${apiKey}` },
+        headers: { ...headers, Authorization: `Bearer ${apiKey}` },
         signal: AbortSignal.timeout(10_000),
       });
     } catch {

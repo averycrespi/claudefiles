@@ -65,15 +65,14 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    lastFetchAt = now;
-    lastFetchKey = fetchKey;
-
     const stats = await adapter.fetchUsage(auth.apiKey, auth.headers);
     if (!stats) {
       state.usage = undefined;
       return;
     }
 
+    lastFetchAt = now;
+    lastFetchKey = fetchKey;
     state.usage = {
       label: adapter.label,
       stats,

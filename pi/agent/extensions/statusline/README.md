@@ -14,7 +14,7 @@ Normal mode omits the workflow badge. When a workflow mode is active, the footer
 
 Left-to-right priority is preserved when the terminal is narrow: workflow mode, cwd, provider quota, context, model, then thinking. Quota percentages and context percentage are highlighted in warning/error colors above the configured thresholds.
 
-The footer updates on session start, workflow-mode changes, model changes, thinking-level changes, and after each turn. Provider usage fetching remains debounced to one API call per 60 seconds.
+The footer updates on session start, workflow-mode changes, model changes, thinking-level changes, and after each turn. Successful provider usage fetching is debounced to one API call per provider/model every 60 seconds.
 
 ## Configuration
 
