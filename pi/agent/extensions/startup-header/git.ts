@@ -38,39 +38,45 @@ function firstLine(result: ExecResult): string | undefined {
   return line?.trim();
 }
 
+async function execGit(
+  pi: ExtensionAPI,
+  cwd: string,
+  args: string[],
+): Promise<ExecResult | undefined> {
+  try {
+    return (await pi.exec("git", args, {
+      cwd,
+      timeout: 2000,
+    } as any)) as ExecResult;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function loadGitMetadata(
   pi: ExtensionAPI,
   cwd: string,
 ): Promise<GitMetadata> {
   const metadata: GitMetadata = { commits: [] };
 
-  try {
-    const root = firstLine(
-      (await pi.exec("git", ["rev-parse", "--show-toplevel"], {
-        cwd,
-        timeout: 2000,
-      } as any)) as ExecResult,
-    );
-    if (root) metadata.repoName = basename(root);
+  const root = firstLine(
+    (await execGit(pi, cwd, ["rev-parse", "--show-toplevel"])) ?? {},
+  );
+  if (root) metadata.repoName = basename(root);
 
-    const branch = firstLine(
-      (await pi.exec("git", ["branch", "--show-current"], {
-        cwd,
-        timeout: 2000,
-      } as any)) as ExecResult,
-    );
-    if (branch) metadata.branch = branch;
+  const branch = firstLine(
+    (await execGit(pi, cwd, ["branch", "--show-current"])) ?? {},
+  );
+  if (branch) metadata.branch = branch;
 
-    const log = (await pi.exec(
-      "git",
-      ["log", "-n", "3", "--pretty=format:%h %s"],
-      { cwd, timeout: 2000 } as any,
-    )) as ExecResult;
-    if (succeeded(log) && log.stdout) {
-      metadata.commits = parseCommitLog(log.stdout);
-    }
-  } catch {
-    return { commits: [] };
+  const log = await execGit(pi, cwd, [
+    "log",
+    "-n",
+    "3",
+    "--pretty=format:%h %s",
+  ]);
+  if (log && succeeded(log) && log.stdout) {
+    metadata.commits = parseCommitLog(log.stdout);
   }
 
   return metadata;
