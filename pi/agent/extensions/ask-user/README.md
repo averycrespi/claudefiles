@@ -25,7 +25,7 @@ An "Other (type your own)" option is always appended automatically — do not in
 - `"User wrote: <text>"` — free-text answer via the Other path
 - `"User cancelled — no option selected."` — user pressed Escape or the tool call was aborted
 
-The `details` object contains `{ cancelled, answerLabel, answerIndex, isCustom }` for structured access by other extensions.
+The `details` object always contains `cancelled`; successful answers also include `answerLabel`, `answerIndex`, and `isCustom` for structured access by other extensions.
 
 ## UI behavior
 
