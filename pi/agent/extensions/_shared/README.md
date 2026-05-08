@@ -19,6 +19,6 @@ Keep shared conventions aligned with the repo's Pi extension guidance in `AGENTS
 
 - `THRESHOLD_CHARS = 25_000`
 - `PREVIEW_BYTES = 2_000`
-- `SPILL_DIR = join(tmpdir(), "pi-mcp-broker")`
+- `SPILL_DIR = join(tmpdir(), "pi-extension-spillover")`
 
 When joined text content exceeds the threshold, the full joined text is written to `<SPILL_DIR>/<toolCallId>.txt` with the `wx` flag. Returned content replaces text blocks with a single `<persisted-output>` envelope at the first text-block position; non-text blocks such as images are preserved. If writing fails, the original content is returned unchanged.

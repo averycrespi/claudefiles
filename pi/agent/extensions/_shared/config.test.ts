@@ -12,9 +12,9 @@ test("readExtensionSettings reads extension-scoped top-level object", () => {
     readExtensionSettings(
       {
         model: "x",
-        "extension:hindsight-memory": { apiUrl: "https://example.com" },
+        "extension:example-extension": { apiUrl: "https://example.com" },
       },
-      "hindsight-memory",
+      "example-extension",
     ),
     { apiUrl: "https://example.com" },
   );
@@ -55,10 +55,10 @@ test("parseBooleanEnv reports invalid values without throwing", () => {
   const warnings: string[] = [];
 
   assert.equal(
-    parseBooleanEnv("sometimes", "HINDSIGHT_ENABLED", warnings),
+    parseBooleanEnv("sometimes", "EXAMPLE_ENABLED", warnings),
     undefined,
   );
   assert.deepEqual(warnings, [
-    "Ignoring invalid boolean env HINDSIGHT_ENABLED=sometimes",
+    "Ignoring invalid boolean env EXAMPLE_ENABLED=sometimes",
   ]);
 });

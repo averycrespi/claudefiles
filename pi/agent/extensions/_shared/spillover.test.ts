@@ -67,11 +67,11 @@ describe("buildEnvelope", () => {
 
   test("path is backtick-wrapped", () => {
     const env = buildEnvelope({
-      filePath: "/tmp/pi-mcp-broker/call_abc.txt",
+      filePath: "/tmp/pi-extension-spillover/call_abc.txt",
       originalSize: 100,
       joinedText: "hello",
     });
-    assert.ok(env.includes("`/tmp/pi-mcp-broker/call_abc.txt`"));
+    assert.ok(env.includes("`/tmp/pi-extension-spillover/call_abc.txt`"));
   });
 
   test("header shows KB and char count", () => {

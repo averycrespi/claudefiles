@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 
 export const THRESHOLD_CHARS = 25_000;
 export const PREVIEW_BYTES = 2_000;
-export const SPILL_DIR = join(tmpdir(), "pi-mcp-broker");
+export const SPILL_DIR = join(tmpdir(), "pi-extension-spillover");
 
 type ContentBlock =
   | { type: "text"; text: string }
