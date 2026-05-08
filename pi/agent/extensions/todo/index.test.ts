@@ -196,6 +196,59 @@ test("session_start subscribes widget updates and tool mutations render aboveEdi
   });
 });
 
+test("successful todo mutations append compact todo-state snapshots", async () => {
+  const pi = makePi();
+  todoExtension(pi as any);
+  await startSession(pi);
+
+  const tool = pi._tools.get("todo")!;
+  await tool.execute(
+    "call-1",
+    { action: "add", text: "Write code" },
+    undefined,
+    undefined,
+    undefined,
+  );
+  await tool.execute(
+    "call-2",
+    { action: "list" },
+    undefined,
+    undefined,
+    undefined,
+  );
+  await tool.execute(
+    "call-3",
+    { action: "update", id: 99, status: "done" },
+    undefined,
+    undefined,
+    undefined,
+  );
+  await tool.execute(
+    "call-4",
+    { action: "update", id: 1, status: "done" },
+    undefined,
+    undefined,
+    undefined,
+  );
+
+  assert.deepEqual(pi._appendedEntries, [
+    {
+      customType: "todo-state",
+      data: {
+        items: [{ id: 1, text: "Write code", status: "todo" }],
+        nextTodoId: 2,
+      },
+    },
+    {
+      customType: "todo-state",
+      data: {
+        items: [{ id: 1, text: "Write code", status: "done" }],
+        nextTodoId: 2,
+      },
+    },
+  ]);
+});
+
 test("session_start reconstructs persisted todos and preserves next ids", async () => {
   const pi = makePi();
   todoExtension(pi as any);

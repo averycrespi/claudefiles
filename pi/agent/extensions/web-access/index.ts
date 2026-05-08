@@ -249,7 +249,7 @@ const fetchTool = {
       // GitHub URL → clone
       const gh = parseGitHubUrl(params.url);
       if (gh) {
-        const result = await fetchGitHub(gh, maxChars);
+        const result = await fetchGitHub(gh, maxChars, fetchSignal);
         return {
           content: [{ type: "text" as const, text: result.text }],
           details: { method: "github", clonePath: result.clonePath },

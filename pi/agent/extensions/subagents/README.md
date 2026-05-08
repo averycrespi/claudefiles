@@ -86,6 +86,7 @@ Retained logs may contain raw subagent output, tool results, command output, and
 ## Notes
 
 - `intent` is required for every agent and drives activity titles — keep it short and descriptive
+- Requests are prevalidated before spawning; blank intents or unknown agent types return one recoverable tool error and no subagents are launched
 - Each subagent starts with a fresh context; session inheritance is not supported
 - `review`, `research`, and `deep-research` require the `mcp-broker` extension to be installed and discoverable; if missing, extension resolution fails with "no matching extensions found". `research` and `deep-research` additionally require `web-access`
 - Built-in agent types disable skills and prompt templates for tighter, role-specific behavior

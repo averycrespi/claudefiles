@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseGitHubUrl } from "./github.ts";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { fetchGitHub, parseGitHubUrl } from "./github.ts";
 
 test("parseGitHubUrl returns null for non-URL input", () => {
   assert.equal(parseGitHubUrl("not a url"), null);
@@ -88,4 +90,62 @@ test("parseGitHubUrl parses tree URL with ref but no path", () => {
       ref: "main",
     },
   );
+});
+
+test("fetchGitHub rejects immediately when the signal is already aborted", async () => {
+  const owner = "pi-test-owner";
+  const repo = "abort-repo";
+  const clonePath = join("/tmp/pi-github-repos", owner, repo);
+  await rm(join("/tmp/pi-github-repos", owner), {
+    recursive: true,
+    force: true,
+  });
+  await mkdir(join(clonePath, ".git"), { recursive: true });
+  await writeFile(join(clonePath, "README.md"), "readme");
+  const controller = new AbortController();
+  controller.abort();
+
+  await assert.rejects(
+    () =>
+      fetchGitHub(
+        { owner, repo, type: "blob", path: "README.md" },
+        10_000,
+        controller.signal,
+      ),
+    { name: "AbortError" },
+  );
+});
+
+test("fetchGitHub uses a ref-specific clone path for blob URLs", async () => {
+  const owner = "pi-test-owner";
+  const repo = "ref-repo";
+  const oldPath = join("/tmp/pi-github-repos", owner, repo);
+  const refPath = join(
+    "/tmp/pi-github-repos",
+    owner,
+    `${repo}--feature_branch`,
+  );
+  await rm(join("/tmp/pi-github-repos", owner), {
+    recursive: true,
+    force: true,
+  });
+  await mkdir(join(oldPath, ".git"), { recursive: true });
+  await mkdir(join(refPath, ".git"), { recursive: true });
+  await writeFile(join(oldPath, "README.md"), "default branch");
+  await writeFile(join(refPath, "README.md"), "feature branch");
+
+  const result = await fetchGitHub(
+    {
+      owner,
+      repo,
+      type: "blob",
+      ref: "feature/branch",
+      path: "README.md",
+    },
+    10_000,
+  );
+
+  assert.equal(result.clonePath, refPath);
+  assert.match(result.text, /feature branch/);
+  assert.doesNotMatch(result.text, /default branch/);
 });

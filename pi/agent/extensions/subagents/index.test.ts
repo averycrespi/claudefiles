@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildAgentDescription, normalizeIntent } from "./index.ts";
+import {
+  buildAgentDescription,
+  normalizeIntent,
+  validateSpawnAgentSpecs,
+} from "./index.ts";
 import type { AgentDefinition } from "./types.ts";
 
 // ─── normalizeIntent ─────────────────────────────────────────────────────────
@@ -44,4 +48,30 @@ test("buildAgentDescription: non-empty list enumerates name and description", ()
   assert.match(text, /Agent type\. Choose based on the task:/);
   assert.match(text, /- explore: Read-only research/);
   assert.match(text, /- code: Full write access/);
+});
+
+// ─── validateSpawnAgentSpecs ────────────────────────────────────────────────
+
+test("validateSpawnAgentSpecs: reports all invalid agents before spawn", () => {
+  const errors = validateSpawnAgentSpecs(
+    [
+      { agent: "explore", intent: "   ", prompt: "Inspect files" },
+      { agent: "missing", intent: "review", prompt: "Review change" },
+    ],
+    new Map([["explore", agent("explore", "Read-only research")]]),
+  );
+
+  assert.deepEqual(errors, [
+    "agents[0].intent is required",
+    'agents[1].agent "missing" is not a known agent type',
+  ]);
+});
+
+test("validateSpawnAgentSpecs: accepts known agents with non-empty intents", () => {
+  const errors = validateSpawnAgentSpecs(
+    [{ agent: "explore", intent: " inspect ", prompt: "Inspect files" }],
+    new Map([["explore", agent("explore", "Read-only research")]]),
+  );
+
+  assert.deepEqual(errors, []);
 });

@@ -26,7 +26,7 @@ import {
 
 const CALL_HEAD_LINES = 3;
 import type { BrokerClient, BrokerTool } from "./client.ts";
-import { spillIfNeeded } from "./spillover.ts";
+import { spillIfNeeded } from "../_shared/spillover.ts";
 
 const SEARCH_PARAMS = Type.Object({
   query: Type.String({
@@ -86,10 +86,16 @@ export async function callBrokerTool(
   details: Record<string, unknown>;
 }> {
   if (readOnly) {
-    const cached = client.getCachedTools();
-    if (cached !== null && !cached.some((t) => t.name === params.name)) {
+    try {
+      const tools = await client.listTools();
+      if (!tools.some((t) => t.name === params.name)) {
+        return errorResult(
+          `mcp_call: tool '${params.name}' is not available in read-only mode`,
+        );
+      }
+    } catch (err) {
       return errorResult(
-        `mcp_call: tool '${params.name}' is not available in read-only mode`,
+        `mcp_call read-only check failed: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

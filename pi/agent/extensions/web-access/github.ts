@@ -109,13 +109,13 @@ export function parseGitHubUrl(url: string): GitHubUrl | null {
 function exec(
   cmd: string,
   args: string[],
-  options: { timeout?: number; cwd?: string },
+  options: { timeout?: number; cwd?: string; signal?: AbortSignal },
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       cmd,
       args,
-      { timeout: options.timeout, cwd: options.cwd },
+      { timeout: options.timeout, cwd: options.cwd, signal: options.signal },
       (err, stdout, stderr) => {
         if (err) reject(new Error(stderr || err.message));
         else resolve(stdout);
@@ -124,10 +124,22 @@ function exec(
   });
 }
 
+function sanitizeRefForPath(ref: string): string {
+  return ref.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function getClonePath(gh: GitHubUrl): string {
+  const repoDir = gh.ref
+    ? `${gh.repo}--${sanitizeRefForPath(gh.ref)}`
+    : gh.repo;
+  return join(CLONE_BASE, gh.owner, repoDir);
+}
+
 /** Check repo size via gh CLI. Returns size in MB, or null if unavailable. */
 async function getRepoSizeMB(
   owner: string,
   repo: string,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   try {
     const out = await exec(
@@ -135,6 +147,7 @@ async function getRepoSizeMB(
       ["api", `repos/${owner}/${repo}`, "--jq", ".size"],
       {
         timeout: 10_000,
+        signal,
       },
     );
     const kb = parseInt(out.trim(), 10);
@@ -232,27 +245,32 @@ export interface GitHubFetchResponse {
 export async function fetchGitHub(
   gh: GitHubUrl,
   maxChars: number,
+  signal?: AbortSignal,
 ): Promise<GitHubFetchResponse> {
+  signal?.throwIfAborted();
+
   // Check repo size
-  const sizeMB = await getRepoSizeMB(gh.owner, gh.repo);
+  const sizeMB = await getRepoSizeMB(gh.owner, gh.repo, signal);
   if (sizeMB !== null && sizeMB > MAX_REPO_SIZE_MB) {
     throw new Error(
       `Repository ${gh.owner}/${gh.repo} is ${Math.round(sizeMB)}MB (limit: ${MAX_REPO_SIZE_MB}MB). Use web_fetch on a specific file URL instead.`,
     );
   }
 
-  const clonePath = join(CLONE_BASE, gh.owner, gh.repo);
+  const clonePath = getClonePath(gh);
 
   // Clone if not already present
   if (!existsSync(join(clonePath, ".git"))) {
     const cloneUrl = `https://github.com/${gh.owner}/${gh.repo}.git`;
-    await exec(
-      "git",
-      ["clone", "--depth", "1", "--single-branch", cloneUrl, clonePath],
-      {
-        timeout: CLONE_TIMEOUT_MS,
-      },
-    );
+    const cloneArgs = ["clone", "--depth", "1", "--single-branch"];
+    if (gh.ref) {
+      cloneArgs.push("--branch", gh.ref);
+    }
+    cloneArgs.push(cloneUrl, clonePath);
+    await exec("git", cloneArgs, {
+      timeout: CLONE_TIMEOUT_MS,
+      signal,
+    });
   }
 
   // If pointing at a specific file, return its contents

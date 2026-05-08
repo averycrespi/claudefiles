@@ -32,10 +32,11 @@ IDs stay stable once assigned. If an item is removed, later items keep their exi
 ## Persistence model
 
 - Tool-driven mutations persist snapshots in `toolResult.details` using the `{ items, nextTodoId }` state shape.
+- Successful mutating tool actions (`set`, `add`, `update`, `remove`, `clear`) also append the same snapshot shape as a compact custom `todo-state` session entry. `list` and failed mutations do not append snapshots.
 - `/todo-clear` persists the same snapshot shape through a custom session entry because commands do not emit `toolResult` messages.
 - On `session_start` and `session_tree`, the extension scans the current branch and restores the latest valid snapshot.
 
-This keeps normal tool usage aligned with Pi's recommended stateful-tool pattern while still making manual clears survive reloads.
+This keeps normal tool usage aligned with Pi's recommended stateful-tool pattern while making TODO restoration more durable across reloads, branch navigation, and compaction.
 
 ## Configuration
 

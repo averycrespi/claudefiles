@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import askUser from "./index.ts";
@@ -42,7 +43,9 @@ test("custom UI wraps long question text instead of truncating it", async () => 
   );
 
   assert.ok(renderedLines.some((line) => line.includes("wrapping long")));
-  assert.ok(renderedLines.some((line) => line.includes("questions correctly?")));
+  assert.ok(
+    renderedLines.some((line) => line.includes("questions correctly?")),
+  );
   const questionLines = renderedLines.slice(1, renderedLines.indexOf(""));
   assert.ok(
     questionLines.every((line) => !line.includes("...")),
@@ -50,6 +53,40 @@ test("custom UI wraps long question text instead of truncating it", async () => 
   );
 });
 
+test("ask_user resolves as cancelled when the tool signal aborts", async () => {
+  const tools = new Map<string, any>();
+  askUser({ registerTool: (def: any) => tools.set(def.name, def) } as any);
+
+  const controller = new AbortController();
+  const ctx = {
+    hasUI: true,
+    ui: {
+      custom(factory: any) {
+        return new Promise((resolve) => {
+          factory({ requestRender: () => {} }, identityTheme, {}, resolve);
+          controller.abort();
+        });
+      },
+    },
+  };
+
+  const result = await Promise.race([
+    tools.get("ask_user").execute(
+      "call-1",
+      {
+        question: "Choose a path",
+        options: [{ label: "A" }, { label: "B" }],
+      },
+      controller.signal,
+      undefined,
+      ctx,
+    ),
+    delay(50).then(() => "timeout"),
+  ]);
+
+  assert.notEqual(result, "timeout");
+  assert.equal((result as any).details.cancelled, true);
+});
 
 test("custom UI rewraps question text when render width changes", async () => {
   const tools = new Map<string, any>();

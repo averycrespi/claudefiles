@@ -97,6 +97,18 @@ function validationError(message: string) {
   };
 }
 
+function cancelledResult(message = "User cancelled — no option selected.") {
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: message,
+      },
+    ],
+    details: { cancelled: true } as AskDetails,
+  };
+}
+
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "ask_user",
@@ -104,7 +116,7 @@ export default function (pi: ExtensionAPI) {
     description: ASK_DESCRIPTION,
     parameters: askParams,
 
-    async execute(_toolCallId, params: AskParams, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params: AskParams, signal, _onUpdate, ctx) {
       if (!ctx.hasUI) {
         return {
           content: [
@@ -120,16 +132,36 @@ export default function (pi: ExtensionAPI) {
       const validationMessage = validateAskParams(params);
       if (validationMessage) return validationError(validationMessage);
 
+      if (signal?.aborted)
+        return cancelledResult("User prompt aborted — no option selected.");
+
       const allOptions: DisplayOption[] = [
         ...params.options.map((o) => ({ ...o, label: o.label.trim() })),
         { label: OTHER_LABEL, isOther: true },
       ];
 
+      let abortHandler: (() => void) | undefined;
       const result = await ctx.ui.custom<{
         answer: string;
         index: number | null;
         isCustom: boolean;
       } | null>((tui, theme, _kb, done) => {
+        let finished = false;
+        const finish = (
+          value: {
+            answer: string;
+            index: number | null;
+            isCustom: boolean;
+          } | null,
+        ) => {
+          if (finished) return;
+          finished = true;
+          if (abortHandler) signal?.removeEventListener("abort", abortHandler);
+          done(value);
+        };
+        abortHandler = () => finish(null);
+        signal?.addEventListener("abort", abortHandler, { once: true });
+        if (signal?.aborted) finish(null);
         let optionIndex = 0;
         let editMode = false;
         let cachedLines: string[] | undefined;
@@ -150,7 +182,7 @@ export default function (pi: ExtensionAPI) {
         editor.onSubmit = (value) => {
           const trimmed = value.trim();
           if (trimmed) {
-            done({ answer: trimmed, index: null, isCustom: true });
+            finish({ answer: trimmed, index: null, isCustom: true });
           } else {
             editMode = false;
             editor.setText("");
@@ -193,7 +225,7 @@ export default function (pi: ExtensionAPI) {
               editMode = true;
               refresh();
             } else {
-              done({
+              finish({
                 answer: selected.label,
                 index: optionIndex + 1,
                 isCustom: false,
@@ -202,7 +234,7 @@ export default function (pi: ExtensionAPI) {
             return;
           }
           if (matchesKey(data, Key.escape)) {
-            done(null);
+            finish(null);
           }
         }
 
@@ -280,17 +312,10 @@ export default function (pi: ExtensionAPI) {
           handleInput,
         };
       });
+      if (abortHandler) signal?.removeEventListener("abort", abortHandler);
 
       if (!result) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: "User cancelled — no option selected.",
-            },
-          ],
-          details: { cancelled: true } as AskDetails,
-        };
+        return cancelledResult();
       }
 
       if (result.isCustom) {

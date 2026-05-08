@@ -142,6 +142,7 @@ export function buildModeContract(options: {
     "Read relevant .plans/*.md files before reviewing when they are available or referenced by the user.",
     "Run deterministic checks first.",
     "Do not silently edit code in Verify mode.",
+    "Report verification in a structured format with: Overall verdict (`pass`, `fail`, or `blocked`); deterministic checks run and results; per acceptance criterion verdicts (`pass`, `fail`, `n/a`, or `unknown`) with evidence; findings / next actions; and any user-accepted known issues.",
     "Turn findings into explicit next actions for a possible return to Execute mode.",
     options.autoHandoffEnabled
       ? 'If verification finds fixable issues, call workflow_handoff with target_mode="execute" and a concise reason describing the fixes needed.'

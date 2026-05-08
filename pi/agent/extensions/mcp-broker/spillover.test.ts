@@ -9,7 +9,7 @@ import {
   buildEnvelope,
   joinText,
   spillIfNeeded,
-} from "./spillover.ts";
+} from "../_shared/spillover.ts";
 
 // ---------------------------------------------------------------------------
 // joinText
@@ -93,6 +93,16 @@ describe("buildEnvelope", () => {
     });
     const expected = "a".repeat(PREVIEW_BYTES);
     assert.ok(env.includes(expected));
+  });
+
+  test("preview heading derives its byte label from PREVIEW_BYTES", () => {
+    const env = buildEnvelope({
+      filePath: "/tmp/t.txt",
+      originalSize: 5000,
+      joinedText: "a".repeat(5000),
+    });
+    const expectedKb = (PREVIEW_BYTES / 1024).toFixed(1);
+    assert.ok(env.includes(`Preview (first ${expectedKb} KB):`));
   });
 
   test("truncated-byte marker shows correct byte count (ASCII)", () => {

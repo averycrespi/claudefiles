@@ -107,7 +107,21 @@ function validateSetItems(items: unknown):
   return { ok: true, items: normalized };
 }
 
+const STATE_ENTRY_TYPE = "todo-state";
+
 export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
+  function appendState(): void {
+    const appendEntry = (pi as any).appendEntry;
+    if (typeof appendEntry === "function") {
+      appendEntry.call(pi, STATE_ENTRY_TYPE, store.getState());
+    }
+  }
+
+  function mutationResult(text: string) {
+    appendState();
+    return textResult(text, store);
+  }
+
   pi.registerTool({
     name: "todo",
     label: "Todo",
@@ -132,7 +146,7 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           const validated = validateSetItems(params.items);
           if (!validated.ok) return errorResult(validated.message, store);
           const items = store.set(validated.items);
-          return textResult(formatTodoList(items), store);
+          return mutationResult(formatTodoList(items));
         }
 
         case "add": {
@@ -147,7 +161,7 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           }
           store.add(text, normalizeStatus(params.status), params.notes);
           const items = store.list();
-          return textResult(formatTodoList(items), store);
+          return mutationResult(formatTodoList(items));
         }
 
         case "update": {
@@ -176,7 +190,7 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           const updated = store.update(params.id, patch);
           if (!updated)
             return errorResult(`TODO #${params.id} not found.`, store);
-          return textResult(formatTodoList(store.list()), store);
+          return mutationResult(formatTodoList(store.list()));
         }
 
         case "remove": {
@@ -186,12 +200,12 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
           if (!store.remove(params.id)) {
             return errorResult(`TODO #${params.id} not found.`, store);
           }
-          return textResult(formatTodoList(store.list()), store);
+          return mutationResult(formatTodoList(store.list()));
         }
 
         case "clear":
           store.clear();
-          return textResult(formatTodoList(store.list()), store);
+          return mutationResult(formatTodoList(store.list()));
       }
 
       return errorResult(`unknown action \"${String(params.action)}\".`, store);

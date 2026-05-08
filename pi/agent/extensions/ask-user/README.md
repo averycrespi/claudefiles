@@ -23,7 +23,7 @@ An "Other (type your own)" option is always appended automatically — do not in
 
 - `"User selected: 2. Option Name"` — chosen option with its 1-based index
 - `"User wrote: <text>"` — free-text answer via the Other path
-- `"User cancelled — no option selected."` — user pressed Escape
+- `"User cancelled — no option selected."` — user pressed Escape or the tool call was aborted
 
 The `details` object contains `{ cancelled, answerLabel, answerIndex, isCustom }` for structured access by other extensions.
 

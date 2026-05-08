@@ -46,6 +46,25 @@ export function buildAgentDescription(agents: AgentDefinition[]): string {
   return `Agent type. Choose based on the task:\n\n${list}`;
 }
 
+export function validateSpawnAgentSpecs(
+  specs: SpawnAgentItem[],
+  agentMap: Map<string, AgentDefinition>,
+): string[] {
+  const errors: string[] = [];
+  for (let i = 0; i < specs.length; i++) {
+    const spec = specs[i];
+    if (!spec.intent.trim()) {
+      errors.push(`agents[${i}].intent is required`);
+    }
+    if (!agentMap.has(spec.agent)) {
+      errors.push(
+        `agents[${i}].agent "${spec.agent}" is not a known agent type`,
+      );
+    }
+  }
+  return errors;
+}
+
 // ─── execution ────────────────────────────────────────────────────────────────
 
 type SpawnCtx = {
@@ -148,6 +167,16 @@ async function runParallelSpawn(
   content: { type: "text"; text: string }[];
   details: Record<string, unknown>;
 }> {
+  const validationErrors = validateSpawnAgentSpecs(specs, agentMap);
+  if (validationErrors.length > 0) {
+    return {
+      content: text(
+        `Error: invalid spawn_agents request\n${validationErrors.join("\n")}`,
+      ),
+      details: { validationError: true, errors: validationErrors },
+    };
+  }
+
   const states: SubagentRunState[] = specs.map((s) => ({
     intent: s.intent,
     agentType: s.agent,

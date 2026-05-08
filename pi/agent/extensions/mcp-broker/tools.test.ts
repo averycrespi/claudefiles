@@ -286,6 +286,96 @@ test("summarize omits the dash when description is whitespace-only", () => {
     );
   });
 
+  test("mcp_call checks listTools before readOnly call when cache is empty", async () => {
+    const callTool = () => {
+      throw new Error("callTool must not be invoked in read-only mode");
+    };
+    let listToolsCalls = 0;
+    const client = {
+      callTool,
+      reset: noop,
+      listTools: async () => {
+        listToolsCalls += 1;
+        return [{ name: "git.git_pull", annotations: { readOnlyHint: true } }];
+      },
+      getCachedTools: () => null,
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "git.git_push", arguments: {} },
+      "readonly-empty-cache-test-id",
+      makeSignal(),
+      scratchDir,
+      true,
+    );
+    assert.equal(listToolsCalls, 1);
+    const texts = result.content.filter((c: any) => c.type === "text");
+    assert.equal(texts.length, 1);
+    assert.equal(
+      (texts[0] as any).text,
+      "mcp_call: tool 'git.git_push' is not available in read-only mode",
+    );
+  });
+
+  test("mcp_call allows readOnly call after checking listTools when cache is empty", async () => {
+    let callToolCalls = 0;
+    let listToolsCalls = 0;
+    const client = {
+      callTool: async () => {
+        callToolCalls += 1;
+        return {
+          content: [{ type: "text", text: "ok" }],
+          isError: false,
+        };
+      },
+      reset: noop,
+      listTools: async () => {
+        listToolsCalls += 1;
+        return [{ name: "git.git_pull", annotations: { readOnlyHint: true } }];
+      },
+      getCachedTools: () => null,
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "git.git_pull", arguments: {} },
+      "readonly-empty-cache-allowed-test-id",
+      makeSignal(),
+      scratchDir,
+      true,
+    );
+    assert.equal(listToolsCalls, 1);
+    assert.equal(callToolCalls, 1);
+    assert.equal((result.content[0] as any).text, "ok");
+  });
+
+  test("mcp_call does not check listTools in normal mode when cache is empty", async () => {
+    let callToolCalls = 0;
+    const client = {
+      callTool: async () => {
+        callToolCalls += 1;
+        return {
+          content: [{ type: "text", text: "ok" }],
+          isError: false,
+        };
+      },
+      reset: noop,
+      listTools: async () => {
+        throw new Error("listTools must not be called in normal mode");
+      },
+      getCachedTools: () => null,
+    };
+    const result = await callBrokerTool(
+      client as any,
+      { name: "git.git_push", arguments: {} },
+      "normal-empty-cache-test-id",
+      makeSignal(),
+      scratchDir,
+      false,
+    );
+    assert.equal(callToolCalls, 1);
+    assert.equal((result.content[0] as any).text, "ok");
+  });
+
   test("mcp_call retry path does not spill error responses", async () => {
     const bigText = "e".repeat(30_000);
     let firstCall = true;

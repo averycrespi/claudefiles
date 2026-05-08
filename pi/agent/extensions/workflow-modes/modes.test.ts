@@ -79,6 +79,21 @@ test("buildModeContract for verify mode explains handoff outcomes", () => {
   assert.match(contract, /unfixable/i);
 });
 
+test("buildModeContract for verify mode requires a structured verification report", () => {
+  const contract = buildModeContract({
+    mode: "verify",
+  });
+
+  assert.match(contract, /overall verdict/i);
+  assert.match(contract, /pass.*fail.*blocked/i);
+  assert.match(contract, /deterministic checks/i);
+  assert.match(contract, /acceptance criterion/i);
+  assert.match(contract, /pass.*fail.*n\/a.*unknown/i);
+  assert.match(contract, /evidence/i);
+  assert.match(contract, /findings.*next actions/i);
+  assert.match(contract, /known issues/i);
+});
+
 test("buildModeContract for verify mode avoids disabled automatic handoff guidance", () => {
   const contract = buildModeContract({
     mode: "verify",

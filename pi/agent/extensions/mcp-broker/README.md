@@ -47,7 +47,7 @@ If `endpoint`/`MCP_BROKER_ENDPOINT` or `authToken`/`MCP_BROKER_AUTH_TOKEN` is mi
 Set `readOnly: true` in settings or `MCP_BROKER_READONLY=1`/`true` in the environment to activate read-only mode. In this mode:
 
 - **Filtered tool list** — on `session_start`, only tools whose MCP `annotations.readOnlyHint === true` are fetched and cached. `mcp_search` and `mcp_describe` only see this filtered set.
-- **Defense-in-depth** — `mcp_call` checks the requested tool name against the cached list before forwarding. Any name not in the list is rejected immediately with the error `mcp_call: tool '<name>' is not available in read-only mode`. Because the list was already filtered at startup, this catches stale or injected names without a second network call.
+- **Defense-in-depth** — `mcp_call` refreshes the broker tool list before forwarding and checks the requested tool name against that filtered read-only list. Any name not in the list is rejected immediately with the error `mcp_call: tool '<name>' is not available in read-only mode`. This catches stale or injected names even when the startup cache is absent.
 - **Bash guard** — the guard's fuzzy-match suggestions are drawn from the same cached list, so it naturally surfaces only read-only tools in this mode. No extra code is required.
 
 Subagents activate read-only mode via the `env:` block in their agent frontmatter:
@@ -68,7 +68,7 @@ When an `mcp_call` result exceeds **25,000 characters** of joined text, the exte
 <persisted-output>
 Output too large (46.2 KB / 47312 chars). Full output saved to: `/tmp/pi-mcp-broker/call_abc123.txt`
 
-Preview (first 2 KB):
+Preview (first 2.0 KB):
 …
 
 …45312 bytes truncated…
@@ -84,11 +84,11 @@ File location: `${tmpdir()}/pi-mcp-broker/<toolCallId>.txt`. Files are written w
 - Only `mcp_call` is affected. `mcp_search` and `mcp_describe` outputs are bounded by design and are never spilled.
 - Error responses are never spilled — they pass through inline regardless of size.
 - Multi-block results: all text blocks are joined and measured together; if the total exceeds the threshold, the joined text is spilled and image blocks are preserved inline.
-- Write failure (disk full, permissions): the extension logs a warning and falls back to returning the original content inline rather than failing the tool call.
+- Write failure (disk full, permissions): the extension falls back to returning the original content inline rather than failing the tool call.
 
 ## Logging
 
-This extension does not write retained diagnostic logs. Large-output spillover writes temporary output files as described above; those files may contain raw broker tool output. If a spillover write fails, the extension emits a warning to stderr and returns the original content inline.
+This extension does not write retained diagnostic logs. Large-output spillover writes temporary output files as described above; those files may contain raw broker tool output. If a spillover write fails, the extension returns the original content inline.
 
 ## Guard behavior
 
@@ -108,7 +108,7 @@ If the broker is unreachable (no cached tool list), the hint falls back to sugge
 - `config.ts` — settings/env merge and validation
 - `client.ts` — `BrokerClient` wrapping `@modelcontextprotocol/sdk`'s `StreamableHTTPClientTransport`
 - `tools.ts` — `mcp_search`, `mcp_describe`, `mcp_call` definitions
-- `spillover.ts` — large-output spill-to-file logic (`joinText`, `buildEnvelope`, `spillIfNeeded`)
+- `spillover.ts` — re-exports shared large-output spill-to-file logic from `../_shared/spillover.ts`
 - `guard.ts` — bash detection and `tool_result` hint injection
 
 ## Inspiration

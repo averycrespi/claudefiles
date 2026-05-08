@@ -45,6 +45,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - intended for deterministic checks, review, and findings capture
 - stays read-mostly
 - defaults thinking to `high` (`verifyThinkingLevel`)
+- reports a structured verification result: overall verdict (`pass`, `fail`, or `blocked`), deterministic checks and results, per-acceptance-criterion verdicts with evidence, findings / next actions, and any user-accepted known issues
 
 When auto handoff is enabled, Verify can call `workflow_handoff` with `target_mode: "execute"` only when it found fixable issues. If verification passes, is blocked, or finds unfixable issues, it should report the outcome instead of handing off.
 
