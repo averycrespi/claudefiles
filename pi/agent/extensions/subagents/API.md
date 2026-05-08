@@ -40,7 +40,7 @@ Notable `SpawnInvocation` fields:
 - `model`, `thinking`, `systemPrompt` — optional runtime overrides
 - `inheritSession` — `"none"` or `"fork"`
 - `disableSkills`, `disablePromptTemplates` — optional startup restrictions
-- `env` — extra environment variables merged into the child process
+- `env` — extra environment variables merged into the child process; `PI_SUBAGENT_DEPTH` is always set by the spawner and overrides any caller-provided value
 
 `SpawnOutcome` reports whether the spawn succeeded and includes the final `stdout`, `stderr`, exit metadata, and optional `errorMessage` / `logFile`.
 

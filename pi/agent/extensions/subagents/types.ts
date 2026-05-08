@@ -1,6 +1,14 @@
 import { Type } from "@sinclair/typebox";
 
-export const BUILTIN_TOOLS = ["read", "bash", "edit", "write"] as const;
+export const BUILTIN_TOOLS = [
+  "read",
+  "bash",
+  "edit",
+  "write",
+  "ls",
+  "find",
+  "grep",
+] as const;
 
 export const MAX_SUBAGENT_DEPTH = 5;
 
