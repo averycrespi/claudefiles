@@ -8,12 +8,36 @@ Web access extension for Pi — provides `web_search` and `web_fetch` tools.
 
 Search the web for current information. Returns titles, URLs, and relevant snippets.
 
+| Parameter     | Type    | Required | Description                                      |
+| ------------- | ------- | -------- | ------------------------------------------------ |
+| `query`       | string  | yes      | Search query                                     |
+| `num_results` | integer | no       | Number of results to return, 1–10; defaults to 5 |
+
+Example:
+
+```json
+{ "query": "Pi coding agent extension docs", "num_results": 3 }
+```
+
 - **Primary provider**: [Tavily](https://app.tavily.com) (1,000 free searches/month)
 - **Fallback**: [Jina Search](https://jina.ai) (works without an API key)
 
 ### web_fetch
 
-Fetch and read web content as clean markdown. Intelligently routes by URL type:
+Fetch and read web content as clean markdown.
+
+| Parameter   | Type    | Required | Description                                               |
+| ----------- | ------- | -------- | --------------------------------------------------------- |
+| `url`       | string  | yes      | Full URL to fetch, including `https://`                   |
+| `max_chars` | integer | no       | Maximum characters to return, 1–32,000; defaults to 8,000 |
+
+Example:
+
+```json
+{ "url": "https://example.com/docs", "max_chars": 12000 }
+```
+
+Routes by URL type:
 
 - **HTML pages** — local extraction via [Readability](https://github.com/mozilla/readability) + [Turndown](https://github.com/mixmark-io/turndown), with [Jina Reader](https://jina.ai/reader) as fallback for JS-rendered pages
 - **GitHub repos** — shallow-clones the repository and returns the README, file tree, and clone path for further exploration with Pi's built-in tools

@@ -52,7 +52,9 @@ async function ensureConfig(ctx: ExtensionContext): Promise<void> {
 const searchParams = Type.Object({
   query: Type.String({ description: "Search query" }),
   num_results: Type.Optional(
-    Type.Number({
+    Type.Integer({
+      minimum: 1,
+      maximum: 10,
       description: "Number of results to return (1–10, default 5)",
     }),
   ),
@@ -146,7 +148,9 @@ const searchTool = {
 const fetchParams = Type.Object({
   url: Type.String({ description: "Full URL to fetch (include https://)" }),
   max_chars: Type.Optional(
-    Type.Number({
+    Type.Integer({
+      minimum: 1,
+      maximum: 32_000,
       description: "Maximum characters to return (default 8000, max 32000)",
     }),
   ),
@@ -241,7 +245,7 @@ const fetchTool = {
     _onUpdate: unknown,
     ctx: ExtensionContext,
   ) {
-    const maxChars = Math.min(params.max_chars ?? 8_000, 32_000);
+    const maxChars = Math.max(1, Math.min(params.max_chars ?? 8_000, 32_000));
     const fetchSignal = signal ?? AbortSignal.timeout(20_000);
 
     try {
