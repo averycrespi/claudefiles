@@ -3,8 +3,33 @@ import assert from "node:assert/strict";
 import { registerTodoTool } from "./tools.ts";
 import { createTodoStore } from "./state.ts";
 
+const identityTheme = {
+  fg: (_color: string, text: string) => text,
+  bold: (text: string) => text,
+};
+
+type Renderable = { render(width: number): string[] };
+
 type ToolDef = {
   name: string;
+  renderCall: (
+    args: Record<string, unknown>,
+    theme: typeof identityTheme,
+    context: unknown,
+  ) => Renderable;
+  renderResult: (
+    result: {
+      content: Array<{ type: string; text: string }>;
+      details?: unknown;
+    },
+    options: { isPartial: boolean },
+    theme: typeof identityTheme,
+    context: {
+      args: Record<string, unknown>;
+      isError?: boolean;
+      lastComponent?: unknown;
+    },
+  ) => Renderable;
   execute: (
     toolCallId: string,
     params: Record<string, unknown>,
@@ -13,7 +38,7 @@ type ToolDef = {
     ctx: unknown,
   ) => Promise<{
     content: Array<{ type: string; text: string }>;
-    details?: Record<string, unknown>;
+    details?: unknown;
   }>;
 };
 
@@ -45,6 +70,54 @@ async function exec(params: Record<string, unknown>) {
   );
   return { result, store };
 }
+
+test("renderCall summarizes todo actions without dumping JSON args", () => {
+  const { tool } = loadTool();
+
+  const lines = tool
+    .renderCall(
+      {
+        action: "set",
+        items: [
+          { text: "Plan", status: "todo" },
+          { text: "Ship", status: "done", notes: "merged" },
+        ],
+      },
+      identityTheme,
+      {},
+    )
+    .render(80);
+
+  assert.deepEqual(lines, ["todo set 2 items"]);
+});
+
+test("renderResult keeps todo errors to one concise line", () => {
+  const { tool, store } = loadTool();
+  store.add("Existing");
+
+  const result = {
+    content: [
+      {
+        type: "text",
+        text: "Error: set items must include non-empty text.\nCurrent TODO list:\n1. [ ] Existing",
+      },
+    ],
+    details: store.getState(),
+  };
+
+  const lines = tool
+    .renderResult(result, { isPartial: false }, identityTheme, {
+      args: { action: "set" },
+      lastComponent: undefined,
+    })
+    .render(80);
+
+  assert.deepEqual(lines, ["Error: set items must include non-empty text."]);
+  assert.deepEqual(result.details, {
+    items: [{ id: 1, text: "Existing", status: "todo" }],
+    nextTodoId: 2,
+  });
+});
 
 test("list returns the current formatted todo list", async () => {
   const { tool, store } = loadTool();

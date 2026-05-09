@@ -1,6 +1,11 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@sinclair/typebox";
 import {
+  firstLine,
+  getResultText,
+  getTruncatedText,
+} from "../_shared/render.ts";
+import {
   formatTodoList,
   isTodoStatus,
   type TodoStatus,
@@ -109,6 +114,32 @@ function validateSetItems(items: unknown):
 
 const STATE_ENTRY_TYPE = "todo-state";
 
+function summarizeAction(params: TodoParams): string {
+  switch (params.action) {
+    case "set": {
+      const count = Array.isArray(params.items) ? params.items.length : 0;
+      return `set ${count} item${count === 1 ? "" : "s"}`;
+    }
+    case "add":
+      return params.text ? `add ${JSON.stringify(params.text)}` : "add";
+    case "update":
+      return params.id === undefined ? "update" : `update #${params.id}`;
+    case "remove":
+      return params.id === undefined ? "remove" : `remove #${params.id}`;
+    case "clear":
+      return "clear";
+    case "list":
+      return "list";
+  }
+}
+
+function summarizeResult(details: unknown): string {
+  const items = (details as { items?: unknown } | undefined)?.items;
+  if (!Array.isArray(items)) return "✓ done";
+  if (items.length === 0) return "✓ no todos";
+  return `✓ ${items.length} todo${items.length === 1 ? "" : "s"}`;
+}
+
 export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
   function appendState(): void {
     const appendEntry = (pi as any).appendEntry;
@@ -136,6 +167,31 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
       "After changing a task, rely on the returned list to see current ids and ordering.",
     ],
     parameters: todoParamsSchema,
+    renderCall(args, theme, context) {
+      const summary = summarizeAction(args as TodoParams);
+      return getTruncatedText(context.lastComponent, [
+        `${theme.fg("toolTitle", theme.bold("todo"))} ${theme.fg("muted", summary)}`,
+      ]);
+    },
+    renderResult(result, { isPartial }, theme, context) {
+      if (isPartial) {
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("warning", "Updating TODOs..."),
+        ]);
+      }
+
+      const text = getResultText(result);
+      const message = firstLine(text);
+      if (context.isError || message.startsWith("Error:")) {
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("error", message || "todo error"),
+        ]);
+      }
+
+      return getTruncatedText(context.lastComponent, [
+        theme.fg("success", summarizeResult(result.details)),
+      ]);
+    },
     async execute(_toolCallId, rawParams, _signal, _onUpdate, _ctx) {
       const params = rawParams as TodoParams;
       switch (params.action) {
