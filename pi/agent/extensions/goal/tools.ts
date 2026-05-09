@@ -42,7 +42,7 @@ function appendState(pi: ExtensionAPI, store: GoalStore): void {
 export function registerGoalTools(
   pi: ExtensionAPI,
   store: GoalStore,
-  options: { evidenceMaxChars: number },
+  options: { evidenceMaxChars: number; showUsage?: boolean },
 ): void {
   pi.registerTool({
     name: "goal_get",
@@ -55,7 +55,10 @@ export function registerGoalTools(
     ],
     parameters: Type.Object({}),
     async execute() {
-      return textResult(formatGoalState(store.getState()), store);
+      return textResult(
+        formatGoalState(store.getState(), { showUsage: options.showUsage }),
+        store,
+      );
     },
   });
 
@@ -86,7 +89,10 @@ export function registerGoalTools(
         );
       }
       if (goal.status === "complete") {
-        return textResult(formatGoalState(store.getState()), store);
+        return textResult(
+          formatGoalState(store.getState(), { showUsage: options.showUsage }),
+          store,
+        );
       }
       let evidence: string;
       try {
@@ -103,7 +109,10 @@ export function registerGoalTools(
       }
       store.complete(evidence, options.evidenceMaxChars);
       appendState(pi, store);
-      return textResult(formatGoalState(store.getState()), store);
+      return textResult(
+        formatGoalState(store.getState(), { showUsage: options.showUsage }),
+        store,
+      );
     },
   });
 }

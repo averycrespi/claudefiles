@@ -1,5 +1,13 @@
 export type GoalStatus = "active" | "paused" | "complete";
 
+export interface GoalUsage {
+  activeElapsedMs: number;
+  totalTokens: number;
+  turns: number;
+  startedAt: number;
+  activeSince?: number;
+}
+
 export interface Goal {
   id: string;
   objective: string;
@@ -8,6 +16,7 @@ export interface Goal {
   updatedAt: number;
   completedAt?: number;
   completionEvidence?: string;
+  usage?: GoalUsage;
 }
 
 export interface GoalState {
@@ -22,16 +31,49 @@ export interface GoalStore {
   pause(): Goal | undefined;
   resume(): Goal | undefined;
   complete(evidence: string, maxChars: number): Goal | undefined;
+  recordAssistantUsage(totalTokens?: number): Goal | undefined;
   clear(): void;
   subscribe(listener: (state: GoalState) => void): () => void;
 }
 
-function cloneGoal(goal: Goal): Goal {
-  return { ...goal };
+function defaultUsage(timestamp: number, active: boolean): GoalUsage {
+  return {
+    activeElapsedMs: 0,
+    totalTokens: 0,
+    turns: 0,
+    startedAt: timestamp,
+    ...(active ? { activeSince: timestamp } : {}),
+  };
 }
 
-function cloneState(goal: Goal | undefined): GoalState {
-  return goal ? { goal: cloneGoal(goal) } : {};
+function cloneGoal(goal: Goal, now?: () => number): Goal {
+  const usage = goal.usage ? { ...goal.usage } : undefined;
+  if (
+    usage &&
+    goal.status === "active" &&
+    usage.activeSince !== undefined &&
+    now
+  ) {
+    usage.activeElapsedMs += Math.max(0, now() - usage.activeSince);
+  }
+  return { ...goal, ...(usage ? { usage } : {}) };
+}
+
+function cloneState(goal: Goal | undefined, now?: () => number): GoalState {
+  return goal ? { goal: cloneGoal(goal, now) } : {};
+}
+
+function accrueActiveTime(goal: Goal, timestamp: number): Goal {
+  if (!goal.usage || goal.usage.activeSince === undefined) return goal;
+  const { activeSince, ...rest } = goal.usage;
+  return {
+    ...goal,
+    usage: {
+      ...rest,
+      activeElapsedMs:
+        goal.usage.activeElapsedMs + Math.max(0, timestamp - activeSince),
+    },
+  };
 }
 
 export function isGoalStatus(value: unknown): value is GoalStatus {
@@ -60,17 +102,17 @@ export function createGoalStore(
   const listeners = new Set<(state: GoalState) => void>();
 
   const notify = () => {
-    const state = cloneState(goal);
+    const state = cloneState(goal, now);
     for (const listener of listeners) listener(state);
   };
 
   return {
     getGoal() {
-      return goal ? cloneGoal(goal) : undefined;
+      return goal ? cloneGoal(goal, now) : undefined;
     },
 
     getState() {
-      return cloneState(goal);
+      return cloneState(goal, now);
     },
 
     replaceState(state) {
@@ -86,31 +128,46 @@ export function createGoalStore(
         status: "active",
         createdAt: timestamp,
         updatedAt: timestamp,
+        usage: defaultUsage(timestamp, true),
       };
       nextId += 1;
       notify();
-      return cloneGoal(goal);
+      return cloneGoal(goal, now);
     },
 
     pause() {
       if (!goal) return undefined;
-      goal = { ...goal, status: "paused", updatedAt: now() };
+      const timestamp = now();
+      goal = {
+        ...accrueActiveTime(goal, timestamp),
+        status: "paused",
+        updatedAt: timestamp,
+      };
       notify();
-      return cloneGoal(goal);
+      return cloneGoal(goal, now);
     },
 
     resume() {
       if (!goal) return undefined;
-      goal = { ...goal, status: "active", updatedAt: now() };
+      const timestamp = now();
+      goal = {
+        ...goal,
+        status: "active",
+        updatedAt: timestamp,
+        usage: {
+          ...(goal.usage ?? defaultUsage(timestamp, false)),
+          activeSince: timestamp,
+        },
+      };
       notify();
-      return cloneGoal(goal);
+      return cloneGoal(goal, now);
     },
 
     complete(evidence, maxChars) {
       if (!goal) return undefined;
       const timestamp = now();
       goal = {
-        ...goal,
+        ...accrueActiveTime(goal, timestamp),
         status: "complete",
         updatedAt: timestamp,
         completedAt: timestamp,
@@ -121,7 +178,27 @@ export function createGoalStore(
         ),
       };
       notify();
-      return cloneGoal(goal);
+      return cloneGoal(goal, now);
+    },
+
+    recordAssistantUsage(totalTokens) {
+      if (!goal || goal.status !== "active") return undefined;
+      const usage = goal.usage ?? defaultUsage(now(), true);
+      goal = {
+        ...goal,
+        updatedAt: now(),
+        usage: {
+          ...usage,
+          totalTokens:
+            usage.totalTokens +
+            (typeof totalTokens === "number" && totalTokens > 0
+              ? totalTokens
+              : 0),
+          turns: usage.turns + 1,
+        },
+      };
+      notify();
+      return cloneGoal(goal, now);
     },
 
     clear() {
@@ -135,6 +212,39 @@ export function createGoalStore(
         listeners.delete(listener);
       };
     },
+  };
+}
+
+function parseUsage(
+  value: unknown,
+  createdAt: number,
+  status: GoalStatus,
+): GoalUsage | undefined {
+  if (value === undefined) return defaultUsage(createdAt, false);
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.activeElapsedMs !== "number" ||
+    typeof candidate.totalTokens !== "number" ||
+    typeof candidate.turns !== "number" ||
+    typeof candidate.startedAt !== "number"
+  ) {
+    return undefined;
+  }
+  if (
+    candidate.activeSince !== undefined &&
+    typeof candidate.activeSince !== "number"
+  ) {
+    return undefined;
+  }
+  return {
+    activeElapsedMs: Math.max(0, candidate.activeElapsedMs),
+    totalTokens: Math.max(0, candidate.totalTokens),
+    turns: Math.max(0, candidate.turns),
+    startedAt: candidate.startedAt,
+    ...(typeof candidate.activeSince === "number"
+      ? { activeSince: candidate.activeSince }
+      : {}),
   };
 }
 
@@ -166,12 +276,19 @@ function parseGoal(value: unknown): Goal | undefined {
   if (candidate.status === "complete" && !candidate.completionEvidence) {
     return undefined;
   }
+  const usage = parseUsage(
+    candidate.usage,
+    candidate.createdAt,
+    candidate.status,
+  );
+  if (!usage) return undefined;
   return {
     id: candidate.id,
     objective: candidate.objective,
     status: candidate.status,
     createdAt: candidate.createdAt,
     updatedAt: candidate.updatedAt,
+    usage,
     ...(typeof candidate.completedAt === "number"
       ? { completedAt: candidate.completedAt }
       : {}),
@@ -189,9 +306,39 @@ export function parsePersistedGoalState(value: unknown): GoalState | undefined {
   return goal ? { goal } : undefined;
 }
 
-export function formatGoalState(state: GoalState): string {
+export function formatDuration(ms: number): string {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder > 0 ? `${hours}h ${remainder}m` : `${hours}h`;
+}
+
+export function formatTokenCount(tokens: number): string {
+  if (tokens < 1000) return String(tokens);
+  if (tokens < 1_000_000)
+    return `${(tokens / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  return `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
+}
+
+export function formatUsageLine(goal: Goal): string | undefined {
+  if (!goal.usage) return undefined;
+  const turnLabel = goal.usage.turns === 1 ? "turn" : "turns";
+  return `Usage: ${formatDuration(goal.usage.activeElapsedMs)} active · ${formatTokenCount(goal.usage.totalTokens)} tokens · ${goal.usage.turns} ${turnLabel}`;
+}
+
+export function formatGoalState(
+  state: GoalState,
+  options: { showUsage?: boolean } = {},
+): string {
   if (!state.goal) return "No goal is set.";
   const lines = [`Goal [${state.goal.status}] ${state.goal.objective}`];
+  if (options.showUsage) {
+    const usageLine = formatUsageLine(state.goal);
+    if (usageLine) lines.push(usageLine);
+  }
   if (state.goal.status === "complete" && state.goal.completionEvidence) {
     lines.push(`Evidence: ${state.goal.completionEvidence}`);
   }

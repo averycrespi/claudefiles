@@ -1,4 +1,4 @@
-import type { Goal, GoalStatus } from "./state.ts";
+import { formatUsageLine, type Goal, type GoalStatus } from "./state.ts";
 
 const WIDGET_SEPARATOR = "─";
 
@@ -32,6 +32,7 @@ export function renderGoalWidgetLines(
   goal: Goal | undefined,
   width: number,
   theme: WidgetTheme = plainTheme,
+  options: { showUsage?: boolean } = {},
 ): string[] {
   if (!goal) return [];
   const safeWidth = Math.max(0, width);
@@ -42,6 +43,11 @@ export function renderGoalWidgetLines(
       safeWidth,
     ),
   ];
+  if (options.showUsage) {
+    const usageLine = formatUsageLine(goal);
+    if (usageLine)
+      lines.push(truncateLine(theme.fg("dim", usageLine), safeWidth));
+  }
   if (goal.status === "complete" && goal.completionEvidence) {
     lines.push(
       truncateLine(
@@ -53,10 +59,13 @@ export function renderGoalWidgetLines(
   return lines;
 }
 
-export function createGoalWidget(goal: Goal) {
+export function createGoalWidget(
+  goal: Goal,
+  options: { showUsage?: boolean } = {},
+) {
   return (_tui: unknown, theme: WidgetTheme) => ({
     render(width: number) {
-      return renderGoalWidgetLines(goal, width, theme);
+      return renderGoalWidgetLines(goal, width, theme, options);
     },
     invalidate() {},
   });

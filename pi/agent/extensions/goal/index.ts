@@ -22,6 +22,7 @@ const DEFAULT_RUNTIME_CONFIG: GoalConfig = {
   evidenceMaxChars: 4000,
   compactSummaryEnabled: true,
   checkpointCommits: true,
+  showUsage: true,
 };
 
 type GoalExtensionOptions = {
@@ -53,7 +54,9 @@ function renderWidget(
   setGoalWidget(
     pi,
     ctx,
-    config.showWidget && goal ? createGoalWidget(goal) : undefined,
+    config.showWidget && goal
+      ? createGoalWidget(goal, { showUsage: config.showUsage })
+      : undefined,
   );
 }
 
@@ -109,6 +112,9 @@ export function createGoalExtension(options: GoalExtensionOptions = {}) {
       get evidenceMaxChars() {
         return config.evidenceMaxChars;
       },
+      get showUsage() {
+        return config.showUsage;
+      },
     });
 
     async function loadRuntimeConfig(ctx: ExtensionContext): Promise<void> {
@@ -128,13 +134,20 @@ export function createGoalExtension(options: GoalExtensionOptions = {}) {
         config,
         store.getGoal(),
       );
-      ctx.ui.notify(message ?? formatGoalState(store.getState()), "info");
+      ctx.ui.notify(
+        message ??
+          formatGoalState(store.getState(), { showUsage: config.showUsage }),
+        "info",
+      );
     }
 
     pi.registerCommand("goal-show", {
       description: "Show the current branch-scoped goal.",
       handler: async (_args, ctx) => {
-        ctx.ui.notify(formatGoalState(store.getState()), "info");
+        ctx.ui.notify(
+          formatGoalState(store.getState(), { showUsage: config.showUsage }),
+          "info",
+        );
       },
     });
 
@@ -210,6 +223,17 @@ export function createGoalExtension(options: GoalExtensionOptions = {}) {
       return {
         systemPrompt: `${event.systemPrompt}\n\n${activeGoalPrompt(goal, config)}`,
       };
+    });
+
+    pi.on("message_end", async (event: any) => {
+      const message = event.message as
+        | { role?: unknown; usage?: { totalTokens?: number } }
+        | undefined;
+      if (message?.role !== "assistant") return undefined;
+      if (store.recordAssistantUsage(message.usage?.totalTokens)) {
+        appendState(pi, store.getState());
+      }
+      return undefined;
     });
 
     pi.on("session_before_compact", async (event: any) => {

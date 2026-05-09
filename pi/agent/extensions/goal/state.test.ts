@@ -22,7 +22,10 @@ test("goal store trims objectives and tracks lifecycle", () => {
 
   store.complete(" tests and docs verify every requirement ", 100);
   assert.equal(store.getGoal()?.status, "complete");
-  assert.equal(store.getGoal()?.completionEvidence, "tests and docs verify every requirement");
+  assert.equal(
+    store.getGoal()?.completionEvidence,
+    "tests and docs verify every requirement",
+  );
   assert.equal(store.getGoal()?.completedAt, 1000);
 });
 
@@ -34,27 +37,21 @@ test("goal store rejects empty and oversized objectives", () => {
 });
 
 test("persisted goal state parser rejects invalid snapshots", () => {
-  assert.equal(parsePersistedGoalState({ goal: { objective: "x" } }), undefined);
-  assert.deepEqual(
-    parsePersistedGoalState({
-      goal: {
-        id: "goal-1",
-        objective: "Finish docs",
-        status: "active",
-        createdAt: 1,
-        updatedAt: 2,
-      },
-    }),
-    {
-      goal: {
-        id: "goal-1",
-        objective: "Finish docs",
-        status: "active",
-        createdAt: 1,
-        updatedAt: 2,
-      },
-    },
+  assert.equal(
+    parsePersistedGoalState({ goal: { objective: "x" } }),
+    undefined,
   );
+  const parsed = parsePersistedGoalState({
+    goal: {
+      id: "goal-1",
+      objective: "Finish docs",
+      status: "active",
+      createdAt: 1,
+      updatedAt: 2,
+    },
+  });
+  assert.equal(parsed?.goal?.id, "goal-1");
+  assert.equal(parsed?.goal?.usage?.turns, 0);
 });
 
 test("formatGoalState includes completion evidence", () => {
@@ -63,5 +60,46 @@ test("formatGoalState includes completion evidence", () => {
   store.complete("unit tests cover expiry", 100);
 
   assert.match(formatGoalState(store.getState()), /Goal \[complete\] Fix auth/);
-  assert.match(formatGoalState(store.getState()), /Evidence: unit tests cover expiry/);
+  assert.match(
+    formatGoalState(store.getState()),
+    /Evidence: unit tests cover expiry/,
+  );
+});
+
+test("goal store tracks active elapsed time and assistant token usage", () => {
+  let now = 1000;
+  const store = createGoalStore(() => now);
+
+  store.setGoal("Measure usage", 100);
+  now = 4000;
+  store.recordAssistantUsage(120);
+
+  assert.equal(store.getGoal()?.usage?.turns, 1);
+  assert.equal(store.getGoal()?.usage?.totalTokens, 120);
+  assert.equal(store.getGoal()?.usage?.activeElapsedMs, 3000);
+
+  store.pause();
+  now = 9000;
+  assert.equal(store.getGoal()?.usage?.activeElapsedMs, 3000);
+
+  store.resume();
+  now = 11000;
+  store.complete("verified", 100);
+  assert.equal(store.getGoal()?.usage?.activeElapsedMs, 5000);
+});
+
+test("legacy persisted goal snapshots default usage counters", () => {
+  const parsed = parsePersistedGoalState({
+    goal: {
+      id: "goal-1",
+      objective: "Finish docs",
+      status: "active",
+      createdAt: 1,
+      updatedAt: 2,
+    },
+  });
+
+  assert.equal(parsed?.goal?.usage?.turns, 0);
+  assert.equal(parsed?.goal?.usage?.totalTokens, 0);
+  assert.equal(parsed?.goal?.usage?.activeElapsedMs, 0);
 });

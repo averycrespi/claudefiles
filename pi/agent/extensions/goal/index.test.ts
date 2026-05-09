@@ -57,6 +57,7 @@ test("commands mutate goal state and persist snapshots", async () => {
         evidenceMaxChars: 100,
         compactSummaryEnabled: true,
         checkpointCommits: true,
+        showUsage: true,
       },
       warnings: [],
     }),
@@ -107,6 +108,7 @@ test("restore scans branch snapshots and before_agent_start injects only active 
         evidenceMaxChars: 100,
         compactSummaryEnabled: true,
         checkpointCommits: true,
+        showUsage: true,
       },
       warnings: [],
     }),
@@ -136,6 +138,7 @@ test("compaction returns goal-aware summary when enabled", async () => {
         evidenceMaxChars: 100,
         compactSummaryEnabled: true,
         checkpointCommits: true,
+        showUsage: true,
       },
       warnings: [],
     }),
@@ -178,6 +181,7 @@ test("before_agent_start omits commit guidance when checkpointCommits is disable
         evidenceMaxChars: 100,
         compactSummaryEnabled: true,
         checkpointCommits: false,
+        showUsage: true,
       },
       warnings: [],
     }),
@@ -190,4 +194,32 @@ test("before_agent_start omits commit guidance when checkpointCommits is disable
   );
 
   assert.doesNotMatch(result.systemPrompt, /Stage files by name/i);
+});
+
+
+test("message_end records usage for active goals", async () => {
+  const pi = makePi();
+  const ctx = makeCtx();
+  createGoalExtension({
+    loadConfig: async () => ({
+      config: {
+        injectActiveGoal: true,
+        showWidget: false,
+        objectiveMaxChars: 100,
+        evidenceMaxChars: 100,
+        compactSummaryEnabled: true,
+        checkpointCommits: true,
+        showUsage: true,
+      },
+      warnings: [],
+    }),
+  })(pi);
+  await pi.handlers.get("session_start")({}, ctx);
+  await pi.commands.get("goal-set").handler("Track usage", ctx);
+
+  await pi.handlers.get("message_end")({ message: { role: "assistant", usage: { totalTokens: 250 } } }, ctx);
+  await pi.commands.get("goal-show").handler("", ctx);
+
+  assert.match(ctx.notifications.at(-1)?.msg, /250 tokens/);
+  assert.match(ctx.notifications.at(-1)?.msg, /1 turn/);
 });
