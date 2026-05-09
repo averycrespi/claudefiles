@@ -93,7 +93,7 @@ The Plan-mode contract tells the agent to usually include sections like:
 
 `Documentation Impact` should list required docs updates or state that none are needed. The `Verification Checklist` should include checking that this documentation decision was followed.
 
-`write_plan` creates or replaces `.plans` files. `edit_plan` applies exact text replacements to existing `.plans` files.
+`write_plan` creates or replaces `.plans` files. `edit_plan` applies exact text replacements to existing `.plans` files. In the TUI they render like Pi's built-in write/edit tools: write calls show the target path and line count, and edit results show compact addition/removal counts with the diff available when expanded.
 
 ## Command behavior
 

@@ -33,6 +33,21 @@ test("applyExactTextEdits applies multiple disjoint replacements against the ori
   assert.deepEqual(result, {
     ok: true,
     content: "one\nbeta\nthree\n",
+    diff: "-1 alpha\n+1 one\n 2 beta\n-3 gamma\n+3 three",
+    firstChangedLine: 1,
+  });
+});
+
+test("applyExactTextEdits includes a line diff for replacements", () => {
+  const result = applyExactTextEdits("one\ntwo\nthree\n", [
+    { oldText: "two", newText: "deux" },
+  ]);
+
+  assert.deepEqual(result, {
+    ok: true,
+    content: "one\ndeux\nthree\n",
+    diff: " 1 one\n-2 two\n+2 deux\n 3 three",
+    firstChangedLine: 2,
   });
 });
 

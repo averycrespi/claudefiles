@@ -23,6 +23,8 @@ type EventHandler = (
 type ToolDef = {
   name: string;
   execute?: (...args: any[]) => Promise<any>;
+  renderCall?: (...args: any[]) => { render: (width: number) => string[] };
+  renderResult?: (...args: any[]) => { render: (width: number) => string[] };
 };
 
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
@@ -1183,7 +1185,7 @@ test("write_plan and edit_plan are scoped to .plans", async () => {
   assert.ok(writePlan?.execute);
   assert.ok(editPlan?.execute);
 
-  await writePlan!.execute!(
+  const writeResult = await writePlan!.execute!(
     "call-1",
     {
       path: "auth.md",
@@ -1194,12 +1196,14 @@ test("write_plan and edit_plan are scoped to .plans", async () => {
     pi._ctx(),
   );
 
+  assert.match(writeResult.content[0].text, /Successfully wrote \d+ bytes/);
+
   assert.equal(
     await readFile(join(cwd, ".plans/auth.md"), "utf8"),
     "# Workflow Brief\n\n## Goal\nRefactor auth middleware\n",
   );
 
-  await editPlan!.execute!(
+  const editResult = await editPlan!.execute!(
     "call-2",
     {
       path: ".plans/auth.md",
@@ -1216,6 +1220,10 @@ test("write_plan and edit_plan are scoped to .plans", async () => {
   );
 
   assert.match(await readFile(join(cwd, ".plans/auth.md"), "utf8"), /safely/);
+  assert.match(editResult.content[0].text, /Successfully replaced 1 block/);
+  assert.match(editResult.details.diff, /-4 Refactor auth middleware/);
+  assert.match(editResult.details.diff, /\+4 Refactor auth middleware safely/);
+  assert.equal(editResult.details.firstChangedLine, 4);
 
   const blocked = await writePlan!.execute!(
     "call-3",
@@ -1225,6 +1233,100 @@ test("write_plan and edit_plan are scoped to .plans", async () => {
     pi._ctx(),
   );
   assert.match(String(blocked.content[0]?.text), /\.plans/i);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("write_plan and edit_plan render like write and edit tools", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-render-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension()(pi as any);
+  await startSession(pi);
+
+  const writePlan = pi._tools.get("write_plan")!;
+  const editPlan = pi._tools.get("edit_plan")!;
+  assert.ok(writePlan.renderCall);
+  assert.ok(writePlan.renderResult);
+  assert.ok(editPlan.renderCall);
+  assert.ok(editPlan.renderResult);
+
+  assert.deepEqual(
+    writePlan
+      .renderCall(
+        { path: "auth.md", content: "# Title\n\nBody" },
+        identityTheme,
+        { cwd, lastComponent: undefined },
+      )
+      .render(120),
+    ["write_plan .plans/auth.md (3 lines)"],
+  );
+
+  assert.deepEqual(
+    writePlan
+      .renderResult(
+        { content: [{ type: "text", text: "Successfully wrote 12 bytes" }] },
+        { isPartial: false },
+        identityTheme,
+        {
+          cwd,
+          args: { path: "auth.md" },
+          isError: false,
+          state: {},
+          lastComponent: undefined,
+        },
+      )
+      .render(120),
+    ["Written"],
+  );
+
+  assert.deepEqual(
+    editPlan
+      .renderCall({ path: ".plans/auth.md", edits: [] }, identityTheme, {
+        cwd,
+        lastComponent: undefined,
+      })
+      .render(120),
+    ["edit_plan .plans/auth.md"],
+  );
+
+  assert.deepEqual(
+    editPlan
+      .renderResult(
+        {
+          content: [{ type: "text", text: "Successfully replaced 1 block" }],
+          details: { diff: " 1 one\n-2 two\n+2 three" },
+        },
+        { expanded: false, isPartial: false },
+        identityTheme,
+        {
+          cwd,
+          args: { path: "auth.md" },
+          isError: false,
+          state: {},
+          lastComponent: undefined,
+        },
+      )
+      .render(120),
+    ["+1 / -1"],
+  );
+
+  assert.deepEqual(
+    editPlan
+      .renderResult(
+        { content: [{ type: "text", text: "edit_plan: oldText must match" }] },
+        { expanded: false, isPartial: false },
+        identityTheme,
+        {
+          cwd,
+          args: { path: "auth.md" },
+          isError: false,
+          state: {},
+          lastComponent: undefined,
+        },
+      )
+      .render(120),
+    ["edit_plan: oldText must match"],
+  );
 
   await rm(cwd, { recursive: true, force: true });
 });

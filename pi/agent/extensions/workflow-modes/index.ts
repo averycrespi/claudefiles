@@ -13,6 +13,13 @@ import {
   readExtensionSettings,
   readPiSettingsFiles,
 } from "../_shared/config.ts";
+import {
+  clearPartialTimer,
+  firstLine,
+  getResultText,
+  getTruncatedText,
+  partialElapsed,
+} from "../_shared/render.ts";
 import { applyExactTextEdits, resolvePlanFilePath } from "./artifact.ts";
 import {
   buildWorkflowCompactionSummary,
@@ -100,6 +107,7 @@ const HANDOFF_PARAMS = Type.Object({
   }),
 });
 
+type WritePlanParams = Static<typeof WRITE_PLAN_PARAMS>;
 type HandoffParams = Static<typeof HANDOFF_PARAMS>;
 
 const EDIT_PLAN_PARAMS = Type.Object({
@@ -120,6 +128,129 @@ const EDIT_PLAN_PARAMS = Type.Object({
     { minItems: 1 },
   ),
 });
+
+type EditPlanParams = Static<typeof EDIT_PLAN_PARAMS>;
+
+function planPathLabel(cwd: string, path: unknown): string {
+  if (typeof path !== "string" || path.length === 0) return ".plans/file.md";
+  const normalized = path.startsWith("@") ? path.slice(1) : path;
+  if (
+    normalized === ".plans" ||
+    normalized.startsWith(".plans/") ||
+    normalized.startsWith("/")
+  ) {
+    return normalized.startsWith(cwd)
+      ? normalized.slice(cwd.length + 1)
+      : normalized;
+  }
+  return `.plans/${normalized}`;
+}
+
+function countLines(text: unknown): number {
+  if (typeof text !== "string" || text.length === 0) return 0;
+  return text.split("\n").length;
+}
+
+function renderWritePlanCall(args: WritePlanParams, theme: any, context: any) {
+  const fileLabel = planPathLabel(context.cwd, args.path);
+  const lineCount = countLines(args.content);
+  return getTruncatedText(context.lastComponent, [
+    `${theme.fg("toolTitle", theme.bold("write_plan"))} ${theme.fg("accent", fileLabel)} ${theme.fg("dim", `(${lineCount} lines)`)}`,
+  ]);
+}
+
+function renderWritePlanResult(
+  result: any,
+  { isPartial }: { isPartial: boolean },
+  theme: any,
+  context: any,
+) {
+  const fileLabel = planPathLabel(context.cwd, context.args?.path);
+  if (isPartial) {
+    return getTruncatedText(context.lastComponent, [
+      theme.fg("warning", `Writing ${fileLabel}...${partialElapsed(context)}`),
+    ]);
+  }
+
+  clearPartialTimer(context);
+  const text = getResultText(result);
+  if (context.isError || text.startsWith("write_plan:")) {
+    return getTruncatedText(context.lastComponent, [
+      theme.fg("error", firstLine(text) || `Error writing ${fileLabel}`),
+    ]);
+  }
+
+  return getTruncatedText(context.lastComponent, [
+    theme.fg("success", "Written"),
+  ]);
+}
+
+function renderEditPlanCall(args: EditPlanParams, theme: any, context: any) {
+  const fileLabel = planPathLabel(context.cwd, args.path);
+  return getTruncatedText(context.lastComponent, [
+    `${theme.fg("toolTitle", theme.bold("edit_plan"))} ${theme.fg("accent", fileLabel)}`,
+  ]);
+}
+
+function renderEditPlanResult(
+  result: any,
+  { expanded, isPartial }: { expanded?: boolean; isPartial: boolean },
+  theme: any,
+  context: any,
+) {
+  const fileLabel = planPathLabel(context.cwd, context.args?.path);
+  if (isPartial) {
+    return getTruncatedText(context.lastComponent, [
+      theme.fg("warning", `Editing ${fileLabel}...${partialElapsed(context)}`),
+    ]);
+  }
+
+  clearPartialTimer(context);
+  const text = getResultText(result);
+  if (context.isError || text.startsWith("edit_plan:")) {
+    return getTruncatedText(context.lastComponent, [
+      theme.fg("error", firstLine(text) || `Error editing ${fileLabel}`),
+    ]);
+  }
+
+  const diff =
+    typeof result.details?.diff === "string" ? result.details.diff : "";
+  if (!diff) {
+    return getTruncatedText(context.lastComponent, [
+      theme.fg("success", "Applied"),
+    ]);
+  }
+
+  let additions = 0;
+  let removals = 0;
+  const diffLines = diff.split("\n");
+  for (const line of diffLines) {
+    if (line.startsWith("+") && !line.startsWith("+++")) additions += 1;
+    if (line.startsWith("-") && !line.startsWith("---")) removals += 1;
+  }
+
+  const lines = [
+    `${theme.fg("success", `+${additions}`)}${theme.fg("dim", " / ")}${theme.fg("error", `-${removals}`)}`,
+  ];
+  if (expanded) {
+    for (const line of diffLines.slice(0, 30)) {
+      if (line.startsWith("+") && !line.startsWith("+++")) {
+        lines.push(theme.fg("success", line));
+      } else if (line.startsWith("-") && !line.startsWith("---")) {
+        lines.push(theme.fg("error", line));
+      } else {
+        lines.push(theme.fg("dim", line));
+      }
+    }
+    if (diffLines.length > 30) {
+      lines.push(
+        theme.fg("muted", `... ${diffLines.length - 30} more diff lines`),
+      );
+    }
+  }
+
+  return getTruncatedText(context.lastComponent, lines);
+}
 
 export function createWorkflowModesExtension(
   options: WorkflowModesExtensionOptions = {},
@@ -511,6 +642,8 @@ export function createWorkflowModesExtension(
       description:
         "Create or replace a markdown file under the repo-root .plans/ directory while in Plan mode.",
       parameters: WRITE_PLAN_PARAMS,
+      renderCall: renderWritePlanCall,
+      renderResult: renderWritePlanResult,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         if (state.mode !== "plan") {
           return {
@@ -539,11 +672,12 @@ export function createWorkflowModesExtension(
 
         await mkdir(dirname(resolved.absolutePath), { recursive: true });
         await writeFile(resolved.absolutePath, params.content, "utf8");
+        const byteLength = Buffer.byteLength(params.content, "utf8");
         return {
           content: [
             {
               type: "text" as const,
-              text: `Wrote ${resolved.displayPath}`,
+              text: `Successfully wrote ${byteLength} bytes to ${resolved.displayPath}`,
             },
           ],
           details: { path: resolved.displayPath },
@@ -557,6 +691,8 @@ export function createWorkflowModesExtension(
       description:
         "Apply exact text replacements to a markdown file under the repo-root .plans/ directory while in Plan mode.",
       parameters: EDIT_PLAN_PARAMS,
+      renderCall: renderEditPlanCall,
+      renderResult: renderEditPlanResult,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         if (state.mode !== "plan") {
           return {
@@ -620,10 +756,14 @@ export function createWorkflowModesExtension(
           content: [
             {
               type: "text" as const,
-              text: `Updated ${resolved.displayPath}`,
+              text: `Successfully replaced ${params.edits.length} block(s) in ${resolved.displayPath}.`,
             },
           ],
-          details: { path: resolved.displayPath },
+          details: {
+            path: resolved.displayPath,
+            diff: edited.diff,
+            firstChangedLine: edited.firstChangedLine,
+          },
         };
       },
     });

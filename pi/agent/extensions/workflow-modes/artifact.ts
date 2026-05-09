@@ -54,6 +54,11 @@ export function resolvePlanFilePath(
   };
 }
 
+export type ExactTextEditDiff = {
+  diff: string;
+  firstChangedLine?: number;
+};
+
 export function applyExactTextEdits(
   originalContent: string,
   edits: ExactTextEdit[],
@@ -61,6 +66,8 @@ export function applyExactTextEdits(
   | {
       ok: true;
       content: string;
+      diff: string;
+      firstChangedLine?: number;
     }
   | {
       ok: false;
@@ -110,7 +117,76 @@ export function applyExactTextEdits(
     content =
       content.slice(0, range.start) + range.newText + content.slice(range.end);
   }
-  return { ok: true, content };
+  return { ok: true, content, ...buildLineDiff(originalContent, content) };
+}
+
+function buildLineDiff(
+  originalContent: string,
+  editedContent: string,
+): ExactTextEditDiff {
+  const originalLines = trimTrailingSplitLine(originalContent.split("\n"));
+  const editedLines = trimTrailingSplitLine(editedContent.split("\n"));
+  const lcsLengths = buildLcsLengths(originalLines, editedLines);
+  const diffLines: string[] = [];
+  let firstChangedLine: number | undefined;
+  let originalIndex = 0;
+  let editedIndex = 0;
+
+  while (
+    originalIndex < originalLines.length ||
+    editedIndex < editedLines.length
+  ) {
+    if (
+      originalIndex < originalLines.length &&
+      editedIndex < editedLines.length &&
+      originalLines[originalIndex] === editedLines[editedIndex]
+    ) {
+      diffLines.push(
+        ` ${originalIndex + 1} ${originalLines[originalIndex] ?? ""}`,
+      );
+      originalIndex += 1;
+      editedIndex += 1;
+    } else if (
+      originalIndex < originalLines.length &&
+      (editedIndex === editedLines.length ||
+        lcsLengths[originalIndex + 1]![editedIndex]! >=
+          lcsLengths[originalIndex]![editedIndex + 1]!)
+    ) {
+      firstChangedLine ??= originalIndex + 1;
+      diffLines.push(
+        `-${originalIndex + 1} ${originalLines[originalIndex] ?? ""}`,
+      );
+      originalIndex += 1;
+    } else {
+      firstChangedLine ??= originalIndex + 1;
+      diffLines.push(`+${editedIndex + 1} ${editedLines[editedIndex] ?? ""}`);
+      editedIndex += 1;
+    }
+  }
+
+  return { diff: diffLines.join("\n"), firstChangedLine };
+}
+
+function buildLcsLengths(a: string[], b: string[]): number[][] {
+  const lengths = Array.from({ length: a.length + 1 }, () =>
+    Array.from({ length: b.length + 1 }, () => 0),
+  );
+
+  for (let i = a.length - 1; i >= 0; i -= 1) {
+    for (let j = b.length - 1; j >= 0; j -= 1) {
+      lengths[i]![j] =
+        a[i] === b[j]
+          ? lengths[i + 1]![j + 1]! + 1
+          : Math.max(lengths[i + 1]![j]!, lengths[i]![j + 1]!);
+    }
+  }
+
+  return lengths;
+}
+
+function trimTrailingSplitLine(lines: string[]): string[] {
+  if (lines.at(-1) === "") return lines.slice(0, -1);
+  return lines;
 }
 
 function isWithin(parent: string, child: string): boolean {
