@@ -38,10 +38,11 @@ When the current goal is active and `injectActiveGoal` is enabled, each agent tu
 
 - the user-provided objective
 - a reminder to continue unless paused, blocked, or complete
+- checkpoint commit guidance when `checkpointCommits` is enabled
 - a completion audit checklist
 - a warning that proxy signals are insufficient completion evidence
 
-No goal context is injected when the goal is paused, complete, absent, or injection is disabled.
+No goal context is injected when the goal is paused, complete, absent, or injection is disabled. When checkpoint guidance is enabled, the agent is told to create git commits at logical verified checkpoints, stage files by name, and never push unless explicitly asked.
 
 ## Widget
 
@@ -66,6 +67,7 @@ Settings live under `extension:goal`. Environment variables override settings.
 | `objectiveMaxChars`     |  `4000` | `GOAL_OBJECTIVE_MAX_CHARS`     | Maximum accepted goal objective length.                                                                                      |
 | `evidenceMaxChars`      |  `4000` | `GOAL_EVIDENCE_MAX_CHARS`      | Maximum accepted completion evidence length.                                                                                 |
 | `compactSummaryEnabled` |  `true` | `GOAL_COMPACT_SUMMARY_ENABLED` | Preserve goal state by providing a custom compaction summary. This may replace other extension/default compaction summaries. |
+| `checkpointCommits`     |  `true` | `GOAL_CHECKPOINT_COMMITS`      | Tell the agent to create git commits at logical verified checkpoints while working on an active goal.                        |
 
 Boolean environment overrides accept `1`/`true` and `0`/`false`.
 
@@ -78,7 +80,8 @@ Example:
     "showWidget": true,
     "objectiveMaxChars": 4000,
     "evidenceMaxChars": 4000,
-    "compactSummaryEnabled": true
+    "compactSummaryEnabled": true,
+    "checkpointCommits": true
   }
 }
 ```

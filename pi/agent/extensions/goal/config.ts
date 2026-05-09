@@ -12,6 +12,7 @@ export type GoalConfig = {
   objectiveMaxChars: number;
   evidenceMaxChars: number;
   compactSummaryEnabled: boolean;
+  checkpointCommits: boolean;
 };
 
 type PlainObject = Record<string, unknown>;
@@ -22,6 +23,7 @@ export const DEFAULT_GOAL_CONFIG: GoalConfig = {
   objectiveMaxChars: 4000,
   evidenceMaxChars: 4000,
   compactSummaryEnabled: true,
+  checkpointCommits: true,
 };
 
 function parsePositiveInteger(
@@ -90,6 +92,19 @@ function readEnvSettings(
           ),
         }
       : {}),
+    ...(parseBooleanEnv(
+      env.GOAL_CHECKPOINT_COMMITS,
+      "GOAL_CHECKPOINT_COMMITS",
+      warnings,
+    ) !== undefined
+      ? {
+          checkpointCommits: parseBooleanEnv(
+            env.GOAL_CHECKPOINT_COMMITS,
+            "GOAL_CHECKPOINT_COMMITS",
+            warnings,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -130,6 +145,10 @@ export function parseGoalConfig(options: {
       typeof merged.compactSummaryEnabled === "boolean"
         ? merged.compactSummaryEnabled
         : DEFAULT_GOAL_CONFIG.compactSummaryEnabled,
+    checkpointCommits:
+      typeof merged.checkpointCommits === "boolean"
+        ? merged.checkpointCommits
+        : DEFAULT_GOAL_CONFIG.checkpointCommits,
   };
 }
 

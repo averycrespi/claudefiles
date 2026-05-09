@@ -14,6 +14,7 @@ test("parseGoalConfig applies defaults and environment overrides", () => {
   assert.equal(config.objectiveMaxChars, 50);
   assert.equal(config.evidenceMaxChars, 25);
   assert.equal(config.injectActiveGoal, true);
+  assert.equal(config.checkpointCommits, true);
   assert.deepEqual(warnings, []);
 });
 
@@ -21,12 +22,13 @@ test("parseGoalConfig rejects invalid numeric config with warning", () => {
   const warnings: string[] = [];
   const config = parseGoalConfig({
     settings: { objectiveMaxChars: -1 },
-    env: { GOAL_COMPACT_SUMMARY_ENABLED: "maybe" },
+    env: { GOAL_COMPACT_SUMMARY_ENABLED: "maybe", GOAL_CHECKPOINT_COMMITS: "false" },
     warnings,
   });
 
   assert.equal(config.objectiveMaxChars, 4000);
   assert.equal(config.compactSummaryEnabled, true);
+  assert.equal(config.checkpointCommits, false);
   assert.match(warnings.join("\n"), /objectiveMaxChars/);
   assert.match(warnings.join("\n"), /GOAL_COMPACT_SUMMARY_ENABLED/);
 });
