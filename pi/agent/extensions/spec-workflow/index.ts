@@ -3,6 +3,7 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { loadSpecWorkflowConfig, type SpecWorkflowConfig } from "./config.ts";
+import { registerSpecWorkflowTools } from "./tools.ts";
 
 const COMMANDS = [
   ["spec-plan", "Create or revise a durable spec workflow plan"],
@@ -56,6 +57,8 @@ export function createSpecWorkflowExtension(
   const loadConfig = options.loadConfig ?? loadSpecWorkflowConfig;
 
   return function specWorkflowExtension(pi: ExtensionAPI) {
+    registerSpecWorkflowTools(pi);
+
     const state: RuntimeState = {
       phase: "idle",
       config: {

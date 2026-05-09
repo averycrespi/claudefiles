@@ -11,6 +11,7 @@ function makePi() {
     registerCommand(name: string, command: any) {
       commands.set(name, command);
     },
+    registerTool() {},
     on(name: string, handler: any) {
       handlers.set(name, handler);
     },
