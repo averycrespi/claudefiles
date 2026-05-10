@@ -21,14 +21,7 @@ const PLAN_TOOLS = [
   "edit_plan",
 ] as const;
 
-const EXECUTE_TOOLS = [
-  "read",
-  "edit",
-  "write",
-  "bash",
-  "todo",
-  "workflow_handoff",
-] as const;
+const EXECUTE_TOOLS = ["read", "edit", "write", "bash", "todo"] as const;
 
 const VERIFY_TOOLS = [
   "read",
@@ -39,8 +32,9 @@ const VERIFY_TOOLS = [
   "mcp_describe",
   "mcp_call",
   "spawn_agents",
-  "workflow_handoff",
 ] as const;
+
+const WORKFLOW_ADVANCE_TOOL = "workflow_advance";
 
 export const DEFAULT_THINKING_LEVELS: WorkflowModeThinkingLevels = {
   plan: "medium",
@@ -93,14 +87,21 @@ Covers: AC-<n>
 
 - <Accepted limitation, follow-up, or "None known.">`;
 
-export function getManagedToolNamesForMode(mode: WorkflowMode): string[] {
+export function getManagedToolNamesForMode(
+  mode: WorkflowMode,
+  options: { autoHandoffEnabled?: boolean } = {},
+): string[] {
   switch (mode) {
     case "plan":
       return [...PLAN_TOOLS];
     case "execute":
-      return [...EXECUTE_TOOLS];
+      return options.autoHandoffEnabled
+        ? [...EXECUTE_TOOLS, WORKFLOW_ADVANCE_TOOL]
+        : [...EXECUTE_TOOLS];
     case "verify":
-      return [...VERIFY_TOOLS];
+      return options.autoHandoffEnabled
+        ? [...VERIFY_TOOLS, WORKFLOW_ADVANCE_TOOL]
+        : [...VERIFY_TOOLS];
     default:
       return [];
   }
@@ -176,7 +177,7 @@ export function buildModeContract(options: {
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
       options.autoHandoffEnabled
-        ? 'Before stopping in Execute mode, call workflow_handoff as the explicit workflow decision: use target_mode="verify" when implementation is ready for verification, or action="complete" / action="abort" when the workflow is finished, blocked, unfixable, or cannot continue. Include a concise reason.'
+        ? 'Before stopping in Execute mode, call workflow_advance as the explicit workflow decision: use state="verify" when implementation is ready for verification, or state="completed" / state="aborted" when the workflow is finished, blocked, unfixable, or cannot continue. Include a concise reason.'
         : "When implementation is complete and ready for verification, report that outcome to the user instead of requesting an automatic workflow handoff.",
     ].join("\n");
   }
@@ -190,10 +191,10 @@ export function buildModeContract(options: {
     "Report verification in a structured format with: Overall verdict (`pass`, `fail`, or `blocked`); deterministic checks run and results; per acceptance criterion verdicts (`pass`, `fail`, `n/a`, or `unknown`) with evidence; findings / next actions; and any user-accepted known issues.",
     "Turn findings into explicit next actions for a possible return to Execute mode.",
     options.autoHandoffEnabled
-      ? 'Before stopping in Verify mode, call workflow_handoff as the explicit workflow decision: use target_mode="execute" when verification finds fixable issues, or action="complete" / action="abort" when verification passes, is blocked, finds unfixable issues, or cannot continue. Include a concise reason.'
+      ? 'Before stopping in Verify mode, call workflow_advance as the explicit workflow decision: use state="execute" when verification finds fixable issues, or state="completed" / state="aborted" when verification passes, is blocked, finds unfixable issues, or cannot continue. Include a concise reason.'
       : "If verification finds fixable issues, report the needed fixes to the user instead of requesting an automatic workflow handoff.",
     options.autoHandoffEnabled
-      ? "Do not end Verify mode with only a free-text report; use workflow_handoff for pass, fail, blocked, and unfixable terminal decisions."
-      : "If verification passes, is blocked, or finds unfixable issues, do not call workflow_handoff; report the outcome to the user.",
+      ? "Do not end Verify mode with only a free-text report; use workflow_advance for pass, fail, blocked, and unfixable terminal decisions."
+      : "If verification passes, is blocked, or finds unfixable issues, do not call workflow_advance; report the outcome to the user.",
   ].join("\n");
 }

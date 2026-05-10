@@ -582,7 +582,6 @@ test("mode switch compacts above the default threshold before applying mode", as
     "write",
     "bash",
     "todo",
-    "workflow_handoff",
   ]);
   assert.equal(pi._sentUserMessages.length, 1);
   assert.match(String(pi._sentUserMessages[0]?.content), /execute mode/i);
@@ -613,8 +612,22 @@ test("mode switch skips pre-compaction when disabled by config", async () => {
     "write",
     "bash",
     "todo",
-    "workflow_handoff",
   ]);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("execute and verify include workflow_advance only when auto handoff is enabled", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-tools-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+  assert.ok(pi._currentTools().includes("workflow_advance"));
+
+  await pi._commands.get("verify")!.handler("Check", pi._ctx());
+  assert.ok(pi._currentTools().includes("workflow_advance"));
 
   await rm(cwd, { recursive: true, force: true });
 });
@@ -865,7 +878,7 @@ test("todo reminders are execute-only, cooldown-gated, and reset by todo results
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff is disabled by default", async () => {
+test("workflow_advance is disabled by default", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-disabled-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension()(pi as any);
@@ -877,12 +890,12 @@ test("workflow_handoff is disabled by default", async () => {
     { type: "before_agent_start", prompt: "hi", systemPrompt: "base" },
     pi._ctx(),
   );
-  assert.doesNotMatch(promptResult.systemPrompt, /call workflow_handoff/i);
+  assert.doesNotMatch(promptResult.systemPrompt, /call workflow_advance/i);
   assert.match(promptResult.systemPrompt, /report that outcome to the user/i);
 
-  const result = await pi._tools.get("workflow_handoff")!.execute!(
+  const result = await pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
@@ -895,7 +908,7 @@ test("workflow_handoff is disabled by default", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff compacts above handoff threshold before applying target mode", async () => {
+test("workflow_advance compacts above handoff threshold before applying target mode", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-compact-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
@@ -903,9 +916,9 @@ test("workflow_handoff compacts above handoff threshold before applying target m
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
   let resolved = false;
-  const handoff = pi._tools.get("workflow_handoff")!.execute!(
+  const handoff = pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, 30_000, true, false),
@@ -935,7 +948,7 @@ test("workflow_handoff compacts above handoff threshold before applying target m
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff compaction summary uses the target mode", async () => {
+test("workflow_advance compaction summary uses the target mode", async () => {
   const cwd = await mkdtemp(
     join(tmpdir(), "workflow-modes-handoff-compact-target-"),
   );
@@ -944,9 +957,9 @@ test("workflow_handoff compaction summary uses the target mode", async () => {
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
-  const handoff = pi._tools.get("workflow_handoff")!.execute!(
+  const handoff = pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, 35_000, true, false),
@@ -980,7 +993,7 @@ test("workflow_handoff compaction summary uses the target mode", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff skips compaction below threshold or when disabled", async () => {
+test("workflow_advance skips compaction below threshold or when disabled", async () => {
   const cwd = await mkdtemp(
     join(tmpdir(), "workflow-modes-handoff-compact-skip-"),
   );
@@ -989,9 +1002,9 @@ test("workflow_handoff skips compaction below threshold or when disabled", async
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
-  await pi._tools.get("workflow_handoff")!.execute!(
+  await pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, 29_999, true, false),
@@ -1006,9 +1019,9 @@ test("workflow_handoff skips compaction below threshold or when disabled", async
   await disabledPi._commands
     .get("execute")!
     .handler("Implement", disabledPi._ctx());
-  await disabledPi._tools.get("workflow_handoff")!.execute!(
+  await disabledPi._tools.get("workflow_advance")!.execute!(
     "call-2",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     disabledPi._ctx([], undefined, true, 100_000, true, false),
@@ -1020,7 +1033,7 @@ test("workflow_handoff skips compaction below threshold or when disabled", async
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff notifies and continues when compaction fails", async () => {
+test("workflow_advance notifies and continues when compaction fails", async () => {
   const cwd = await mkdtemp(
     join(tmpdir(), "workflow-modes-handoff-compact-error-"),
   );
@@ -1029,9 +1042,9 @@ test("workflow_handoff notifies and continues when compaction fails", async () =
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
-  const handoff = pi._tools.get("workflow_handoff")!.execute!(
+  const handoff = pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, 30_000, true, false),
@@ -1052,7 +1065,7 @@ test("workflow_handoff notifies and continues when compaction fails", async () =
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff moves execute to verify when not denied", async () => {
+test("workflow_advance moves execute to verify when not denied", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-verify-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
@@ -1064,11 +1077,11 @@ test("workflow_handoff moves execute to verify when not denied", async () => {
     { type: "before_agent_start", prompt: "hi", systemPrompt: "base" },
     pi._ctx(),
   );
-  assert.match(promptResult.systemPrompt, /call workflow_handoff/i);
+  assert.match(promptResult.systemPrompt, /call workflow_advance/i);
 
-  const result = await pi._tools.get("workflow_handoff")!.execute!(
+  const result = await pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
@@ -1089,16 +1102,16 @@ test("workflow_handoff moves execute to verify when not denied", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff denial keeps the current mode", async () => {
+test("workflow_advance denial keeps the current mode", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-denied-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
-  const result = await pi._tools.get("workflow_handoff")!.execute!(
+  const result = await pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, undefined, "Cancel"),
@@ -1115,16 +1128,16 @@ test("workflow_handoff denial keeps the current mode", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff skips denial prompt without UI", async () => {
+test("workflow_advance skips denial prompt without UI", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-no-ui-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
-  await pi._tools.get("workflow_handoff")!.execute!(
+  await pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Implementation complete" },
+    { state: "verify", reason: "Implementation complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, false, true),
@@ -1136,7 +1149,7 @@ test("workflow_handoff skips denial prompt without UI", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff caps verify to execute fix loops", async () => {
+test("workflow_advance caps verify to execute fix loops", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-cap-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({
@@ -1146,24 +1159,24 @@ test("workflow_handoff caps verify to execute fix loops", async () => {
   await startSession(pi);
   await pi._commands.get("verify")!.handler("Check", pi._ctx());
 
-  const handoff = pi._tools.get("workflow_handoff")!;
+  const handoff = pi._tools.get("workflow_advance")!;
   await handoff.execute!(
     "call-1",
-    { target_mode: "execute", reason: "Fix failures" },
+    { state: "execute", reason: "Fix failures" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
   );
   await handoff.execute!(
     "call-2",
-    { target_mode: "verify", reason: "Fixes complete" },
+    { state: "verify", reason: "Fixes complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
   );
   const result = await handoff.execute!(
     "call-3",
-    { target_mode: "execute", reason: "More fixes" },
+    { state: "execute", reason: "More fixes" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
@@ -1176,16 +1189,16 @@ test("workflow_handoff caps verify to execute fix loops", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_handoff terminal action exits to normal and terminates", async () => {
+test("workflow_advance terminal action exits to normal and terminates", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-terminal-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("verify")!.handler("Check", pi._ctx());
 
-  const result = await pi._tools.get("workflow_handoff")!.execute!(
+  const result = await pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { action: "complete", reason: "Verification passed" },
+    { state: "completed", reason: "Verification passed" },
     undefined,
     undefined,
     pi._ctx(),
@@ -1217,7 +1230,7 @@ test("workflow_handoff terminal action exits to normal and terminates", async ()
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("agent_end queues missing workflow_handoff follow-ups in execute and verify", async () => {
+test("agent_end queues missing workflow_advance follow-ups in execute and verify", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-fallback-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
@@ -1232,17 +1245,14 @@ test("agent_end queues missing workflow_handoff follow-ups in execute and verify
     String(pi._sentUserMessages.at(-1)?.content),
     /stopped in Execute mode/i,
   );
-  assert.match(
-    String(pi._sentUserMessages.at(-1)?.content),
-    /target_mode="verify"/,
-  );
+  assert.match(String(pi._sentUserMessages.at(-1)?.content), /state="verify"/);
   assert.deepEqual(pi._sentUserMessages.at(-1)?.options, {
     deliverAs: "followUp",
   });
 
-  await pi._tools.get("workflow_handoff")!.execute!(
+  await pi._tools.get("workflow_advance")!.execute!(
     "call-1",
-    { target_mode: "verify", reason: "Ready for verification" },
+    { state: "verify", reason: "Ready for verification" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
@@ -1253,15 +1263,12 @@ test("agent_end queues missing workflow_handoff follow-ups in execute and verify
     String(pi._sentUserMessages.at(-1)?.content),
     /stopped in Verify mode/i,
   );
-  assert.match(
-    String(pi._sentUserMessages.at(-1)?.content),
-    /target_mode="execute"/,
-  );
+  assert.match(String(pi._sentUserMessages.at(-1)?.content), /state="execute"/);
 
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("agent_end skips missing workflow_handoff follow-up when disabled or pending", async () => {
+test("agent_end skips missing workflow_advance follow-up when disabled or pending", async () => {
   const cwd = await mkdtemp(
     join(tmpdir(), "workflow-modes-handoff-no-fallback-"),
   );
@@ -1303,7 +1310,7 @@ test("agent_end skips missing workflow_handoff follow-up when disabled or pendin
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("agent_end caps missing workflow_handoff follow-ups and resets after mode entry", async () => {
+test("agent_end caps missing workflow_advance follow-ups and resets after mode entry", async () => {
   const cwd = await mkdtemp(
     join(tmpdir(), "workflow-modes-handoff-fallback-cap-"),
   );

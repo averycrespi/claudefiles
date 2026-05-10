@@ -45,6 +45,7 @@ type RuntimeState = {
   baselineTools?: string[];
   baselineThinking?: string;
   thinkingLevels: WorkflowModeThinkingLevels;
+  autoHandoffEnabled: boolean;
   autoHandoffFixLoopsUsed: number;
   missingHandoffFollowUpsUsed: number;
   todoReminderTurnsSinceTodo: number;
@@ -97,27 +98,26 @@ const WRITE_PLAN_PARAMS = Type.Object({
   }),
 });
 
-const HANDOFF_PARAMS = Type.Object({
-  target_mode: Type.Optional(
-    Type.Union([Type.Literal("execute"), Type.Literal("verify")], {
+const ADVANCE_PARAMS = Type.Object({
+  state: Type.Union(
+    [
+      Type.Literal("execute"),
+      Type.Literal("verify"),
+      Type.Literal("completed"),
+      Type.Literal("aborted"),
+    ],
+    {
       description:
-        "Workflow mode to hand off to. Execute mode may target verify; Verify mode may target execute.",
-    }),
-  ),
-  action: Type.Optional(
-    Type.Union([Type.Literal("complete"), Type.Literal("abort")], {
-      description:
-        "Terminal workflow decision. Use complete when the workflow is finished; use abort when it is blocked, unfixable, or cannot continue.",
-    }),
+        "Workflow state to advance to: execute, verify, completed, or aborted.",
+    },
   ),
   reason: Type.String({
-    description:
-      "Concise reason for the handoff or terminal workflow decision.",
+    description: "Concise reason for the workflow advance decision.",
   }),
 });
 
 type WritePlanParams = Static<typeof WRITE_PLAN_PARAMS>;
-type HandoffParams = Static<typeof HANDOFF_PARAMS>;
+type AdvanceParams = Static<typeof ADVANCE_PARAMS>;
 
 const MISSING_HANDOFF_FOLLOW_UP_LIMIT = 2;
 
@@ -272,6 +272,7 @@ export function createWorkflowModesExtension(
     const state: RuntimeState = {
       mode: "normal",
       thinkingLevels: { ...DEFAULT_THINKING_LEVELS },
+      autoHandoffEnabled: false,
       autoHandoffFixLoopsUsed: 0,
       missingHandoffFollowUpsUsed: 0,
       todoReminderTurnsSinceTodo: 0,
@@ -305,12 +306,13 @@ export function createWorkflowModesExtension(
       state.baselineThinking = undefined;
     }
 
-    function updateThinkingLevels(config: WorkflowModesConfig): void {
+    function updateRuntimeConfig(config: WorkflowModesConfig): void {
       state.thinkingLevels = {
         plan: config.planThinkingLevel,
         execute: config.executeThinkingLevel,
         verify: config.verifyThinkingLevel,
       };
+      state.autoHandoffEnabled = config.autoHandoffEnabled;
     }
 
     function resetTodoReminder(): void {
@@ -325,17 +327,17 @@ export function createWorkflowModesExtension(
     function buildMissingHandoffFollowUpMessage(): string {
       if (state.mode === "execute") {
         return [
-          "You stopped in Execute mode without calling the required workflow_handoff decision tool.",
-          'If implementation is ready for verification, call workflow_handoff with target_mode="verify" and a concise reason.',
-          'If the workflow is finished, blocked, unfixable, or cannot continue, call workflow_handoff with action="complete" or action="abort" and a concise reason.',
+          "You stopped in Execute mode without calling the required workflow_advance decision tool.",
+          'If implementation is ready for verification, call workflow_advance with state="verify" and a concise reason.',
+          'If the workflow is finished, blocked, unfixable, or cannot continue, call workflow_advance with state="completed" or state="aborted" and a concise reason.',
           "If you are not actually at a stopping point, continue the implementation work now.",
         ].join("\n");
       }
 
       return [
-        "You stopped in Verify mode without calling the required workflow_handoff decision tool.",
-        'If verification found fixable issues, call workflow_handoff with target_mode="execute" and a concise reason.',
-        'If verification passed, is blocked, found unfixable issues, or cannot continue, call workflow_handoff with action="complete" or action="abort" and a concise reason.',
+        "You stopped in Verify mode without calling the required workflow_advance decision tool.",
+        'If verification found fixable issues, call workflow_advance with state="execute" and a concise reason.',
+        'If verification passed, is blocked, found unfixable issues, or cannot continue, call workflow_advance with state="completed" or state="aborted" and a concise reason.',
         "If you are not actually at a stopping point, continue verification now.",
       ].join("\n");
     }
@@ -351,9 +353,9 @@ export function createWorkflowModesExtension(
       }
 
       const available = new Set(pi.getAllTools().map((tool) => tool.name));
-      const nextTools = getManagedToolNamesForMode(mode).filter((name) =>
-        available.has(name),
-      );
+      const nextTools = getManagedToolNamesForMode(mode, {
+        autoHandoffEnabled: state.autoHandoffEnabled,
+      }).filter((name) => available.has(name));
       pi.setActiveTools(nextTools);
       const thinking = getThinkingLevelForMode(mode, state.thinkingLevels);
       if (thinking) {
@@ -462,7 +464,7 @@ export function createWorkflowModesExtension(
       state.autoHandoffFixLoopsUsed = 0;
       resetMissingHandoffFollowUps();
       const config = await loadWorkflowModesConfig(ctx.cwd);
-      updateThinkingLevels(config);
+      updateRuntimeConfig(config);
       if (state.mode !== mode) {
         await maybeCompactBeforeModeSwitch(mode, ctx, {
           enabled: config.autoCompactOnModeSwitch,
@@ -485,7 +487,7 @@ export function createWorkflowModesExtension(
       ctx: ExtensionContext,
       config: WorkflowModesConfig,
     ): Promise<void> {
-      updateThinkingLevels(config);
+      updateRuntimeConfig(config);
       if (state.mode !== mode) {
         await maybeCompactBeforeModeSwitch(mode, ctx, {
           enabled: config.autoCompactOnHandoff,
@@ -502,8 +504,8 @@ export function createWorkflowModesExtension(
       sendHandoffKickoffMessage(mode, args);
     }
 
-    async function exitWorkflowFromHandoff(
-      action: "complete" | "abort",
+    async function exitWorkflowFromAdvance(
+      terminalState: "completed" | "aborted",
       reason: string,
       ctx: ExtensionContext,
     ): Promise<void> {
@@ -518,8 +520,7 @@ export function createWorkflowModesExtension(
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
       if (ctx.hasUI) {
-        const label = action === "complete" ? "completed" : "aborted";
-        ctx.ui.notify(`Workflow ${label}: ${reason}`, "info");
+        ctx.ui.notify(`Workflow ${terminalState}: ${reason}`, "info");
       }
     }
 
@@ -571,21 +572,21 @@ export function createWorkflowModesExtension(
     }
 
     pi.registerTool({
-      name: "workflow_handoff",
-      label: "Workflow Handoff",
+      name: "workflow_advance",
+      label: "Workflow Advance",
       description:
-        "Request an automatic workflow mode handoff between Execute and Verify modes when auto handoff is enabled.",
-      parameters: HANDOFF_PARAMS,
+        "Advance an automatic workflow to Execute, Verify, completed, or aborted when auto handoff is enabled.",
+      parameters: ADVANCE_PARAMS,
       async execute(_toolCallId, rawParams, _signal, _onUpdate, ctx) {
-        const params = rawParams as HandoffParams;
+        const params = rawParams as AdvanceParams;
         const config = await loadWorkflowModesConfig(ctx.cwd);
-        updateThinkingLevels(config);
+        updateRuntimeConfig(config);
         if (!config.autoHandoffEnabled) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: "workflow_handoff: automatic handoff is disabled by configuration",
+                text: "workflow_advance: automatic handoff is disabled by configuration",
               },
             ],
             details: {},
@@ -597,7 +598,7 @@ export function createWorkflowModesExtension(
             content: [
               {
                 type: "text" as const,
-                text: "workflow_handoff: only available while workflow modes are in Execute or Verify mode",
+                text: "workflow_advance: only available while workflow modes are in Execute or Verify mode",
               },
             ],
             details: {},
@@ -606,32 +607,19 @@ export function createWorkflowModesExtension(
 
         const reason = params.reason.trim();
         const displayReason = reason || "No reason provided.";
-        const action = params.action;
-        const targetMode = params.target_mode;
+        const nextState = params.state;
 
-        if (action !== undefined && targetMode !== undefined) {
+        if (nextState === "completed" || nextState === "aborted") {
+          await exitWorkflowFromAdvance(nextState, displayReason, ctx);
           return {
             content: [
               {
                 type: "text" as const,
-                text: "workflow_handoff: provide either target_mode for a handoff or action for a terminal workflow decision, not both",
-              },
-            ],
-            details: {},
-          };
-        }
-
-        if (action !== undefined) {
-          await exitWorkflowFromHandoff(action, displayReason, ctx);
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `workflow_handoff: workflow ${action === "complete" ? "completed" : "aborted"}`,
+                text: `workflow_advance: workflow ${nextState}`,
               },
             ],
             details: {
-              action,
+              state: nextState,
               reason: displayReason,
               fixLoopsUsed: state.autoHandoffFixLoopsUsed,
               maxFixLoops: config.autoHandoffMaxFixLoops,
@@ -640,35 +628,23 @@ export function createWorkflowModesExtension(
           };
         }
 
-        if (targetMode === undefined) {
+        if (state.mode === "execute" && nextState !== "verify") {
           return {
             content: [
               {
                 type: "text" as const,
-                text: "workflow_handoff: provide target_mode for a handoff or action for a terminal workflow decision",
+                text: "workflow_advance: Execute mode can only advance to Verify, completed, or aborted",
               },
             ],
             details: {},
           };
         }
-
-        if (state.mode === "execute" && targetMode !== "verify") {
+        if (state.mode === "verify" && nextState !== "execute") {
           return {
             content: [
               {
                 type: "text" as const,
-                text: "workflow_handoff: Execute mode can only hand off to Verify mode",
-              },
-            ],
-            details: {},
-          };
-        }
-        if (state.mode === "verify" && targetMode !== "execute") {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: "workflow_handoff: Verify mode can only hand off to Execute mode",
+                text: "workflow_advance: Verify mode can only advance to Execute, completed, or aborted",
               },
             ],
             details: {},
@@ -684,7 +660,7 @@ export function createWorkflowModesExtension(
             content: [
               {
                 type: "text" as const,
-                text: `workflow_handoff: automatic fix-loop cap reached (${state.autoHandoffFixLoopsUsed}/${config.autoHandoffMaxFixLoops})`,
+                text: `workflow_advance: automatic fix-loop cap reached (${state.autoHandoffFixLoopsUsed}/${config.autoHandoffMaxFixLoops})`,
               },
             ],
             details: {
@@ -696,7 +672,7 @@ export function createWorkflowModesExtension(
 
         if (ctx.hasUI) {
           const choice = await ctx.ui.select(
-            `Agent triggered handoff to ${capitalize(targetMode)} mode: ${displayReason}`,
+            `Agent triggered handoff to ${capitalize(nextState)} mode: ${displayReason}`,
             ["Cancel"],
             { timeout: config.autoHandoffDenyTimeoutMs },
           );
@@ -705,7 +681,7 @@ export function createWorkflowModesExtension(
               content: [
                 {
                   type: "text" as const,
-                  text: "workflow_handoff: handoff denied by user",
+                  text: "workflow_advance: handoff denied by user",
                 },
               ],
               details: { denied: true },
@@ -713,12 +689,12 @@ export function createWorkflowModesExtension(
           }
         }
 
-        if (state.mode === "verify" && targetMode === "execute") {
+        if (state.mode === "verify" && nextState === "execute") {
           state.autoHandoffFixLoopsUsed += 1;
         }
 
         await transitionToModeFromHandoff(
-          targetMode,
+          nextState,
           displayReason,
           ctx,
           config,
@@ -727,11 +703,11 @@ export function createWorkflowModesExtension(
           content: [
             {
               type: "text" as const,
-              text: `workflow_handoff: handed off to ${targetMode} mode`,
+              text: `workflow_advance: advanced to ${nextState} mode`,
             },
           ],
           details: {
-            targetMode,
+            state: nextState,
             fixLoopsUsed: state.autoHandoffFixLoopsUsed,
             maxFixLoops: config.autoHandoffMaxFixLoops,
           },
@@ -898,7 +874,7 @@ export function createWorkflowModesExtension(
     }
 
     pi.on("session_start", async (_event, ctx) => {
-      updateThinkingLevels(await loadWorkflowModesConfig(ctx.cwd));
+      updateRuntimeConfig(await loadWorkflowModesConfig(ctx.cwd));
       resetBaselines();
       captureBaselines();
       if (state.mode !== "normal") {
@@ -935,7 +911,7 @@ export function createWorkflowModesExtension(
     pi.on("before_agent_start", async (event, ctx) => {
       if (state.mode === "normal") return undefined;
       const config = await loadWorkflowModesConfig(ctx.cwd);
-      updateThinkingLevels(config);
+      updateRuntimeConfig(config);
       return {
         systemPrompt: `${event.systemPrompt}\n\n${buildModeContract({
           mode: state.mode,
