@@ -13,8 +13,8 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 - compacts large idle sessions before `/plan`, `/execute`, and `/verify` mode switches to reduce expensive cache misses after the tool set changes
 - provides Plan-mode-only `write_plan` and `edit_plan` tools scoped to `.plans/` at the repo root
 - builds a custom compaction summary so long-running workflow sessions keep their mode and TODO context
-- optionally requires the agent to end Execute/Verify phases with `workflow_advance`, either for capped Execute ↔ Verify handoffs or terminal completion/abort decisions
-- follows up up to 2 times when auto handoff is enabled and the agent stops in Execute/Verify without calling `workflow_advance`
+- optionally requires the agent to end Execute/Verify phases with `workflow_advance`, either for capped Execute ↔ Verify advances or terminal completion/abort decisions
+- follows up up to 2 times when auto advance is enabled and the agent stops in Execute/Verify without calling `workflow_advance`
 - injects an Execute-mode-only hidden reminder when the agent has gone several turns without using `todo`
 - currently leaves `mcp_call` available in Plan and Verify mode; read-only broker filtering is deferred to a later revision
 
@@ -39,7 +39,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - defaults thinking to `low` (`executeThinkingLevel`)
 - encourages regular commits at logical checkpoints instead of one large end-of-run commit
 - reminds the agent to use `todo` after a configurable number of Execute-mode turns without TODO activity; the reminder is injected only into model context and tells the agent not to mention it to the user
-- when auto handoff is enabled, must call `workflow_advance` before stopping: use `state: "verify"` when implementation is ready for verification, or `state: "aborted"` when the workflow is blocked, unfixable, or cannot continue
+- when auto advance is enabled, must call `workflow_advance` before stopping: use `state: "verify"` when implementation is ready for verification, or `state: "aborted"` when the workflow is blocked, unfixable, or cannot continue
 
 ### Verify
 
@@ -48,11 +48,11 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - defaults thinking to `high` (`verifyThinkingLevel`)
 - reports a structured verification result: overall verdict (`pass`, `fail`, or `blocked`), deterministic checks and results, per-acceptance-criterion verdicts with evidence, findings / next actions, and any user-accepted known issues
 
-When auto handoff is enabled, Verify must call `workflow_advance` before stopping. It should use `state: "execute"` only when it found fixable issues. If verification passes, is blocked, finds unfixable issues, or cannot continue, it should use `state: "completed"` or `state: "aborted"` so the workflow exits to Normal mode explicitly.
+When auto advance is enabled, Verify must call `workflow_advance` before stopping. It should use `state: "execute"` only when it found fixable issues. If verification passes, is blocked, finds unfixable issues, or cannot continue, it should use `state: "completed"` or `state: "aborted"` so the workflow exits to Normal mode explicitly.
 
-## Automatic handoff
+## Automatic advance
 
-The `workflow_advance` tool is active only in Execute and Verify modes when auto handoff is enabled. It accepts a single `state` decision plus a concise reason:
+The `workflow_advance` tool is active only in Execute and Verify modes when auto advance is enabled. It accepts a single `state` decision plus a concise reason:
 
 ```json
 {
@@ -85,11 +85,11 @@ stateDiagram-v2
 
 Execute mode may advance only to Verify or aborted. Verify mode may advance only to Execute, completed, or aborted. The tool validates the current mode, configuration, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
 
-Accepted handoffs switch directly to the requested mode and queue the follow-up kickoff message. Verify → Execute handoffs consume the configured fix-loop budget; Execute → Verify handoffs do not.
+Accepted advances switch directly to the requested mode and queue the follow-up kickoff message. Verify → Execute advances consume the configured fix-loop budget; Execute → Verify advances do not.
 
-Accepted handoffs compact before changing tools/thinking when `autoCompactOnHandoff` is enabled and current context usage is at least `autoCompactHandoffMinTokens`. If handoff compaction fails, the extension reports the failure when UI is available and continues with the handoff.
+Accepted advances compact before changing tools/thinking when `autoCompactOnAdvance` is enabled and current context usage is at least `autoCompactAdvanceMinTokens`. If advance compaction fails, the extension reports the failure when UI is available and continues with the advance.
 
-If auto handoff is enabled and the agent stops in Execute or Verify mode without calling `workflow_advance`, the extension queues a follow-up user message asking for the missing workflow decision. This fallback is capped at 2 follow-ups per mode entry or successful handoff, skips when another message is already pending, and then leaves the current mode unchanged.
+If auto advance is enabled and the agent stops in Execute or Verify mode without calling `workflow_advance`, the extension queues a follow-up user message asking for the missing workflow decision. This fallback is capped at 2 follow-ups per mode entry or successful advance, skips when another message is already pending, and then leaves the current mode unchanged.
 
 ## Plan files
 
@@ -180,10 +180,10 @@ Configure via `extension:workflow-modes` in Pi settings. Environment variables o
 | ----------------------------------- | -------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | `autoCompactOnModeSwitch`           | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH`           | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.                                            |
 | `autoCompactMinTokens`              | `50000`  | `WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS`               | Context-token threshold for slash-command pre-switch compaction.                                                 |
-| `autoCompactOnHandoff`              | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF`               | Enables pre-switch compaction for accepted `workflow_advance` transitions.                                       |
-| `autoCompactHandoffMinTokens`       | `30000`  | `WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS`       | Context-token threshold for handoff pre-switch compaction.                                                       |
-| `autoHandoffEnabled`                | `false`  | `WORKFLOW_MODES_AUTO_HANDOFF_ENABLED`                  | Enables required Execute/Verify `workflow_advance` decisions, handoffs, and bounded missing-decision follow-ups. |
-| `autoHandoffMaxFixLoops`            | `2`      | `WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS`            | Caps Verify → Execute loopbacks.                                                                                 |
+| `autoCompactOnAdvance`              | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE`               | Enables pre-switch compaction for accepted `workflow_advance` transitions.                                       |
+| `autoCompactAdvanceMinTokens`       | `30000`  | `WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS`       | Context-token threshold for advance pre-switch compaction.                                                       |
+| `autoAdvanceEnabled`                | `false`  | `WORKFLOW_MODES_AUTO_ADVANCE_ENABLED`                  | Enables required Execute/Verify `workflow_advance` decisions, advances, and bounded missing-decision follow-ups. |
+| `autoAdvanceMaxFixLoops`            | `2`      | `WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS`            | Caps Verify → Execute loopbacks.                                                                                 |
 | `todoReminderEnabled`               | `true`   | `WORKFLOW_MODES_TODO_REMINDER_ENABLED`                 | Enables the Execute-mode-only hidden reminder when `todo` has not been used recently.                            |
 | `todoReminderTurnsSinceTodo`        | `3`      | `WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO`        | Execute-mode assistant turns without a `todo` result before the reminder may fire.                               |
 | `todoReminderTurnsBetweenReminders` | `3`      | `WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS` | Minimum Execute-mode assistant turns between reminder injections.                                                |
@@ -198,10 +198,10 @@ Example settings:
   "extension:workflow-modes": {
     "autoCompactOnModeSwitch": true,
     "autoCompactMinTokens": 50000,
-    "autoCompactOnHandoff": true,
-    "autoCompactHandoffMinTokens": 30000,
-    "autoHandoffEnabled": false,
-    "autoHandoffMaxFixLoops": 2,
+    "autoCompactOnAdvance": true,
+    "autoCompactAdvanceMinTokens": 30000,
+    "autoAdvanceEnabled": false,
+    "autoAdvanceMaxFixLoops": 2,
     "todoReminderEnabled": true,
     "todoReminderTurnsSinceTodo": 3,
     "todoReminderTurnsBetweenReminders": 3,
@@ -216,17 +216,17 @@ Boolean environment overrides accept `1`/`true` and `0`/`false`. Thinking-level 
 
 ## Logging
 
-This extension does not write retained logs or diagnostic files. Pre-switch compaction failures, including handoff pre-compaction failures, are reported to the user and the requested mode switch continues. Terminal decision notifications and missing-decision fallback notifications are UI-only and are not retained as separate log files. Automatic handoffs queue transient user messages. Missing-decision follow-ups are queued as transient user messages. TODO reminders are injected as hidden context for the model, not as retained log files or user-visible messages.
+This extension does not write retained logs or diagnostic files. Pre-switch compaction failures, including advance pre-compaction failures, are reported to the user and the requested mode switch continues. Terminal decision notifications and missing-decision fallback notifications are UI-only and are not retained as separate log files. Automatic advances queue transient user messages. Missing-decision follow-ups are queued as transient user messages. TODO reminders are injected as hidden context for the model, not as retained log files or user-visible messages.
 
 ## Persistence and compaction
 
-Workflow mode, automatic handoff loop counters, missing-decision follow-up counters, and TODO reminder counters are in-memory session state. New or restored sessions start in Normal mode with these counters reset.
+Workflow mode, automatic advance loop counters, missing-decision follow-up counters, and TODO reminder counters are in-memory session state. New or restored sessions start in Normal mode with these counters reset.
 
 By default, when an idle session has at least 50,000 context tokens, `/plan`, `/execute`, and `/verify` compact before changing tools/thinking and before sending the kickoff message. Slash-command pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the command is invoked while the agent is not idle. If compaction fails, the extension reports the error and continues with the requested mode switch.
 
-Accepted tool-driven automatic handoffs use a separate threshold. By default, when current context usage has at least 30,000 tokens, `workflow_advance` compacts before changing tools/thinking and before queueing the follow-up kickoff. Handoff pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the handoff is rejected. If handoff compaction fails, the extension reports the error and continues with the handoff.
+Accepted tool-driven automatic advances use a separate threshold. By default, when current context usage has at least 30,000 tokens, `workflow_advance` compacts before changing tools/thinking and before queueing the follow-up kickoff. Advance pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the advance is rejected. If advance compaction fails, the extension reports the error and continues with the advance.
 
-During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. For pre-switch compaction, including handoff compaction, the summary records the target mode so the compacted context matches the kickoff that follows. The summary preserves:
+During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. For pre-switch compaction, including advance compaction, the summary records the target mode so the compacted context matches the kickoff that follows. The summary preserves:
 
 - current or target mode
 - tactical TODO state

@@ -8,11 +8,11 @@ import { loadConfig, readEnvSettings } from "./index.ts";
 const ENV_NAMES = [
   "WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH",
   "WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS",
-  "WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF",
-  "WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS",
-  "WORKFLOW_MODES_AUTO_HANDOFF_ENABLED",
-  "WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS",
-  "WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS",
+  "WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE",
+  "WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS",
+  "WORKFLOW_MODES_AUTO_ADVANCE_ENABLED",
+  "WORKFLOW_MODES_AUTO_ADVANCE_DENY_TIMEOUT_MS",
+  "WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS",
   "WORKFLOW_MODES_TODO_REMINDER_ENABLED",
   "WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO",
   "WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS",
@@ -36,11 +36,11 @@ afterEach(() => {
 test("readEnvSettings maps every workflow-modes environment override", () => {
   process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH = "0";
   process.env.WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS = "12345";
-  process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF = "0";
-  process.env.WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS = "30000";
-  process.env.WORKFLOW_MODES_AUTO_HANDOFF_ENABLED = "1";
-  process.env.WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS = "2500";
-  process.env.WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS = "4";
+  process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE = "0";
+  process.env.WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS = "30000";
+  process.env.WORKFLOW_MODES_AUTO_ADVANCE_ENABLED = "1";
+  process.env.WORKFLOW_MODES_AUTO_ADVANCE_DENY_TIMEOUT_MS = "2500";
+  process.env.WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS = "4";
   process.env.WORKFLOW_MODES_TODO_REMINDER_ENABLED = "0";
   process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO = "5";
   process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS = "6";
@@ -49,14 +49,14 @@ test("readEnvSettings maps every workflow-modes environment override", () => {
   process.env.WORKFLOW_MODES_VERIFY_THINKING_LEVEL = "xhigh";
 
   const settings = readEnvSettings();
-  assert.equal("autoHandoffDenyTimeoutMs" in settings, false);
+  assert.equal("autoAdvanceDenyTimeoutMs" in settings, false);
   assert.deepEqual(settings, {
     autoCompactOnModeSwitch: false,
     autoCompactMinTokens: 12345,
-    autoCompactOnHandoff: false,
-    autoCompactHandoffMinTokens: 30000,
-    autoHandoffEnabled: true,
-    autoHandoffMaxFixLoops: 4,
+    autoCompactOnAdvance: false,
+    autoCompactAdvanceMinTokens: 30000,
+    autoAdvanceEnabled: true,
+    autoAdvanceMaxFixLoops: 4,
     todoReminderEnabled: false,
     todoReminderTurnsSinceTodo: 5,
     todoReminderTurnsBetweenReminders: 6,
@@ -86,10 +86,10 @@ test("loadConfig lets env settings override project and global settings", async 
         "extension:workflow-modes": {
           autoCompactOnModeSwitch: true,
           autoCompactMinTokens: 50000,
-          autoCompactOnHandoff: false,
-          autoCompactHandoffMinTokens: 40000,
-          autoHandoffEnabled: false,
-          autoHandoffMaxFixLoops: 2,
+          autoCompactOnAdvance: false,
+          autoCompactAdvanceMinTokens: 40000,
+          autoAdvanceEnabled: false,
+          autoAdvanceMaxFixLoops: 2,
           todoReminderEnabled: true,
           todoReminderTurnsSinceTodo: 3,
           todoReminderTurnsBetweenReminders: 3,
@@ -104,21 +104,21 @@ test("loadConfig lets env settings override project and global settings", async 
       JSON.stringify({
         "extension:workflow-modes": {
           autoCompactMinTokens: 75000,
-          autoCompactHandoffMinTokens: 35000,
+          autoCompactAdvanceMinTokens: 35000,
           planThinkingLevel: "low",
         },
       }),
     );
 
     process.env.WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS = "90000";
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF = "1";
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS = "30000";
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE = "1";
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS = "30000";
     process.env.WORKFLOW_MODES_PLAN_THINKING_LEVEL = "xhigh";
 
     const config = await loadConfig(cwd);
     assert.equal(config.autoCompactMinTokens, 90000);
-    assert.equal(config.autoCompactOnHandoff, true);
-    assert.equal(config.autoCompactHandoffMinTokens, 30000);
+    assert.equal(config.autoCompactOnAdvance, true);
+    assert.equal(config.autoCompactAdvanceMinTokens, 30000);
     assert.equal(config.planThinkingLevel, "xhigh");
     assert.equal(config.executeThinkingLevel, "low");
   } finally {

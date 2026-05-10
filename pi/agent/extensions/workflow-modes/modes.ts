@@ -89,17 +89,17 @@ Covers: AC-<n>
 
 export function getManagedToolNamesForMode(
   mode: WorkflowMode,
-  options: { autoHandoffEnabled?: boolean } = {},
+  options: { autoAdvanceEnabled?: boolean } = {},
 ): string[] {
   switch (mode) {
     case "plan":
       return [...PLAN_TOOLS];
     case "execute":
-      return options.autoHandoffEnabled
+      return options.autoAdvanceEnabled
         ? [...EXECUTE_TOOLS, WORKFLOW_ADVANCE_TOOL]
         : [...EXECUTE_TOOLS];
     case "verify":
-      return options.autoHandoffEnabled
+      return options.autoAdvanceEnabled
         ? [...VERIFY_TOOLS, WORKFLOW_ADVANCE_TOOL]
         : [...VERIFY_TOOLS];
     default:
@@ -125,7 +125,7 @@ export function getThinkingLevelForMode(
 
 export function buildModeContract(options: {
   mode: Exclude<WorkflowMode, "normal">;
-  autoHandoffEnabled?: boolean;
+  autoAdvanceEnabled?: boolean;
 }): string {
   const shared = [
     "## Workflow modes",
@@ -176,9 +176,9 @@ export function buildModeContract(options: {
       "Keep changes aligned with the current conversation, acceptance criteria, and ordered tasks.",
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
-      options.autoHandoffEnabled
+      options.autoAdvanceEnabled
         ? 'Before stopping in Execute mode, call workflow_advance as the explicit workflow decision: use state="verify" when implementation is ready for verification, or state="aborted" when the workflow is blocked, unfixable, or cannot continue. Include a concise reason.'
-        : "When implementation is complete and ready for verification, report that outcome to the user instead of requesting an automatic workflow handoff.",
+        : "When implementation is complete and ready for verification, report that outcome to the user instead of requesting an automatic workflow advance.",
     ].join("\n");
   }
 
@@ -190,10 +190,10 @@ export function buildModeContract(options: {
     "Do not silently edit code in Verify mode.",
     "Report verification in a structured format with: Overall verdict (`pass`, `fail`, or `blocked`); deterministic checks run and results; per acceptance criterion verdicts (`pass`, `fail`, `n/a`, or `unknown`) with evidence; findings / next actions; and any user-accepted known issues.",
     "Turn findings into explicit next actions for a possible return to Execute mode.",
-    options.autoHandoffEnabled
+    options.autoAdvanceEnabled
       ? 'Before stopping in Verify mode, call workflow_advance as the explicit workflow decision: use state="execute" when verification finds fixable issues, or state="completed" / state="aborted" when verification passes, is blocked, finds unfixable issues, or cannot continue. Include a concise reason.'
-      : "If verification finds fixable issues, report the needed fixes to the user instead of requesting an automatic workflow handoff.",
-    options.autoHandoffEnabled
+      : "If verification finds fixable issues, report the needed fixes to the user instead of requesting an automatic workflow advance.",
+    options.autoAdvanceEnabled
       ? "Do not end Verify mode with only a free-text report; use workflow_advance for pass, fail, blocked, and unfixable terminal decisions."
       : "If verification passes, is blocked, or finds unfixable issues, do not call workflow_advance; report the outcome to the user.",
   ].join("\n");

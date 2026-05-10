@@ -52,7 +52,7 @@ test("buildModeContract for plan mode includes collaborative discovery and plan-
 test("buildModeContract for execute mode encourages using relevant plan files without requiring one", () => {
   const contract = buildModeContract({
     mode: "execute",
-    autoHandoffEnabled: true,
+    autoAdvanceEnabled: true,
   });
 
   assert.match(contract, /current mode: execute/i);
@@ -65,7 +65,7 @@ test("buildModeContract for execute mode encourages using relevant plan files wi
   assert.doesNotMatch(contract, /state="completed"/i);
 });
 
-test("buildModeContract for execute mode avoids disabled automatic handoff guidance", () => {
+test("buildModeContract for execute mode avoids disabled automatic advance guidance", () => {
   const contract = buildModeContract({
     mode: "execute",
   });
@@ -74,10 +74,10 @@ test("buildModeContract for execute mode avoids disabled automatic handoff guida
   assert.match(contract, /report that outcome to the user/i);
 });
 
-test("buildModeContract for verify mode explains handoff outcomes", () => {
+test("buildModeContract for verify mode explains advance outcomes", () => {
   const contract = buildModeContract({
     mode: "verify",
-    autoHandoffEnabled: true,
+    autoAdvanceEnabled: true,
   });
 
   assert.match(contract, /workflow_advance/i);
@@ -102,7 +102,7 @@ test("buildModeContract for verify mode requires a structured verification repor
   assert.match(contract, /known issues/i);
 });
 
-test("buildModeContract for verify mode avoids disabled automatic handoff guidance", () => {
+test("buildModeContract for verify mode avoids disabled automatic advance guidance", () => {
   const contract = buildModeContract({
     mode: "verify",
   });
@@ -141,12 +141,12 @@ test("mode helpers return the expected thinking defaults and tool sets", () => {
   assert.ok(!verifyTools.includes("edit"));
 
   const executeToolsWithAdvance = getManagedToolNamesForMode("execute", {
-    autoHandoffEnabled: true,
+    autoAdvanceEnabled: true,
   });
   assert.ok(executeToolsWithAdvance.includes("workflow_advance"));
 
   const verifyToolsWithAdvance = getManagedToolNamesForMode("verify", {
-    autoHandoffEnabled: true,
+    autoAdvanceEnabled: true,
   });
   assert.ok(verifyToolsWithAdvance.includes("workflow_advance"));
 });

@@ -46,9 +46,9 @@ type RuntimeState = {
   baselineTools?: string[];
   baselineThinking?: string;
   thinkingLevels: WorkflowModeThinkingLevels;
-  autoHandoffEnabled: boolean;
-  autoHandoffFixLoopsUsed: number;
-  missingHandoffFollowUpsUsed: number;
+  autoAdvanceEnabled: boolean;
+  autoAdvanceFixLoopsUsed: number;
+  missingAdvanceFollowUpsUsed: number;
   todoReminderTurnsSinceTodo: number;
   todoReminderTurnsSinceReminder: number;
 };
@@ -56,10 +56,10 @@ type RuntimeState = {
 type WorkflowModesConfig = {
   autoCompactOnModeSwitch: boolean;
   autoCompactMinTokens: number;
-  autoCompactOnHandoff: boolean;
-  autoCompactHandoffMinTokens: number;
-  autoHandoffEnabled: boolean;
-  autoHandoffMaxFixLoops: number;
+  autoCompactOnAdvance: boolean;
+  autoCompactAdvanceMinTokens: number;
+  autoAdvanceEnabled: boolean;
+  autoAdvanceMaxFixLoops: number;
   todoReminderEnabled: boolean;
   todoReminderTurnsSinceTodo: number;
   todoReminderTurnsBetweenReminders: number;
@@ -75,10 +75,10 @@ type WorkflowModesExtensionOptions = {
 const DEFAULT_CONFIG: WorkflowModesConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
-  autoCompactOnHandoff: true,
-  autoCompactHandoffMinTokens: 30_000,
-  autoHandoffEnabled: false,
-  autoHandoffMaxFixLoops: 2,
+  autoCompactOnAdvance: true,
+  autoCompactAdvanceMinTokens: 30_000,
+  autoAdvanceEnabled: false,
+  autoAdvanceMaxFixLoops: 2,
   todoReminderEnabled: true,
   todoReminderTurnsSinceTodo: 3,
   todoReminderTurnsBetweenReminders: 3,
@@ -118,7 +118,7 @@ const ADVANCE_PARAMS = Type.Object({
 type WritePlanParams = Static<typeof WRITE_PLAN_PARAMS>;
 type AdvanceParams = Static<typeof ADVANCE_PARAMS>;
 
-const MISSING_HANDOFF_FOLLOW_UP_LIMIT = 2;
+const MISSING_ADVANCE_FOLLOW_UP_LIMIT = 2;
 
 const EDIT_PLAN_PARAMS = Type.Object({
   path: Type.String({
@@ -271,9 +271,9 @@ export function createWorkflowModesExtension(
     const state: RuntimeState = {
       mode: "normal",
       thinkingLevels: { ...DEFAULT_THINKING_LEVELS },
-      autoHandoffEnabled: false,
-      autoHandoffFixLoopsUsed: 0,
-      missingHandoffFollowUpsUsed: 0,
+      autoAdvanceEnabled: false,
+      autoAdvanceFixLoopsUsed: 0,
+      missingAdvanceFollowUpsUsed: 0,
       todoReminderTurnsSinceTodo: 0,
       todoReminderTurnsSinceReminder: 0,
     };
@@ -316,7 +316,7 @@ export function createWorkflowModesExtension(
         execute: config.executeThinkingLevel,
         verify: config.verifyThinkingLevel,
       };
-      state.autoHandoffEnabled = config.autoHandoffEnabled;
+      state.autoAdvanceEnabled = config.autoAdvanceEnabled;
     }
 
     function resetTodoReminder(): void {
@@ -324,11 +324,11 @@ export function createWorkflowModesExtension(
       state.todoReminderTurnsSinceReminder = 0;
     }
 
-    function resetMissingHandoffFollowUps(): void {
-      state.missingHandoffFollowUpsUsed = 0;
+    function resetMissingAdvanceFollowUps(): void {
+      state.missingAdvanceFollowUpsUsed = 0;
     }
 
-    function buildMissingHandoffFollowUpMessage(): string {
+    function buildMissingAdvanceFollowUpMessage(): string {
       if (state.mode === "execute") {
         return [
           "You stopped in Execute mode without calling the required workflow_advance decision tool.",
@@ -358,7 +358,7 @@ export function createWorkflowModesExtension(
 
       const available = new Set(pi.getAllTools().map((tool) => tool.name));
       const nextTools = getManagedToolNamesForMode(mode, {
-        autoHandoffEnabled: state.autoHandoffEnabled,
+        autoAdvanceEnabled: state.autoAdvanceEnabled,
       }).filter((name) => available.has(name));
       pi.setActiveTools(nextTools);
       const thinking = getThinkingLevelForMode(mode, state.thinkingLevels);
@@ -412,7 +412,7 @@ export function createWorkflowModesExtension(
       pi.sendUserMessage(message, { deliverAs: "steer" });
     }
 
-    function sendHandoffKickoffMessage(
+    function sendAdvanceKickoffMessage(
       mode: Exclude<WorkflowMode, "normal">,
       args: string,
     ): void {
@@ -441,19 +441,19 @@ export function createWorkflowModesExtension(
       return lines.join("\n");
     }
 
-    async function updateAutoHandoffStatus(
+    async function updateAutoAdvanceStatus(
       ctx: ExtensionContext,
     ): Promise<void> {
       if (!ctx.hasUI) return;
       const config = await loadWorkflowModesConfig(ctx.cwd);
-      if (!config.autoHandoffEnabled || state.mode === "normal") {
+      if (!config.autoAdvanceEnabled || state.mode === "normal") {
         ctx.ui.setStatus("workflow-modes", undefined);
         return;
       }
 
       const exhausted =
-        state.autoHandoffFixLoopsUsed >= config.autoHandoffMaxFixLoops;
-      const budget = `${state.autoHandoffFixLoopsUsed}/${config.autoHandoffMaxFixLoops}`;
+        state.autoAdvanceFixLoopsUsed >= config.autoAdvanceMaxFixLoops;
+      const budget = `${state.autoAdvanceFixLoopsUsed}/${config.autoAdvanceMaxFixLoops}`;
       ctx.ui.setStatus(
         "workflow-modes",
         exhausted ? `↻ exhausted ${budget}` : `↻ auto ${budget}`,
@@ -465,8 +465,8 @@ export function createWorkflowModesExtension(
       args: string,
       ctx: ExtensionCommandContext,
     ): Promise<void> {
-      state.autoHandoffFixLoopsUsed = 0;
-      resetMissingHandoffFollowUps();
+      state.autoAdvanceFixLoopsUsed = 0;
+      resetMissingAdvanceFollowUps();
       const config = await loadWorkflowModesConfig(ctx.cwd);
       updateRuntimeConfig(config);
       if (state.mode !== mode) {
@@ -478,14 +478,14 @@ export function createWorkflowModesExtension(
         applyMode(mode);
       }
       state.mode = mode;
-      resetMissingHandoffFollowUps();
+      resetMissingAdvanceFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
-      await updateAutoHandoffStatus(ctx);
+      await updateAutoAdvanceStatus(ctx);
       sendKickoffMessage(mode, args, ctx);
     }
 
-    async function transitionToModeFromHandoff(
+    async function transitionToModeFromAdvance(
       mode: "execute" | "verify",
       args: string,
       ctx: ExtensionContext,
@@ -494,18 +494,18 @@ export function createWorkflowModesExtension(
       updateRuntimeConfig(config);
       if (state.mode !== mode) {
         await maybeCompactBeforeModeSwitch(mode, ctx, {
-          enabled: config.autoCompactOnHandoff,
-          minTokens: config.autoCompactHandoffMinTokens,
-          label: "Workflow handoff",
+          enabled: config.autoCompactOnAdvance,
+          minTokens: config.autoCompactAdvanceMinTokens,
+          label: "Workflow advance",
         });
         applyMode(mode);
       }
       state.mode = mode;
-      resetMissingHandoffFollowUps();
+      resetMissingAdvanceFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
-      await updateAutoHandoffStatus(ctx);
-      sendHandoffKickoffMessage(mode, args);
+      await updateAutoAdvanceStatus(ctx);
+      sendAdvanceKickoffMessage(mode, args);
     }
 
     async function exitWorkflowFromAdvance(
@@ -518,11 +518,11 @@ export function createWorkflowModesExtension(
         applyMode("normal");
       }
       state.mode = "normal";
-      state.autoHandoffFixLoopsUsed = 0;
-      resetMissingHandoffFollowUps();
+      state.autoAdvanceFixLoopsUsed = 0;
+      resetMissingAdvanceFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
-      await updateAutoHandoffStatus(ctx);
+      await updateAutoAdvanceStatus(ctx);
       if (ctx.hasUI) {
         ctx.ui.notify(`Workflow ${terminalState}: ${reason}`, "info");
       }
@@ -534,7 +534,7 @@ export function createWorkflowModesExtension(
       options: {
         enabled: boolean;
         minTokens: number;
-        label: "Workflow mode" | "Workflow handoff";
+        label: "Workflow mode" | "Workflow advance";
       },
     ): Promise<void> {
       if (!options.enabled || !ctx.isIdle()) return;
@@ -579,18 +579,18 @@ export function createWorkflowModesExtension(
       name: "workflow_advance",
       label: "Workflow Advance",
       description:
-        "Advance an automatic workflow to Execute, Verify, completed, or aborted when auto handoff is enabled.",
+        "Advance an automatic workflow to Execute, Verify, completed, or aborted when auto advance is enabled.",
       parameters: ADVANCE_PARAMS,
       async execute(_toolCallId, rawParams, _signal, _onUpdate, ctx) {
         const params = rawParams as AdvanceParams;
         const config = await loadWorkflowModesConfig(ctx.cwd);
         updateRuntimeConfig(config);
-        if (!config.autoHandoffEnabled) {
+        if (!config.autoAdvanceEnabled) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: "workflow_advance: automatic handoff is disabled by configuration",
+                text: "workflow_advance: automatic advance is disabled by configuration",
               },
             ],
             details: {},
@@ -657,8 +657,8 @@ export function createWorkflowModesExtension(
             details: {
               state: nextState,
               reason: displayReason,
-              fixLoopsUsed: state.autoHandoffFixLoopsUsed,
-              maxFixLoops: config.autoHandoffMaxFixLoops,
+              fixLoopsUsed: state.autoAdvanceFixLoopsUsed,
+              maxFixLoops: config.autoAdvanceMaxFixLoops,
             },
             terminate: true,
           };
@@ -666,28 +666,28 @@ export function createWorkflowModesExtension(
 
         if (
           state.mode === "verify" &&
-          state.autoHandoffFixLoopsUsed >= config.autoHandoffMaxFixLoops
+          state.autoAdvanceFixLoopsUsed >= config.autoAdvanceMaxFixLoops
         ) {
-          await updateAutoHandoffStatus(ctx);
+          await updateAutoAdvanceStatus(ctx);
           return {
             content: [
               {
                 type: "text" as const,
-                text: `workflow_advance: automatic fix-loop cap reached (${state.autoHandoffFixLoopsUsed}/${config.autoHandoffMaxFixLoops})`,
+                text: `workflow_advance: automatic fix-loop cap reached (${state.autoAdvanceFixLoopsUsed}/${config.autoAdvanceMaxFixLoops})`,
               },
             ],
             details: {
-              fixLoopsUsed: state.autoHandoffFixLoopsUsed,
-              maxFixLoops: config.autoHandoffMaxFixLoops,
+              fixLoopsUsed: state.autoAdvanceFixLoopsUsed,
+              maxFixLoops: config.autoAdvanceMaxFixLoops,
             },
           };
         }
 
         if (state.mode === "verify" && nextState === "execute") {
-          state.autoHandoffFixLoopsUsed += 1;
+          state.autoAdvanceFixLoopsUsed += 1;
         }
 
-        await transitionToModeFromHandoff(
+        await transitionToModeFromAdvance(
           nextState,
           displayReason,
           ctx,
@@ -702,8 +702,8 @@ export function createWorkflowModesExtension(
           ],
           details: {
             state: nextState,
-            fixLoopsUsed: state.autoHandoffFixLoopsUsed,
-            maxFixLoops: config.autoHandoffMaxFixLoops,
+            fixLoopsUsed: state.autoAdvanceFixLoopsUsed,
+            maxFixLoops: config.autoAdvanceMaxFixLoops,
           },
           terminate: true,
         };
@@ -850,11 +850,11 @@ export function createWorkflowModesExtension(
           applyMode("normal");
         }
         state.mode = "normal";
-        state.autoHandoffFixLoopsUsed = 0;
-        resetMissingHandoffFollowUps();
+        state.autoAdvanceFixLoopsUsed = 0;
+        resetMissingAdvanceFollowUps();
         resetTodoReminder();
         publishWorkflowModeState();
-        await updateAutoHandoffStatus(ctx);
+        await updateAutoAdvanceStatus(ctx);
       },
     });
 
@@ -875,11 +875,11 @@ export function createWorkflowModesExtension(
         applyMode("normal");
       }
       state.mode = "normal";
-      state.autoHandoffFixLoopsUsed = 0;
-      resetMissingHandoffFollowUps();
+      state.autoAdvanceFixLoopsUsed = 0;
+      resetMissingAdvanceFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
-      await updateAutoHandoffStatus(ctx);
+      await updateAutoAdvanceStatus(ctx);
     });
 
     pi.on("session_tree", async (_event, ctx) => {
@@ -887,17 +887,17 @@ export function createWorkflowModesExtension(
         applyMode("normal");
       }
       state.mode = "normal";
-      state.autoHandoffFixLoopsUsed = 0;
-      resetMissingHandoffFollowUps();
+      state.autoAdvanceFixLoopsUsed = 0;
+      resetMissingAdvanceFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
-      await updateAutoHandoffStatus(ctx);
+      await updateAutoAdvanceStatus(ctx);
     });
 
     pi.on("session_shutdown", async () => {
       state.mode = "normal";
-      state.autoHandoffFixLoopsUsed = 0;
-      resetMissingHandoffFollowUps();
+      state.autoAdvanceFixLoopsUsed = 0;
+      resetMissingAdvanceFollowUps();
       resetBaselines();
       publishWorkflowModeState();
     });
@@ -909,7 +909,7 @@ export function createWorkflowModesExtension(
       return {
         systemPrompt: `${event.systemPrompt}\n\n${buildModeContract({
           mode: state.mode,
-          autoHandoffEnabled: config.autoHandoffEnabled,
+          autoAdvanceEnabled: config.autoAdvanceEnabled,
         })}`,
       };
     });
@@ -917,23 +917,23 @@ export function createWorkflowModesExtension(
     pi.on("agent_end", async (_event, ctx) => {
       if (state.mode !== "execute" && state.mode !== "verify") return;
       const config = await loadWorkflowModesConfig(ctx.cwd);
-      if (!config.autoHandoffEnabled) return;
+      if (!config.autoAdvanceEnabled) return;
       if (ctx.hasPendingMessages()) return;
 
       if (
-        state.missingHandoffFollowUpsUsed >= MISSING_HANDOFF_FOLLOW_UP_LIMIT
+        state.missingAdvanceFollowUpsUsed >= MISSING_ADVANCE_FOLLOW_UP_LIMIT
       ) {
         if (ctx.hasUI) {
           ctx.ui.notify(
-            "Workflow handoff fallback cap reached; staying in current mode",
+            "Workflow advance fallback cap reached; staying in current mode",
             "warning",
           );
         }
         return;
       }
 
-      state.missingHandoffFollowUpsUsed += 1;
-      pi.sendUserMessage(buildMissingHandoffFollowUpMessage(), {
+      state.missingAdvanceFollowUpsUsed += 1;
+      pi.sendUserMessage(buildMissingAdvanceFollowUpMessage(), {
         deliverAs: "followUp",
       });
     });
@@ -1031,26 +1031,26 @@ export async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
       merged.autoCompactMinTokens >= 0
         ? merged.autoCompactMinTokens
         : DEFAULT_CONFIG.autoCompactMinTokens,
-    autoCompactOnHandoff:
-      typeof merged.autoCompactOnHandoff === "boolean"
-        ? merged.autoCompactOnHandoff
-        : DEFAULT_CONFIG.autoCompactOnHandoff,
-    autoCompactHandoffMinTokens:
-      typeof merged.autoCompactHandoffMinTokens === "number" &&
-      Number.isFinite(merged.autoCompactHandoffMinTokens) &&
-      merged.autoCompactHandoffMinTokens >= 0
-        ? merged.autoCompactHandoffMinTokens
-        : DEFAULT_CONFIG.autoCompactHandoffMinTokens,
-    autoHandoffEnabled:
-      typeof merged.autoHandoffEnabled === "boolean"
-        ? merged.autoHandoffEnabled
-        : DEFAULT_CONFIG.autoHandoffEnabled,
-    autoHandoffMaxFixLoops:
-      typeof merged.autoHandoffMaxFixLoops === "number" &&
-      Number.isInteger(merged.autoHandoffMaxFixLoops) &&
-      merged.autoHandoffMaxFixLoops >= 0
-        ? merged.autoHandoffMaxFixLoops
-        : DEFAULT_CONFIG.autoHandoffMaxFixLoops,
+    autoCompactOnAdvance:
+      typeof merged.autoCompactOnAdvance === "boolean"
+        ? merged.autoCompactOnAdvance
+        : DEFAULT_CONFIG.autoCompactOnAdvance,
+    autoCompactAdvanceMinTokens:
+      typeof merged.autoCompactAdvanceMinTokens === "number" &&
+      Number.isFinite(merged.autoCompactAdvanceMinTokens) &&
+      merged.autoCompactAdvanceMinTokens >= 0
+        ? merged.autoCompactAdvanceMinTokens
+        : DEFAULT_CONFIG.autoCompactAdvanceMinTokens,
+    autoAdvanceEnabled:
+      typeof merged.autoAdvanceEnabled === "boolean"
+        ? merged.autoAdvanceEnabled
+        : DEFAULT_CONFIG.autoAdvanceEnabled,
+    autoAdvanceMaxFixLoops:
+      typeof merged.autoAdvanceMaxFixLoops === "number" &&
+      Number.isInteger(merged.autoAdvanceMaxFixLoops) &&
+      merged.autoAdvanceMaxFixLoops >= 0
+        ? merged.autoAdvanceMaxFixLoops
+        : DEFAULT_CONFIG.autoAdvanceMaxFixLoops,
     todoReminderEnabled:
       typeof merged.todoReminderEnabled === "boolean"
         ? merged.todoReminderEnabled
@@ -1097,24 +1097,24 @@ export function readEnvSettings(): Partial<WorkflowModesConfig> {
   );
   setBooleanEnv(
     settings,
-    "autoCompactOnHandoff",
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF,
+    "autoCompactOnAdvance",
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE,
   );
   setNumberEnv(
     settings,
-    "autoCompactHandoffMinTokens",
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS,
+    "autoCompactAdvanceMinTokens",
+    process.env.WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS,
     false,
   );
   setBooleanEnv(
     settings,
-    "autoHandoffEnabled",
-    process.env.WORKFLOW_MODES_AUTO_HANDOFF_ENABLED,
+    "autoAdvanceEnabled",
+    process.env.WORKFLOW_MODES_AUTO_ADVANCE_ENABLED,
   );
   setNumberEnv(
     settings,
-    "autoHandoffMaxFixLoops",
-    process.env.WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS,
+    "autoAdvanceMaxFixLoops",
+    process.env.WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS,
     true,
   );
   setBooleanEnv(

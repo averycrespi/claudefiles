@@ -32,10 +32,10 @@ type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 type TestConfig = {
   autoCompactOnModeSwitch: boolean;
   autoCompactMinTokens: number;
-  autoCompactOnHandoff: boolean;
-  autoCompactHandoffMinTokens: number;
-  autoHandoffEnabled: boolean;
-  autoHandoffMaxFixLoops: number;
+  autoCompactOnAdvance: boolean;
+  autoCompactAdvanceMinTokens: number;
+  autoAdvanceEnabled: boolean;
+  autoAdvanceMaxFixLoops: number;
   todoReminderEnabled: boolean;
   todoReminderTurnsSinceTodo: number;
   todoReminderTurnsBetweenReminders: number;
@@ -47,10 +47,10 @@ type TestConfig = {
 const defaultTestConfig: TestConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
-  autoCompactOnHandoff: true,
-  autoCompactHandoffMinTokens: 30_000,
-  autoHandoffEnabled: false,
-  autoHandoffMaxFixLoops: 2,
+  autoCompactOnAdvance: true,
+  autoCompactAdvanceMinTokens: 30_000,
+  autoAdvanceEnabled: false,
+  autoAdvanceMaxFixLoops: 2,
   todoReminderEnabled: true,
   todoReminderTurnsSinceTodo: 3,
   todoReminderTurnsBetweenReminders: 3,
@@ -364,7 +364,7 @@ test("/workflow-modes-config displays effective config", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-index-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({
-    autoHandoffEnabled: true,
+    autoAdvanceEnabled: true,
     executeThinkingLevel: "medium",
   })(pi as any);
 
@@ -373,7 +373,7 @@ test("/workflow-modes-config displays effective config", async () => {
   const message = pi._notifications.at(-1)?.msg;
   assert.ok(message);
   assert.match(message, /workflow-modes effective config:/);
-  assert.match(message, /"autoHandoffEnabled": true/);
+  assert.match(message, /"autoAdvanceEnabled": true/);
   assert.match(message, /"executeThinkingLevel": "medium"/);
 
   await rm(cwd, { recursive: true, force: true });
@@ -634,10 +634,10 @@ test("mode switch skips pre-compaction when disabled by config", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("execute and verify include workflow_advance only when auto handoff is enabled", async () => {
+test("execute and verify include workflow_advance only when auto advance is enabled", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-tools-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
 
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
@@ -763,7 +763,7 @@ test("mode switch respects configured pre-compaction threshold", async () => {
 });
 
 test("/execute and /verify send kickoff messages with mode-specific guidance", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
@@ -896,7 +896,7 @@ test("todo reminders are execute-only, cooldown-gated, and reset by todo results
 });
 
 test("workflow_advance is disabled by default", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-disabled-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-disabled-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension()(pi as any);
   await startSession(pi);
@@ -925,15 +925,15 @@ test("workflow_advance is disabled by default", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_advance compacts above handoff threshold before applying target mode", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-compact-"));
+test("workflow_advance compacts above advance threshold before applying target mode", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-compact-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
   let resolved = false;
-  const handoff = pi._tools.get("workflow_advance")!.execute!(
+  const advance = pi._tools.get("workflow_advance")!.execute!(
     "call-1",
     { state: "verify", reason: "Implementation complete" },
     undefined,
@@ -955,7 +955,7 @@ test("workflow_advance compacts above handoff threshold before applying target m
     firstKeptEntryId: "keep-1",
     tokensBefore: 30_000,
   });
-  const result = await handoff;
+  const result = await advance;
 
   assert.equal(resolved, true);
   assert.equal(result.terminate, true);
@@ -967,14 +967,14 @@ test("workflow_advance compacts above handoff threshold before applying target m
 
 test("workflow_advance compaction summary uses the target mode", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-handoff-compact-target-"),
+    join(tmpdir(), "workflow-modes-advance-compact-target-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
-  const handoff = pi._tools.get("workflow_advance")!.execute!(
+  const advance = pi._tools.get("workflow_advance")!.execute!(
     "call-1",
     { state: "verify", reason: "Implementation complete" },
     undefined,
@@ -1005,17 +1005,17 @@ test("workflow_advance compaction summary uses the target mode", async () => {
     firstKeptEntryId: "keep-1",
     tokensBefore: 35_000,
   });
-  await handoff;
+  await advance;
 
   await rm(cwd, { recursive: true, force: true });
 });
 
 test("workflow_advance skips compaction below threshold or when disabled", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-handoff-compact-skip-"),
+    join(tmpdir(), "workflow-modes-advance-compact-skip-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1029,8 +1029,8 @@ test("workflow_advance skips compaction below threshold or when disabled", async
 
   const disabledPi = makePi(cwd);
   createTestWorkflowModesExtension({
-    autoHandoffEnabled: true,
-    autoCompactOnHandoff: false,
+    autoAdvanceEnabled: true,
+    autoCompactOnAdvance: false,
   } as any)(disabledPi as any);
   await startSession(disabledPi);
   await disabledPi._commands
@@ -1052,14 +1052,14 @@ test("workflow_advance skips compaction below threshold or when disabled", async
 
 test("workflow_advance notifies and continues when compaction fails", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-handoff-compact-error-"),
+    join(tmpdir(), "workflow-modes-advance-compact-error-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
-  const handoff = pi._tools.get("workflow_advance")!.execute!(
+  const advance = pi._tools.get("workflow_advance")!.execute!(
     "call-1",
     { state: "verify", reason: "Implementation complete" },
     undefined,
@@ -1069,13 +1069,13 @@ test("workflow_advance notifies and continues when compaction fails", async () =
   await waitForCompactCall(pi);
 
   pi._compactCalls[0]!.onError?.(new Error("provider unavailable"));
-  const result = await handoff;
+  const result = await advance;
 
   assert.equal(result.terminate, true);
   assert.equal(pi._thinkingLevel(), "high");
   assert.match(String(pi._sentUserMessages.at(-1)?.content), /verify mode/i);
   assert.deepEqual(pi._notifications.at(-1), {
-    msg: "Workflow handoff pre-compaction failed: provider unavailable",
+    msg: "Workflow advance pre-compaction failed: provider unavailable",
     level: "error",
   });
 
@@ -1083,9 +1083,9 @@ test("workflow_advance notifies and continues when compaction fails", async () =
 });
 
 test("workflow_advance moves execute directly to verify", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-verify-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-verify-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1120,9 +1120,9 @@ test("workflow_advance moves execute directly to verify", async () => {
 });
 
 test("workflow_advance advances directly without a UI prompt", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-direct-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-direct-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1143,9 +1143,9 @@ test("workflow_advance advances directly without a UI prompt", async () => {
 });
 
 test("workflow_advance advances directly without UI", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-no-ui-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-no-ui-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1164,31 +1164,31 @@ test("workflow_advance advances directly without UI", async () => {
 });
 
 test("workflow_advance caps verify to execute fix loops", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-cap-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-cap-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({
-    autoHandoffEnabled: true,
-    autoHandoffMaxFixLoops: 1,
+    autoAdvanceEnabled: true,
+    autoAdvanceMaxFixLoops: 1,
   })(pi as any);
   await startSession(pi);
   await pi._commands.get("verify")!.handler("Check", pi._ctx());
 
-  const handoff = pi._tools.get("workflow_advance")!;
-  await handoff.execute!(
+  const advance = pi._tools.get("workflow_advance")!;
+  await advance.execute!(
     "call-1",
     { state: "execute", reason: "Fix failures" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
   );
-  await handoff.execute!(
+  await advance.execute!(
     "call-2",
     { state: "verify", reason: "Fixes complete" },
     undefined,
     undefined,
     pi._ctx([], undefined, true, undefined, true, false),
   );
-  const result = await handoff.execute!(
+  const result = await advance.execute!(
     "call-3",
     { state: "execute", reason: "More fixes" },
     undefined,
@@ -1205,10 +1205,10 @@ test("workflow_advance caps verify to execute fix loops", async () => {
 
 test("workflow_advance rejects execute to completed and keeps execute mode", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-handoff-execute-complete-"),
+    join(tmpdir(), "workflow-modes-advance-execute-complete-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1233,9 +1233,9 @@ test("workflow_advance rejects execute to completed and keeps execute mode", asy
 });
 
 test("workflow_advance terminal action exits to normal and terminates", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-terminal-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-terminal-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("verify")!.handler("Check", pi._ctx());
 
@@ -1274,9 +1274,9 @@ test("workflow_advance terminal action exits to normal and terminates", async ()
 });
 
 test("agent_end queues missing workflow_advance follow-ups in execute and verify", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-fallback-"));
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-fallback-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
 
   const agentEnd = pi._handlers.get("agent_end")!;
@@ -1313,7 +1313,7 @@ test("agent_end queues missing workflow_advance follow-ups in execute and verify
 
 test("agent_end skips missing workflow_advance follow-up when disabled or pending", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-handoff-no-fallback-"),
+    join(tmpdir(), "workflow-modes-advance-no-fallback-"),
   );
   const disabledPi = makePi(cwd);
   createTestWorkflowModesExtension()(disabledPi as any);
@@ -1328,7 +1328,7 @@ test("agent_end skips missing workflow_advance follow-up when disabled or pendin
   assert.equal(disabledPi._sentUserMessages.length, 1);
 
   const pendingPi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(
     pendingPi as any,
   );
   await startSession(pendingPi);
@@ -1355,10 +1355,10 @@ test("agent_end skips missing workflow_advance follow-up when disabled or pendin
 
 test("agent_end caps missing workflow_advance follow-ups and resets after mode entry", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-handoff-fallback-cap-"),
+    join(tmpdir(), "workflow-modes-advance-fallback-cap-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
