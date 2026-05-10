@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import workflowModes, { createWorkflowModesExtension } from "./index.ts";
+import devWorkflow, { createDevWorkflowExtension } from "./index.ts";
 
 const identityTheme = {
   fg: (_color: string, text: string) => text,
@@ -59,10 +59,10 @@ const defaultTestConfig: TestConfig = {
   verifyThinkingLevel: "high",
 };
 
-function createTestWorkflowModesExtension(
+function createTestDevWorkflowExtension(
   config: Partial<TestConfig> = {},
-): ReturnType<typeof createWorkflowModesExtension> {
-  return createWorkflowModesExtension({
+): ReturnType<typeof createDevWorkflowExtension> {
+  return createDevWorkflowExtension({
     loadConfig: async () => ({ ...defaultTestConfig, ...config }),
   });
 }
@@ -356,23 +356,23 @@ async function startSession(
   await handler({ type: "session_start", reason: "startup" }, pi._ctx(branch));
 }
 
-test("default export is the configurable workflow-modes extension", () => {
-  assert.equal(typeof workflowModes, "function");
+test("default export is the configurable dev-workflow extension", () => {
+  assert.equal(typeof devWorkflow, "function");
 });
 
-test("/workflow-modes-config displays effective config", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-index-"));
+test("/dev-workflow-config displays effective config", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-index-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     autoAdvanceEnabled: true,
     executeThinkingLevel: "medium",
   })(pi as any);
 
-  await pi._commands.get("workflow-modes-config")!.handler("", pi._ctx());
+  await pi._commands.get("dev-workflow-config")!.handler("", pi._ctx());
 
   const message = pi._notifications.at(-1)?.msg;
   assert.ok(message);
-  assert.match(message, /workflow-modes effective config:/);
+  assert.match(message, /dev-workflow effective config:/);
   assert.match(message, /"autoAdvanceEnabled": true/);
   assert.match(message, /"executeThinkingLevel": "medium"/);
 
@@ -380,9 +380,9 @@ test("/workflow-modes-config displays effective config", async () => {
 });
 
 test("/plan sends a kickoff user message, switches tools/thinking, and injects the plan contract", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-index-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-index-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -415,7 +415,7 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
     /Refactor auth middleware/,
   );
   assert.deepEqual(pi._emittedEvents.at(-1), {
-    event: "workflow-modes:changed",
+    event: "dev-workflow:changed",
     data: {
       mode: "plan",
       baseThinking: "medium",
@@ -437,9 +437,9 @@ test("/plan sends a kickoff user message, switches tools/thinking, and injects t
 });
 
 test("mode thinking levels are configurable", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-thinking-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-thinking-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     planThinkingLevel: "high",
     executeThinkingLevel: "minimal",
     verifyThinkingLevel: "xhigh",
@@ -449,7 +449,7 @@ test("mode thinking levels are configurable", async () => {
   await pi._commands.get("plan")!.handler("Plan", pi._ctx());
   assert.equal(pi._thinkingLevel(), "high");
   assert.deepEqual(pi._emittedEvents.at(-1), {
-    event: "workflow-modes:changed",
+    event: "dev-workflow:changed",
     data: {
       mode: "plan",
       baseThinking: "high",
@@ -467,9 +467,9 @@ test("mode thinking levels are configurable", async () => {
 });
 
 test("re-entering the same mode does not reapply tools or thinking defaults", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-reenter-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-reenter-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -490,9 +490,9 @@ test("re-entering the same mode does not reapply tools or thinking defaults", as
 });
 
 test("session_start resets stale workflow baselines before restoring normal mode", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-baseline-reset-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-baseline-reset-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands.get("plan")!.handler("Plan", pi._ctx());
@@ -508,9 +508,9 @@ test("session_start resets stale workflow baselines before restoring normal mode
 });
 
 test("/normal restores baseline tools, clears workflow state, and does not send a kickoff message", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-normal-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-normal-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -538,7 +538,7 @@ test("/normal restores baseline tools, clears workflow state, and does not send 
   ]);
   assert.equal(pi._widgetCalls.length, 0);
   assert.deepEqual(pi._emittedEvents.at(-1), {
-    event: "workflow-modes:changed",
+    event: "dev-workflow:changed",
     data: {
       mode: "normal",
       baseThinking: undefined,
@@ -551,9 +551,9 @@ test("/normal restores baseline tools, clears workflow state, and does not send 
 });
 
 test("/plan with no args starts immediately without prompting", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-input-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-input-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands.get("plan")!.handler("", pi._ctx([], "ignored"));
@@ -566,9 +566,9 @@ test("/plan with no args starts immediately without prompting", async () => {
 });
 
 test("mode switch compacts above the default threshold before applying mode", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-precompact-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   let resolved = false;
@@ -608,10 +608,10 @@ test("mode switch compacts above the default threshold before applying mode", as
 
 test("mode switch skips pre-compaction when disabled by config", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-precompact-disabled-"),
+    join(tmpdir(), "dev-workflow-precompact-disabled-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     autoCompactOnModeSwitch: false,
     autoCompactMinTokens: 50_000,
   })(pi as any);
@@ -635,9 +635,9 @@ test("mode switch skips pre-compaction when disabled by config", async () => {
 });
 
 test("execute and verify include workflow_advance only when auto advance is enabled", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-tools-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-tools-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
 
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
@@ -650,9 +650,9 @@ test("execute and verify include workflow_advance only when auto advance is enab
 });
 
 test("mode switch skips pre-compaction below threshold or when not idle", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-skip-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-precompact-skip-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -672,9 +672,9 @@ test("mode switch skips pre-compaction below threshold or when not idle", async 
 });
 
 test("mode switch notifies and proceeds when pre-compaction fails", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-precompact-error-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-precompact-error-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   const transition = pi._commands
@@ -699,11 +699,9 @@ test("mode switch notifies and proceeds when pre-compaction fails", async () => 
 });
 
 test("mode-to-mode pre-compaction summarizes the target mode", async () => {
-  const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-precompact-target-"),
-  );
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-precompact-target-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
   await pi._commands
     .get("plan")!
@@ -729,7 +727,7 @@ test("mode-to-mode pre-compaction summarizes the target mode", async () => {
   );
 
   assert.match(result.compaction.summary, /Mode: execute/);
-  assert.equal(result.compaction.details.workflowModes.mode, "execute");
+  assert.equal(result.compaction.details.devWorkflow.mode, "execute");
 
   pi._compactCalls[0]!.onComplete?.({
     summary: "ok",
@@ -743,10 +741,10 @@ test("mode-to-mode pre-compaction summarizes the target mode", async () => {
 
 test("mode switch respects configured pre-compaction threshold", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-precompact-threshold-"),
+    join(tmpdir(), "dev-workflow-precompact-threshold-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     autoCompactOnModeSwitch: true,
     autoCompactMinTokens: 100_000,
   })(pi as any);
@@ -763,9 +761,9 @@ test("mode switch respects configured pre-compaction threshold", async () => {
 });
 
 test("/execute and /verify send kickoff messages with mode-specific guidance", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   await pi._commands
@@ -791,9 +789,9 @@ test("/execute and /verify send kickoff messages with mode-specific guidance", a
 });
 
 test("execute mode injects a hidden todo reminder after configured turns without todo", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-todo-reminder-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-todo-reminder-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     todoReminderTurnsSinceTodo: 2,
     todoReminderTurnsBetweenReminders: 2,
   })(pi as any);
@@ -847,9 +845,9 @@ test("execute mode injects a hidden todo reminder after configured turns without
 });
 
 test("todo reminders are execute-only, cooldown-gated, and reset by todo results", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-todo-cooldown-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-todo-cooldown-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     todoReminderTurnsSinceTodo: 1,
     todoReminderTurnsBetweenReminders: 2,
   })(pi as any);
@@ -896,9 +894,9 @@ test("todo reminders are execute-only, cooldown-gated, and reset by todo results
 });
 
 test("workflow_advance is disabled by default", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-disabled-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-disabled-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -926,9 +924,9 @@ test("workflow_advance is disabled by default", async () => {
 });
 
 test("workflow_advance compacts above advance threshold before applying target mode", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-compact-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-compact-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -967,10 +965,10 @@ test("workflow_advance compacts above advance threshold before applying target m
 
 test("workflow_advance compaction summary uses the target mode", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-advance-compact-target-"),
+    join(tmpdir(), "dev-workflow-advance-compact-target-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -998,7 +996,7 @@ test("workflow_advance compaction summary uses the target mode", async () => {
   );
 
   assert.match(result.compaction.summary, /Mode: verify/);
-  assert.equal(result.compaction.details.workflowModes.mode, "verify");
+  assert.equal(result.compaction.details.devWorkflow.mode, "verify");
 
   pi._compactCalls[0]!.onComplete?.({
     summary: "ok",
@@ -1012,10 +1010,10 @@ test("workflow_advance compaction summary uses the target mode", async () => {
 
 test("workflow_advance skips compaction below threshold or when disabled", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-advance-compact-skip-"),
+    join(tmpdir(), "dev-workflow-advance-compact-skip-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1028,7 +1026,7 @@ test("workflow_advance skips compaction below threshold or when disabled", async
   );
 
   const disabledPi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     autoAdvanceEnabled: true,
     autoCompactOnAdvance: false,
   } as any)(disabledPi as any);
@@ -1052,10 +1050,10 @@ test("workflow_advance skips compaction below threshold or when disabled", async
 
 test("workflow_advance notifies and continues when compaction fails", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-advance-compact-error-"),
+    join(tmpdir(), "dev-workflow-advance-compact-error-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1083,9 +1081,9 @@ test("workflow_advance notifies and continues when compaction fails", async () =
 });
 
 test("workflow_advance moves execute directly to verify", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-verify-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-verify-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1120,9 +1118,9 @@ test("workflow_advance moves execute directly to verify", async () => {
 });
 
 test("workflow_advance advances directly without a UI prompt", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-direct-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-direct-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1143,9 +1141,9 @@ test("workflow_advance advances directly without a UI prompt", async () => {
 });
 
 test("workflow_advance advances directly without UI", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-no-ui-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-no-ui-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1164,9 +1162,9 @@ test("workflow_advance advances directly without UI", async () => {
 });
 
 test("workflow_advance caps verify to execute fix loops", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-cap-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-cap-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({
+  createTestDevWorkflowExtension({
     autoAdvanceEnabled: true,
     autoAdvanceMaxFixLoops: 1,
   })(pi as any);
@@ -1205,10 +1203,10 @@ test("workflow_advance caps verify to execute fix loops", async () => {
 
 test("workflow_advance rejects execute to completed and keeps execute mode", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-advance-execute-complete-"),
+    join(tmpdir(), "dev-workflow-advance-execute-complete-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1233,9 +1231,9 @@ test("workflow_advance rejects execute to completed and keeps execute mode", asy
 });
 
 test("workflow_advance terminal action exits to normal and terminates", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-terminal-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-terminal-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("verify")!.handler("Check", pi._ctx());
 
@@ -1274,9 +1272,9 @@ test("workflow_advance terminal action exits to normal and terminates", async ()
 });
 
 test("agent_end queues missing workflow_advance follow-ups in execute and verify", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-advance-fallback-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-fallback-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
 
   const agentEnd = pi._handlers.get("agent_end")!;
@@ -1313,10 +1311,10 @@ test("agent_end queues missing workflow_advance follow-ups in execute and verify
 
 test("agent_end skips missing workflow_advance follow-up when disabled or pending", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-advance-no-fallback-"),
+    join(tmpdir(), "dev-workflow-advance-no-fallback-"),
   );
   const disabledPi = makePi(cwd);
-  createTestWorkflowModesExtension()(disabledPi as any);
+  createTestDevWorkflowExtension()(disabledPi as any);
   await startSession(disabledPi);
   await disabledPi._commands
     .get("execute")!
@@ -1328,7 +1326,7 @@ test("agent_end skips missing workflow_advance follow-up when disabled or pendin
   assert.equal(disabledPi._sentUserMessages.length, 1);
 
   const pendingPi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(
     pendingPi as any,
   );
   await startSession(pendingPi);
@@ -1355,10 +1353,10 @@ test("agent_end skips missing workflow_advance follow-up when disabled or pendin
 
 test("agent_end caps missing workflow_advance follow-ups and resets after mode entry", async () => {
   const cwd = await mkdtemp(
-    join(tmpdir(), "workflow-modes-advance-fallback-cap-"),
+    join(tmpdir(), "dev-workflow-advance-fallback-cap-"),
   );
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension({ autoAdvanceEnabled: true })(pi as any);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
   await startSession(pi);
   await pi._commands.get("execute")!.handler("Implement", pi._ctx());
 
@@ -1383,9 +1381,9 @@ test("agent_end caps missing workflow_advance follow-ups and resets after mode e
 });
 
 test("write_plan and edit_plan are scoped to .plans", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-tools-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-tools-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
   await pi._commands.get("plan")!.handler("Draft a workflow", pi._ctx());
 
@@ -1447,9 +1445,9 @@ test("write_plan and edit_plan are scoped to .plans", async () => {
 });
 
 test("write_plan and edit_plan render like write and edit tools", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-render-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-render-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
 
   const writePlan = pi._tools.get("write_plan")!;
@@ -1541,9 +1539,9 @@ test("write_plan and edit_plan render like write and edit tools", async () => {
 });
 
 test("session_before_compact returns a workflow-aware summary while a mode is active", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-compact-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-compact-"));
   const pi = makePi(cwd);
-  createTestWorkflowModesExtension()(pi as any);
+  createTestDevWorkflowExtension()(pi as any);
   await startSession(pi);
   await pi._commands
     .get("plan")!

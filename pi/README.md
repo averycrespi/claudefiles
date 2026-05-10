@@ -26,6 +26,7 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `ask-user`       | `ask_user` tool for multiple-choice questions                                                                          |
 | `compact-tools`  | Compact TUI rendering for built-in shell and file tools                                                                |
+| `dev-workflow`   | Plan/Execute/Verify workflow shell with mode-specific prompts, scoped plan tools, auto-advance, and compaction context |
 | `goal`           | Branch-scoped persistent goal steering with commands, tools, widget, and compaction context                            |
 | `mcp-broker`     | Broker CLI skill + guard for remote operations                                                                         |
 | `statusline`     | Single-line footer with cwd, quota, context, model, and thinking                                                       |
@@ -33,7 +34,6 @@ TypeScript modules that customize the Pi agent. Type-check with `make typecheck`
 | `subagents`      | Dynamic subagent loading and dispatch                                                                                  |
 | `todo`           | Session-persisted TODO tool with a sticky widget                                                                       |
 | `web-access`     | Web search, fetch, GitHub, and PDF tools                                                                               |
-| `workflow-modes` | Plan/Execute/Verify workflow shell with mode-specific prompts, scoped plan tools, auto-advance, and compaction context |
 
 Underscore-prefixed directories are libraries imported by sibling extensions, not extensions themselves — pi's extension loader skips them because they have no `index.ts`.
 
@@ -59,4 +59,4 @@ Markdown skill packages that load on demand via progressive disclosure — only 
 | `skill-creator`           | Creating a new skill or updating an existing one                                                  |
 | `test-driven-development` | Implementing a feature or bugfix that involves writing meaningful application logic               |
 
-Most skills are mirrored from `claude/skills/` with Pi-platform adjustments (tool name swaps, mcp-broker meta-tools for MCP calls, GPT-5.x-friendly prose). Collaborative planning now lives in the `workflow-modes` Plan-mode contract rather than a separate Pi brainstorming skill. Skills adapted from external sources should include bare `ATTRIBUTION` and `LICENSE` files in the skill directory. See the [skill-creator](../pi/agent/skills/skill-creator/SKILL.md) skill when adding new ones.
+Most skills are mirrored from `claude/skills/` with Pi-platform adjustments (tool name swaps, mcp-broker meta-tools for MCP calls, GPT-5.x-friendly prose). Collaborative planning now lives in the `dev-workflow` Plan-mode contract rather than a separate Pi brainstorming skill. Skills adapted from external sources should include bare `ATTRIBUTION` and `LICENSE` files in the skill directory. See the [skill-creator](../pi/agent/skills/skill-creator/SKILL.md) skill when adding new ones.

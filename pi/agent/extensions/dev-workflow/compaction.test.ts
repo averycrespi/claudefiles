@@ -9,12 +9,12 @@ test("buildWorkflowCompactionSummary preserves mode, todo context, and next acti
       { id: 1, text: "Run typecheck", status: "done" },
       { id: 2, text: "Investigate failing test", status: "in_progress" },
     ],
-    nextAction: "Fix the failing workflow-modes test",
+    nextAction: "Fix the failing dev-workflow test",
   });
 
   assert.match(summary, /Mode: verify/);
   assert.match(summary, /\[~\] Investigate failing test/);
-  assert.match(summary, /Next action: Fix the failing workflow-modes test/);
+  assert.match(summary, /Next action: Fix the failing dev-workflow test/);
   assert.doesNotMatch(summary, /Active plan:/);
   assert.doesNotMatch(summary, /Recent outcome:/);
 });

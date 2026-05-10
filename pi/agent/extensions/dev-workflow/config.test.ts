@@ -6,19 +6,19 @@ import { tmpdir } from "node:os";
 import { loadConfig, readEnvSettings } from "./index.ts";
 
 const ENV_NAMES = [
-  "WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH",
-  "WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS",
-  "WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE",
-  "WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS",
-  "WORKFLOW_MODES_AUTO_ADVANCE_ENABLED",
-  "WORKFLOW_MODES_AUTO_ADVANCE_DENY_TIMEOUT_MS",
-  "WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS",
-  "WORKFLOW_MODES_TODO_REMINDER_ENABLED",
-  "WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO",
-  "WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS",
-  "WORKFLOW_MODES_PLAN_THINKING_LEVEL",
-  "WORKFLOW_MODES_EXECUTE_THINKING_LEVEL",
-  "WORKFLOW_MODES_VERIFY_THINKING_LEVEL",
+  "DEV_WORKFLOW_AUTO_COMPACT_ON_MODE_SWITCH",
+  "DEV_WORKFLOW_AUTO_COMPACT_MIN_TOKENS",
+  "DEV_WORKFLOW_AUTO_COMPACT_ON_ADVANCE",
+  "DEV_WORKFLOW_AUTO_COMPACT_ADVANCE_MIN_TOKENS",
+  "DEV_WORKFLOW_AUTO_ADVANCE_ENABLED",
+  "DEV_WORKFLOW_AUTO_ADVANCE_DENY_TIMEOUT_MS",
+  "DEV_WORKFLOW_AUTO_ADVANCE_MAX_FIX_LOOPS",
+  "DEV_WORKFLOW_TODO_REMINDER_ENABLED",
+  "DEV_WORKFLOW_TODO_REMINDER_TURNS_SINCE_TODO",
+  "DEV_WORKFLOW_TODO_REMINDER_TURNS_BETWEEN_REMINDERS",
+  "DEV_WORKFLOW_PLAN_THINKING_LEVEL",
+  "DEV_WORKFLOW_EXECUTE_THINKING_LEVEL",
+  "DEV_WORKFLOW_VERIFY_THINKING_LEVEL",
   "PI_CODING_AGENT_DIR",
 ] as const;
 
@@ -33,20 +33,20 @@ afterEach(() => {
   }
 });
 
-test("readEnvSettings maps every workflow-modes environment override", () => {
-  process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH = "0";
-  process.env.WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS = "12345";
-  process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE = "0";
-  process.env.WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS = "30000";
-  process.env.WORKFLOW_MODES_AUTO_ADVANCE_ENABLED = "1";
-  process.env.WORKFLOW_MODES_AUTO_ADVANCE_DENY_TIMEOUT_MS = "2500";
-  process.env.WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS = "4";
-  process.env.WORKFLOW_MODES_TODO_REMINDER_ENABLED = "0";
-  process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO = "5";
-  process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS = "6";
-  process.env.WORKFLOW_MODES_PLAN_THINKING_LEVEL = "high";
-  process.env.WORKFLOW_MODES_EXECUTE_THINKING_LEVEL = "medium";
-  process.env.WORKFLOW_MODES_VERIFY_THINKING_LEVEL = "xhigh";
+test("readEnvSettings maps every dev-workflow environment override", () => {
+  process.env.DEV_WORKFLOW_AUTO_COMPACT_ON_MODE_SWITCH = "0";
+  process.env.DEV_WORKFLOW_AUTO_COMPACT_MIN_TOKENS = "12345";
+  process.env.DEV_WORKFLOW_AUTO_COMPACT_ON_ADVANCE = "0";
+  process.env.DEV_WORKFLOW_AUTO_COMPACT_ADVANCE_MIN_TOKENS = "30000";
+  process.env.DEV_WORKFLOW_AUTO_ADVANCE_ENABLED = "1";
+  process.env.DEV_WORKFLOW_AUTO_ADVANCE_DENY_TIMEOUT_MS = "2500";
+  process.env.DEV_WORKFLOW_AUTO_ADVANCE_MAX_FIX_LOOPS = "4";
+  process.env.DEV_WORKFLOW_TODO_REMINDER_ENABLED = "0";
+  process.env.DEV_WORKFLOW_TODO_REMINDER_TURNS_SINCE_TODO = "5";
+  process.env.DEV_WORKFLOW_TODO_REMINDER_TURNS_BETWEEN_REMINDERS = "6";
+  process.env.DEV_WORKFLOW_PLAN_THINKING_LEVEL = "high";
+  process.env.DEV_WORKFLOW_EXECUTE_THINKING_LEVEL = "medium";
+  process.env.DEV_WORKFLOW_VERIFY_THINKING_LEVEL = "xhigh";
 
   const settings = readEnvSettings();
   assert.equal("autoAdvanceDenyTimeoutMs" in settings, false);
@@ -71,7 +71,7 @@ test("loadConfig lets env settings override project and global settings", async 
 
   const root = join(
     tmpdir(),
-    `workflow-modes-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    `dev-workflow-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   const agentDir = join(root, "agent");
   const cwd = join(root, "project");
@@ -83,7 +83,7 @@ test("loadConfig lets env settings override project and global settings", async 
     await writeFile(
       join(agentDir, "settings.json"),
       JSON.stringify({
-        "extension:workflow-modes": {
+        "extension:dev-workflow": {
           autoCompactOnModeSwitch: true,
           autoCompactMinTokens: 50000,
           autoCompactOnAdvance: false,
@@ -102,7 +102,7 @@ test("loadConfig lets env settings override project and global settings", async 
     await writeFile(
       join(cwd, ".pi", "settings.json"),
       JSON.stringify({
-        "extension:workflow-modes": {
+        "extension:dev-workflow": {
           autoCompactMinTokens: 75000,
           autoCompactAdvanceMinTokens: 35000,
           planThinkingLevel: "low",
@@ -110,10 +110,10 @@ test("loadConfig lets env settings override project and global settings", async 
       }),
     );
 
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS = "90000";
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE = "1";
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS = "30000";
-    process.env.WORKFLOW_MODES_PLAN_THINKING_LEVEL = "xhigh";
+    process.env.DEV_WORKFLOW_AUTO_COMPACT_MIN_TOKENS = "90000";
+    process.env.DEV_WORKFLOW_AUTO_COMPACT_ON_ADVANCE = "1";
+    process.env.DEV_WORKFLOW_AUTO_COMPACT_ADVANCE_MIN_TOKENS = "30000";
+    process.env.DEV_WORKFLOW_PLAN_THINKING_LEVEL = "xhigh";
 
     const config = await loadConfig(cwd);
     assert.equal(config.autoCompactMinTokens, 90000);

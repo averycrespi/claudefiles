@@ -1,5 +1,5 @@
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import type { WorkflowMode } from "../workflow-modes/types.ts";
+import type { WorkflowMode } from "../dev-workflow/types.ts";
 import { formatDuration, type UsageStats } from "./utils.ts";
 
 export type FooterTheme = {

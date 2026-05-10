@@ -9,7 +9,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   WORKFLOW_MODE_CHANGED_EVENT,
   type WorkflowModeState,
-} from "../workflow-modes/api.ts";
+} from "../dev-workflow/api.ts";
 import { codexAdapter } from "./codex.ts";
 import { renderFooterLine, type FooterState } from "./footer.ts";
 import { type ProviderAdapter } from "./utils.ts";

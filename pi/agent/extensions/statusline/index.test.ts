@@ -126,7 +126,7 @@ test("workflow mode events rerender the statusline with mode badge and base thin
 
   await handler!({ type: "session_start", reason: "startup" }, pi._ctx());
   pi._setThinkingLevel("low");
-  pi.events.emit("workflow-modes:changed", {
+  pi.events.emit("dev-workflow:changed", {
     mode: "execute",
     baseThinking: "low",
     baselineThinking: "high",

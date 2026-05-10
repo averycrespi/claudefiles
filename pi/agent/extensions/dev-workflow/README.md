@@ -1,4 +1,4 @@
-# workflow-modes
+# dev-workflow
 
 Pi extension that adds lightweight workflow modes on top of the repo's existing tools.
 
@@ -174,28 +174,28 @@ The extension publishes workflow-mode state changes over `pi.events` so other ex
 
 ## Configuration
 
-Configure via `extension:workflow-modes` in Pi settings. Environment variables override settings when set. Use `/workflow-modes-config` to display the effective parsed config.
+Configure via `extension:dev-workflow` in Pi settings. Environment variables override settings when set. Use `/dev-workflow-config` to display the effective parsed config.
 
-| Field                               | Default  | Environment override                                   | Description                                                                                                      |
-| ----------------------------------- | -------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `autoCompactOnModeSwitch`           | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH`           | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.                                            |
-| `autoCompactMinTokens`              | `50000`  | `WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS`               | Context-token threshold for slash-command pre-switch compaction.                                                 |
-| `autoCompactOnAdvance`              | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE`               | Enables pre-switch compaction for accepted `workflow_advance` transitions.                                       |
-| `autoCompactAdvanceMinTokens`       | `30000`  | `WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS`       | Context-token threshold for advance pre-switch compaction.                                                       |
-| `autoAdvanceEnabled`                | `false`  | `WORKFLOW_MODES_AUTO_ADVANCE_ENABLED`                  | Enables required Execute/Verify `workflow_advance` decisions, advances, and bounded missing-decision follow-ups. |
-| `autoAdvanceMaxFixLoops`            | `2`      | `WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS`            | Caps Verify → Execute loopbacks.                                                                                 |
-| `todoReminderEnabled`               | `true`   | `WORKFLOW_MODES_TODO_REMINDER_ENABLED`                 | Enables the Execute-mode-only hidden reminder when `todo` has not been used recently.                            |
-| `todoReminderTurnsSinceTodo`        | `3`      | `WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO`        | Execute-mode assistant turns without a `todo` result before the reminder may fire.                               |
-| `todoReminderTurnsBetweenReminders` | `3`      | `WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS` | Minimum Execute-mode assistant turns between reminder injections.                                                |
-| `planThinkingLevel`                 | `medium` | `WORKFLOW_MODES_PLAN_THINKING_LEVEL`                   | Thinking level applied when entering Plan mode.                                                                  |
-| `executeThinkingLevel`              | `low`    | `WORKFLOW_MODES_EXECUTE_THINKING_LEVEL`                | Thinking level applied when entering Execute mode.                                                               |
-| `verifyThinkingLevel`               | `high`   | `WORKFLOW_MODES_VERIFY_THINKING_LEVEL`                 | Thinking level applied when entering Verify mode.                                                                |
+| Field                               | Default  | Environment override                                 | Description                                                                                                      |
+| ----------------------------------- | -------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `autoCompactOnModeSwitch`           | `true`   | `DEV_WORKFLOW_AUTO_COMPACT_ON_MODE_SWITCH`           | Enables pre-switch compaction for `/plan`, `/execute`, and `/verify`.                                            |
+| `autoCompactMinTokens`              | `50000`  | `DEV_WORKFLOW_AUTO_COMPACT_MIN_TOKENS`               | Context-token threshold for slash-command pre-switch compaction.                                                 |
+| `autoCompactOnAdvance`              | `true`   | `DEV_WORKFLOW_AUTO_COMPACT_ON_ADVANCE`               | Enables pre-switch compaction for accepted `workflow_advance` transitions.                                       |
+| `autoCompactAdvanceMinTokens`       | `30000`  | `DEV_WORKFLOW_AUTO_COMPACT_ADVANCE_MIN_TOKENS`       | Context-token threshold for advance pre-switch compaction.                                                       |
+| `autoAdvanceEnabled`                | `false`  | `DEV_WORKFLOW_AUTO_ADVANCE_ENABLED`                  | Enables required Execute/Verify `workflow_advance` decisions, advances, and bounded missing-decision follow-ups. |
+| `autoAdvanceMaxFixLoops`            | `2`      | `DEV_WORKFLOW_AUTO_ADVANCE_MAX_FIX_LOOPS`            | Caps Verify → Execute loopbacks.                                                                                 |
+| `todoReminderEnabled`               | `true`   | `DEV_WORKFLOW_TODO_REMINDER_ENABLED`                 | Enables the Execute-mode-only hidden reminder when `todo` has not been used recently.                            |
+| `todoReminderTurnsSinceTodo`        | `3`      | `DEV_WORKFLOW_TODO_REMINDER_TURNS_SINCE_TODO`        | Execute-mode assistant turns without a `todo` result before the reminder may fire.                               |
+| `todoReminderTurnsBetweenReminders` | `3`      | `DEV_WORKFLOW_TODO_REMINDER_TURNS_BETWEEN_REMINDERS` | Minimum Execute-mode assistant turns between reminder injections.                                                |
+| `planThinkingLevel`                 | `medium` | `DEV_WORKFLOW_PLAN_THINKING_LEVEL`                   | Thinking level applied when entering Plan mode.                                                                  |
+| `executeThinkingLevel`              | `low`    | `DEV_WORKFLOW_EXECUTE_THINKING_LEVEL`                | Thinking level applied when entering Execute mode.                                                               |
+| `verifyThinkingLevel`               | `high`   | `DEV_WORKFLOW_VERIFY_THINKING_LEVEL`                 | Thinking level applied when entering Verify mode.                                                                |
 
 Example settings:
 
 ```json
 {
-  "extension:workflow-modes": {
+  "extension:dev-workflow": {
     "autoCompactOnModeSwitch": true,
     "autoCompactMinTokens": 50000,
     "autoCompactOnAdvance": true,

@@ -53,7 +53,7 @@ type RuntimeState = {
   todoReminderTurnsSinceReminder: number;
 };
 
-type WorkflowModesConfig = {
+type DevWorkflowConfig = {
   autoCompactOnModeSwitch: boolean;
   autoCompactMinTokens: number;
   autoCompactOnAdvance: boolean;
@@ -68,11 +68,11 @@ type WorkflowModesConfig = {
   verifyThinkingLevel: ThinkingLevel;
 };
 
-type WorkflowModesExtensionOptions = {
-  loadConfig?: (cwd: string) => Promise<WorkflowModesConfig>;
+type DevWorkflowExtensionOptions = {
+  loadConfig?: (cwd: string) => Promise<DevWorkflowConfig>;
 };
 
-const DEFAULT_CONFIG: WorkflowModesConfig = {
+const DEFAULT_CONFIG: DevWorkflowConfig = {
   autoCompactOnModeSwitch: true,
   autoCompactMinTokens: 50_000,
   autoCompactOnAdvance: true,
@@ -262,10 +262,10 @@ function renderEditPlanResult(
   return getTruncatedText(context.lastComponent, lines);
 }
 
-export function createWorkflowModesExtension(
-  options: WorkflowModesExtensionOptions = {},
+export function createDevWorkflowExtension(
+  options: DevWorkflowExtensionOptions = {},
 ) {
-  const loadWorkflowModesConfig = options.loadConfig ?? loadConfig;
+  const loadDevWorkflowConfig = options.loadConfig ?? loadConfig;
 
   return function (pi: ExtensionAPI) {
     const state: RuntimeState = {
@@ -279,8 +279,8 @@ export function createWorkflowModesExtension(
     };
 
     registerConfigCommand(pi, {
-      extensionName: "workflow-modes",
-      loadConfig: loadWorkflowModesConfig,
+      extensionName: "dev-workflow",
+      loadConfig: loadDevWorkflowConfig,
     });
 
     function getWorkflowModeState(): WorkflowModeState {
@@ -310,7 +310,7 @@ export function createWorkflowModesExtension(
       state.baselineThinking = undefined;
     }
 
-    function updateRuntimeConfig(config: WorkflowModesConfig): void {
+    function updateRuntimeConfig(config: DevWorkflowConfig): void {
       state.thinkingLevels = {
         plan: config.planThinkingLevel,
         execute: config.executeThinkingLevel,
@@ -445,9 +445,9 @@ export function createWorkflowModesExtension(
       ctx: ExtensionContext,
     ): Promise<void> {
       if (!ctx.hasUI) return;
-      const config = await loadWorkflowModesConfig(ctx.cwd);
+      const config = await loadDevWorkflowConfig(ctx.cwd);
       if (!config.autoAdvanceEnabled || state.mode === "normal") {
-        ctx.ui.setStatus("workflow-modes", undefined);
+        ctx.ui.setStatus("dev-workflow", undefined);
         return;
       }
 
@@ -455,7 +455,7 @@ export function createWorkflowModesExtension(
         state.autoAdvanceFixLoopsUsed >= config.autoAdvanceMaxFixLoops;
       const budget = `${state.autoAdvanceFixLoopsUsed}/${config.autoAdvanceMaxFixLoops}`;
       ctx.ui.setStatus(
-        "workflow-modes",
+        "dev-workflow",
         exhausted ? `↻ exhausted ${budget}` : `↻ auto ${budget}`,
       );
     }
@@ -467,7 +467,7 @@ export function createWorkflowModesExtension(
     ): Promise<void> {
       state.autoAdvanceFixLoopsUsed = 0;
       resetMissingAdvanceFollowUps();
-      const config = await loadWorkflowModesConfig(ctx.cwd);
+      const config = await loadDevWorkflowConfig(ctx.cwd);
       updateRuntimeConfig(config);
       if (state.mode !== mode) {
         await maybeCompactBeforeModeSwitch(mode, ctx, {
@@ -489,7 +489,7 @@ export function createWorkflowModesExtension(
       mode: "execute" | "verify",
       args: string,
       ctx: ExtensionContext,
-      config: WorkflowModesConfig,
+      config: DevWorkflowConfig,
     ): Promise<void> {
       updateRuntimeConfig(config);
       if (state.mode !== mode) {
@@ -583,7 +583,7 @@ export function createWorkflowModesExtension(
       parameters: ADVANCE_PARAMS,
       async execute(_toolCallId, rawParams, _signal, _onUpdate, ctx) {
         const params = rawParams as AdvanceParams;
-        const config = await loadWorkflowModesConfig(ctx.cwd);
+        const config = await loadDevWorkflowConfig(ctx.cwd);
         updateRuntimeConfig(config);
         if (!config.autoAdvanceEnabled) {
           return {
@@ -868,7 +868,7 @@ export function createWorkflowModesExtension(
     }
 
     pi.on("session_start", async (_event, ctx) => {
-      updateRuntimeConfig(await loadWorkflowModesConfig(ctx.cwd));
+      updateRuntimeConfig(await loadDevWorkflowConfig(ctx.cwd));
       resetBaselines();
       captureBaselines();
       if (state.mode !== "normal") {
@@ -904,7 +904,7 @@ export function createWorkflowModesExtension(
 
     pi.on("before_agent_start", async (event, ctx) => {
       if (state.mode === "normal") return undefined;
-      const config = await loadWorkflowModesConfig(ctx.cwd);
+      const config = await loadDevWorkflowConfig(ctx.cwd);
       updateRuntimeConfig(config);
       return {
         systemPrompt: `${event.systemPrompt}\n\n${buildModeContract({
@@ -916,7 +916,7 @@ export function createWorkflowModesExtension(
 
     pi.on("agent_end", async (_event, ctx) => {
       if (state.mode !== "execute" && state.mode !== "verify") return;
-      const config = await loadWorkflowModesConfig(ctx.cwd);
+      const config = await loadDevWorkflowConfig(ctx.cwd);
       if (!config.autoAdvanceEnabled) return;
       if (ctx.hasPendingMessages()) return;
 
@@ -954,7 +954,7 @@ export function createWorkflowModesExtension(
       if (state.mode !== "execute") return undefined;
       if (!pi.getActiveTools().includes("todo")) return undefined;
 
-      const config = await loadWorkflowModesConfig(ctx.cwd);
+      const config = await loadDevWorkflowConfig(ctx.cwd);
       if (!config.todoReminderEnabled) return undefined;
       if (
         state.todoReminderTurnsSinceTodo < config.todoReminderTurnsSinceTodo ||
@@ -997,7 +997,7 @@ export function createWorkflowModesExtension(
           }),
           details: {
             version: 2,
-            workflowModes: {
+            devWorkflow: {
               mode: compactionMode,
               nextAction,
             },
@@ -1008,15 +1008,15 @@ export function createWorkflowModesExtension(
   };
 }
 
-export async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
+export async function loadConfig(cwd: string): Promise<DevWorkflowConfig> {
   const { globalSettings, projectSettings } = await readPiSettingsFiles({
     agentDir: getAgentDir(),
     cwd,
   });
   const merged = mergeExtensionConfig({
     defaults: DEFAULT_CONFIG,
-    globalSettings: readExtensionSettings(globalSettings, "workflow-modes"),
-    projectSettings: readExtensionSettings(projectSettings, "workflow-modes"),
+    globalSettings: readExtensionSettings(globalSettings, "dev-workflow"),
+    projectSettings: readExtensionSettings(projectSettings, "dev-workflow"),
     envSettings: readEnvSettings(),
   });
 
@@ -1082,78 +1082,78 @@ export async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
   };
 }
 
-export function readEnvSettings(): Partial<WorkflowModesConfig> {
-  const settings: Partial<WorkflowModesConfig> = {};
+export function readEnvSettings(): Partial<DevWorkflowConfig> {
+  const settings: Partial<DevWorkflowConfig> = {};
   setBooleanEnv(
     settings,
     "autoCompactOnModeSwitch",
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_MODE_SWITCH,
+    process.env.DEV_WORKFLOW_AUTO_COMPACT_ON_MODE_SWITCH,
   );
   setNumberEnv(
     settings,
     "autoCompactMinTokens",
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_MIN_TOKENS,
+    process.env.DEV_WORKFLOW_AUTO_COMPACT_MIN_TOKENS,
     false,
   );
   setBooleanEnv(
     settings,
     "autoCompactOnAdvance",
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_ON_ADVANCE,
+    process.env.DEV_WORKFLOW_AUTO_COMPACT_ON_ADVANCE,
   );
   setNumberEnv(
     settings,
     "autoCompactAdvanceMinTokens",
-    process.env.WORKFLOW_MODES_AUTO_COMPACT_ADVANCE_MIN_TOKENS,
+    process.env.DEV_WORKFLOW_AUTO_COMPACT_ADVANCE_MIN_TOKENS,
     false,
   );
   setBooleanEnv(
     settings,
     "autoAdvanceEnabled",
-    process.env.WORKFLOW_MODES_AUTO_ADVANCE_ENABLED,
+    process.env.DEV_WORKFLOW_AUTO_ADVANCE_ENABLED,
   );
   setNumberEnv(
     settings,
     "autoAdvanceMaxFixLoops",
-    process.env.WORKFLOW_MODES_AUTO_ADVANCE_MAX_FIX_LOOPS,
+    process.env.DEV_WORKFLOW_AUTO_ADVANCE_MAX_FIX_LOOPS,
     true,
   );
   setBooleanEnv(
     settings,
     "todoReminderEnabled",
-    process.env.WORKFLOW_MODES_TODO_REMINDER_ENABLED,
+    process.env.DEV_WORKFLOW_TODO_REMINDER_ENABLED,
   );
   setNumberEnv(
     settings,
     "todoReminderTurnsSinceTodo",
-    process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO,
+    process.env.DEV_WORKFLOW_TODO_REMINDER_TURNS_SINCE_TODO,
     true,
   );
   setNumberEnv(
     settings,
     "todoReminderTurnsBetweenReminders",
-    process.env.WORKFLOW_MODES_TODO_REMINDER_TURNS_BETWEEN_REMINDERS,
+    process.env.DEV_WORKFLOW_TODO_REMINDER_TURNS_BETWEEN_REMINDERS,
     true,
   );
   setThinkingLevelEnv(
     settings,
     "planThinkingLevel",
-    process.env.WORKFLOW_MODES_PLAN_THINKING_LEVEL,
+    process.env.DEV_WORKFLOW_PLAN_THINKING_LEVEL,
   );
   setThinkingLevelEnv(
     settings,
     "executeThinkingLevel",
-    process.env.WORKFLOW_MODES_EXECUTE_THINKING_LEVEL,
+    process.env.DEV_WORKFLOW_EXECUTE_THINKING_LEVEL,
   );
   setThinkingLevelEnv(
     settings,
     "verifyThinkingLevel",
-    process.env.WORKFLOW_MODES_VERIFY_THINKING_LEVEL,
+    process.env.DEV_WORKFLOW_VERIFY_THINKING_LEVEL,
   );
   return settings;
 }
 
-function setBooleanEnv<K extends keyof WorkflowModesConfig>(
-  settings: Partial<WorkflowModesConfig>,
+function setBooleanEnv<K extends keyof DevWorkflowConfig>(
+  settings: Partial<DevWorkflowConfig>,
   key: K,
   value: string | undefined,
 ): void {
@@ -1163,8 +1163,8 @@ function setBooleanEnv<K extends keyof WorkflowModesConfig>(
   }
 }
 
-function setNumberEnv<K extends keyof WorkflowModesConfig>(
-  settings: Partial<WorkflowModesConfig>,
+function setNumberEnv<K extends keyof DevWorkflowConfig>(
+  settings: Partial<DevWorkflowConfig>,
   key: K,
   value: string | undefined,
   integer: boolean,
@@ -1180,8 +1180,8 @@ function setNumberEnv<K extends keyof WorkflowModesConfig>(
   }
 }
 
-function setThinkingLevelEnv<K extends keyof WorkflowModesConfig>(
-  settings: Partial<WorkflowModesConfig>,
+function setThinkingLevelEnv<K extends keyof DevWorkflowConfig>(
+  settings: Partial<DevWorkflowConfig>,
   key: K,
   value: string | undefined,
 ): void {
@@ -1205,4 +1205,4 @@ function capitalize(value: string): string {
   return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
 
-export default createWorkflowModesExtension();
+export default createDevWorkflowExtension();

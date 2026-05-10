@@ -1,6 +1,6 @@
-# workflow-modes API
+# dev-workflow API
 
-Programmatic integration surface for the `workflow-modes` extension.
+Programmatic integration surface for the `dev-workflow` extension.
 
 Import from `api.ts`:
 
@@ -8,7 +8,7 @@ Import from `api.ts`:
 import {
   WORKFLOW_MODE_CHANGED_EVENT,
   type WorkflowModeState,
-} from "../workflow-modes/api.ts";
+} from "../dev-workflow/api.ts";
 ```
 
 Anything not exported from `api.ts` should be treated as internal.
