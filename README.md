@@ -52,10 +52,14 @@ make stow-pi            # symlink pi/agent/ into ~/.pi/agent/
 ### Development
 
 ```sh
-make install-dev # install Pi dev dependencies
-make typecheck   # type-check Pi extension TypeScript files
-make test        # run Pi extension unit tests
+make install-dev      # install Pi dev dependencies and Husky git hooks
+npm run lint          # lint Pi extension TypeScript files
+npm run format:check  # check formatting for TS/JS/JSON/Markdown/YAML files
+make typecheck        # type-check Pi extension TypeScript files
+make test             # run Pi extension unit tests
 ```
+
+`npm install` runs Husky's `prepare` script, which installs the repo's pre-commit hook. The hook runs `lint-staged` for staged formatting/lint fixes, then `npm run typecheck`.
 
 ## License
 

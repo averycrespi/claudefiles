@@ -21,11 +21,13 @@ This is a public repository. When creating or modifying content:
 ## Commands
 
 ```bash
-make install-dev        # install Node dependencies for Pi extensions
+make install-dev        # install Node dependencies and Husky git hooks
 make install-playwright # install Playwright for browser automation
 make stow-claude         # symlink claude/ into ~/.claude/
 make stow-claude-sandbox # stow-claude + patch sandbox overrides
 make stow-pi             # symlink pi/agent/ into ~/.pi/agent/
+npm run lint            # lint Pi extension TypeScript files
+npm run format:check    # check formatting for TS/JS/JSON/Markdown/YAML files
 make typecheck          # type-check Pi extension TypeScript files
 make test               # run all Pi extension unit tests
 ```

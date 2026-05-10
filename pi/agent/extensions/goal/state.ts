@@ -340,11 +340,7 @@ export function createGoalStore(
   };
 }
 
-function parseUsage(
-  value: unknown,
-  createdAt: number,
-  status: GoalStatus,
-): GoalUsage | undefined {
+function parseUsage(value: unknown, createdAt: number): GoalUsage | undefined {
   if (value === undefined) return defaultUsage(createdAt, false);
   if (!value || typeof value !== "object") return undefined;
   const candidate = value as Record<string, unknown>;
@@ -401,11 +397,7 @@ function parseGoal(value: unknown): Goal | undefined {
   if (candidate.status === "complete" && !candidate.completionEvidence) {
     return undefined;
   }
-  const usage = parseUsage(
-    candidate.usage,
-    candidate.createdAt,
-    candidate.status,
-  );
+  const usage = parseUsage(candidate.usage, candidate.createdAt);
   if (!usage) return undefined;
   return {
     id: candidate.id,

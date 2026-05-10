@@ -24,7 +24,9 @@ test("goal_get returns current goal without mutating", async () => {
   store.setGoal("Finish goal extension", 100);
   registerGoalTools(pi, store, { evidenceMaxChars: 100 });
 
-  const result = await pi.tools.get("goal_get").execute("call-1", {}, undefined, undefined, {});
+  const result = await pi.tools
+    .get("goal_get")
+    .execute("call-1", {}, undefined, undefined, {});
 
   assert.match(result.content[0].text, /Goal \[active\] Finish goal extension/);
   assert.equal(pi.entries.length, 0);
@@ -36,10 +38,26 @@ test("goal_update requires complete status and non-empty evidence", async () => 
   store.setGoal("Finish goal extension", 100);
   registerGoalTools(pi, store, { evidenceMaxChars: 100 });
 
-  const badStatus = await pi.tools.get("goal_update").execute("call-1", { status: "paused", evidence: "done" }, undefined, undefined, {});
+  const badStatus = await pi.tools
+    .get("goal_update")
+    .execute(
+      "call-1",
+      { status: "paused", evidence: "done" },
+      undefined,
+      undefined,
+      {},
+    );
   assert.match(badStatus.content[0].text, /Error: status must be "complete"/);
 
-  const missingEvidence = await pi.tools.get("goal_update").execute("call-2", { status: "complete", evidence: "   " }, undefined, undefined, {});
+  const missingEvidence = await pi.tools
+    .get("goal_update")
+    .execute(
+      "call-2",
+      { status: "complete", evidence: "   " },
+      undefined,
+      undefined,
+      {},
+    );
   assert.match(missingEvidence.content[0].text, /Error: evidence is required/);
 });
 
@@ -49,7 +67,15 @@ test("goal_update completes active goal with evidence and persists state", async
   store.setGoal("Finish goal extension", 100);
   registerGoalTools(pi, store, { evidenceMaxChars: 100 });
 
-  const result = await pi.tools.get("goal_update").execute("call-1", { status: "complete", evidence: "typecheck and tests pass" }, undefined, undefined, {});
+  const result = await pi.tools
+    .get("goal_update")
+    .execute(
+      "call-1",
+      { status: "complete", evidence: "typecheck and tests pass" },
+      undefined,
+      undefined,
+      {},
+    );
 
   assert.match(result.content[0].text, /Goal \[complete\]/);
   assert.equal(store.getGoal()?.completionEvidence, "typecheck and tests pass");

@@ -214,7 +214,6 @@ test("before_agent_start omits commit guidance when checkpointCommits is disable
   assert.doesNotMatch(result.systemPrompt, /Stage files by name/i);
 });
 
-
 test("message_end records usage for active goals", async () => {
   const pi = makePi();
   const ctx = makeCtx();
@@ -238,7 +237,10 @@ test("message_end records usage for active goals", async () => {
   await pi.handlers.get("session_start")({}, ctx);
   await pi.commands.get("goal-set").handler("Track usage", ctx);
 
-  await pi.handlers.get("message_end")({ message: { role: "assistant", usage: { totalTokens: 250 } } }, ctx);
+  await pi.handlers.get("message_end")(
+    { message: { role: "assistant", usage: { totalTokens: 250 } } },
+    ctx,
+  );
   await pi.commands.get("goal-show").handler("", ctx);
 
   assert.match(ctx.notifications.at(-1)?.msg, /250 tokens/);
@@ -366,7 +368,10 @@ test("agent_end stops auto-run at turn budget", async () => {
 
   assert.equal((pi.entries.at(-1)?.data as any).goal.status, "active");
   assert.equal((pi.entries.at(-1)?.data as any).autoRun.status, "stopped");
-  assert.equal((pi.entries.at(-1)?.data as any).autoRun.stopReason, "turn_budget");
+  assert.equal(
+    (pi.entries.at(-1)?.data as any).autoRun.stopReason,
+    "turn_budget",
+  );
   assert.equal(pi.sentMessages.length, 2);
 });
 
@@ -398,5 +403,8 @@ test("user input stops auto-run but extension input does not", async () => {
 
   await pi.handlers.get("input")({ source: "interactive" }, ctx);
   assert.equal((pi.entries.at(-1)?.data as any).autoRun.status, "stopped");
-  assert.equal((pi.entries.at(-1)?.data as any).autoRun.stopReason, "user_input");
+  assert.equal(
+    (pi.entries.at(-1)?.data as any).autoRun.stopReason,
+    "user_input",
+  );
 });
