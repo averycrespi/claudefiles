@@ -1,7 +1,15 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { maskConfigValue } from "../_shared/config.ts";
-import { normalizeConfig, readEnvSettings } from "./config.ts";
+import {
+  loadHindsightConfig,
+  normalizeConfig,
+  readEnvSettings,
+} from "./config.ts";
 
 test("normalizes invalid optional config to defaults", () => {
   assert.deepEqual(
@@ -53,4 +61,37 @@ test("reads environment overrides", () => {
 test("masks apiKey", () => {
   const masked = maskConfigValue({ apiKey: "secret" }, ["apiKey"]);
   assert.equal((masked as { apiKey: unknown }).apiKey, "********");
+});
+
+test("loadHindsightConfig applies project settings and environment overrides", async () => {
+  const old = { ...process.env };
+  const cwd = mkdtempSync(join(tmpdir(), "hindsight-config-"));
+  mkdirSync(join(cwd, ".pi"), { recursive: true });
+  writeFileSync(
+    join(cwd, ".pi", "settings.json"),
+    JSON.stringify({
+      "extension:hindsight": {
+        baseUrl: "https://project.example.com",
+        apiKey: "project-key",
+        bankId: "project-bank",
+        defaultScope: "global",
+        recallBudget: "high",
+      },
+    }),
+  );
+  process.env = { ...old };
+  delete process.env.HINDSIGHT_BASE_URL;
+  delete process.env.HINDSIGHT_API_KEY;
+  process.env.HINDSIGHT_BANK_ID = "env-bank";
+  process.env.HINDSIGHT_DEFAULT_SCOPE = "repo";
+  try {
+    const config = await loadHindsightConfig(cwd);
+    assert.equal(config.baseUrl, "https://project.example.com");
+    assert.equal(config.apiKey, "project-key");
+    assert.equal(config.bankId, "env-bank");
+    assert.equal(config.defaultScope, "repo");
+    assert.equal(config.recallBudget, "high");
+  } finally {
+    process.env = old;
+  }
 });

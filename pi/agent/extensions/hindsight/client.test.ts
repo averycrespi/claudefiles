@@ -38,6 +38,41 @@ test("shapes retain request path, auth, and body", async () => {
   });
 });
 
+test("shapes recall and reflect request paths and bodies", async () => {
+  const calls: any[] = [];
+  mock.method(_fetch, "fn", async (url: string, init: any) => {
+    calls.push([url, init]);
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  });
+  const client = new HindsightClient(config);
+  await client.recall(
+    { query: "q", tags: ["scope:repo"], include: { source_facts: {} } },
+    new AbortController().signal,
+  );
+  await client.reflect(
+    { query: "r", include: { facts: {} }, fact_types: ["world"] },
+    new AbortController().signal,
+  );
+  assert.equal(
+    calls[0][0],
+    "https://hindsight.example.com/v1/default/banks/bank%20with%20space/memories/recall",
+  );
+  assert.deepEqual(JSON.parse(calls[0][1].body), {
+    query: "q",
+    tags: ["scope:repo"],
+    include: { source_facts: {} },
+  });
+  assert.equal(
+    calls[1][0],
+    "https://hindsight.example.com/v1/default/banks/bank%20with%20space/reflect",
+  );
+  assert.deepEqual(JSON.parse(calls[1][1].body), {
+    query: "r",
+    include: { facts: {} },
+    fact_types: ["world"],
+  });
+});
+
 test("throws readable http errors", async () => {
   mock.method(
     _fetch,

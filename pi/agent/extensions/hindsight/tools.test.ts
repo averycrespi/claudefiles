@@ -119,6 +119,26 @@ test("shapes retain body with tags and metadata", async () => {
   assert.equal(body.items[0].metadata.x, "y");
 });
 
+test("marks recall result-count truncation in agent text", async () => {
+  const client = new FakeClient();
+  client.response = {
+    results: Array.from({ length: 20 }, (_, i) => ({
+      id: String(i),
+      text: `fact ${i}`,
+    })),
+  };
+  const result = await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    { action: "recall", query: "q" },
+    new AbortController().signal,
+  );
+  const text = result.content[0].type === "text" ? result.content[0].text : "";
+  assert.match(text, /truncated/);
+  assert.equal((result.details as any).truncated, true);
+});
+
 test("bounds oversized recall output", async () => {
   const client = new FakeClient();
   client.response = {
@@ -132,6 +152,56 @@ test("bounds oversized recall output", async () => {
     config,
     { cwd: process.cwd() } as any,
     { action: "recall", query: "q" },
+    new AbortController().signal,
+  );
+  const text = result.content[0].type === "text" ? result.content[0].text : "";
+  assert.match(text, /truncated/);
+  assert.equal((result.details as any).truncated, true);
+});
+
+test("rejects malformed recall options", async () => {
+  for (const params of [
+    { action: "recall", query: "q", types: ["fact", 3] },
+    { action: "recall", query: "q", max_tokens: -1 },
+  ]) {
+    const result = await executeHindsight(
+      new FakeClient(),
+      config,
+      { cwd: process.cwd() } as any,
+      params,
+      new AbortController().signal,
+    );
+    assert.equal((result.details as any).error, true);
+  }
+});
+
+test("rejects malformed reflect options", async () => {
+  for (const params of [
+    { action: "reflect", query: "q", fact_types: ["world", 3] },
+    { action: "reflect", query: "q", max_tokens: 0 },
+  ]) {
+    const result = await executeHindsight(
+      new FakeClient(),
+      config,
+      { cwd: process.cwd() } as any,
+      params,
+      new AbortController().signal,
+    );
+    assert.equal((result.details as any).error, true);
+  }
+});
+
+test("bounds oversized reflect output", async () => {
+  const client = new FakeClient();
+  client.response = {
+    text: "x".repeat(2000),
+    based_on: Array.from({ length: 20 }, (_, i) => ({ id: String(i) })),
+  };
+  const result = await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    { action: "reflect", query: "q" },
     new AbortController().signal,
   );
   const text = result.content[0].type === "text" ? result.content[0].text : "";

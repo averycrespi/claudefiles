@@ -211,6 +211,14 @@ async function recall(
   const callerTags = arrayOfStrings(params.tags);
   if (params.tags !== undefined && !callerTags)
     return errorResult("hindsight recall: tags must be an array of strings");
+  const types = arrayOfStrings(params.types);
+  if (params.types !== undefined && !types)
+    return errorResult("hindsight recall: types must be an array of strings");
+  const maxTokens = positiveNumber(params.max_tokens);
+  if (params.max_tokens !== undefined && !maxTokens)
+    return errorResult(
+      "hindsight recall: max_tokens must be a positive number",
+    );
   const tags = buildQueryTags({
     cwd,
     scope,
@@ -220,12 +228,10 @@ async function recall(
   const body = {
     query,
     budget,
-    max_tokens: positiveNumber(params.max_tokens) ?? config.recallMaxTokens,
+    max_tokens: maxTokens ?? config.recallMaxTokens,
     tags,
     tags_match: tagsMatch,
-    ...(arrayOfStrings(params.types)
-      ? { types: arrayOfStrings(params.types) }
-      : {}),
+    ...(types ? { types } : {}),
     ...(typeof params.trace === "boolean" ? { trace: params.trace } : {}),
     ...(stringValue(params.query_timestamp)
       ? { query_timestamp: stringValue(params.query_timestamp) }
@@ -276,6 +282,16 @@ async function reflect(
   const callerTags = arrayOfStrings(params.tags);
   if (params.tags !== undefined && !callerTags)
     return errorResult("hindsight reflect: tags must be an array of strings");
+  const factTypes = arrayOfStrings(params.fact_types);
+  if (params.fact_types !== undefined && !factTypes)
+    return errorResult(
+      "hindsight reflect: fact_types must be an array of strings",
+    );
+  const maxTokens = positiveNumber(params.max_tokens);
+  if (params.max_tokens !== undefined && !maxTokens)
+    return errorResult(
+      "hindsight reflect: max_tokens must be a positive number",
+    );
   const tags = buildQueryTags({
     cwd,
     scope,
@@ -285,14 +301,10 @@ async function reflect(
   const body = {
     query,
     budget,
-    ...(positiveNumber(params.max_tokens)
-      ? { max_tokens: positiveNumber(params.max_tokens) }
-      : {}),
+    ...(maxTokens ? { max_tokens: maxTokens } : {}),
     tags,
     tags_match: tagsMatch,
-    ...(arrayOfStrings(params.fact_types)
-      ? { fact_types: arrayOfStrings(params.fact_types) }
-      : {}),
+    ...(factTypes ? { fact_types: factTypes } : {}),
     ...(typeof params.exclude_mental_models === "boolean"
       ? { exclude_mental_models: params.exclude_mental_models }
       : {}),
@@ -345,8 +357,12 @@ function boundResponse(value: unknown): {
       return item;
     }
     if (Array.isArray(item)) {
-      if (item.length > MAX_RESULTS) truncated = true;
-      return item.slice(0, MAX_RESULTS).map(bound);
+      const values = item.slice(0, MAX_RESULTS).map(bound);
+      if (item.length > MAX_RESULTS) {
+        truncated = true;
+        values.push(`...[truncated ${item.length - MAX_RESULTS} item(s)]`);
+      }
+      return values;
     }
     if (item && typeof item === "object") {
       return Object.fromEntries(
