@@ -163,7 +163,7 @@ The extension publishes workflow-mode state changes over `pi.events` so other ex
 
 ## Configuration
 
-Configure via `extension:workflow-modes` in Pi settings. Environment variables override settings when set.
+Configure via `extension:workflow-modes` in Pi settings. Environment variables override settings when set. Use `/workflow-modes-config` to display the effective parsed config.
 
 | Field                               | Default  | Environment override                                   | Description                                                                                                      |
 | ----------------------------------- | -------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |

@@ -45,7 +45,7 @@ Routes by URL type:
 
 ## Configuration
 
-Configure via `extension:web-access` in Pi settings. Environment variables override settings when set.
+Configure via `extension:web-access` in Pi settings. Environment variables override settings when set. Use `/web-access-config` to display the effective parsed config with API keys masked.
 
 | Field          | Default | Environment override | Description                                                                                                                  |
 | -------------- | ------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |

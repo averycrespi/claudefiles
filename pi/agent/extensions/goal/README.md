@@ -80,7 +80,7 @@ Because extension-provided compaction replaces Pi's default compaction result, d
 
 ## Configuration
 
-Settings live under `extension:goal`. Environment variables override settings.
+Settings live under `extension:goal`. Environment variables override settings. Use `/goal-config` to display the effective parsed config.
 
 | Field                     | Default | Environment override               | Description                                                                                                                  |
 | ------------------------- | ------: | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |

@@ -3,6 +3,7 @@ import type {
   ExtensionCommandContext,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { registerConfigCommand } from "../_shared/config.ts";
 import { loadGoalConfig, type GoalConfig } from "./config.ts";
 import { createGoalWidget } from "./render.ts";
 import {
@@ -145,6 +146,11 @@ export function createGoalExtension(options: GoalExtensionOptions = {}) {
       get showUsage() {
         return config.showUsage;
       },
+    });
+
+    registerConfigCommand(pi, {
+      extensionName: "goal",
+      loadConfig: async (cwd) => (await loadConfig(cwd)).config,
     });
 
     async function loadRuntimeConfig(ctx: ExtensionContext): Promise<void> {

@@ -8,6 +8,7 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { registerConfigCommand } from "../_shared/config.ts";
 import { type Static, Type } from "@sinclair/typebox";
 import {
   clearPartialTimer,
@@ -306,6 +307,11 @@ const fetchTool = {
 export default function (pi: ExtensionAPI) {
   pi.registerTool(searchTool as any);
   pi.registerTool(fetchTool as any);
+  registerConfigCommand(pi, {
+    extensionName: "web-access",
+    loadConfig: loadWebAccessConfig,
+    sensitiveFields: ["tavilyApiKey", "jinaApiKey"],
+  });
 
   pi.on("session_start", async (_event, ctx) => {
     await ensureConfig(ctx);

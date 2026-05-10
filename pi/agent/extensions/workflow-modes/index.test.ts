@@ -362,6 +362,25 @@ test("default export is the configurable workflow-modes extension", () => {
   assert.equal(typeof workflowModes, "function");
 });
 
+test("/workflow-modes-config displays effective config", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-index-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({
+    autoHandoffEnabled: true,
+    executeThinkingLevel: "medium",
+  })(pi as any);
+
+  await pi._commands.get("workflow-modes-config")!.handler("", pi._ctx());
+
+  const message = pi._notifications.at(-1)?.msg;
+  assert.ok(message);
+  assert.match(message, /workflow-modes effective config:/);
+  assert.match(message, /"autoHandoffEnabled": true/);
+  assert.match(message, /"executeThinkingLevel": "medium"/);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
 test("/plan sends a kickoff user message, switches tools/thinking, and injects the plan contract", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-index-"));
   const pi = makePi(cwd);

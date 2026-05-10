@@ -20,7 +20,7 @@ Tool calls that require human approval block for up to 10 minutes, matching the 
 
 ## Configuration
 
-Configure via `extension:mcp-broker` in Pi settings. Environment variables override settings when set.
+Configure via `extension:mcp-broker` in Pi settings. Environment variables override settings when set. Use `/mcp-broker-config` to display the effective parsed config with `authToken` masked.
 
 | Field       | Default | Environment override    | Description                                                                                                     |
 | ----------- | ------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- |

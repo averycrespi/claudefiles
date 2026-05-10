@@ -1,7 +1,17 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+} from "@earendil-works/pi-coding-agent";
 
 type PlainObject = Record<string, unknown>;
+
+type ConfigCommandOptions<T extends PlainObject> = {
+  extensionName: string;
+  loadConfig: (cwd: string) => Promise<T> | T;
+  sensitiveFields?: readonly string[];
+};
 
 function isPlainObject(value: unknown): value is PlainObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -61,4 +71,54 @@ export function parseBooleanEnv(
   if (["false", "0", "no"].includes(normalized)) return false;
   if (name) warnings.push(`Ignoring invalid boolean env ${name}=${value}`);
   return undefined;
+}
+
+export function maskConfigValue(
+  value: unknown,
+  sensitiveFields: readonly string[] = [],
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => maskConfigValue(item, sensitiveFields));
+  }
+  if (!isPlainObject(value)) return value === undefined ? "(unset)" : value;
+
+  const sensitive = new Set(sensitiveFields);
+  return Object.fromEntries(
+    Object.entries(value).map(([key, fieldValue]) => [
+      key,
+      sensitive.has(key) && fieldValue !== undefined && fieldValue !== null
+        ? "********"
+        : maskConfigValue(fieldValue, sensitiveFields),
+    ]),
+  );
+}
+
+export function formatConfigForDisplay(
+  extensionName: string,
+  config: PlainObject,
+  options: { sensitiveFields?: readonly string[] } = {},
+): string {
+  const masked = maskConfigValue(config, options.sensitiveFields);
+  return [
+    `${extensionName} effective config:`,
+    JSON.stringify(masked, null, 2),
+  ].join("\n");
+}
+
+export function registerConfigCommand<T extends PlainObject>(
+  pi: Pick<ExtensionAPI, "registerCommand">,
+  options: ConfigCommandOptions<T>,
+): void {
+  pi.registerCommand(`${options.extensionName}-config`, {
+    description: `Show the effective ${options.extensionName} extension config.`,
+    handler: async (_args: string, ctx: ExtensionCommandContext) => {
+      const config = await options.loadConfig(ctx.cwd);
+      ctx.ui.notify(
+        formatConfigForDisplay(options.extensionName, config, {
+          sensitiveFields: options.sensitiveFields,
+        }),
+        "info",
+      );
+    },
+  });
 }

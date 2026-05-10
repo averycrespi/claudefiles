@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  formatConfigForDisplay,
+  maskConfigValue,
   mergeExtensionConfig,
   parseBooleanEnv,
   readExtensionSettings,
+  registerConfigCommand,
 } from "./config.ts";
 
 test("readExtensionSettings reads extension-scoped top-level object", () => {
@@ -61,4 +64,64 @@ test("parseBooleanEnv reports invalid values without throwing", () => {
   assert.deepEqual(warnings, [
     "Ignoring invalid boolean env EXAMPLE_ENABLED=sometimes",
   ]);
+});
+
+test("maskConfigValue masks configured sensitive fields and preserves unset values", () => {
+  const result = maskConfigValue(
+    {
+      endpoint: "https://broker.example.com",
+      authToken: "secret-token",
+      nested: { authToken: undefined },
+    },
+    ["authToken"],
+  );
+
+  assert.deepEqual(result, {
+    endpoint: "https://broker.example.com",
+    authToken: "********",
+    nested: { authToken: "(unset)" },
+  });
+});
+
+test("formatConfigForDisplay emits stable masked JSON", () => {
+  const output = formatConfigForDisplay(
+    "example",
+    { enabled: true, apiKey: "secret", optional: undefined },
+    { sensitiveFields: ["apiKey"] },
+  );
+
+  assert.match(output, /^example effective config:/);
+  assert.match(output, /"enabled": true/);
+  assert.match(output, /"apiKey": "\*\*\*\*\*\*\*\*"/);
+  assert.match(output, /"optional": "\(unset\)"/);
+  assert.doesNotMatch(output, /secret/);
+});
+
+test("registerConfigCommand registers and displays loaded effective config", async () => {
+  const commands = new Map<string, any>();
+  const notifications: Array<{ message: string; level: string }> = [];
+  const pi = {
+    registerCommand(name: string, command: any) {
+      commands.set(name, command);
+    },
+  };
+
+  registerConfigCommand(pi, {
+    extensionName: "example",
+    loadConfig: async (cwd) => ({ cwd, apiKey: "secret" }),
+    sensitiveFields: ["apiKey"],
+  });
+
+  await commands.get("example-config").handler("", {
+    cwd: "/repo",
+    ui: {
+      notify(message: string, level: string) {
+        notifications.push({ message, level });
+      },
+    },
+  });
+
+  assert.equal(notifications[0].level, "info");
+  assert.match(notifications[0].message, /"cwd": "\/repo"/);
+  assert.doesNotMatch(notifications[0].message, /secret/);
 });

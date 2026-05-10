@@ -8,7 +8,7 @@ Keep shared conventions aligned with the repo's Pi extension guidance in `AGENTS
 
 ## Modules
 
-- `config.ts` — reads Pi settings files, extracts `extension:<name>` settings, merges defaults/global/project/environment config, and parses boolean environment overrides.
+- `config.ts` — reads Pi settings files, extracts `extension:<name>` settings, merges defaults/global/project/environment config, parses boolean environment overrides, and registers masked `/EXTENSION-NAME-config` inspection commands.
 - `logging.ts` — creates managed temp logs under `${tmpdir()}/pi-extension-logs/<extensionName>/`, with sanitized unique filenames and explicit deletion support.
 - `render.ts` — compact rendering utilities for tool calls/results, including elapsed partial timers, width-aware truncated text, path labels, command labels, and common text extraction helpers.
 - `spillover.ts` — large-output spill-to-file helper. It joins text blocks, writes oversized text to a temp file, returns a preview envelope that references the full file, preserves image blocks inline, and falls back to original content on write failure.

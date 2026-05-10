@@ -12,6 +12,7 @@ import {
   parseBooleanEnv,
   readExtensionSettings,
   readPiSettingsFiles,
+  registerConfigCommand,
 } from "../_shared/config.ts";
 import {
   clearPartialTimer,
@@ -278,6 +279,11 @@ export function createWorkflowModesExtension(
       todoReminderTurnsSinceTodo: 0,
       todoReminderTurnsSinceReminder: 0,
     };
+
+    registerConfigCommand(pi, {
+      extensionName: "workflow-modes",
+      loadConfig: loadWorkflowModesConfig,
+    });
 
     function getWorkflowModeState(): WorkflowModeState {
       return {

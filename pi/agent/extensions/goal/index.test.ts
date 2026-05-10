@@ -51,6 +51,34 @@ function makeCtx(branch: unknown[] = []) {
   } as any;
 }
 
+test("/goal-config displays effective config", async () => {
+  const pi = makePi();
+  const ctx = makeCtx();
+  createGoalExtension({
+    loadConfig: async () => ({
+      config: {
+        injectActiveGoal: false,
+        showWidget: true,
+        objectiveMaxChars: 123,
+        evidenceMaxChars: 456,
+        compactSummaryEnabled: true,
+        checkpointCommits: false,
+        showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 7,
+        autoRunMaxActiveMinutes: 8,
+      },
+      warnings: [],
+    }),
+  })(pi);
+
+  await pi.commands.get("goal-config").handler("", ctx);
+
+  assert.match(ctx.notifications.at(-1)?.msg, /goal effective config:/);
+  assert.match(ctx.notifications.at(-1)?.msg, /"objectiveMaxChars": 123/);
+  assert.match(ctx.notifications.at(-1)?.msg, /"checkpointCommits": false/);
+});
+
 test("commands mutate goal state and persist snapshots", async () => {
   const pi = makePi();
   const ctx = makeCtx();

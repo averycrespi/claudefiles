@@ -12,6 +12,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { registerConfigCommand } from "../_shared/config.ts";
 import { BrokerClient, type BrokerTool } from "./client.ts";
 import { loadMcpBrokerConfig } from "./config.ts";
 import initGuard from "./guard.ts";
@@ -29,6 +30,11 @@ export default function (pi: ExtensionAPI) {
 
   registerTools(pi, client, ensureConfig);
   initGuard(pi, client);
+  registerConfigCommand(pi, {
+    extensionName: "mcp-broker",
+    loadConfig: loadMcpBrokerConfig,
+    sensitiveFields: ["authToken"],
+  });
 
   // Pre-fetch the tool list on session start so the broker prompt menu
   // is ready by the time before_agent_start fires. Silently skip on

@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { BrokerTool } from "./client.ts";
 import extensionDefault, { buildBrokerPrompt } from "./index.ts";
+
+const OLD_ENV = { ...process.env };
+
+afterEach(() => {
+  process.env = { ...OLD_ENV };
+});
 
 const TOOLS: BrokerTool[] = [
   { name: "github.gh_list_prs", description: "List pull requests" },
@@ -63,10 +69,18 @@ test("buildBrokerPrompt skips tools without a namespace prefix", () => {
   assert.doesNotMatch(prompt, /no_namespace_tool/);
 });
 
-test("extension registers a session_shutdown handler for broker cleanup", () => {
+test("extension registers lifecycle and config command handlers", async () => {
+  process.env.MCP_BROKER_ENDPOINT = "https://broker.example.com";
+  process.env.MCP_BROKER_AUTH_TOKEN = "secret-token";
+  process.env.MCP_BROKER_READONLY = "true";
   const handlers = new Map<string, (event: unknown, ctx: unknown) => unknown>();
+  const commands = new Map<string, any>();
+  const notifications: Array<{ message: string; level: string }> = [];
   const pi = {
     registerTool() {},
+    registerCommand(name: string, command: any) {
+      commands.set(name, command);
+    },
     on(event: string, handler: (event: unknown, ctx: unknown) => unknown) {
       handlers.set(event, handler);
     },
@@ -79,4 +93,20 @@ test("extension registers a session_shutdown handler for broker cleanup", () => 
     handlers.has("session_shutdown"),
     "session_shutdown handler should be registered",
   );
+  assert.ok(commands.has("mcp-broker-config"));
+
+  await commands.get("mcp-broker-config").handler("", {
+    cwd: "/repo",
+    ui: {
+      notify(message: string, level: string) {
+        notifications.push({ message, level });
+      },
+    },
+  });
+
+  assert.equal(notifications[0].level, "info");
+  assert.match(notifications[0].message, /mcp-broker effective config:/);
+  assert.match(notifications[0].message, /"authToken": "\*\*\*\*\*\*\*\*"/);
+  assert.match(notifications[0].message, /"readOnly": true/);
+  assert.doesNotMatch(notifications[0].message, /secret-token/);
 });
