@@ -107,16 +107,18 @@ async function retain(
 ): Promise<AgentToolResult<unknown>> {
   const content = stringValue(params.content);
   if (!content) return errorResult("hindsight retain: content is required");
-  const scope = enumValue(
+  const scope = enumParam(
     params.scope,
     ["repo", "global"],
     config.defaultScope,
   );
-  const source = enumValue(
+  if (!scope) return errorResult("hindsight retain: invalid scope");
+  const source = enumParam(
     params.source,
     ["manual", "external", "agent"],
     "manual",
   );
+  if (!source) return errorResult("hindsight retain: invalid source");
   const kind = optionalEnumValue(params.kind, [
     "semantic",
     "episodic",
@@ -188,11 +190,24 @@ async function recall(
 ): Promise<AgentToolResult<unknown>> {
   const query = stringValue(params.query);
   if (!query) return errorResult("hindsight recall: query is required");
-  const scope = enumValue(
+  const scope = enumParam(
     params.scope,
     ["repo", "global"],
     config.defaultScope,
   );
+  if (!scope) return errorResult("hindsight recall: invalid scope");
+  const budget = enumParam(
+    params.budget,
+    ["low", "mid", "high"],
+    config.recallBudget,
+  );
+  if (!budget) return errorResult("hindsight recall: invalid budget");
+  const tagsMatch = enumParam(
+    params.tags_match,
+    ["any", "any_strict", "all", "all_strict"],
+    config.tagsMatch,
+  );
+  if (!tagsMatch) return errorResult("hindsight recall: invalid tags_match");
   const callerTags = arrayOfStrings(params.tags);
   if (params.tags !== undefined && !callerTags)
     return errorResult("hindsight recall: tags must be an array of strings");
@@ -204,18 +219,10 @@ async function recall(
   });
   const body = {
     query,
-    budget: enumValue(
-      params.budget,
-      ["low", "mid", "high"],
-      config.recallBudget,
-    ),
+    budget,
     max_tokens: positiveNumber(params.max_tokens) ?? config.recallMaxTokens,
     tags,
-    tags_match: enumValue(
-      params.tags_match,
-      ["any", "any_strict", "all", "all_strict"],
-      config.tagsMatch,
-    ),
+    tags_match: tagsMatch,
     ...(arrayOfStrings(params.types)
       ? { types: arrayOfStrings(params.types) }
       : {}),
@@ -248,11 +255,24 @@ async function reflect(
 ): Promise<AgentToolResult<unknown>> {
   const query = stringValue(params.query);
   if (!query) return errorResult("hindsight reflect: query is required");
-  const scope = enumValue(
+  const scope = enumParam(
     params.scope,
     ["repo", "global"],
     config.defaultScope,
   );
+  if (!scope) return errorResult("hindsight reflect: invalid scope");
+  const budget = enumParam(
+    params.budget,
+    ["low", "mid", "high"],
+    config.reflectBudget,
+  );
+  if (!budget) return errorResult("hindsight reflect: invalid budget");
+  const tagsMatch = enumParam(
+    params.tags_match,
+    ["any", "any_strict", "all", "all_strict"],
+    config.tagsMatch,
+  );
+  if (!tagsMatch) return errorResult("hindsight reflect: invalid tags_match");
   const callerTags = arrayOfStrings(params.tags);
   if (params.tags !== undefined && !callerTags)
     return errorResult("hindsight reflect: tags must be an array of strings");
@@ -264,20 +284,12 @@ async function reflect(
   });
   const body = {
     query,
-    budget: enumValue(
-      params.budget,
-      ["low", "mid", "high"],
-      config.reflectBudget,
-    ),
+    budget,
     ...(positiveNumber(params.max_tokens)
       ? { max_tokens: positiveNumber(params.max_tokens) }
       : {}),
     tags,
-    tags_match: enumValue(
-      params.tags_match,
-      ["any", "any_strict", "all", "all_strict"],
-      config.tagsMatch,
-    ),
+    tags_match: tagsMatch,
     ...(arrayOfStrings(params.fact_types)
       ? { fact_types: arrayOfStrings(params.fact_types) }
       : {}),
@@ -376,15 +388,16 @@ function objectOfStrings(value: unknown): Record<string, string> | undefined {
     : undefined;
 }
 
-function enumValue<T extends string>(
+function enumParam<T extends string>(
   value: unknown,
   allowed: readonly T[],
   fallback: T,
-): T {
+): T | undefined {
+  if (value === undefined) return fallback;
   return typeof value === "string" &&
     (allowed as readonly string[]).includes(value)
     ? (value as T)
-    : fallback;
+    : undefined;
 }
 
 function optionalEnumValue<T extends string>(

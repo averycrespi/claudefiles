@@ -62,6 +62,20 @@ test("validates action requirements", async () => {
   );
 });
 
+test("returns readable errors for invalid enum inputs", async () => {
+  const result = await executeHindsight(
+    new FakeClient(),
+    config,
+    { cwd: process.cwd() } as any,
+    { action: "recall", query: "q", tags_match: "loose" },
+    new AbortController().signal,
+  );
+  assert.match(
+    result.content[0].type === "text" ? result.content[0].text : "",
+    /invalid tags_match/,
+  );
+});
+
 test("returns recoverable error text for client failures", async () => {
   const client = new FakeClient();
   client.error = new Error("network down");
