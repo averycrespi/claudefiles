@@ -1208,6 +1208,35 @@ test("workflow_advance caps verify to execute fix loops", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
+test("workflow_advance rejects execute to completed and keeps execute mode", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-handoff-execute-complete-"),
+  );
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const result = await pi._tools.get("workflow_advance")!.execute!(
+    "call-1",
+    { state: "completed", reason: "Implementation done" },
+    undefined,
+    undefined,
+    pi._ctx(),
+  );
+
+  assert.equal(result.terminate, undefined);
+  assert.match(
+    result.content[0].text,
+    /Execute mode can only advance to Verify or aborted/i,
+  );
+  assert.equal(pi._thinkingLevel(), "low");
+  assert.ok(pi._currentTools().includes("workflow_advance"));
+  assert.equal(pi._sentUserMessages.length, 1);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
 test("workflow_advance terminal action exits to normal and terminates", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-terminal-"));
   const pi = makePi(cwd);

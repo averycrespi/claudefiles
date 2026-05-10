@@ -61,6 +61,8 @@ test("buildModeContract for execute mode encourages using relevant plan files wi
   assert.match(contract, /logical checkpoints/i);
   assert.match(contract, /workflow_advance/i);
   assert.match(contract, /state="verify"/i);
+  assert.match(contract, /state="aborted"/i);
+  assert.doesNotMatch(contract, /state="completed"/i);
 });
 
 test("buildModeContract for execute mode avoids disabled automatic handoff guidance", () => {

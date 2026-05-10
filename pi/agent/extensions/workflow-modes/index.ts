@@ -335,7 +335,7 @@ export function createWorkflowModesExtension(
         return [
           "You stopped in Execute mode without calling the required workflow_advance decision tool.",
           'If implementation is ready for verification, call workflow_advance with state="verify" and a concise reason.',
-          'If the workflow is finished, blocked, unfixable, or cannot continue, call workflow_advance with state="completed" or state="aborted" and a concise reason.',
+          'If the workflow is blocked, unfixable, or cannot continue, call workflow_advance with state="aborted" and a concise reason.',
           "If you are not actually at a stopping point, continue the implementation work now.",
         ].join("\n");
       }
@@ -615,6 +615,38 @@ export function createWorkflowModesExtension(
         const displayReason = reason || "No reason provided.";
         const nextState = params.state;
 
+        if (
+          state.mode === "execute" &&
+          nextState !== "verify" &&
+          nextState !== "aborted"
+        ) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_advance: Execute mode can only advance to Verify or aborted",
+              },
+            ],
+            details: {},
+          };
+        }
+        if (
+          state.mode === "verify" &&
+          nextState !== "execute" &&
+          nextState !== "completed" &&
+          nextState !== "aborted"
+        ) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_advance: Verify mode can only advance to Execute, completed, or aborted",
+              },
+            ],
+            details: {},
+          };
+        }
+
         if (nextState === "completed" || nextState === "aborted") {
           await exitWorkflowFromAdvance(nextState, displayReason, ctx);
           return {
@@ -631,29 +663,6 @@ export function createWorkflowModesExtension(
               maxFixLoops: config.autoHandoffMaxFixLoops,
             },
             terminate: true,
-          };
-        }
-
-        if (state.mode === "execute" && nextState !== "verify") {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: "workflow_advance: Execute mode can only advance to Verify, completed, or aborted",
-              },
-            ],
-            details: {},
-          };
-        }
-        if (state.mode === "verify" && nextState !== "execute") {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: "workflow_advance: Verify mode can only advance to Execute, completed, or aborted",
-              },
-            ],
-            details: {},
           };
         }
 

@@ -39,7 +39,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - defaults thinking to `low` (`executeThinkingLevel`)
 - encourages regular commits at logical checkpoints instead of one large end-of-run commit
 - reminds the agent to use `todo` after a configurable number of Execute-mode turns without TODO activity; the reminder is injected only into model context and tells the agent not to mention it to the user
-- when auto handoff is enabled, must call `workflow_advance` before stopping: use `state: "verify"` when implementation is ready for verification, or `state: "completed"` / `state: "aborted"` when the workflow is finished, blocked, unfixable, or cannot continue
+- when auto handoff is enabled, must call `workflow_advance` before stopping: use `state: "verify"` when implementation is ready for verification, or `state: "aborted"` when the workflow is blocked, unfixable, or cannot continue
 
 ### Verify
 
@@ -72,7 +72,18 @@ For a terminal workflow decision:
 
 Use `state: "aborted"` instead of `completed` when the workflow is blocked, unfixable, or cannot continue. Terminal decisions restore Normal mode and terminate the current run.
 
-Execute mode may advance only to Verify, completed, or aborted. Verify mode may advance only to Execute, completed, or aborted. The tool validates the current mode, configuration, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
+Allowed transitions:
+
+```mermaid
+stateDiagram-v2
+  Execute --> Verify: ready for verification
+  Execute --> Aborted: blocked / cannot continue
+  Verify --> Execute: fixable issues
+  Verify --> Completed: verification passed
+  Verify --> Aborted: blocked / unfixable / cannot continue
+```
+
+Execute mode may advance only to Verify or aborted. Verify mode may advance only to Execute, completed, or aborted. The tool validates the current mode, configuration, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
 
 When UI is available, handoff shows a timed prompt with the requested target mode and reason, plus a single `Cancel` option. If the user does nothing before `autoHandoffDenyTimeoutMs`, the handoff proceeds. If no UI is available, the denial prompt and timeout are skipped. Verify → Execute handoffs consume the configured fix-loop budget; Execute → Verify handoffs do not.
 
