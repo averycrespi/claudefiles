@@ -1,5 +1,6 @@
+import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Type, type Static } from "@sinclair/typebox";
+import { Type, type Static } from "typebox";
 import {
   firstLine,
   getResultText,
@@ -12,12 +13,21 @@ import {
   type TodoStore,
 } from "./state.ts";
 
-const todoStatusSchema = Type.Union([
-  Type.Literal("todo"),
-  Type.Literal("in_progress"),
-  Type.Literal("done"),
-  Type.Literal("blocked"),
-]);
+const todoStatusSchema = StringEnum(
+  ["todo", "in_progress", "done", "blocked"] as const,
+  {
+    description:
+      "Task status. Use exactly one of: todo, in_progress, done, blocked.",
+  },
+);
+
+const todoActionSchema = StringEnum(
+  ["list", "set", "add", "update", "remove", "clear"] as const,
+  {
+    description:
+      "Todo operation. Use exactly one of: list, set, add, update, remove, clear.",
+  },
+);
 
 const todoItemInputSchema = Type.Object({
   text: Type.String({ description: "Task text" }),
@@ -26,14 +36,7 @@ const todoItemInputSchema = Type.Object({
 });
 
 const todoParamsSchema = Type.Object({
-  action: Type.Union([
-    Type.Literal("list"),
-    Type.Literal("set"),
-    Type.Literal("add"),
-    Type.Literal("update"),
-    Type.Literal("remove"),
-    Type.Literal("clear"),
-  ]),
+  action: todoActionSchema,
   items: Type.Optional(
     Type.Array(todoItemInputSchema, { description: "Items for set" }),
   ),
@@ -162,6 +165,7 @@ export function registerTodoTool(pi: ExtensionAPI, store: TodoStore): void {
     promptGuidelines: [
       "Use todo proactively for non-trivial coding work: 3+ distinct steps, multi-file changes, explicit user task lists, or Execute-mode work from a plan.",
       "Skip todo for a single trivial step, pure conversation, or one immediate command where tracking adds no value.",
+      "todo status values are exactly: todo (not started), in_progress (currently active), done (finished), blocked (waiting). Do not use pending or not_started.",
       "Before starting tracked work, create or update the list and keep exactly one item in_progress.",
       "Mark tasks done immediately after finishing them; do not batch status updates at the end.",
       "After changing a task, rely on the returned list to see current ids and ordering.",

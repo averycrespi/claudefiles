@@ -12,6 +12,8 @@ type Renderable = { render(width: number): string[] };
 
 type ToolDef = {
   name: string;
+  parameters: Record<string, any>;
+  promptGuidelines?: string[];
   renderCall: (
     args: Record<string, unknown>,
     theme: typeof identityTheme,
@@ -70,6 +72,37 @@ async function exec(params: Record<string, unknown>) {
   );
   return { result, store };
 }
+
+test("schema exposes action and status string enums", () => {
+  const { tool } = loadTool();
+
+  assert.deepEqual(tool.parameters.properties.action.enum, [
+    "list",
+    "set",
+    "add",
+    "update",
+    "remove",
+    "clear",
+  ]);
+  assert.deepEqual(tool.parameters.properties.status.enum, [
+    "todo",
+    "in_progress",
+    "done",
+    "blocked",
+  ]);
+  assert.deepEqual(
+    tool.parameters.properties.items.items.properties.status.enum,
+    ["todo", "in_progress", "done", "blocked"],
+  );
+  assert.ok(
+    tool.promptGuidelines?.some(
+      (line) =>
+        line.includes("todo status values are exactly") &&
+        line.includes("pending") &&
+        line.includes("not_started"),
+    ),
+  );
+});
 
 test("renderCall summarizes todo actions without dumping JSON args", () => {
   const { tool } = loadTool();
