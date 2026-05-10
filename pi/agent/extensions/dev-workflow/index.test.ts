@@ -225,6 +225,17 @@ function makePi(cwd: string) {
   const setThinkingLevelCalls: string[] = [];
   const eventHandlers = new Map<string, Array<(data: unknown) => void>>();
   const emittedEvents: Array<{ event: string; data: unknown }> = [];
+  const execCalls: Array<{
+    command: string;
+    args: string[];
+    options?: unknown;
+  }> = [];
+  const execResults: Array<{
+    stdout: string;
+    stderr?: string;
+    code: number;
+    killed?: boolean;
+  }> = [];
   let currentTools = [...activeTools];
   let thinkingLevel = "medium";
 
@@ -239,6 +250,17 @@ function makePi(cwd: string) {
       handlers.set(event, handler);
     },
     appendEntry: () => {},
+    async exec(command: string, args: string[], options?: unknown) {
+      execCalls.push({ command, args, options });
+      return (
+        execResults.shift() ?? {
+          stdout: "",
+          stderr: "",
+          code: 0,
+          killed: false,
+        }
+      );
+    },
     sendUserMessage(content: unknown, options?: unknown) {
       sentUserMessages.push({ content, options });
     },
@@ -311,6 +333,8 @@ function makePi(cwd: string) {
     _compactCalls: compactCalls,
     _setActiveToolsCalls: setActiveToolsCalls,
     _setThinkingLevelCalls: setThinkingLevelCalls,
+    _execCalls: execCalls,
+    _execResults: execResults,
     _emittedEvents: emittedEvents,
     _currentTools: () => [...currentTools],
     _thinkingLevel: () => thinkingLevel,
@@ -1076,6 +1100,40 @@ test("workflow_advance notifies and continues when compaction fails", async () =
     msg: "Workflow advance pre-compaction failed: provider unavailable",
     level: "error",
   });
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_advance rejects execute to verify when staged or unstaged changes exist", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-advance-dirty-"));
+  const pi = makePi(cwd);
+  createTestDevWorkflowExtension({ autoAdvanceEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+  pi._execResults.push({
+    stdout: "M  src/staged.ts\n M src/unstaged.ts\n",
+    code: 0,
+  });
+
+  const result = await pi._tools.get("workflow_advance")!.execute!(
+    "call-1",
+    { state: "verify", reason: "Implementation complete" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, false),
+  );
+
+  assert.equal(result.terminate, undefined);
+  assert.match(result.content[0].text, /uncommitted changes/i);
+  assert.deepEqual(pi._execCalls[0]?.args, [
+    "-C",
+    cwd,
+    "status",
+    "--porcelain=v1",
+  ]);
+  assert.equal(pi._thinkingLevel(), "low");
+  assert.ok(pi._currentTools().includes("workflow_advance"));
+  assert.equal(pi._sentUserMessages.length, 1);
 
   await rm(cwd, { recursive: true, force: true });
 });

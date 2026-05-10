@@ -39,7 +39,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - defaults thinking to `low` (`executeThinkingLevel`)
 - encourages regular commits at logical checkpoints instead of one large end-of-run commit
 - reminds the agent to use `todo` after a configurable number of Execute-mode turns without TODO activity; the reminder is injected only into model context and tells the agent not to mention it to the user
-- when auto advance is enabled, must call `workflow_advance` before stopping: use `state: "verify"` when implementation is ready for verification, or `state: "aborted"` when the workflow is blocked, unfixable, or cannot continue
+- when auto advance is enabled, must call `workflow_advance` before stopping: use `state: "verify"` when implementation is ready for verification and all changes are committed, or `state: "aborted"` when the workflow is blocked, unfixable, or cannot continue
 
 ### Verify
 
@@ -83,7 +83,9 @@ stateDiagram-v2
   Verify --> Aborted: blocked / unfixable / cannot continue
 ```
 
-Execute mode may advance only to Verify or aborted. Verify mode may advance only to Execute, completed, or aborted. The tool validates the current mode, configuration, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
+Execute mode may advance only to Verify or aborted. Verify mode may advance only to Execute, completed, or aborted. The tool validates the current mode, configuration, clean worktree requirement, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
+
+Execute → Verify advances run `git status --porcelain=v1` in the current workspace and fail when staged or unstaged uncommitted changes are present. Commit or revert implementation changes before advancing to Verify. Non-git workspaces are allowed.
 
 Accepted advances switch directly to the requested mode and queue the follow-up kickoff message. Verify → Execute advances consume the configured fix-loop budget; Execute → Verify advances do not.
 

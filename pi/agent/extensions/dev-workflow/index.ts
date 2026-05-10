@@ -528,6 +528,19 @@ export function createDevWorkflowExtension(
       }
     }
 
+    async function getUncommittedChangeCount(
+      ctx: ExtensionContext,
+      signal: AbortSignal | undefined,
+    ): Promise<number> {
+      const result = await pi.exec(
+        "git",
+        ["-C", ctx.cwd, "status", "--porcelain=v1"],
+        { signal },
+      );
+      if (result.code !== 0) return 0;
+      return result.stdout.trim().split("\n").filter(Boolean).length;
+    }
+
     async function maybeCompactBeforeModeSwitch(
       mode: Exclude<WorkflowMode, "normal">,
       ctx: ExtensionContext,
@@ -581,7 +594,7 @@ export function createDevWorkflowExtension(
       description:
         "Advance an automatic workflow to Execute, Verify, completed, or aborted when auto advance is enabled.",
       parameters: ADVANCE_PARAMS,
-      async execute(_toolCallId, rawParams, _signal, _onUpdate, ctx) {
+      async execute(_toolCallId, rawParams, signal, _onUpdate, ctx) {
         const params = rawParams as AdvanceParams;
         const config = await loadDevWorkflowConfig(ctx.cwd);
         updateRuntimeConfig(config);
@@ -643,6 +656,21 @@ export function createDevWorkflowExtension(
             ],
             details: {},
           };
+        }
+
+        if (state.mode === "execute" && nextState === "verify") {
+          const changeCount = await getUncommittedChangeCount(ctx, signal);
+          if (changeCount > 0) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `workflow_advance: cannot advance to Verify with uncommitted changes (${changeCount} file(s)); commit or revert staged and unstaged changes first`,
+                },
+              ],
+              details: { uncommittedChanges: changeCount },
+            };
+          }
         }
 
         if (nextState === "completed" || nextState === "aborted") {

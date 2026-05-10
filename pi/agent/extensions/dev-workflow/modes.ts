@@ -177,7 +177,7 @@ export function buildModeContract(options: {
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
       options.autoAdvanceEnabled
-        ? 'Before stopping in Execute mode, call workflow_advance as the explicit workflow decision: use state="verify" when implementation is ready for verification, or state="aborted" when the workflow is blocked, unfixable, or cannot continue. Include a concise reason.'
+        ? 'Before stopping in Execute mode, call workflow_advance as the explicit workflow decision: use state="verify" when implementation is ready for verification and all changes are committed, or state="aborted" when the workflow is blocked, unfixable, or cannot continue. Execute → Verify advance fails if git status has staged or unstaged uncommitted changes. Include a concise reason.'
         : "When implementation is complete and ready for verification, report that outcome to the user instead of requesting an automatic workflow advance.",
     ].join("\n");
   }
