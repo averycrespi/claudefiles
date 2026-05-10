@@ -174,6 +174,7 @@ export function buildModeContract(options: {
       "Read relevant .plans/*.md files before changing code when they are available or referenced by the user.",
       "Use TODO state for short-lived decomposition only; do not treat it as the durable plan.",
       "Keep changes aligned with the current conversation, acceptance criteria, and ordered tasks.",
+      "Follow test-driven development for feature work, bug fixes, refactors, and behavior changes that involve meaningful implementation logic: write the failing test first, watch it fail, then implement the minimal passing change.",
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
       options.autoAdvanceEnabled

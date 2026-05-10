@@ -57,6 +57,8 @@ test("buildModeContract for execute mode encourages using relevant plan files wi
 
   assert.match(contract, /current mode: execute/i);
   assert.match(contract, /read relevant .*\.plans/i);
+  assert.match(contract, /follow test-driven development/i);
+  assert.match(contract, /meaningful implementation logic/i);
   assert.match(contract, /commit regularly/i);
   assert.match(contract, /logical checkpoints/i);
   assert.match(contract, /workflow_advance/i);

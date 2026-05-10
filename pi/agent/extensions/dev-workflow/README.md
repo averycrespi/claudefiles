@@ -37,6 +37,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 - intended for code changes and deterministic local execution
 - uses `read`, `edit`, `write`, `bash`, and `todo`
 - defaults thinking to `low` (`executeThinkingLevel`)
+- instructs the agent to follow test-driven development for feature work, bug fixes, refactors, and behavior changes that involve meaningful implementation logic
 - encourages regular commits at logical checkpoints instead of one large end-of-run commit
 - reminds the agent to use `todo` after a configurable number of Execute-mode turns without TODO activity; the reminder is injected only into model context and tells the agent not to mention it to the user
 - when auto advance is enabled, must call `workflow_advance` before stopping: use `state: "verify"` when implementation is ready for verification and all changes are committed, or `state: "aborted"` when the workflow is blocked, unfixable, or cannot continue
