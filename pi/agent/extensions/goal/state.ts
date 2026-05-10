@@ -19,12 +19,33 @@ export interface Goal {
   usage?: GoalUsage;
 }
 
+export type AutoRunStatus = "idle" | "running" | "stopped";
+export type AutoRunStopReason =
+  | "user_stopped"
+  | "user_input"
+  | "goal_paused"
+  | "goal_cleared"
+  | "goal_complete"
+  | "turn_budget"
+  | "time_budget";
+
+export interface GoalAutoRunState {
+  status: AutoRunStatus;
+  startedAt?: number;
+  updatedAt: number;
+  continuationTurns: number;
+  stopReason?: AutoRunStopReason;
+  lastContinuationAt?: number;
+}
+
 export interface GoalState {
   goal?: Goal;
+  autoRun?: GoalAutoRunState;
 }
 
 export interface GoalStore {
   getGoal(): Goal | undefined;
+  getAutoRun(): GoalAutoRunState | undefined;
   getState(): GoalState;
   replaceState(state: GoalState): void;
   setGoal(objective: string, maxChars: number): Goal;
@@ -32,6 +53,9 @@ export interface GoalStore {
   resume(): Goal | undefined;
   complete(evidence: string, maxChars: number): Goal | undefined;
   recordAssistantUsage(totalTokens?: number): Goal | undefined;
+  startAutoRun(): GoalAutoRunState;
+  stopAutoRun(reason: AutoRunStopReason): GoalAutoRunState;
+  recordAutoRunContinuation(): GoalAutoRunState;
   clear(): void;
   subscribe(listener: (state: GoalState) => void): () => void;
 }
@@ -59,8 +83,21 @@ function cloneGoal(goal: Goal, now?: () => number): Goal {
   return { ...goal, ...(usage ? { usage } : {}) };
 }
 
-function cloneState(goal: Goal | undefined, now?: () => number): GoalState {
-  return goal ? { goal: cloneGoal(goal, now) } : {};
+function cloneAutoRun(
+  autoRun: GoalAutoRunState | undefined,
+): GoalAutoRunState | undefined {
+  return autoRun ? { ...autoRun } : undefined;
+}
+
+function cloneState(
+  goal: Goal | undefined,
+  autoRun: GoalAutoRunState | undefined,
+  now?: () => number,
+): GoalState {
+  return {
+    ...(goal ? { goal: cloneGoal(goal, now) } : {}),
+    ...(autoRun ? { autoRun: cloneAutoRun(autoRun) } : {}),
+  };
 }
 
 function accrueActiveTime(goal: Goal, timestamp: number): Goal {
@@ -78,6 +115,24 @@ function accrueActiveTime(goal: Goal, timestamp: number): Goal {
 
 export function isGoalStatus(value: unknown): value is GoalStatus {
   return value === "active" || value === "paused" || value === "complete";
+}
+
+export function isAutoRunStatus(value: unknown): value is AutoRunStatus {
+  return value === "idle" || value === "running" || value === "stopped";
+}
+
+export function isAutoRunStopReason(
+  value: unknown,
+): value is AutoRunStopReason {
+  return (
+    value === "user_stopped" ||
+    value === "user_input" ||
+    value === "goal_paused" ||
+    value === "goal_cleared" ||
+    value === "goal_complete" ||
+    value === "turn_budget" ||
+    value === "time_budget"
+  );
 }
 
 export function normalizeBoundedText(
@@ -98,11 +153,12 @@ export function createGoalStore(
   now: () => number = () => Date.now(),
 ): GoalStore {
   let goal: Goal | undefined;
+  let autoRun: GoalAutoRunState | undefined;
   let nextId = 1;
   const listeners = new Set<(state: GoalState) => void>();
 
   const notify = () => {
-    const state = cloneState(goal, now);
+    const state = cloneState(goal, autoRun, now);
     for (const listener of listeners) listener(state);
   };
 
@@ -111,12 +167,17 @@ export function createGoalStore(
       return goal ? cloneGoal(goal, now) : undefined;
     },
 
+    getAutoRun() {
+      return cloneAutoRun(autoRun);
+    },
+
     getState() {
-      return cloneState(goal, now);
+      return cloneState(goal, autoRun, now);
     },
 
     replaceState(state) {
       goal = state.goal ? cloneGoal(state.goal) : undefined;
+      autoRun = cloneAutoRun(state.autoRun);
       notify();
     },
 
@@ -131,6 +192,7 @@ export function createGoalStore(
         usage: defaultUsage(timestamp, true),
       };
       nextId += 1;
+      autoRun = undefined;
       notify();
       return cloneGoal(goal, now);
     },
@@ -143,6 +205,14 @@ export function createGoalStore(
         status: "paused",
         updatedAt: timestamp,
       };
+      if (autoRun?.status === "running") {
+        autoRun = {
+          ...autoRun,
+          status: "stopped",
+          updatedAt: timestamp,
+          stopReason: "goal_paused",
+        };
+      }
       notify();
       return cloneGoal(goal, now);
     },
@@ -177,6 +247,14 @@ export function createGoalStore(
           "Evidence",
         ),
       };
+      if (autoRun?.status === "running") {
+        autoRun = {
+          ...autoRun,
+          status: "stopped",
+          updatedAt: timestamp,
+          stopReason: "goal_complete",
+        };
+      }
       notify();
       return cloneGoal(goal, now);
     },
@@ -201,8 +279,55 @@ export function createGoalStore(
       return cloneGoal(goal, now);
     },
 
+    startAutoRun() {
+      const timestamp = now();
+      autoRun = {
+        status: "running",
+        startedAt: timestamp,
+        updatedAt: timestamp,
+        continuationTurns: 0,
+      };
+      notify();
+      return cloneAutoRun(autoRun)!;
+    },
+
+    stopAutoRun(reason) {
+      const timestamp = now();
+      autoRun = {
+        ...(autoRun ?? { continuationTurns: 0 }),
+        status: "stopped",
+        updatedAt: timestamp,
+        stopReason: reason,
+      };
+      notify();
+      return cloneAutoRun(autoRun)!;
+    },
+
+    recordAutoRunContinuation() {
+      const timestamp = now();
+      autoRun = {
+        ...(autoRun ?? { startedAt: timestamp, continuationTurns: 0 }),
+        status: "running",
+        updatedAt: timestamp,
+        lastContinuationAt: timestamp,
+        continuationTurns: (autoRun?.continuationTurns ?? 0) + 1,
+      };
+      notify();
+      return cloneAutoRun(autoRun)!;
+    },
+
     clear() {
       goal = undefined;
+      if (autoRun?.status === "running") {
+        autoRun = {
+          ...autoRun,
+          status: "stopped",
+          updatedAt: now(),
+          stopReason: "goal_cleared",
+        };
+      } else {
+        autoRun = undefined;
+      }
       notify();
     },
 
@@ -298,12 +423,63 @@ function parseGoal(value: unknown): Goal | undefined {
   };
 }
 
+function parseAutoRun(value: unknown): GoalAutoRunState | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (
+    !isAutoRunStatus(candidate.status) ||
+    typeof candidate.updatedAt !== "number" ||
+    typeof candidate.continuationTurns !== "number"
+  ) {
+    return undefined;
+  }
+  if (
+    candidate.startedAt !== undefined &&
+    typeof candidate.startedAt !== "number"
+  ) {
+    return undefined;
+  }
+  if (
+    candidate.lastContinuationAt !== undefined &&
+    typeof candidate.lastContinuationAt !== "number"
+  ) {
+    return undefined;
+  }
+  if (
+    candidate.stopReason !== undefined &&
+    !isAutoRunStopReason(candidate.stopReason)
+  ) {
+    return undefined;
+  }
+  return {
+    status: candidate.status,
+    updatedAt: candidate.updatedAt,
+    continuationTurns: Math.max(0, candidate.continuationTurns),
+    ...(typeof candidate.startedAt === "number"
+      ? { startedAt: candidate.startedAt }
+      : {}),
+    ...(typeof candidate.lastContinuationAt === "number"
+      ? { lastContinuationAt: candidate.lastContinuationAt }
+      : {}),
+    ...(isAutoRunStopReason(candidate.stopReason)
+      ? { stopReason: candidate.stopReason }
+      : {}),
+  };
+}
+
 export function parsePersistedGoalState(value: unknown): GoalState | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const goalValue = (value as { goal?: unknown }).goal;
-  if (goalValue === undefined) return {};
-  const goal = parseGoal(goalValue);
-  return goal ? { goal } : undefined;
+  const candidate = value as { goal?: unknown; autoRun?: unknown };
+  const goal =
+    candidate.goal === undefined ? undefined : parseGoal(candidate.goal);
+  if (candidate.goal !== undefined && !goal) return undefined;
+  const autoRun = parseAutoRun(candidate.autoRun);
+  if (candidate.autoRun !== undefined && !autoRun) return undefined;
+  return {
+    ...(goal ? { goal } : {}),
+    ...(autoRun ? { autoRun } : {}),
+  };
 }
 
 export function formatDuration(ms: number): string {
@@ -329,6 +505,17 @@ export function formatUsageLine(goal: Goal): string | undefined {
   return `Usage: ${formatDuration(goal.usage.activeElapsedMs)} active · ${formatTokenCount(goal.usage.totalTokens)} tokens · ${goal.usage.turns} ${turnLabel}`;
 }
 
+export function formatAutoRunLine(autoRun: GoalAutoRunState): string {
+  if (autoRun.status === "running") {
+    const turnLabel = autoRun.continuationTurns === 1 ? "turn" : "turns";
+    return `Auto-run: running · ${autoRun.continuationTurns} continuation ${turnLabel}`;
+  }
+  if (autoRun.status === "stopped") {
+    return `Auto-run: stopped${autoRun.stopReason ? ` · ${autoRun.stopReason}` : ""}`;
+  }
+  return "Auto-run: idle";
+}
+
 export function formatGoalState(
   state: GoalState,
   options: { showUsage?: boolean } = {},
@@ -338,6 +525,9 @@ export function formatGoalState(
   if (options.showUsage) {
     const usageLine = formatUsageLine(state.goal);
     if (usageLine) lines.push(usageLine);
+  }
+  if (state.autoRun && state.autoRun.status !== "idle") {
+    lines.push(formatAutoRunLine(state.autoRun));
   }
   if (state.goal.status === "complete" && state.goal.completionEvidence) {
     lines.push(`Evidence: ${state.goal.completionEvidence}`);

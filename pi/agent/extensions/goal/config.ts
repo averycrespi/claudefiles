@@ -14,6 +14,9 @@ export type GoalConfig = {
   compactSummaryEnabled: boolean;
   checkpointCommits: boolean;
   showUsage: boolean;
+  autoRunEnabled: boolean;
+  autoRunMaxTurns: number;
+  autoRunMaxActiveMinutes: number;
 };
 
 type PlainObject = Record<string, unknown>;
@@ -26,6 +29,9 @@ export const DEFAULT_GOAL_CONFIG: GoalConfig = {
   compactSummaryEnabled: true,
   checkpointCommits: true,
   showUsage: true,
+  autoRunEnabled: true,
+  autoRunMaxTurns: 10,
+  autoRunMaxActiveMinutes: 60,
 };
 
 function parsePositiveInteger(
@@ -117,6 +123,25 @@ function readEnvSettings(
           ),
         }
       : {}),
+    ...(parseBooleanEnv(
+      env.GOAL_AUTO_RUN_ENABLED,
+      "GOAL_AUTO_RUN_ENABLED",
+      warnings,
+    ) !== undefined
+      ? {
+          autoRunEnabled: parseBooleanEnv(
+            env.GOAL_AUTO_RUN_ENABLED,
+            "GOAL_AUTO_RUN_ENABLED",
+            warnings,
+          ),
+        }
+      : {}),
+    ...(env.GOAL_AUTO_RUN_MAX_TURNS !== undefined
+      ? { autoRunMaxTurns: env.GOAL_AUTO_RUN_MAX_TURNS }
+      : {}),
+    ...(env.GOAL_AUTO_RUN_MAX_ACTIVE_MINUTES !== undefined
+      ? { autoRunMaxActiveMinutes: env.GOAL_AUTO_RUN_MAX_ACTIVE_MINUTES }
+      : {}),
   };
 }
 
@@ -165,6 +190,22 @@ export function parseGoalConfig(options: {
       typeof merged.showUsage === "boolean"
         ? merged.showUsage
         : DEFAULT_GOAL_CONFIG.showUsage,
+    autoRunEnabled:
+      typeof merged.autoRunEnabled === "boolean"
+        ? merged.autoRunEnabled
+        : DEFAULT_GOAL_CONFIG.autoRunEnabled,
+    autoRunMaxTurns: parsePositiveInteger(
+      merged.autoRunMaxTurns,
+      "autoRunMaxTurns",
+      DEFAULT_GOAL_CONFIG.autoRunMaxTurns,
+      warnings,
+    ),
+    autoRunMaxActiveMinutes: parsePositiveInteger(
+      merged.autoRunMaxActiveMinutes,
+      "autoRunMaxActiveMinutes",
+      DEFAULT_GOAL_CONFIG.autoRunMaxActiveMinutes,
+      warnings,
+    ),
   };
 }
 

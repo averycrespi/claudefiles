@@ -7,12 +7,14 @@ function makePi() {
   const handlers = new Map<string, any>();
   const widgets: Array<{ key: string; content: any }> = [];
   const entries: Array<{ type: string; data: unknown }> = [];
+  const sentMessages: Array<{ content: unknown; options: unknown }> = [];
   return {
     hasUI: true,
     commands,
     handlers,
     widgets,
     entries,
+    sentMessages,
     registerCommand(name: string, command: any) {
       commands.set(name, command);
     },
@@ -25,6 +27,9 @@ function makePi() {
     },
     appendEntry(type: string, data: unknown) {
       entries.push({ type, data });
+    },
+    sendUserMessage(content: unknown, options?: unknown) {
+      sentMessages.push({ content, options });
     },
   } as any;
 }
@@ -42,6 +47,7 @@ function makeCtx(branch: unknown[] = []) {
       setWidget() {},
     },
     sessionManager: { getBranch: () => branch },
+    hasPendingMessages: async () => false,
   } as any;
 }
 
@@ -58,6 +64,9 @@ test("commands mutate goal state and persist snapshots", async () => {
         compactSummaryEnabled: true,
         checkpointCommits: true,
         showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
       },
       warnings: [],
     }),
@@ -109,6 +118,9 @@ test("restore scans branch snapshots and before_agent_start injects only active 
         compactSummaryEnabled: true,
         checkpointCommits: true,
         showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
       },
       warnings: [],
     }),
@@ -139,6 +151,9 @@ test("compaction returns goal-aware summary when enabled", async () => {
         compactSummaryEnabled: true,
         checkpointCommits: true,
         showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
       },
       warnings: [],
     }),
@@ -182,6 +197,9 @@ test("before_agent_start omits commit guidance when checkpointCommits is disable
         compactSummaryEnabled: true,
         checkpointCommits: false,
         showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
       },
       warnings: [],
     }),
@@ -210,6 +228,9 @@ test("message_end records usage for active goals", async () => {
         compactSummaryEnabled: true,
         checkpointCommits: true,
         showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
       },
       warnings: [],
     }),
@@ -222,4 +243,160 @@ test("message_end records usage for active goals", async () => {
 
   assert.match(ctx.notifications.at(-1)?.msg, /250 tokens/);
   assert.match(ctx.notifications.at(-1)?.msg, /1 turn/);
+});
+
+test("/goal sets active goal, starts auto-run, and sends kickoff", async () => {
+  const pi = makePi();
+  const ctx = makeCtx();
+  createGoalExtension({
+    loadConfig: async () => ({
+      config: {
+        injectActiveGoal: true,
+        showWidget: false,
+        objectiveMaxChars: 100,
+        evidenceMaxChars: 100,
+        compactSummaryEnabled: true,
+        checkpointCommits: true,
+        showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
+      },
+      warnings: [],
+    }),
+  })(pi);
+  await pi.handlers.get("session_start")({}, ctx);
+
+  await pi.commands.get("goal").handler("  Finish auto-run  ", ctx);
+
+  assert.match(ctx.notifications.at(-1)?.msg, /Auto-run: running/);
+  assert.equal(pi.sentMessages.length, 1);
+  assert.match(String(pi.sentMessages[0].content), /Finish auto-run/);
+  assert.equal(pi.entries.at(-1)?.type, "goal-state");
+});
+
+test("agent_end schedules bounded continuation", async () => {
+  const pi = makePi();
+  const ctx = makeCtx();
+  createGoalExtension({
+    loadConfig: async () => ({
+      config: {
+        injectActiveGoal: true,
+        showWidget: false,
+        objectiveMaxChars: 100,
+        evidenceMaxChars: 100,
+        compactSummaryEnabled: true,
+        checkpointCommits: true,
+        showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
+      },
+      warnings: [],
+    }),
+  })(pi);
+  await pi.handlers.get("session_start")({}, ctx);
+  await pi.commands.get("goal").handler("Keep working", ctx);
+
+  await pi.handlers.get("agent_end")({}, ctx);
+
+  assert.equal(pi.sentMessages.length, 2);
+  assert.deepEqual(pi.sentMessages.at(-1)?.options, { deliverAs: "followUp" });
+  assert.match(String(pi.entries.at(-1)?.data), /object Object/);
+  assert.equal((pi.entries.at(-1)?.data as any).autoRun.continuationTurns, 1);
+});
+
+test("/goal-stop leaves goal active and stops auto-run", async () => {
+  const pi = makePi();
+  const ctx = makeCtx();
+  createGoalExtension({
+    loadConfig: async () => ({
+      config: {
+        injectActiveGoal: true,
+        showWidget: false,
+        objectiveMaxChars: 100,
+        evidenceMaxChars: 100,
+        compactSummaryEnabled: true,
+        checkpointCommits: true,
+        showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
+      },
+      warnings: [],
+    }),
+  })(pi);
+  await pi.handlers.get("session_start")({}, ctx);
+  await pi.commands.get("goal").handler("Stop later", ctx);
+
+  await pi.commands.get("goal-stop").handler("", ctx);
+  await pi.handlers.get("agent_end")({}, ctx);
+
+  assert.match(ctx.notifications.at(-1)?.msg, /stopped/i);
+  assert.equal((pi.entries.at(-1)?.data as any).goal.status, "active");
+  assert.equal((pi.entries.at(-1)?.data as any).autoRun.status, "stopped");
+  assert.equal(pi.sentMessages.length, 1);
+});
+
+test("agent_end stops auto-run at turn budget", async () => {
+  const pi = makePi();
+  const ctx = makeCtx();
+  createGoalExtension({
+    loadConfig: async () => ({
+      config: {
+        injectActiveGoal: true,
+        showWidget: false,
+        objectiveMaxChars: 100,
+        evidenceMaxChars: 100,
+        compactSummaryEnabled: true,
+        checkpointCommits: true,
+        showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 1,
+        autoRunMaxActiveMinutes: 60,
+      },
+      warnings: [],
+    }),
+  })(pi);
+  await pi.handlers.get("session_start")({}, ctx);
+  await pi.commands.get("goal").handler("Budgeted", ctx);
+  await pi.handlers.get("agent_end")({}, ctx);
+
+  await pi.handlers.get("agent_end")({}, ctx);
+
+  assert.equal((pi.entries.at(-1)?.data as any).goal.status, "active");
+  assert.equal((pi.entries.at(-1)?.data as any).autoRun.status, "stopped");
+  assert.equal((pi.entries.at(-1)?.data as any).autoRun.stopReason, "turn_budget");
+  assert.equal(pi.sentMessages.length, 2);
+});
+
+test("user input stops auto-run but extension input does not", async () => {
+  const pi = makePi();
+  const ctx = makeCtx();
+  createGoalExtension({
+    loadConfig: async () => ({
+      config: {
+        injectActiveGoal: true,
+        showWidget: false,
+        objectiveMaxChars: 100,
+        evidenceMaxChars: 100,
+        compactSummaryEnabled: true,
+        checkpointCommits: true,
+        showUsage: true,
+        autoRunEnabled: true,
+        autoRunMaxTurns: 10,
+        autoRunMaxActiveMinutes: 60,
+      },
+      warnings: [],
+    }),
+  })(pi);
+  await pi.handlers.get("session_start")({}, ctx);
+  await pi.commands.get("goal").handler("Handle interruption", ctx);
+
+  await pi.handlers.get("input")({ source: "extension" }, ctx);
+  assert.equal((pi.entries.at(-1)?.data as any).autoRun.status, "running");
+
+  await pi.handlers.get("input")({ source: "interactive" }, ctx);
+  assert.equal((pi.entries.at(-1)?.data as any).autoRun.status, "stopped");
+  assert.equal((pi.entries.at(-1)?.data as any).autoRun.stopReason, "user_input");
 });

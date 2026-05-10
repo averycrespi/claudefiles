@@ -20,8 +20,13 @@ test("goal store trims objectives and tracks lifecycle", () => {
   store.resume();
   assert.equal(store.getGoal()?.status, "active");
 
+  store.startAutoRun();
+  assert.equal(store.getAutoRun()?.status, "running");
+
   store.complete(" tests and docs verify every requirement ", 100);
   assert.equal(store.getGoal()?.status, "complete");
+  assert.equal(store.getAutoRun()?.status, "stopped");
+  assert.equal(store.getAutoRun()?.stopReason, "goal_complete");
   assert.equal(
     store.getGoal()?.completionEvidence,
     "tests and docs verify every requirement",
@@ -52,6 +57,37 @@ test("persisted goal state parser rejects invalid snapshots", () => {
   });
   assert.equal(parsed?.goal?.id, "goal-1");
   assert.equal(parsed?.goal?.usage?.turns, 0);
+});
+
+test("persisted goal state parser accepts auto-run snapshots", () => {
+  const parsed = parsePersistedGoalState({
+    goal: {
+      id: "goal-1",
+      objective: "Finish docs",
+      status: "active",
+      createdAt: 1,
+      updatedAt: 2,
+    },
+    autoRun: {
+      status: "stopped",
+      updatedAt: 3,
+      continuationTurns: 10,
+      stopReason: "turn_budget",
+    },
+  });
+
+  assert.equal(parsed?.autoRun?.status, "stopped");
+  assert.equal(parsed?.autoRun?.stopReason, "turn_budget");
+});
+
+test("formatGoalState includes auto-run status", () => {
+  const store = createGoalStore(() => 1);
+  store.setGoal("Fix auth", 100);
+  store.startAutoRun();
+  store.recordAutoRunContinuation();
+
+  assert.match(formatGoalState(store.getState()), /Auto-run: running/);
+  assert.match(formatGoalState(store.getState()), /1 continuation turn/);
 });
 
 test("formatGoalState includes completion evidence", () => {
