@@ -176,7 +176,7 @@ export function buildModeContract(options: {
       "Commit regularly at logical checkpoints as the work progresses.",
       "Do not wait for one giant commit at the end of Execute mode.",
       options.autoHandoffEnabled
-        ? 'When implementation is complete and ready for verification, call workflow_handoff with target_mode="verify" and a concise reason instead of asking the user to run /verify.'
+        ? 'Before stopping in Execute mode, call workflow_handoff as the explicit workflow decision: use target_mode="verify" when implementation is ready for verification, or action="complete" / action="abort" when the workflow is finished, blocked, unfixable, or cannot continue. Include a concise reason.'
         : "When implementation is complete and ready for verification, report that outcome to the user instead of requesting an automatic workflow handoff.",
     ].join("\n");
   }
@@ -190,8 +190,10 @@ export function buildModeContract(options: {
     "Report verification in a structured format with: Overall verdict (`pass`, `fail`, or `blocked`); deterministic checks run and results; per acceptance criterion verdicts (`pass`, `fail`, `n/a`, or `unknown`) with evidence; findings / next actions; and any user-accepted known issues.",
     "Turn findings into explicit next actions for a possible return to Execute mode.",
     options.autoHandoffEnabled
-      ? 'If verification finds fixable issues, call workflow_handoff with target_mode="execute" and a concise reason describing the fixes needed.'
+      ? 'Before stopping in Verify mode, call workflow_handoff as the explicit workflow decision: use target_mode="execute" when verification finds fixable issues, or action="complete" / action="abort" when verification passes, is blocked, finds unfixable issues, or cannot continue. Include a concise reason.'
       : "If verification finds fixable issues, report the needed fixes to the user instead of requesting an automatic workflow handoff.",
-    "If verification passes, is blocked, or finds unfixable issues, do not call workflow_handoff; report the outcome to the user.",
+    options.autoHandoffEnabled
+      ? "Do not end Verify mode with only a free-text report; use workflow_handoff for pass, fail, blocked, and unfixable terminal decisions."
+      : "If verification passes, is blocked, or finds unfixable issues, do not call workflow_handoff; report the outcome to the user.",
   ].join("\n");
 }

@@ -46,6 +46,7 @@ type RuntimeState = {
   baselineThinking?: string;
   thinkingLevels: WorkflowModeThinkingLevels;
   autoHandoffFixLoopsUsed: number;
+  missingHandoffFollowUpsUsed: number;
   todoReminderTurnsSinceTodo: number;
   todoReminderTurnsSinceReminder: number;
 };
@@ -97,18 +98,28 @@ const WRITE_PLAN_PARAMS = Type.Object({
 });
 
 const HANDOFF_PARAMS = Type.Object({
-  target_mode: Type.Union([Type.Literal("execute"), Type.Literal("verify")], {
-    description:
-      "Workflow mode to hand off to. Execute mode may target verify; Verify mode may target execute.",
-  }),
+  target_mode: Type.Optional(
+    Type.Union([Type.Literal("execute"), Type.Literal("verify")], {
+      description:
+        "Workflow mode to hand off to. Execute mode may target verify; Verify mode may target execute.",
+    }),
+  ),
+  action: Type.Optional(
+    Type.Union([Type.Literal("complete"), Type.Literal("abort")], {
+      description:
+        "Terminal workflow decision. Use complete when the workflow is finished; use abort when it is blocked, unfixable, or cannot continue.",
+    }),
+  ),
   reason: Type.String({
     description:
-      "Concise reason for the handoff, used in the user-facing deny prompt and next mode kickoff context.",
+      "Concise reason for the handoff or terminal workflow decision.",
   }),
 });
 
 type WritePlanParams = Static<typeof WRITE_PLAN_PARAMS>;
 type HandoffParams = Static<typeof HANDOFF_PARAMS>;
+
+const MISSING_HANDOFF_FOLLOW_UP_LIMIT = 2;
 
 const EDIT_PLAN_PARAMS = Type.Object({
   path: Type.String({
@@ -262,6 +273,7 @@ export function createWorkflowModesExtension(
       mode: "normal",
       thinkingLevels: { ...DEFAULT_THINKING_LEVELS },
       autoHandoffFixLoopsUsed: 0,
+      missingHandoffFollowUpsUsed: 0,
       todoReminderTurnsSinceTodo: 0,
       todoReminderTurnsSinceReminder: 0,
     };
@@ -304,6 +316,28 @@ export function createWorkflowModesExtension(
     function resetTodoReminder(): void {
       state.todoReminderTurnsSinceTodo = 0;
       state.todoReminderTurnsSinceReminder = 0;
+    }
+
+    function resetMissingHandoffFollowUps(): void {
+      state.missingHandoffFollowUpsUsed = 0;
+    }
+
+    function buildMissingHandoffFollowUpMessage(): string {
+      if (state.mode === "execute") {
+        return [
+          "You stopped in Execute mode without calling the required workflow_handoff decision tool.",
+          'If implementation is ready for verification, call workflow_handoff with target_mode="verify" and a concise reason.',
+          'If the workflow is finished, blocked, unfixable, or cannot continue, call workflow_handoff with action="complete" or action="abort" and a concise reason.',
+          "If you are not actually at a stopping point, continue the implementation work now.",
+        ].join("\n");
+      }
+
+      return [
+        "You stopped in Verify mode without calling the required workflow_handoff decision tool.",
+        'If verification found fixable issues, call workflow_handoff with target_mode="execute" and a concise reason.',
+        'If verification passed, is blocked, found unfixable issues, or cannot continue, call workflow_handoff with action="complete" or action="abort" and a concise reason.',
+        "If you are not actually at a stopping point, continue verification now.",
+      ].join("\n");
     }
 
     function applyMode(mode: WorkflowMode): void {
@@ -426,6 +460,7 @@ export function createWorkflowModesExtension(
       ctx: ExtensionCommandContext,
     ): Promise<void> {
       state.autoHandoffFixLoopsUsed = 0;
+      resetMissingHandoffFollowUps();
       const config = await loadWorkflowModesConfig(ctx.cwd);
       updateThinkingLevels(config);
       if (state.mode !== mode) {
@@ -437,6 +472,7 @@ export function createWorkflowModesExtension(
         applyMode(mode);
       }
       state.mode = mode;
+      resetMissingHandoffFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
@@ -459,10 +495,32 @@ export function createWorkflowModesExtension(
         applyMode(mode);
       }
       state.mode = mode;
+      resetMissingHandoffFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
       sendHandoffKickoffMessage(mode, args);
+    }
+
+    async function exitWorkflowFromHandoff(
+      action: "complete" | "abort",
+      reason: string,
+      ctx: ExtensionContext,
+    ): Promise<void> {
+      captureBaselines();
+      if (state.mode !== "normal") {
+        applyMode("normal");
+      }
+      state.mode = "normal";
+      state.autoHandoffFixLoopsUsed = 0;
+      resetMissingHandoffFollowUps();
+      resetTodoReminder();
+      publishWorkflowModeState();
+      await updateAutoHandoffStatus(ctx);
+      if (ctx.hasUI) {
+        const label = action === "complete" ? "completed" : "aborted";
+        ctx.ui.notify(`Workflow ${label}: ${reason}`, "info");
+      }
     }
 
     async function maybeCompactBeforeModeSwitch(
@@ -534,7 +592,66 @@ export function createWorkflowModesExtension(
           };
         }
 
+        if (state.mode !== "execute" && state.mode !== "verify") {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_handoff: only available while workflow modes are in Execute or Verify mode",
+              },
+            ],
+            details: {},
+          };
+        }
+
+        const reason = params.reason.trim();
+        const displayReason = reason || "No reason provided.";
+        const action = params.action;
         const targetMode = params.target_mode;
+
+        if (action !== undefined && targetMode !== undefined) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_handoff: provide either target_mode for a handoff or action for a terminal workflow decision, not both",
+              },
+            ],
+            details: {},
+          };
+        }
+
+        if (action !== undefined) {
+          await exitWorkflowFromHandoff(action, displayReason, ctx);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `workflow_handoff: workflow ${action === "complete" ? "completed" : "aborted"}`,
+              },
+            ],
+            details: {
+              action,
+              reason: displayReason,
+              fixLoopsUsed: state.autoHandoffFixLoopsUsed,
+              maxFixLoops: config.autoHandoffMaxFixLoops,
+            },
+            terminate: true,
+          };
+        }
+
+        if (targetMode === undefined) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "workflow_handoff: provide target_mode for a handoff or action for a terminal workflow decision",
+              },
+            ],
+            details: {},
+          };
+        }
+
         if (state.mode === "execute" && targetMode !== "verify") {
           return {
             content: [
@@ -552,17 +669,6 @@ export function createWorkflowModesExtension(
               {
                 type: "text" as const,
                 text: "workflow_handoff: Verify mode can only hand off to Execute mode",
-              },
-            ],
-            details: {},
-          };
-        }
-        if (state.mode !== "execute" && state.mode !== "verify") {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: "workflow_handoff: only available while workflow modes are in Execute or Verify mode",
               },
             ],
             details: {},
@@ -588,8 +694,6 @@ export function createWorkflowModesExtension(
           };
         }
 
-        const reason = params.reason.trim();
-        const displayReason = reason || "No reason provided.";
         if (ctx.hasUI) {
           const choice = await ctx.ui.select(
             `Agent triggered handoff to ${capitalize(targetMode)} mode: ${displayReason}`,
@@ -777,6 +881,7 @@ export function createWorkflowModesExtension(
         }
         state.mode = "normal";
         state.autoHandoffFixLoopsUsed = 0;
+        resetMissingHandoffFollowUps();
         resetTodoReminder();
         publishWorkflowModeState();
         await updateAutoHandoffStatus(ctx);
@@ -801,6 +906,7 @@ export function createWorkflowModesExtension(
       }
       state.mode = "normal";
       state.autoHandoffFixLoopsUsed = 0;
+      resetMissingHandoffFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
@@ -812,6 +918,7 @@ export function createWorkflowModesExtension(
       }
       state.mode = "normal";
       state.autoHandoffFixLoopsUsed = 0;
+      resetMissingHandoffFollowUps();
       resetTodoReminder();
       publishWorkflowModeState();
       await updateAutoHandoffStatus(ctx);
@@ -820,6 +927,7 @@ export function createWorkflowModesExtension(
     pi.on("session_shutdown", async () => {
       state.mode = "normal";
       state.autoHandoffFixLoopsUsed = 0;
+      resetMissingHandoffFollowUps();
       resetBaselines();
       publishWorkflowModeState();
     });
@@ -834,6 +942,30 @@ export function createWorkflowModesExtension(
           autoHandoffEnabled: config.autoHandoffEnabled,
         })}`,
       };
+    });
+
+    pi.on("agent_end", async (_event, ctx) => {
+      if (state.mode !== "execute" && state.mode !== "verify") return;
+      const config = await loadWorkflowModesConfig(ctx.cwd);
+      if (!config.autoHandoffEnabled) return;
+      if (ctx.hasPendingMessages()) return;
+
+      if (
+        state.missingHandoffFollowUpsUsed >= MISSING_HANDOFF_FOLLOW_UP_LIMIT
+      ) {
+        if (ctx.hasUI) {
+          ctx.ui.notify(
+            "Workflow handoff fallback cap reached; staying in current mode",
+            "warning",
+          );
+        }
+        return;
+      }
+
+      state.missingHandoffFollowUpsUsed += 1;
+      pi.sendUserMessage(buildMissingHandoffFollowUpMessage(), {
+        deliverAs: "followUp",
+      });
     });
 
     pi.on("tool_result", async (event) => {

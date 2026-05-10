@@ -96,6 +96,7 @@ function makeCtx(options: {
   idle?: boolean;
   hasUI?: boolean;
   usageTokens?: number | null;
+  pendingMessages?: boolean;
   compactCalls?: Array<{
     customInstructions?: string;
     onComplete?: (result: any) => void;
@@ -109,7 +110,7 @@ function makeCtx(options: {
     isIdle: () => options.idle ?? true,
     signal: undefined,
     abort: () => {},
-    hasPendingMessages: () => false,
+    hasPendingMessages: () => options.pendingMessages ?? false,
     shutdown: () => {},
     getContextUsage: () =>
       options.usageTokens === undefined
@@ -323,6 +324,7 @@ function makePi(cwd: string) {
       hasUI = true,
       confirmResponse?: boolean,
       selectResponse?: string,
+      pendingMessages?: boolean,
     ) {
       return makeCtx({
         cwd,
@@ -338,6 +340,7 @@ function makePi(cwd: string) {
         idle,
         hasUI,
         usageTokens,
+        pendingMessages,
         compactCalls,
       });
     },
@@ -1169,6 +1172,162 @@ test("workflow_handoff caps verify to execute fix loops", async () => {
   assert.match(result.content[0].text, /cap reached/i);
   assert.equal(pi._thinkingLevel(), "high");
   assert.equal(pi._statusCalls.at(-1)?.text, "↻ exhausted 1/1");
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("workflow_handoff terminal action exits to normal and terminates", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-terminal-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("verify")!.handler("Check", pi._ctx());
+
+  const result = await pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { action: "complete", reason: "Verification passed" },
+    undefined,
+    undefined,
+    pi._ctx(),
+  );
+
+  assert.equal(result.terminate, true);
+  assert.match(result.content[0].text, /completed/i);
+  assert.equal(pi._thinkingLevel(), "medium");
+  assert.deepEqual(pi._currentTools(), [
+    "read",
+    "edit",
+    "write",
+    "bash",
+    "todo",
+    "ask_user",
+    "web_search",
+    "web_fetch",
+    "mcp_search",
+    "mcp_describe",
+    "mcp_call",
+    "spawn_agents",
+    "ls",
+    "find",
+    "grep",
+  ]);
+  assert.equal(pi._statusCalls.at(-1)?.text, undefined);
+  assert.match(pi._notifications.at(-1)?.msg ?? "", /Workflow completed/);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("agent_end queues missing workflow_handoff follow-ups in execute and verify", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-fallback-"));
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+
+  const agentEnd = pi._handlers.get("agent_end")!;
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+  await agentEnd({ type: "agent_end", messages: [] }, pi._ctx());
+
+  assert.equal(pi._sentUserMessages.length, 2);
+  assert.match(
+    String(pi._sentUserMessages.at(-1)?.content),
+    /stopped in Execute mode/i,
+  );
+  assert.match(
+    String(pi._sentUserMessages.at(-1)?.content),
+    /target_mode="verify"/,
+  );
+  assert.deepEqual(pi._sentUserMessages.at(-1)?.options, {
+    deliverAs: "followUp",
+  });
+
+  await pi._tools.get("workflow_handoff")!.execute!(
+    "call-1",
+    { target_mode: "verify", reason: "Ready for verification" },
+    undefined,
+    undefined,
+    pi._ctx([], undefined, true, undefined, true, false),
+  );
+  await agentEnd({ type: "agent_end", messages: [] }, pi._ctx());
+
+  assert.match(
+    String(pi._sentUserMessages.at(-1)?.content),
+    /stopped in Verify mode/i,
+  );
+  assert.match(
+    String(pi._sentUserMessages.at(-1)?.content),
+    /target_mode="execute"/,
+  );
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("agent_end skips missing workflow_handoff follow-up when disabled or pending", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-handoff-no-fallback-"),
+  );
+  const disabledPi = makePi(cwd);
+  createTestWorkflowModesExtension()(disabledPi as any);
+  await startSession(disabledPi);
+  await disabledPi._commands
+    .get("execute")!
+    .handler("Implement", disabledPi._ctx());
+  await disabledPi._handlers.get("agent_end")!(
+    { type: "agent_end", messages: [] },
+    disabledPi._ctx(),
+  );
+  assert.equal(disabledPi._sentUserMessages.length, 1);
+
+  const pendingPi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(
+    pendingPi as any,
+  );
+  await startSession(pendingPi);
+  await pendingPi._commands
+    .get("execute")!
+    .handler("Implement", pendingPi._ctx());
+  await pendingPi._handlers.get("agent_end")!(
+    { type: "agent_end", messages: [] },
+    pendingPi._ctx(
+      [],
+      undefined,
+      true,
+      undefined,
+      true,
+      undefined,
+      undefined,
+      true,
+    ),
+  );
+  assert.equal(pendingPi._sentUserMessages.length, 1);
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("agent_end caps missing workflow_handoff follow-ups and resets after mode entry", async () => {
+  const cwd = await mkdtemp(
+    join(tmpdir(), "workflow-modes-handoff-fallback-cap-"),
+  );
+  const pi = makePi(cwd);
+  createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
+  await startSession(pi);
+  await pi._commands.get("execute")!.handler("Implement", pi._ctx());
+
+  const agentEnd = pi._handlers.get("agent_end")!;
+  await agentEnd({ type: "agent_end", messages: [] }, pi._ctx());
+  await agentEnd({ type: "agent_end", messages: [] }, pi._ctx());
+  await agentEnd({ type: "agent_end", messages: [] }, pi._ctx());
+
+  assert.equal(pi._sentUserMessages.length, 3);
+  assert.match(pi._notifications.at(-1)?.msg ?? "", /fallback cap reached/i);
+
+  await pi._commands.get("execute")!.handler("Implement again", pi._ctx());
+  await agentEnd({ type: "agent_end", messages: [] }, pi._ctx());
+
+  assert.equal(pi._sentUserMessages.length, 5);
+  assert.match(
+    String(pi._sentUserMessages.at(-1)?.content),
+    /stopped in Execute/,
+  );
 
   await rm(cwd, { recursive: true, force: true });
 });
