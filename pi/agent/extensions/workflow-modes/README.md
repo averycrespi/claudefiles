@@ -79,19 +79,56 @@ The Plan-mode contract requires a discovery-first flow before durable plan writi
 
 For non-trivial work, the agent should ask requirements-discovery questions until the purpose, constraints, success criteria, major trade-offs, and acceptance criteria are clear enough to execute. It should ask one focused question at a time, include a recommended answer, resolve upstream decisions before downstream questions, and explore the repo instead of asking whenever the repo can answer the question. This grilling behavior is inspired by Matt Pocock's [`grill-me` skill](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me). The agent should use `ask_user` for material decisions with multiple valid directions, and it should not call `write_plan` or `edit_plan` until discovery, exploration, and validation are complete unless the user explicitly asks to skip discovery or provides a complete implementation-ready plan.
 
-The Plan-mode contract tells the agent to usually include sections like:
+The Plan-mode contract includes a plan template for substantial work. Agents should use it unless there is a clear reason to simplify:
 
-- `## Goal`
-- `## Constraints`
-- `## Acceptance Criteria`
-- `## Chosen Approach`
-- `## Documentation Impact`
-- `## Assumptions / Open Questions`
-- `## Ordered Tasks`
-- `## Verification Checklist`
-- `## Known Issues / Follow-ups`
+```md
+# <Short Title> Plan
 
-`Documentation Impact` should list required docs updates or state that none are needed. The `Verification Checklist` should include checking that this documentation decision was followed.
+## Goal
+
+<One sentence describing the intended outcome.>
+
+## Constraints
+
+- <Hard constraints, repo conventions, scope boundaries, or user preferences.>
+
+## Acceptance Criteria
+
+- AC-1: <Observable criterion verified by a test, command, file state, or UI state.>
+- AC-2: <Observable criterion verified by a test, command, file state, or UI state.>
+- AC-3: <Observable criterion verified by a test, command, file state, or UI state.>
+
+## Chosen Approach
+
+<Recommended approach and the key trade-off behind it.>
+
+## Documentation Impact
+
+<List docs, READMEs, examples, changelogs, or user-facing references to update, or state that no documentation updates are required and why.>
+
+## Assumptions / Open Questions
+
+- Q1: <Assumption or unresolved question, with owner/status when known.>
+
+## Ordered Tasks
+
+### T1: <Task title>
+
+Covers: AC-<n>
+
+- <Implementation intent and relevant files or areas, not a line-by-line diff.>
+
+## Verification Checklist
+
+- [ ] V1: <Command, test, or observable check for AC-<n>.>
+- [ ] V2: Confirm Documentation Impact was followed.
+
+## Known Issues / Follow-ups
+
+- <Accepted limitation, follow-up, or "None known.">
+```
+
+`Acceptance Criteria`, `Ordered Tasks`, and `Verification Checklist` use stable IDs such as `AC-1`, `T1`, and `V1` so Execute and Verify mode can reference specific requirements. `Documentation Impact` should list required docs updates or state that none are needed. The `Verification Checklist` should include checking that this documentation decision was followed.
 
 `write_plan` creates or replaces `.plans` files. `edit_plan` applies exact text replacements to existing `.plans` files. In the TUI they render like Pi's built-in write/edit tools: write calls show the target path and line count, and edit results show compact addition/removal counts with the diff available when expanded.
 

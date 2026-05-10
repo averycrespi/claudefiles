@@ -48,6 +48,51 @@ export const DEFAULT_THINKING_LEVELS: WorkflowModeThinkingLevels = {
   verify: "high",
 };
 
+export const PLAN_TEMPLATE = `# <Short Title> Plan
+
+## Goal
+
+<One sentence describing the intended outcome.>
+
+## Constraints
+
+- <Hard constraints, repo conventions, scope boundaries, or user preferences.>
+
+## Acceptance Criteria
+
+- AC-1: <Observable criterion verified by a test, command, file state, or UI state.>
+- AC-2: <Observable criterion verified by a test, command, file state, or UI state.>
+- AC-3: <Observable criterion verified by a test, command, file state, or UI state.>
+
+## Chosen Approach
+
+<Recommended approach and the key trade-off behind it.>
+
+## Documentation Impact
+
+<List docs, READMEs, examples, changelogs, or user-facing references to update, or state that no documentation updates are required and why.>
+
+## Assumptions / Open Questions
+
+- Q1: <Assumption or unresolved question, with owner/status when known.>
+
+## Ordered Tasks
+
+### T1: <Task title>
+
+Covers: AC-<n>
+
+- <Implementation intent and relevant files or areas, not a line-by-line diff.>
+
+## Verification Checklist
+
+- [ ] V1: <Command, test, or observable check for AC-<n>.>
+- [ ] V2: Confirm Documentation Impact was followed.
+
+## Known Issues / Follow-ups
+
+- <Accepted limitation, follow-up, or "None known.">`;
+
 export function getManagedToolNamesForMode(mode: WorkflowMode): string[] {
   switch (mode) {
     case "plan":
@@ -117,7 +162,7 @@ export function buildModeContract(options: {
       "Verification Checklist should include checking that Documentation Impact was followed: required docs were updated, or the no-docs-needed rationale still holds.",
       "Include 3-7 testable acceptance criteria whenever the task is substantial enough to need them.",
       "Each acceptance criterion should be observable via a test, command output, or file/UI state — not a feeling.",
-      "Plan files should be markdown and usually include: Goal, Constraints, Acceptance Criteria, Chosen Approach, Documentation Impact, Assumptions / Open Questions, Ordered Tasks, Verification Checklist, and Known Issues / Follow-ups.",
+      `Substantial plan files should use this template unless there is a clear reason to simplify:\n\n${PLAN_TEMPLATE}`,
     ].join("\n");
   }
 

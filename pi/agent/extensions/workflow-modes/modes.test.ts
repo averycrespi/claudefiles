@@ -4,6 +4,7 @@ import {
   buildModeContract,
   getManagedToolNamesForMode,
   getThinkingLevelForMode,
+  PLAN_TEMPLATE,
 } from "./modes.ts";
 
 test("buildModeContract for plan mode includes collaborative discovery and plan-authoring guidance", () => {
@@ -34,6 +35,11 @@ test("buildModeContract for plan mode includes collaborative discovery and plan-
   );
   assert.match(contract, /skip discovery for trivial mechanical tasks/i);
   assert.match(contract, /testable acceptance criteria/i);
+  assert.match(contract, /Substantial plan files should use this template/i);
+  assert.ok(contract.includes(PLAN_TEMPLATE));
+  assert.match(contract, /AC-1:/);
+  assert.match(contract, /### T1:/);
+  assert.match(contract, /V1:/);
   assert.match(contract, /Documentation Impact/i);
   assert.match(contract, /no documentation updates are required/i);
   assert.match(contract, /Documentation Impact was followed/i);
