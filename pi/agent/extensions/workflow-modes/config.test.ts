@@ -48,13 +48,14 @@ test("readEnvSettings maps every workflow-modes environment override", () => {
   process.env.WORKFLOW_MODES_EXECUTE_THINKING_LEVEL = "medium";
   process.env.WORKFLOW_MODES_VERIFY_THINKING_LEVEL = "xhigh";
 
-  assert.deepEqual(readEnvSettings(), {
+  const settings = readEnvSettings();
+  assert.equal("autoHandoffDenyTimeoutMs" in settings, false);
+  assert.deepEqual(settings, {
     autoCompactOnModeSwitch: false,
     autoCompactMinTokens: 12345,
     autoCompactOnHandoff: false,
     autoCompactHandoffMinTokens: 30000,
     autoHandoffEnabled: true,
-    autoHandoffDenyTimeoutMs: 2500,
     autoHandoffMaxFixLoops: 4,
     todoReminderEnabled: false,
     todoReminderTurnsSinceTodo: 5,
@@ -88,7 +89,6 @@ test("loadConfig lets env settings override project and global settings", async 
           autoCompactOnHandoff: false,
           autoCompactHandoffMinTokens: 40000,
           autoHandoffEnabled: false,
-          autoHandoffDenyTimeoutMs: 10000,
           autoHandoffMaxFixLoops: 2,
           todoReminderEnabled: true,
           todoReminderTurnsSinceTodo: 3,

@@ -85,7 +85,7 @@ stateDiagram-v2
 
 Execute mode may advance only to Verify or aborted. Verify mode may advance only to Execute, completed, or aborted. The tool validates the current mode, configuration, and fix-loop cap; it does not ask the agent to self-declare whether issues are fixable. That semantic decision is part of the mode contract.
 
-When UI is available, handoff shows a timed prompt with the requested target mode and reason, plus a single `Cancel` option. If the user does nothing before `autoHandoffDenyTimeoutMs`, the handoff proceeds. If no UI is available, the denial prompt and timeout are skipped. Verify → Execute handoffs consume the configured fix-loop budget; Execute → Verify handoffs do not.
+Accepted handoffs switch directly to the requested mode and queue the follow-up kickoff message. Verify → Execute handoffs consume the configured fix-loop budget; Execute → Verify handoffs do not.
 
 Accepted handoffs compact before changing tools/thinking when `autoCompactOnHandoff` is enabled and current context usage is at least `autoCompactHandoffMinTokens`. If handoff compaction fails, the extension reports the failure when UI is available and continues with the handoff.
 
@@ -183,7 +183,6 @@ Configure via `extension:workflow-modes` in Pi settings. Environment variables o
 | `autoCompactOnHandoff`              | `true`   | `WORKFLOW_MODES_AUTO_COMPACT_ON_HANDOFF`               | Enables pre-switch compaction for accepted `workflow_advance` transitions.                                       |
 | `autoCompactHandoffMinTokens`       | `30000`  | `WORKFLOW_MODES_AUTO_COMPACT_HANDOFF_MIN_TOKENS`       | Context-token threshold for handoff pre-switch compaction.                                                       |
 | `autoHandoffEnabled`                | `false`  | `WORKFLOW_MODES_AUTO_HANDOFF_ENABLED`                  | Enables required Execute/Verify `workflow_advance` decisions, handoffs, and bounded missing-decision follow-ups. |
-| `autoHandoffDenyTimeoutMs`          | `10000`  | `WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS`          | UI denial window for automatic handoffs; if it expires, the handoff proceeds.                                    |
 | `autoHandoffMaxFixLoops`            | `2`      | `WORKFLOW_MODES_AUTO_HANDOFF_MAX_FIX_LOOPS`            | Caps Verify → Execute loopbacks.                                                                                 |
 | `todoReminderEnabled`               | `true`   | `WORKFLOW_MODES_TODO_REMINDER_ENABLED`                 | Enables the Execute-mode-only hidden reminder when `todo` has not been used recently.                            |
 | `todoReminderTurnsSinceTodo`        | `3`      | `WORKFLOW_MODES_TODO_REMINDER_TURNS_SINCE_TODO`        | Execute-mode assistant turns without a `todo` result before the reminder may fire.                               |
@@ -202,7 +201,6 @@ Example settings:
     "autoCompactOnHandoff": true,
     "autoCompactHandoffMinTokens": 30000,
     "autoHandoffEnabled": false,
-    "autoHandoffDenyTimeoutMs": 10000,
     "autoHandoffMaxFixLoops": 2,
     "todoReminderEnabled": true,
     "todoReminderTurnsSinceTodo": 3,
@@ -218,7 +216,7 @@ Boolean environment overrides accept `1`/`true` and `0`/`false`. Thinking-level 
 
 ## Logging
 
-This extension does not write retained logs or diagnostic files. Pre-switch compaction failures, including handoff pre-compaction failures, are reported to the user and the requested mode switch continues. Automatic handoff prompts, denials, terminal decision notifications, and missing-decision fallback notifications are UI-only and are not retained as separate log files. Missing-decision follow-ups are queued as transient user messages. TODO reminders are injected as hidden context for the model, not as retained log files or user-visible messages.
+This extension does not write retained logs or diagnostic files. Pre-switch compaction failures, including handoff pre-compaction failures, are reported to the user and the requested mode switch continues. Terminal decision notifications and missing-decision fallback notifications are UI-only and are not retained as separate log files. Automatic handoffs queue transient user messages. Missing-decision follow-ups are queued as transient user messages. TODO reminders are injected as hidden context for the model, not as retained log files or user-visible messages.
 
 ## Persistence and compaction
 
@@ -226,7 +224,7 @@ Workflow mode, automatic handoff loop counters, missing-decision follow-up count
 
 By default, when an idle session has at least 50,000 context tokens, `/plan`, `/execute`, and `/verify` compact before changing tools/thinking and before sending the kickoff message. Slash-command pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the command is invoked while the agent is not idle. If compaction fails, the extension reports the error and continues with the requested mode switch.
 
-Accepted tool-driven automatic handoffs use a separate threshold. By default, when current context usage has at least 30,000 tokens, `workflow_advance` compacts before changing tools/thinking and before queueing the follow-up kickoff. Handoff pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the handoff is denied or rejected. If handoff compaction fails, the extension reports the error and continues with the handoff.
+Accepted tool-driven automatic handoffs use a separate threshold. By default, when current context usage has at least 30,000 tokens, `workflow_advance` compacts before changing tools/thinking and before queueing the follow-up kickoff. Handoff pre-switch compaction is skipped when disabled, when usage is below the threshold or unknown, or when the handoff is rejected. If handoff compaction fails, the extension reports the error and continues with the handoff.
 
 During compaction, the extension summarizes the active workflow shell state instead of relying on raw conversation history. For pre-switch compaction, including handoff compaction, the summary records the target mode so the compacted context matches the kickoff that follows. The summary preserves:
 

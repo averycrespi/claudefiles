@@ -59,7 +59,6 @@ type WorkflowModesConfig = {
   autoCompactOnHandoff: boolean;
   autoCompactHandoffMinTokens: number;
   autoHandoffEnabled: boolean;
-  autoHandoffDenyTimeoutMs: number;
   autoHandoffMaxFixLoops: number;
   todoReminderEnabled: boolean;
   todoReminderTurnsSinceTodo: number;
@@ -79,7 +78,6 @@ const DEFAULT_CONFIG: WorkflowModesConfig = {
   autoCompactOnHandoff: true,
   autoCompactHandoffMinTokens: 30_000,
   autoHandoffEnabled: false,
-  autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
   todoReminderEnabled: true,
   todoReminderTurnsSinceTodo: 3,
@@ -685,25 +683,6 @@ export function createWorkflowModesExtension(
           };
         }
 
-        if (ctx.hasUI) {
-          const choice = await ctx.ui.select(
-            `Agent triggered handoff to ${capitalize(nextState)} mode: ${displayReason}`,
-            ["Cancel"],
-            { timeout: config.autoHandoffDenyTimeoutMs },
-          );
-          if (choice === "Cancel") {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: "workflow_advance: handoff denied by user",
-                },
-              ],
-              details: { denied: true },
-            };
-          }
-        }
-
         if (state.mode === "verify" && nextState === "execute") {
           state.autoHandoffFixLoopsUsed += 1;
         }
@@ -1066,12 +1045,6 @@ export async function loadConfig(cwd: string): Promise<WorkflowModesConfig> {
       typeof merged.autoHandoffEnabled === "boolean"
         ? merged.autoHandoffEnabled
         : DEFAULT_CONFIG.autoHandoffEnabled,
-    autoHandoffDenyTimeoutMs:
-      typeof merged.autoHandoffDenyTimeoutMs === "number" &&
-      Number.isFinite(merged.autoHandoffDenyTimeoutMs) &&
-      merged.autoHandoffDenyTimeoutMs >= 0
-        ? merged.autoHandoffDenyTimeoutMs
-        : DEFAULT_CONFIG.autoHandoffDenyTimeoutMs,
     autoHandoffMaxFixLoops:
       typeof merged.autoHandoffMaxFixLoops === "number" &&
       Number.isInteger(merged.autoHandoffMaxFixLoops) &&
@@ -1137,12 +1110,6 @@ export function readEnvSettings(): Partial<WorkflowModesConfig> {
     settings,
     "autoHandoffEnabled",
     process.env.WORKFLOW_MODES_AUTO_HANDOFF_ENABLED,
-  );
-  setNumberEnv(
-    settings,
-    "autoHandoffDenyTimeoutMs",
-    process.env.WORKFLOW_MODES_AUTO_HANDOFF_DENY_TIMEOUT_MS,
-    false,
   );
   setNumberEnv(
     settings,

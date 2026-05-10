@@ -35,7 +35,6 @@ type TestConfig = {
   autoCompactOnHandoff: boolean;
   autoCompactHandoffMinTokens: number;
   autoHandoffEnabled: boolean;
-  autoHandoffDenyTimeoutMs: number;
   autoHandoffMaxFixLoops: number;
   todoReminderEnabled: boolean;
   todoReminderTurnsSinceTodo: number;
@@ -51,7 +50,6 @@ const defaultTestConfig: TestConfig = {
   autoCompactOnHandoff: true,
   autoCompactHandoffMinTokens: 30_000,
   autoHandoffEnabled: false,
-  autoHandoffDenyTimeoutMs: 10_000,
   autoHandoffMaxFixLoops: 2,
   todoReminderEnabled: true,
   todoReminderTurnsSinceTodo: 3,
@@ -1084,7 +1082,7 @@ test("workflow_advance notifies and continues when compaction fails", async () =
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_advance moves execute to verify when not denied", async () => {
+test("workflow_advance moves execute directly to verify", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-verify-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
@@ -1121,8 +1119,8 @@ test("workflow_advance moves execute to verify when not denied", async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_advance denial keeps the current mode", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-denied-"));
+test("workflow_advance advances directly without a UI prompt", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-direct-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
   await startSession(pi);
@@ -1136,18 +1134,15 @@ test("workflow_advance denial keeps the current mode", async () => {
     pi._ctx([], undefined, true, undefined, true, undefined, "Cancel"),
   );
 
-  assert.deepEqual(pi._selectCalls.at(-1), {
-    title: "Agent triggered handoff to Verify mode: Implementation complete",
-    options: ["Cancel"],
-  });
-  assert.match(result.content[0].text, /denied/i);
-  assert.equal(pi._thinkingLevel(), "low");
-  assert.equal(pi._sentUserMessages.length, 1);
+  assert.equal(result.terminate, true);
+  assert.equal(pi._selectCalls.length, 0);
+  assert.equal(pi._thinkingLevel(), "high");
+  assert.match(String(pi._sentUserMessages.at(-1)?.content), /verify mode/i);
 
   await rm(cwd, { recursive: true, force: true });
 });
 
-test("workflow_advance skips denial prompt without UI", async () => {
+test("workflow_advance advances directly without UI", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-modes-handoff-no-ui-"));
   const pi = makePi(cwd);
   createTestWorkflowModesExtension({ autoHandoffEnabled: true })(pi as any);
