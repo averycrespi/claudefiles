@@ -125,11 +125,12 @@ env:
 
 Variable values are always strings. The map is merged into the child's environment before launch; unset keys in the map leave the parent environment unchanged.
 
-## Inspiration
+## Prior art
 
+- [Claude Code subagents docs](https://docs.claude.com/en/docs/claude-code/sub-agents) — specialized agents with isolated context windows, custom system prompts, tool restrictions, and reusable markdown definitions.
+- [Codex subagents docs](https://developers.openai.com/codex/subagents) — explicit subagent workflows that spawn specialized agents in parallel and consolidate results.
 - [nicobailon/pi-subagents](https://github.com/nicobailon/pi-subagents) — slash commands (`/run`, `/chain`, `/parallel`), an interactive Agents Manager overlay, reusable chain files (`.chain.md`), and background/foreground execution modes
 - [tintinweb/pi-subagents](https://github.com/tintinweb/pi-subagents) — parallel execution with configurable concurrency limits, a persistent live widget, mid-run steering, custom agent definitions via markdown, and cross-extension communication through event-based RPC
-- Claude Code subagents — the `Agent` tool in the Claude Code CLI, supporting specialized agent types, worktree isolation, and background execution
 
 ## File layout
 

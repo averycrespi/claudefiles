@@ -82,6 +82,7 @@ Repo-specific structure rules:
 Documentation split:
 
 - Keep `README.md` focused on what the extension does for users and agents.
+- Include a `## Prior art` section when an extension has meaningful public inspirations, adjacent projects, or conceptual antecedents. Link to resources or similar work, describe the specific influence in one sentence, and omit the section when there is no applicable public prior art. Verify newly discovered links with the user before adding them.
 - If an extension exposes reusable code to other extensions, document imports, exports, types, and usage contracts in `API.md` instead of the README.
 - Treat `api.ts` as the stable public surface. Anything not exported there should usually be treated as internal.
 

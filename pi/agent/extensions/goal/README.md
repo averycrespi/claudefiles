@@ -120,6 +120,11 @@ Example:
 
 The extension writes no retained logs or diagnostic files. Goal objectives, usage counters, auto-run state, and completion evidence are persisted in Pi session history as described above.
 
-## Prior art and v1 omissions
+## Prior art
+
+- [Codex CLI `/goal`](https://developers.openai.com/codex/cli/slash-commands#set-or-view-an-experimental-task-goal-with-goal) — experimental long-running task goal command with persistent target tracking and feature-gated continuation behavior.
+- [Codex CLI 0.128.0 adds `/goal`](https://simonwillison.net/2026/Apr/30/codex-goals/) — summary of the Codex goal loop and its continuation/budget prompt implementation.
+
+## V1 omissions
 
 This extension adapts the durable objective, lifecycle controls, bounded continuation loop, model-visible goal context, and conservative completion audit from Codex-style goal workflows. It includes observational time/token counters, but intentionally omits background scheduling after Pi exits, project-global goals, hard token enforcement, budget-limited goal status, and automatic TODO creation from goals.

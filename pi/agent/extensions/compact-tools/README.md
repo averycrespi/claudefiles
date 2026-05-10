@@ -80,6 +80,6 @@ Intentionally out of scope — this is a minimal, hand-rolled subset tailored to
 - **No MCP tool rendering.** MCP tools vary too widely to compact generically.
 - **No edit / write diff customization.** Pi's built-in diff renderer is already reasonable.
 
-## Inspiration
+## Prior art
 
 - [`pi-tool-display`](https://www.npmjs.com/package/pi-tool-display) — a full-featured extension with compact rendering for all built-in tools, MCP support, adaptive diffs, and configurable presets. `compact-tools` is a deliberately smaller, hand-rolled subset focused on the built-in tools that are most verbose in this setup.

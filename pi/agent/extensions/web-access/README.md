@@ -71,9 +71,11 @@ For GitHub repository URLs, `web_fetch` shallow-clones the repository and return
 
 This extension does not write retained logs or diagnostic files.
 
-## Inspiration
+## Prior art
 
 This extension was informed by exploring these projects:
 
+- [eysenfalk/pi-search](https://github.com/eysenfalk/pi-search) — Pi web search/fetch extension using OpenAI/Codex web search, Readability/Turndown extraction, Playwright fallback, link extraction, and private-host blocking.
+- [mavam/pi-web-providers](https://github.com/mavam/pi-web-providers) — provider-routed Pi web tools with configurable search, content extraction, grounded answers, research providers, and background page prefetch.
 - [pi-web-access](https://github.com/nicobailon/pi-web-access) — multi-provider search, GitHub cloning, PDF extraction, Readability-based content extraction
 - [oh-my-pi](https://github.com/can1357/oh-my-pi) — multi-provider search fallback chains, intelligent content-type routing

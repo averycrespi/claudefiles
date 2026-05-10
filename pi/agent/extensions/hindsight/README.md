@@ -88,6 +88,14 @@ Tags are lowercased and normalized to safe separators. Repo scope derives the ba
 
 This extension writes no retained logs or temporary output. Recoverable tool errors are returned as agent-readable tool text.
 
+## Prior art
+
+- [Hindsight API docs](https://hindsight.vectorize.io/developer/api/quickstart) — upstream retain, recall, and reflect concepts that this extension exposes as one explicit Pi tool.
+- [Your agent needs three kinds of memory, not one](https://samfoy.github.io/circuit-break/posts/your-agent-needs-three-kinds-of-memory-not-one/) — frames memory as facts/lessons, session history, and knowledge-base retrieval rather than a single store.
+- [walodayeet/hindsight-pi](https://github.com/walodayeet/hindsight-pi) — Hindsight-backed Pi memory extension with automatic recall, queued retention, scoped tags, and setup/status commands.
+- [elpapi42/pi-observational-memory](https://github.com/elpapi42/pi-observational-memory) — Pi memory extension focused on observation/reflection logs that survive compaction.
+- [chandra447/pi-hermes-memory](https://github.com/chandra447/pi-hermes-memory) — Pi memory suite with persistent memory, session search, failure learning, and procedural memory.
+
 ## Deferred
 
 Auto recall, auto retain, session ingestion, richer bank/entity-label configuration, async operation polling, and external connectors are intentionally deferred.

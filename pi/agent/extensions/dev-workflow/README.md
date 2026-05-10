@@ -235,6 +235,16 @@ During compaction, the extension summarizes the active workflow shell state inst
 - tactical TODO state
 - next intended action
 
+## Prior art
+
+- [Agents need control flow](https://bsuh.bearblog.dev/agents-need-control-flow/) — argues for deterministic state transitions and validation checkpoints around LLM work instead of relying only on prompt chains.
+- [juicesharp/rpiv-mono](https://github.com/juicesharp/rpiv-mono) — Pi pipeline and sibling extensions for driver-in-the-loop planning, TODOs, web tools, and structured user questions.
+- [klaudworks/ralph-meets-rex](https://github.com/klaudworks/ralph-meets-rex) — YAML-driven multi-step agent workflows with plan, implement, verify, loopback, and run persistence.
+- [ruizrica/agent-pi](https://github.com/ruizrica/agent-pi) — Pi extension suite with explicit operational modes, planning/spec workflows, multi-agent orchestration, and browser-based review surfaces.
+- [davidorex/pi-workflows](https://github.com/davidorex/pi-project-workflows/tree/main/packages/pi-workflows) — schema-driven Pi workflow orchestration with typed step outputs and validation boundaries.
+- [tmdgusya/roach-pi](https://github.com/tmdgusya/roach-pi) — Pi engineering loop around clarify, plan, worker, validator, review, subagents, and memory.
+- [galatolofederico/moonpi](https://github.com/galatolofederico/moonpi) — opinionated Pi modes, TODO-driven execution, phase loops, and guardrails.
+
 ## File layout
 
 - `index.ts` — commands, event hooks, tool gating, and plan-scoped tools

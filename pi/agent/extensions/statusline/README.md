@@ -43,7 +43,8 @@ Each adapter handles provider detection (`handles`) and API-specific fetching (`
 - `codex.ts` — Codex provider adapter
 - `utils.ts` — `ProviderAdapter` interface, `UsageStats` type, and formatting helpers
 
-## Inspiration
+## Prior art
 
+- [Claude Code status line docs](https://docs.claude.com/en/docs/claude-code/statusline) — configurable bottom status line that receives session JSON and displays context, costs, git status, or custom fields.
 - [marckrenn/pi-sub/sub-bar](https://github.com/marckrenn/pi-sub/tree/main/packages/sub-bar) — multi-provider usage widget with theming, widget/status placement options, and a settings system
 - [ifiokjr/oh-pi/usage-tracker](https://github.com/ifiokjr/oh-pi/blob/main/packages/extensions/extensions/usage-tracker.ts) — per-session cost tracking, pacing analysis, dashboard overlay, and inter-extension event broadcasting

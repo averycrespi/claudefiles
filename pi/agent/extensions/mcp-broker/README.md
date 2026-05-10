@@ -111,7 +111,8 @@ If the broker is unreachable (no cached tool list), the hint falls back to sugge
 - `spillover.ts` — re-exports shared large-output spill-to-file logic from `../_shared/spillover.ts`
 - `guard.ts` — bash detection and `tool_result` hint injection
 
-## Inspiration
+## Prior art
 
+- [tickernelz/pi-mcp-tools](https://github.com/tickernelz/pi-mcp-tools) — universal Pi MCP extension that connects local and remote MCP servers, auto-registers tools, and provides commands for status, reconnect, toggling, and tool selection.
 - [nicobailon/pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) — proxy-tool pattern for exposing an MCP broker to Pi through a minimal set of meta-tools rather than one-tool-per-upstream-tool fan-out. Influenced the decision to go with a small static surface instead of fanning upstream tools into the Pi tool list, and demonstrated the value of making the meta-tool's search/describe path feel first-class.
 - Claude Code's `ToolSearch` + `defer_loading` pattern — studied and explicitly not copied. Claude Code accepts prompt-cache invalidation on tool discovery in exchange for context-window savings; this extension optimizes in the other direction (cache stability > per-call token efficiency) because Pi has no API-level `defer_loading` support and our sessions are long-lived.

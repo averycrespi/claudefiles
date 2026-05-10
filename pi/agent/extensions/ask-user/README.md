@@ -49,8 +49,9 @@ No user-facing configuration.
 
 This extension does not write retained logs or diagnostic files.
 
-## Inspiration
+## Prior art
 
+- [ghoseb/pi-askuserquestion](https://github.com/ghoseb/pi-askuserquestion/) — Pi extension for structured single-select, multi-select, multi-question, and free-text user questions inspired by Claude Code's AskUserQuestion tool.
 - [edlsh/pi-ask-user](https://github.com/edlsh/pi-ask-user) — searchable single/multi-select options, freeform responses, and a bundled skill that prompts agents to seek input on architectural trade-offs
 - [mitsuhiko/agent-stuff answer.ts](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/answer.ts) — extracts embedded questions from assistant responses using an LLM, then presents a sequential multi-line editor UI for answering each one
 - [jayshah5696/pi-agent-extensions ask-user](https://github.com/jayshah5696/pi-agent-extensions/tree/main/extensions/ask-user) — supports free-form text, single-select, and multi-select question formats, plus a non-interactive print mode for asynchronous answering

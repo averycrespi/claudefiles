@@ -74,12 +74,17 @@ No user-facing configuration.
 
 This extension does not write retained logs or diagnostic files.
 
-## Inspiration / References
+## Prior art
 
 This extension adapts Moonpi's lightweight TODO UX into this repo's standalone Pi extension model.
 
 Primary reference:
 
 - Moonpi repository: [galatolofederico/moonpi](https://github.com/galatolofederico/moonpi)
+
+Additional related work:
+
+- [@agnishc/edb-todo](https://pi.dev/packages/@agnishc/edb-todo) — Pi extension with `todo_write`/`todo_read`, live widget, branch reconstruction, and system-prompt injection to reduce goal drift.
+- [tintinweb/pi-tasks](https://github.com/tintinweb/pi-tasks) — Claude Code-style task tracking and coordination for Pi with persistent widgets, dependencies, and subagent task execution.
 
 The goal here is narrower than Moonpi: keep the low-friction TODO surface without reintroducing Moonpi's broader mode system.
