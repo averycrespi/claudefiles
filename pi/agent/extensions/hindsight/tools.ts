@@ -86,10 +86,10 @@ export async function executeHindsight(
     return errorResult(`hindsight: ${configErrors.join("; ")}`);
   try {
     if (action === "retain")
-      return retain(client, config, ctx.cwd, params, signal);
+      return await retain(client, config, ctx.cwd, params, signal);
     if (action === "recall")
-      return recall(client, config, ctx.cwd, params, signal);
-    return reflect(client, config, ctx.cwd, params, signal);
+      return await recall(client, config, ctx.cwd, params, signal);
+    return await reflect(client, config, ctx.cwd, params, signal);
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") throw err;
     return errorResult(

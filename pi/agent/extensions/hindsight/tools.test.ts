@@ -13,19 +13,23 @@ const config = {
 class FakeClient extends HindsightClient {
   calls: Array<[string, unknown]> = [];
   response: unknown = { results: [] };
+  error?: Error;
   constructor() {
     super(config);
   }
   async retain(body: unknown) {
     this.calls.push(["retain", body]);
+    if (this.error) throw this.error;
     return this.response;
   }
   async recall(body: unknown) {
     this.calls.push(["recall", body]);
+    if (this.error) throw this.error;
     return this.response;
   }
   async reflect(body: unknown) {
     this.calls.push(["reflect", body]);
+    if (this.error) throw this.error;
     return this.response;
   }
 }
@@ -55,6 +59,22 @@ test("validates action requirements", async () => {
   assert.match(
     result.content[0].type === "text" ? result.content[0].text : "",
     /content is required/,
+  );
+});
+
+test("returns recoverable error text for client failures", async () => {
+  const client = new FakeClient();
+  client.error = new Error("network down");
+  const result = await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    { action: "recall", query: "q" },
+    new AbortController().signal,
+  );
+  assert.match(
+    result.content[0].type === "text" ? result.content[0].text : "",
+    /hindsight recall failed: network down/,
   );
 });
 
