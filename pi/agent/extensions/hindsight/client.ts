@@ -78,7 +78,7 @@ export class HindsightClient {
     body: unknown,
     signal: AbortSignal,
   ): Promise<unknown> {
-    const response = await _fetch.fn(`${this.config.baseUrl}${path}`, {
+    const response = await _fetch.fn(`${this.config.apiUrl}${path}`, {
       method: "POST",
       signal,
       headers: {

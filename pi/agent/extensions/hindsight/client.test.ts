@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { HindsightClient, _fetch } from "./client.ts";
 
 const config = {
-  baseUrl: "https://hindsight.example.com",
+  apiUrl: "https://hindsight.example.com",
   apiKey: "secret",
   bankId: "bank with space",
   defaultScope: "repo" as const,

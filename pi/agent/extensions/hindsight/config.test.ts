@@ -14,7 +14,7 @@ import {
 test("normalizes invalid optional config to defaults", () => {
   assert.deepEqual(
     normalizeConfig({
-      baseUrl: "not a url",
+      apiUrl: "not a url",
       apiKey: " ",
       bankId: " bank ",
       defaultScope: "bad",
@@ -25,7 +25,7 @@ test("normalizes invalid optional config to defaults", () => {
       tagsMatch: "all",
     } as any),
     {
-      baseUrl: "http://localhost:8888",
+      apiUrl: "http://localhost:8888",
       apiKey: undefined,
       bankId: "bank",
       defaultScope: "repo",
@@ -40,14 +40,14 @@ test("normalizes invalid optional config to defaults", () => {
 
 test("reads environment overrides", () => {
   const old = { ...process.env };
-  process.env.HINDSIGHT_BASE_URL = "https://hindsight.example.com/";
+  process.env.HINDSIGHT_API_URL = "https://hindsight.example.com/";
   process.env.HINDSIGHT_API_KEY = "secret";
   process.env.HINDSIGHT_BANK_ID = "main";
   process.env.HINDSIGHT_DEFAULT_TAGS = "one, two,,";
   process.env.HINDSIGHT_RECALL_MAX_TOKENS = "99";
   try {
     assert.deepEqual(readEnvSettings(), {
-      baseUrl: "https://hindsight.example.com/",
+      apiUrl: "https://hindsight.example.com/",
       apiKey: "secret",
       bankId: "main",
       defaultTags: ["one", "two"],
@@ -71,7 +71,7 @@ test("loadHindsightConfig applies project settings and environment overrides", a
     join(cwd, ".pi", "settings.json"),
     JSON.stringify({
       "extension:hindsight": {
-        baseUrl: "https://project.example.com",
+        apiUrl: "https://project.example.com",
         apiKey: "project-key",
         bankId: "project-bank",
         defaultScope: "global",
@@ -80,13 +80,13 @@ test("loadHindsightConfig applies project settings and environment overrides", a
     }),
   );
   process.env = { ...old };
-  delete process.env.HINDSIGHT_BASE_URL;
+  delete process.env.HINDSIGHT_API_URL;
   delete process.env.HINDSIGHT_API_KEY;
   process.env.HINDSIGHT_BANK_ID = "env-bank";
   process.env.HINDSIGHT_DEFAULT_SCOPE = "repo";
   try {
     const config = await loadHindsightConfig(cwd);
-    assert.equal(config.baseUrl, "https://project.example.com");
+    assert.equal(config.apiUrl, "https://project.example.com");
     assert.equal(config.apiKey, "project-key");
     assert.equal(config.bankId, "env-bank");
     assert.equal(config.defaultScope, "repo");

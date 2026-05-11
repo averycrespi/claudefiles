@@ -12,7 +12,7 @@ export type HindsightBudget = "low" | "mid" | "high";
 export type HindsightTagsMatch = "any" | "any_strict" | "all" | "all_strict";
 
 export type HindsightConfig = {
-  baseUrl: string;
+  apiUrl: string;
   apiKey?: string;
   bankId?: string;
   defaultScope: HindsightScope;
@@ -39,7 +39,7 @@ type RawHindsightConfig = Omit<
 };
 
 export const DEFAULT_HINDSIGHT_CONFIG: HindsightConfig = {
-  baseUrl: "http://localhost:8888",
+  apiUrl: "http://localhost:8888",
   apiKey: undefined,
   bankId: undefined,
   defaultScope: "repo",
@@ -77,7 +77,7 @@ export async function loadHindsightConfig(
 
 export function readEnvSettings(): Partial<HindsightConfig> {
   const settings: Partial<HindsightConfig> = {};
-  setString(settings, "baseUrl", process.env.HINDSIGHT_BASE_URL);
+  setString(settings, "apiUrl", process.env.HINDSIGHT_API_URL);
   setString(settings, "apiKey", process.env.HINDSIGHT_API_KEY);
   setString(settings, "bankId", process.env.HINDSIGHT_BANK_ID);
   setString(settings, "defaultScope", process.env.HINDSIGHT_DEFAULT_SCOPE);
@@ -101,7 +101,7 @@ export function normalizeConfig(
   raw: Partial<RawHindsightConfig>,
 ): HindsightConfig {
   return {
-    baseUrl: normalizeBaseUrl(raw.baseUrl) ?? DEFAULT_HINDSIGHT_CONFIG.baseUrl,
+    apiUrl: normalizeApiUrl(raw.apiUrl) ?? DEFAULT_HINDSIGHT_CONFIG.apiUrl,
     apiKey: normalizeRequiredString(raw.apiKey),
     bankId: normalizeRequiredString(raw.bankId),
     defaultScope: enumOrDefault(
@@ -158,7 +158,7 @@ function setNumber<T extends Record<string, unknown>, K extends keyof T>(
   }
 }
 
-function normalizeBaseUrl(value: unknown): string | undefined {
+function normalizeApiUrl(value: unknown): string | undefined {
   const text = normalizeRequiredString(value);
   if (!text) return undefined;
   try {

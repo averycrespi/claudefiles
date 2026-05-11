@@ -47,7 +47,7 @@ Settings live under `extension:hindsight`. Environment variables override settin
 
 | Field             | Default                 | Environment override          | Description                                                                      |
 | ----------------- | ----------------------- | ----------------------------- | -------------------------------------------------------------------------------- |
-| `baseUrl`         | `http://localhost:8888` | `HINDSIGHT_BASE_URL`          | Hindsight API base URL.                                                          |
+| `apiUrl`          | `http://localhost:8888` | `HINDSIGHT_API_URL`           | Hindsight API URL.                                                               |
 | `apiKey`          | unset                   | `HINDSIGHT_API_KEY`           | Bearer token. Required for tool network calls and masked by `/hindsight-config`. |
 | `bankId`          | unset                   | `HINDSIGHT_BANK_ID`           | Hindsight bank ID. Required for tool network calls.                              |
 | `defaultScope`    | `repo`                  | `HINDSIGHT_DEFAULT_SCOPE`     | Default scope: `repo` or `global`.                                               |
@@ -60,7 +60,7 @@ Settings live under `extension:hindsight`. Environment variables override settin
 ```json
 {
   "extension:hindsight": {
-    "baseUrl": "https://hindsight.example.com",
+    "apiUrl": "https://hindsight.example.com",
     "apiKey": "...",
     "bankId": "main",
     "defaultScope": "repo",
