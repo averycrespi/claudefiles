@@ -59,12 +59,13 @@ A workflow for reliably turning ideas into pull requests, adapted from [superpow
 
 ### Other Workflows
 
-| Skill                   | Purpose                                                             |
-| ----------------------- | ------------------------------------------------------------------- |
-| `assisting-research`    | Structured multi-session research with experiments and HTML reports |
-| `creating-jira-tickets` | Draft and create well-structured Jira tickets                       |
-| `reviewing-prs`         | Holistic PR review across 6 parallel dimensions                     |
-| `troubleshooting`       | Battle buddy for incident response and system troubleshooting       |
+| Skill                     | Purpose                                                                |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `assisting-research`      | Structured multi-session research with experiments and HTML reports    |
+| `creating-html-artifacts` | Create standalone HTML reports, explainers, visual plans, decks, tools |
+| `creating-jira-tickets`   | Draft and create well-structured Jira tickets                          |
+| `reviewing-prs`           | Holistic PR review across 6 parallel dimensions                        |
+| `troubleshooting`         | Battle buddy for incident response and system troubleshooting          |
 
 ### Reference Skills
 
