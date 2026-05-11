@@ -6,11 +6,14 @@ import type {
   HindsightSource,
 } from "./config.ts";
 
+export const TAG_POLICY_VERSION = "1";
+
 export type TagOptions = {
   cwd: string;
   scope: HindsightScope;
   source: HindsightSource;
   kind?: HindsightKind;
+  origin?: string;
   defaultTags?: string[];
   tags?: string[];
 };
@@ -18,6 +21,7 @@ export type TagOptions = {
 export type QueryTagOptions = {
   cwd: string;
   scope: HindsightScope;
+  origin?: string;
   defaultTags?: string[];
   tags?: string[];
 };
@@ -40,6 +44,7 @@ export function buildTags(options: TagOptions): string[] {
       : undefined,
     `source:${options.source}`,
     options.kind ? `kind:${options.kind}` : undefined,
+    options.origin ? `origin:${options.origin}` : undefined,
     ...(options.defaultTags ?? []),
     ...(options.tags ?? []),
   ]);
@@ -51,6 +56,7 @@ export function buildQueryTags(options: QueryTagOptions): string[] {
     options.scope === "repo"
       ? `repo:${deriveRepoName(options.cwd)}`
       : undefined,
+    options.origin ? `origin:${options.origin}` : undefined,
     ...(options.defaultTags ?? []),
     ...(options.tags ?? []),
   ]);
@@ -73,17 +79,30 @@ export function buildMetadata(options: {
   scope: HindsightScope;
   source: HindsightSource;
   kind?: HindsightKind;
+  origin?: string;
+  documentId?: string;
   metadata?: Record<string, string>;
 }): Record<string, string> {
+  const origin = options.origin ? normalizeTag(options.origin) : undefined;
+  const documentId = normalizeMetadataString(options.documentId);
   return {
     ...(options.metadata ?? {}),
     hindsight_scope: options.scope,
     hindsight_source: options.source,
     ...(options.kind ? { hindsight_kind: options.kind } : {}),
+    ...(origin ? { hindsight_origin: origin } : {}),
+    ...(documentId ? { hindsight_document_id: documentId } : {}),
+    hindsight_tag_policy_version: TAG_POLICY_VERSION,
     ...(options.scope === "repo"
       ? { hindsight_repo: deriveRepoName(options.cwd) }
       : {}),
   };
+}
+
+function normalizeMetadataString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== ""
+    ? value.trim()
+    : undefined;
 }
 
 export function deriveRepoName(cwd: string): string {

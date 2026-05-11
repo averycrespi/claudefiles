@@ -20,8 +20,9 @@ Examples:
   "content": "ABC-123 requires the importer to ignore archived rows.",
   "source": "external",
   "kind": "semantic",
+  "origin": "jira",
   "tags": ["ticket:abc-123"],
-  "document_id": "ticket-abc-123"
+  "document_id": "ticket:abc-123"
 }
 ```
 
@@ -79,10 +80,30 @@ All actions use deterministic tags:
 - `repo:<base-repo-name>` when scope is `repo`
 - `source:<manual|external|agent>` for retained content only; recall/reflect do not source-filter by default
 - `kind:<semantic|episodic|procedural>` when provided for retained content
+- `origin:<slug>` when the caller provides `origin`; recall/reflect also include this tag when filtering by `origin`
 - configured `defaultTags`
 - caller-provided tags
 
-Tags are lowercased and normalized to safe separators. Repo scope derives the base repository name from Git metadata. In Git worktrees, the tag uses the common base repository name instead of the worktree directory name. Non-Git directories fall back to the current directory basename.
+Tags are lowercased, deduped, and normalized to safe separators. Repo scope derives the base repository name from Git metadata. In Git worktrees, the tag uses the common base repository name instead of the worktree directory name. Non-Git directories fall back to the current directory basename.
+
+Use `origin` to distinguish ingestion sources without overloading `source`. `source` answers who supplied the memory to Pi (`manual`, `external`, or `agent`); `origin` answers where the underlying information came from, such as `jira`, `docs`, `github`, `chat`, or `user`.
+
+Prefer stable, namespaced caller tags:
+
+- `topic:<slug>` for broad subjects, such as `topic:repo-conventions`
+- `ticket:<key>` for issue tracker identifiers, such as `ticket:abc-123`
+- `tool:<name>` for tools or systems, such as `tool:stow`
+- `preference:<name>` for user preferences, such as `preference:user-name`
+- `convention:<name>` for working conventions, such as `convention:stow-editing`
+
+Use deterministic `document_id` values to avoid duplicate durable memories. For semantic and procedural memories, use the same `document_id` for the same source object and pass `update_mode: "replace"`. Use append-style IDs for episodic/session memories. Recommended shapes:
+
+- `repo:<repo>:convention:<slug>`
+- `ticket:<key>`
+- `source:<origin>:<external-id>`
+- `session:<date>:<session-id>`
+
+Retained memories include policy metadata automatically: `hindsight_scope`, `hindsight_source`, optional `hindsight_kind`, optional `hindsight_origin`, optional `hindsight_document_id`, optional `hindsight_repo`, and `hindsight_tag_policy_version`.
 
 ## Logging
 

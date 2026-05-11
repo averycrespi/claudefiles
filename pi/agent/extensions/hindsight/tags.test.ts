@@ -4,10 +4,12 @@ import { join } from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildMetadata,
   buildQueryTags,
   buildTags,
   deriveRepoName,
   normalizeTag,
+  TAG_POLICY_VERSION,
 } from "./tags.ts";
 
 test("normalizes tags predictably", () => {
@@ -36,6 +38,48 @@ test("builds deterministic scoped tags", () => {
       "ticket:abc-123",
     ],
   );
+});
+
+test("builds deterministic origin tags", () => {
+  const dir = mkdtempSync(join(tmpdir(), "hindsight-origin-tags-"));
+  mkdirSync(join(dir, ".git"));
+  const tags = buildTags({
+    cwd: dir,
+    scope: "repo",
+    source: "external",
+    kind: "semantic",
+    origin: "Jira Importer",
+  });
+  assert.ok(tags.includes("origin:jira-importer"));
+
+  const queryTags = buildQueryTags({
+    cwd: dir,
+    scope: "repo",
+    origin: "Jira Importer",
+  });
+  assert.ok(queryTags.includes("origin:jira-importer"));
+});
+
+test("builds metadata with origin, document id, and policy version", () => {
+  const dir = mkdtempSync(join(tmpdir(), "hindsight-metadata-"));
+  mkdirSync(join(dir, ".git"));
+  const metadata = buildMetadata({
+    cwd: dir,
+    scope: "repo",
+    source: "external",
+    kind: "procedural",
+    origin: "docs importer",
+    documentId: "repo:agent-config:convention:stow-editing",
+    metadata: { x: "y" },
+  });
+
+  assert.equal(metadata.x, "y");
+  assert.equal(metadata.hindsight_origin, "docs-importer");
+  assert.equal(
+    metadata.hindsight_document_id,
+    "repo:agent-config:convention:stow-editing",
+  );
+  assert.equal(metadata.hindsight_tag_policy_version, TAG_POLICY_VERSION);
 });
 
 test("builds query tags without source filtering", () => {

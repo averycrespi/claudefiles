@@ -36,6 +36,12 @@ const PARAMS = Type.Object({
   scope: Type.Optional(scopeSchema),
   source: Type.Optional(Type.String()),
   kind: Type.Optional(Type.String()),
+  origin: Type.Optional(
+    Type.String({
+      description:
+        "Filterable memory origin, e.g. jira, docs, github, chat, or user.",
+    }),
+  ),
   tags: Type.Optional(Type.Array(Type.String())),
   metadata: Type.Optional(Type.Record(Type.String(), Type.String())),
   document_id: Type.Optional(Type.String()),
@@ -69,6 +75,13 @@ export function registerHindsightTool(pi: ExtensionAPI, deps: ToolDeps): void {
     label: "Hindsight Memory",
     description:
       "Explicitly retain facts in Hindsight, recall raw memory evidence, or ask Hindsight to synthesize a grounded reflection. Use recall for evidence and reflect for synthesis.",
+    promptGuidelines: [
+      "For Hindsight retain calls, use origin for the underlying information source, such as jira, docs, github, chat, or user; source remains manual, external, or agent.",
+      "Use stable namespaced caller tags when useful: topic:*, ticket:*, tool:*, preference:*, and convention:*.",
+      "Use deterministic document_id values for durable semantic/procedural memories so repeats update the same source object.",
+      "Use update_mode: replace for durable facts, preferences, and conventions; reserve append-style document_id values for episodic/session memories.",
+      "Avoid ad hoc synonyms for the same tag concept; prefer existing canonical tags over near-duplicates.",
+    ],
     parameters: PARAMS,
     renderCall(args, theme, context) {
       return getTruncatedText(context.lastComponent, [
@@ -185,11 +198,14 @@ async function retain(
   const callerTags = arrayOfStrings(params.tags);
   if (params.tags !== undefined && !callerTags)
     return errorResult("hindsight retain: tags must be an array of strings");
+  const origin = stringValue(params.origin);
+  const documentId = stringValue(params.document_id);
   const tags = buildTags({
     cwd,
     scope,
     source,
     kind,
+    origin,
     defaultTags: config.defaultTags,
     tags: callerTags,
   });
@@ -203,9 +219,7 @@ async function retain(
         ...(stringValue(params.timestamp)
           ? { timestamp: stringValue(params.timestamp) }
           : {}),
-        ...(stringValue(params.document_id)
-          ? { document_id: stringValue(params.document_id) }
-          : {}),
+        ...(documentId ? { document_id: documentId } : {}),
         ...(updateMode ? { update_mode: updateMode } : {}),
         tags,
         metadata: buildMetadata({
@@ -213,6 +227,8 @@ async function retain(
           scope,
           source,
           kind,
+          origin,
+          documentId,
           metadata: metadata ?? undefined,
         }),
       },
@@ -256,6 +272,7 @@ async function recall(
   const callerTags = arrayOfStrings(params.tags);
   if (params.tags !== undefined && !callerTags)
     return errorResult("hindsight recall: tags must be an array of strings");
+  const origin = stringValue(params.origin);
   const types = arrayOfStrings(params.types);
   if (params.types !== undefined && !types)
     return errorResult("hindsight recall: types must be an array of strings");
@@ -267,6 +284,7 @@ async function recall(
   const tags = buildQueryTags({
     cwd,
     scope,
+    origin,
     defaultTags: config.defaultTags,
     tags: callerTags,
   });
@@ -327,6 +345,7 @@ async function reflect(
   const callerTags = arrayOfStrings(params.tags);
   if (params.tags !== undefined && !callerTags)
     return errorResult("hindsight reflect: tags must be an array of strings");
+  const origin = stringValue(params.origin);
   const factTypes = arrayOfStrings(params.fact_types);
   if (params.fact_types !== undefined && !factTypes)
     return errorResult(
@@ -340,6 +359,7 @@ async function reflect(
   const tags = buildQueryTags({
     cwd,
     scope,
+    origin,
     defaultTags: config.defaultTags,
     tags: callerTags,
   });
@@ -381,6 +401,8 @@ function summarizeCall(params: Params): string {
   }
   const subject = stringValue(params.query) ?? stringValue(params.content);
   if (subject) parts.push(quote(subject));
+  const origin = stringValue(params.origin);
+  if (origin) parts.push(`origin:${origin}`);
   const tags = arrayOfStrings(params.tags);
   if (tags && tags.length > 0) parts.push(`tags:${tags.length}`);
   const budget = stringValue(params.budget);

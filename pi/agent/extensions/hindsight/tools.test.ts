@@ -20,6 +20,7 @@ type Renderable = { render(width: number): string[] };
 type ToolDef = {
   name: string;
   parameters: Record<string, any>;
+  promptGuidelines?: string[];
   renderCall: (
     args: Record<string, unknown>,
     theme: typeof identityTheme,
@@ -84,10 +85,24 @@ class FakeClient extends HindsightClient {
   }
 }
 
-test("schema exposes scope string enum", () => {
+test("schema exposes scope string enum and origin", () => {
   const tool = loadTool();
 
   assert.deepEqual(tool.parameters.properties.scope.enum, ["repo", "global"]);
+  assert.equal(tool.parameters.properties.origin.type, "string");
+});
+
+test("promptGuidelines teach tag and document id policy", () => {
+  const tool = loadTool();
+  const guidance = tool.promptGuidelines?.join("\n") ?? "";
+
+  assert.match(guidance, /origin/);
+  assert.match(guidance, /topic:\*/);
+  assert.match(guidance, /ticket:\*/);
+  assert.match(guidance, /document_id/);
+  assert.match(guidance, /update_mode/);
+  assert.match(guidance, /replace/);
+  assert.match(guidance, /Avoid ad hoc synonyms/);
 });
 
 test("renderCall summarizes recall without dumping JSON", () => {
@@ -214,6 +229,7 @@ test("shapes retain body with tags and metadata", async () => {
       kind: "procedural",
       tags: ["Ticket ABC"],
       metadata: { x: "y" },
+      origin: "Docs Importer",
       document_id: "doc1",
     },
     new AbortController().signal,
@@ -224,7 +240,11 @@ test("shapes retain body with tags and metadata", async () => {
   assert.ok(body.items[0].tags.includes("source:external"));
   assert.ok(body.items[0].tags.includes("kind:procedural"));
   assert.ok(body.items[0].tags.includes("ticket-abc"));
+  assert.ok(body.items[0].tags.includes("origin:docs-importer"));
   assert.equal(body.items[0].metadata.x, "y");
+  assert.equal(body.items[0].metadata.hindsight_origin, "docs-importer");
+  assert.equal(body.items[0].metadata.hindsight_document_id, "doc1");
+  assert.equal(body.items[0].metadata.hindsight_tag_policy_version, "1");
 });
 
 test("marks recall result-count truncation in agent text", async () => {
