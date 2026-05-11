@@ -2,13 +2,36 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { HindsightClient } from "./client.ts";
 import { DEFAULT_HINDSIGHT_CONFIG } from "./config.ts";
-import { executeHindsight } from "./tools.ts";
+import { executeHindsight, registerHindsightTool } from "./tools.ts";
 
 const config = {
   ...DEFAULT_HINDSIGHT_CONFIG,
   apiKey: "secret",
   bankId: "main",
 };
+
+type ToolDef = {
+  name: string;
+  parameters: Record<string, any>;
+};
+
+function loadTool() {
+  const registered: ToolDef[] = [];
+  const pi = {
+    registerTool(def: ToolDef) {
+      registered.push(def);
+    },
+  };
+
+  registerHindsightTool(pi as any, {
+    client: new FakeClient(),
+    loadConfig: async () => config,
+  });
+
+  assert.equal(registered.length, 1);
+  assert.equal(registered[0]?.name, "hindsight");
+  return registered[0]!;
+}
 
 class FakeClient extends HindsightClient {
   calls: Array<[string, unknown]> = [];
@@ -33,6 +56,12 @@ class FakeClient extends HindsightClient {
     return this.response;
   }
 }
+
+test("schema exposes scope string enum", () => {
+  const tool = loadTool();
+
+  assert.deepEqual(tool.parameters.properties.scope.enum, ["repo", "global"]);
+});
 
 test("returns recoverable error for missing required config", async () => {
   const result = await executeHindsight(

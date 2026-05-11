@@ -13,12 +13,18 @@ const MAX_RESULTS = 8;
 const MAX_FIELD = 1200;
 const MAX_TOTAL = 7000;
 
+const scopeSchema = Type.Unsafe<"repo" | "global">({
+  type: "string",
+  enum: ["repo", "global"],
+  description: "Memory scope. Use exactly one of: repo, global.",
+});
+
 const PARAMS = Type.Object({
   action: Type.String({ description: "One of: retain, recall, reflect." }),
   content: Type.Optional(Type.String()),
   context: Type.Optional(Type.String()),
   query: Type.Optional(Type.String()),
-  scope: Type.Optional(Type.String()),
+  scope: Type.Optional(scopeSchema),
   source: Type.Optional(Type.String()),
   kind: Type.Optional(Type.String()),
   tags: Type.Optional(Type.Array(Type.String())),
