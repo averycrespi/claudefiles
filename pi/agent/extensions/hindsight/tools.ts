@@ -7,6 +7,15 @@ import { Type } from "@sinclair/typebox";
 import type { HindsightClient } from "./client.ts";
 import type { HindsightConfig } from "./config.ts";
 import { validateRequiredConfig } from "./config.ts";
+import {
+  clearPartialTimer,
+  FIRST_LINE_INLINE_MAX,
+  firstLine,
+  getResultText,
+  getTruncatedText,
+  partialElapsed,
+  plural,
+} from "../_shared/render.ts";
 import { buildMetadata, buildQueryTags, buildTags } from "./tags.ts";
 
 const MAX_RESULTS = 8;
@@ -61,6 +70,36 @@ export function registerHindsightTool(pi: ExtensionAPI, deps: ToolDeps): void {
     description:
       "Explicitly retain facts in Hindsight, recall raw memory evidence, or ask Hindsight to synthesize a grounded reflection. Use recall for evidence and reflect for synthesis.",
     parameters: PARAMS,
+    renderCall(args, theme, context) {
+      return getTruncatedText(context.lastComponent, [
+        `${theme.fg("toolTitle", theme.bold("hindsight"))} ${theme.fg("muted", summarizeCall(args as Params))}`,
+      ]);
+    },
+    renderResult(result, { isPartial }, theme, context) {
+      const action = stringValue(context.args?.action);
+      if (isPartial) {
+        return getTruncatedText(context.lastComponent, [
+          theme.fg(
+            "warning",
+            `${partialLabel(action)}...${partialElapsed(context)}`,
+          ),
+        ]);
+      }
+
+      clearPartialTimer(context);
+      const text = getResultText(result);
+      const message = firstLine(text);
+      const details = result.details as Record<string, unknown> | undefined;
+      if (context.isError || details?.error === true) {
+        return getTruncatedText(context.lastComponent, [
+          theme.fg("error", message || "hindsight error"),
+        ]);
+      }
+
+      return getTruncatedText(context.lastComponent, [
+        theme.fg("success", summarizeResult(details, text, action)),
+      ]);
+    },
     async execute(_id, params, signal, _onUpdate, ctx) {
       const config = await deps.loadConfig(ctx.cwd);
       deps.client.configure(config);
@@ -327,6 +366,89 @@ async function reflect(
     response: bounded.value,
     truncated: bounded.truncated,
   });
+}
+
+function summarizeCall(params: Params): string {
+  const action = stringValue(params.action) ?? "call";
+  const parts = [action];
+  const scope = stringValue(params.scope);
+  if (scope) parts.push(scope);
+  if (action === "retain") {
+    const source = stringValue(params.source);
+    const kind = stringValue(params.kind);
+    if (source) parts.push(source);
+    if (kind) parts.push(kind);
+  }
+  const subject = stringValue(params.query) ?? stringValue(params.content);
+  if (subject) parts.push(quote(subject));
+  const tags = arrayOfStrings(params.tags);
+  if (tags && tags.length > 0) parts.push(`tags:${tags.length}`);
+  const budget = stringValue(params.budget);
+  if (budget) parts.push(`budget:${budget}`);
+  const includes = summarizeIncludes(params);
+  if (includes.length > 0) parts.push(includes.join(","));
+  return parts.join(" ");
+}
+
+function summarizeIncludes(params: Params): string[] {
+  const labels: string[] = [];
+  if (params.include_entities === true) labels.push("entities");
+  if (params.include_chunks === true) labels.push("chunks");
+  if (params.include_source_facts === true) labels.push("facts");
+  if (params.include_facts === true) labels.push("facts");
+  if (params.include_tool_calls === true) labels.push("tool-calls");
+  return [...new Set(labels)];
+}
+
+function partialLabel(action: string | undefined): string {
+  if (action === "retain") return "Retaining memory";
+  if (action === "recall") return "Recalling memories";
+  if (action === "reflect") return "Reflecting on memories";
+  return "Using Hindsight";
+}
+
+function summarizeResult(
+  details: Record<string, unknown> | undefined,
+  text: string,
+  fallbackAction: string | undefined,
+): string {
+  const action = stringValue(details?.action) ?? fallbackAction;
+  const response = details?.response;
+  const truncated = details?.truncated === true ? " (truncated)" : "";
+  if (action === "retain") {
+    const count = numericValue(get(response, "items_count")) ?? 1;
+    return `stored ${plural(count, "memory", "memories")}`;
+  }
+  if (action === "recall") {
+    const results = get(response, "results");
+    const count = Array.isArray(results) ? results.length : 0;
+    return count === 0
+      ? `no memories found${truncated}`
+      : `${plural(count, "memory", "memories")} found${truncated}`;
+  }
+  if (action === "reflect") {
+    const reflectedText = stringValue(get(response, "text")) ?? "";
+    const line = firstLine(
+      reflectedText || text.replace(/^hindsight reflect:\s*/i, ""),
+    );
+    const summary =
+      line.length > 0 && line.length <= FIRST_LINE_INLINE_MAX
+        ? line
+        : "reflection ready";
+    return `${summary}${truncated}`;
+  }
+  return firstLine(text) || "hindsight complete";
+}
+
+function quote(value: string): string {
+  const compact = value.replace(/\s+/g, " ");
+  return `"${compact}"`;
+}
+
+function numericValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function includeObject(

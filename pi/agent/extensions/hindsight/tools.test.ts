@@ -10,9 +10,36 @@ const config = {
   bankId: "main",
 };
 
+const identityTheme = {
+  fg: (_color: string, text: string) => text,
+  bold: (text: string) => text,
+};
+
+type Renderable = { render(width: number): string[] };
+
 type ToolDef = {
   name: string;
   parameters: Record<string, any>;
+  renderCall: (
+    args: Record<string, unknown>,
+    theme: typeof identityTheme,
+    context: { lastComponent?: unknown },
+  ) => Renderable;
+  renderResult: (
+    result: {
+      content: Array<{ type: string; text: string }>;
+      details?: unknown;
+    },
+    options: { isPartial: boolean },
+    theme: typeof identityTheme,
+    context: {
+      args: Record<string, unknown>;
+      isError?: boolean;
+      lastComponent?: unknown;
+      state: Record<string, unknown>;
+      invalidate: () => void;
+    },
+  ) => Renderable;
 };
 
 function loadTool() {
@@ -61,6 +88,58 @@ test("schema exposes scope string enum", () => {
   const tool = loadTool();
 
   assert.deepEqual(tool.parameters.properties.scope.enum, ["repo", "global"]);
+});
+
+test("renderCall summarizes recall without dumping JSON", () => {
+  const tool = loadTool();
+
+  const lines = tool
+    .renderCall(
+      {
+        action: "recall",
+        query: "memories relevant to user preferences",
+        scope: "global",
+        include_source_facts: true,
+        tags: ["preference:user-name", "agent:pi"],
+      },
+      identityTheme,
+      {},
+    )
+    .render(120);
+
+  assert.equal(lines.length, 1);
+  assert.match(lines[0] ?? "", /hindsight recall global/);
+  assert.match(lines[0] ?? "", /memories relevant to user preferences/);
+  assert.match(lines[0] ?? "", /tags:2/);
+  assert.match(lines[0] ?? "", /facts/);
+  assert.doesNotMatch(lines[0] ?? "", /\{/);
+  assert.doesNotMatch(lines[0] ?? "", /include_source_facts/);
+});
+
+test("renderResult summarizes recall count", () => {
+  const tool = loadTool();
+
+  const lines = tool
+    .renderResult(
+      {
+        content: [{ type: "text", text: "hindsight recall:\n{...}" }],
+        details: {
+          action: "recall",
+          response: { results: [{ id: "1" }, { id: "2" }] },
+          truncated: true,
+        },
+      },
+      { isPartial: false },
+      identityTheme,
+      {
+        args: { action: "recall" },
+        state: {},
+        invalidate() {},
+      },
+    )
+    .render(120);
+
+  assert.deepEqual(lines, ["2 memories found (truncated)"]);
 });
 
 test("returns recoverable error for missing required config", async () => {
