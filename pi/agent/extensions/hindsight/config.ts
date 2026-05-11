@@ -14,7 +14,7 @@ export type HindsightTagsMatch = "any" | "any_strict" | "all" | "all_strict";
 export type HindsightConfig = {
   apiUrl: string;
   apiKey?: string;
-  bankId?: string;
+  bankId: string;
   defaultScope: HindsightScope;
   defaultTags: string[];
   recallMaxTokens: number;
@@ -41,7 +41,7 @@ type RawHindsightConfig = Omit<
 export const DEFAULT_HINDSIGHT_CONFIG: HindsightConfig = {
   apiUrl: "http://localhost:8888",
   apiKey: undefined,
-  bankId: undefined,
+  bankId: "default",
   defaultScope: "repo",
   defaultTags: [],
   recallMaxTokens: 1200,
@@ -103,7 +103,8 @@ export function normalizeConfig(
   return {
     apiUrl: normalizeApiUrl(raw.apiUrl) ?? DEFAULT_HINDSIGHT_CONFIG.apiUrl,
     apiKey: normalizeRequiredString(raw.apiKey),
-    bankId: normalizeRequiredString(raw.bankId),
+    bankId:
+      normalizeRequiredString(raw.bankId) ?? DEFAULT_HINDSIGHT_CONFIG.bankId,
     defaultScope: enumOrDefault(
       raw.defaultScope,
       SCOPES,
@@ -135,7 +136,6 @@ export function normalizeConfig(
 export function validateRequiredConfig(config: HindsightConfig): string[] {
   const errors: string[] = [];
   if (!config.apiKey) errors.push("Hindsight apiKey is not configured");
-  if (!config.bankId) errors.push("Hindsight bankId is not configured");
   return errors;
 }
 

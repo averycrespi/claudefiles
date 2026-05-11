@@ -1,6 +1,6 @@
 # Hindsight Extension
 
-The Hindsight extension gives Pi one explicit `hindsight` tool for memory work against a configured Hindsight bank.
+The Hindsight extension gives Pi one explicit `hindsight` tool for memory work against a configured Hindsight bank. If no bank is configured, it uses the `default` bank.
 
 V1 is explicit-only: it does not automatically recall, retain, ingest sessions, create banks, read URLs, or provide subagents automatic memory access. If a subagent needs memory, recall bounded facts first and include them in the subagent prompt.
 
@@ -49,7 +49,7 @@ Settings live under `extension:hindsight`. Environment variables override settin
 | ----------------- | ----------------------- | ----------------------------- | -------------------------------------------------------------------------------- |
 | `apiUrl`          | `http://localhost:8888` | `HINDSIGHT_API_URL`           | Hindsight API URL.                                                               |
 | `apiKey`          | unset                   | `HINDSIGHT_API_KEY`           | Bearer token. Required for tool network calls and masked by `/hindsight-config`. |
-| `bankId`          | unset                   | `HINDSIGHT_BANK_ID`           | Hindsight bank ID. Required for tool network calls.                              |
+| `bankId`          | `default`               | `HINDSIGHT_BANK_ID`           | Hindsight bank ID.                                                               |
 | `defaultScope`    | `repo`                  | `HINDSIGHT_DEFAULT_SCOPE`     | Default scope: `repo` or `global`.                                               |
 | `defaultTags`     | `[]`                    | `HINDSIGHT_DEFAULT_TAGS`      | Extra default tags. Env format is comma-separated.                               |
 | `recallMaxTokens` | `1200`                  | `HINDSIGHT_RECALL_MAX_TOKENS` | Server recall token hint. Local output bounds still apply.                       |

@@ -16,7 +16,7 @@ test("normalizes invalid optional config to defaults", () => {
     normalizeConfig({
       apiUrl: "not a url",
       apiKey: " ",
-      bankId: " bank ",
+      bankId: " ",
       defaultScope: "bad",
       defaultTags: [" one ", 3, ""],
       recallMaxTokens: -1,
@@ -27,7 +27,7 @@ test("normalizes invalid optional config to defaults", () => {
     {
       apiUrl: "http://localhost:8888",
       apiKey: undefined,
-      bankId: "bank",
+      bankId: "default",
       defaultScope: "repo",
       defaultTags: ["one"],
       recallMaxTokens: 1200,
@@ -36,6 +36,10 @@ test("normalizes invalid optional config to defaults", () => {
       tagsMatch: "all",
     },
   );
+});
+
+test("trims configured bankId", () => {
+  assert.equal(normalizeConfig({ bankId: " bank " }).bankId, "bank");
 });
 
 test("reads environment overrides", () => {
