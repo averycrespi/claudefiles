@@ -18,6 +18,7 @@ export type HindsightConfig = {
   defaultScope: HindsightScope;
   defaultTags: string[];
   recallMaxTokens: number;
+  reflectMaxTokens: number;
   recallBudget: HindsightBudget;
   reflectBudget: HindsightBudget;
   tagsMatch: HindsightTagsMatch;
@@ -45,6 +46,7 @@ export const DEFAULT_HINDSIGHT_CONFIG: HindsightConfig = {
   defaultScope: "repo",
   defaultTags: [],
   recallMaxTokens: 1200,
+  reflectMaxTokens: 1200,
   recallBudget: "mid",
   reflectBudget: "low",
   tagsMatch: "any_strict",
@@ -91,6 +93,11 @@ export function readEnvSettings(): Partial<HindsightConfig> {
     "recallMaxTokens",
     process.env.HINDSIGHT_RECALL_MAX_TOKENS,
   );
+  setNumber(
+    settings,
+    "reflectMaxTokens",
+    process.env.HINDSIGHT_REFLECT_MAX_TOKENS,
+  );
   setString(settings, "recallBudget", process.env.HINDSIGHT_RECALL_BUDGET);
   setString(settings, "reflectBudget", process.env.HINDSIGHT_REFLECT_BUDGET);
   setString(settings, "tagsMatch", process.env.HINDSIGHT_TAGS_MATCH);
@@ -114,6 +121,10 @@ export function normalizeConfig(
     recallMaxTokens: positiveIntegerOrDefault(
       raw.recallMaxTokens,
       DEFAULT_HINDSIGHT_CONFIG.recallMaxTokens,
+    ),
+    reflectMaxTokens: positiveIntegerOrDefault(
+      raw.reflectMaxTokens,
+      DEFAULT_HINDSIGHT_CONFIG.reflectMaxTokens,
     ),
     recallBudget: enumOrDefault(
       raw.recallBudget,

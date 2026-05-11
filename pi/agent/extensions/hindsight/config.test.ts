@@ -20,6 +20,7 @@ test("normalizes invalid optional config to defaults", () => {
       defaultScope: "bad",
       defaultTags: [" one ", 3, ""],
       recallMaxTokens: -1,
+      reflectMaxTokens: -2,
       recallBudget: "bad",
       reflectBudget: "high",
       tagsMatch: "all",
@@ -31,6 +32,7 @@ test("normalizes invalid optional config to defaults", () => {
       defaultScope: "repo",
       defaultTags: ["one"],
       recallMaxTokens: 1200,
+      reflectMaxTokens: 1200,
       recallBudget: "mid",
       reflectBudget: "high",
       tagsMatch: "all",
@@ -48,14 +50,24 @@ test("reads environment overrides", () => {
   process.env.HINDSIGHT_API_KEY = "secret";
   process.env.HINDSIGHT_BANK_ID = "main";
   process.env.HINDSIGHT_DEFAULT_TAGS = "one, two,,";
+  process.env.HINDSIGHT_DEFAULT_SCOPE = "global";
   process.env.HINDSIGHT_RECALL_MAX_TOKENS = "99";
+  process.env.HINDSIGHT_REFLECT_MAX_TOKENS = "88";
+  process.env.HINDSIGHT_RECALL_BUDGET = "high";
+  process.env.HINDSIGHT_REFLECT_BUDGET = "mid";
+  process.env.HINDSIGHT_TAGS_MATCH = "all";
   try {
     assert.deepEqual(readEnvSettings(), {
       apiUrl: "https://hindsight.example.com/",
       apiKey: "secret",
       bankId: "main",
+      defaultScope: "global",
       defaultTags: ["one", "two"],
       recallMaxTokens: 99,
+      reflectMaxTokens: 88,
+      recallBudget: "high",
+      reflectBudget: "mid",
+      tagsMatch: "all",
     });
   } finally {
     process.env = old;

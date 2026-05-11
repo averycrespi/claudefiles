@@ -85,10 +85,40 @@ class FakeClient extends HindsightClient {
   }
 }
 
-test("schema exposes scope string enum and origin", () => {
+test("schema exposes enums for finite string parameters", () => {
   const tool = loadTool();
 
+  assert.deepEqual(tool.parameters.properties.action.enum, [
+    "retain",
+    "recall",
+    "reflect",
+  ]);
   assert.deepEqual(tool.parameters.properties.scope.enum, ["repo", "global"]);
+  assert.deepEqual(tool.parameters.properties.source.enum, [
+    "manual",
+    "external",
+    "agent",
+  ]);
+  assert.deepEqual(tool.parameters.properties.kind.enum, [
+    "semantic",
+    "episodic",
+    "procedural",
+  ]);
+  assert.deepEqual(tool.parameters.properties.update_mode.enum, [
+    "replace",
+    "append",
+  ]);
+  assert.deepEqual(tool.parameters.properties.tags_match.enum, [
+    "any",
+    "any_strict",
+    "all",
+    "all_strict",
+  ]);
+  assert.deepEqual(tool.parameters.properties.budget.enum, [
+    "low",
+    "mid",
+    "high",
+  ]);
   assert.equal(tool.parameters.properties.origin.type, "string");
 });
 
@@ -103,6 +133,8 @@ test("promptGuidelines teach tag and document id policy", () => {
   assert.match(guidance, /update_mode/);
   assert.match(guidance, /replace/);
   assert.match(guidance, /Avoid ad hoc synonyms/);
+  assert.match(guidance, /untrusted evidence/);
+  assert.match(guidance, /verify/i);
 });
 
 test("renderCall summarizes recall without dumping JSON", () => {
@@ -215,6 +247,44 @@ test("returns recoverable error text for client failures", async () => {
   );
 });
 
+test("blocks secret-like retained content before calling Hindsight", async () => {
+  const client = new FakeClient();
+  const result = await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    {
+      action: "retain",
+      content: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----",
+    },
+    new AbortController().signal,
+  );
+  const text = result.content[0].type === "text" ? result.content[0].text : "";
+  assert.match(text, /blocked/);
+  assert.match(text, /private key/i);
+  assert.equal((result.details as any).error, true);
+  assert.equal(client.calls.length, 0);
+});
+
+test("rejects caller metadata keys reserved for Hindsight policy", async () => {
+  const client = new FakeClient();
+  const result = await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    {
+      action: "retain",
+      content: "fact",
+      metadata: { hindsight_scope: "global" },
+    },
+    new AbortController().signal,
+  );
+  const text = result.content[0].type === "text" ? result.content[0].text : "";
+  assert.match(text, /reserved metadata/i);
+  assert.equal((result.details as any).error, true);
+  assert.equal(client.calls.length, 0);
+});
+
 test("shapes retain body with tags and metadata", async () => {
   const client = new FakeClient();
   client.response = { success: true, items_count: 1 };
@@ -247,6 +317,47 @@ test("shapes retain body with tags and metadata", async () => {
   assert.equal(body.items[0].metadata.hindsight_tag_policy_version, "1");
 });
 
+test("shapes batch retain body with per-item fields", async () => {
+  const client = new FakeClient();
+  client.response = { success: true, items_count: 2 };
+  await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    {
+      action: "retain",
+      source: "external",
+      kind: "semantic",
+      tags: ["ticket:ABC-123"],
+      items: [
+        {
+          content: "first fact",
+          document_id: "doc:first",
+          metadata: { item: "one" },
+          tags: ["topic:first"],
+        },
+        {
+          content: "second fact",
+          context: "from issue tracker",
+          update_mode: "append",
+          tags: ["topic:second"],
+        },
+      ],
+    },
+    new AbortController().signal,
+  );
+  const body = client.calls[0][1] as any;
+  assert.equal(body.items.length, 2);
+  assert.equal(body.items[0].content, "first fact");
+  assert.equal(body.items[0].document_id, "doc:first");
+  assert.equal(body.items[0].metadata.item, "one");
+  assert.ok(body.items[0].tags.includes("ticket:abc-123"));
+  assert.ok(body.items[0].tags.includes("topic:first"));
+  assert.equal(body.items[1].context, "from issue tracker");
+  assert.equal(body.items[1].update_mode, "append");
+  assert.ok(body.items[1].tags.includes("topic:second"));
+});
+
 test("marks recall result-count truncation in agent text", async () => {
   const client = new FakeClient();
   client.response = {
@@ -265,6 +376,21 @@ test("marks recall result-count truncation in agent text", async () => {
   const text = result.content[0].type === "text" ? result.content[0].text : "";
   assert.match(text, /truncated/);
   assert.equal((result.details as any).truncated, true);
+});
+
+test("recall result text includes memory trust boundary", async () => {
+  const client = new FakeClient();
+  client.response = { results: [] };
+  const result = await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    { action: "recall", query: "q" },
+    new AbortController().signal,
+  );
+  const text = result.content[0].type === "text" ? result.content[0].text : "";
+  assert.match(text, /untrusted evidence/);
+  assert.match(text, /verify/i);
 });
 
 test("bounds oversized recall output", async () => {
@@ -354,4 +480,20 @@ test("shapes reflect body", async () => {
   const body = client.calls[0][1] as any;
   assert.deepEqual(body.include, { facts: {} });
   assert.deepEqual(body.fact_types, ["world"]);
+  assert.equal(body.max_tokens, 1200);
+});
+
+test("reflect result text includes memory trust boundary", async () => {
+  const client = new FakeClient();
+  client.response = { text: "answer" };
+  const result = await executeHindsight(
+    client,
+    config,
+    { cwd: process.cwd() } as any,
+    { action: "reflect", query: "q" },
+    new AbortController().signal,
+  );
+  const text = result.content[0].type === "text" ? result.content[0].text : "";
+  assert.match(text, /untrusted evidence/);
+  assert.match(text, /verify/i);
 });

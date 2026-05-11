@@ -9,6 +9,7 @@ const config = {
   defaultScope: "repo" as const,
   defaultTags: [],
   recallMaxTokens: 1200,
+  reflectMaxTokens: 1200,
   recallBudget: "mid" as const,
   reflectBudget: "low" as const,
   tagsMatch: "any_strict" as const,
