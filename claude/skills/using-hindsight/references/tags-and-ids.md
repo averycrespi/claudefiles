@@ -55,7 +55,7 @@ No tags are added for you — set the auto tags below explicitly on every retain
 | `scope:global`     | Memory applies across repos                                            | `scope:global`      |
 | `repo:<base-name>` | Required when `scope:repo`. Use base repo name, not worktree dir name. | `repo:agent-config` |
 | `source:<who>`     | Who supplied this memory to the agent                                  | `source:external`   |
-| `kind:<class>`     | When meaningful — semantic, episodic, procedural                       | `kind:semantic`     |
+| `kind:<class>`     | Required. One of `semantic`, `episodic`, `procedural` — no others      | `kind:semantic`     |
 | `origin:<system>`  | Where the underlying information came from                             | `origin:jira`       |
 
 `source` values:
@@ -64,11 +64,13 @@ No tags are added for you — set the auto tags below explicitly on every retain
 - `external` — fetched from an external system (Jira, Confluence, GitHub, web).
 - `agent` — derived from agent observation or reasoning.
 
-`kind` values (tagging convention only — Hindsight does not treat these specially server-side):
+`kind` values (tagging convention only — Hindsight does not treat these specially server-side, but downstream filters expect the canonical set):
 
 - `semantic` — facts, definitions, constraints, conventions.
 - `episodic` — events, sessions, what-happened-when.
 - `procedural` — how-to instructions, runbooks, recipes.
+
+Non-canonical kinds (`reference`, `runbook`, `design`, `meeting-notes`, etc.) silently bypass canonical-kind filters. Map your content into one of the three values above; if it doesn't fit, default to `semantic`.
 
 `origin` values (extend as needed): `jira`, `confluence`, `github`, `docs`, `web`, `chat`, `user`.
 
@@ -118,8 +120,8 @@ A consequence of `any_strict` being the typical default: **untagged retains are 
 Before calling `retain`/`sync_retain`, verify:
 
 1. `document_id` is anchored on a stable external identifier (not a title or current content).
-2. `scope` is set, and `repo:<base>` is in tags when `scope:repo`.
-3. `source`, `origin`, and (when meaningful) `kind` are set.
+2. `scope:repo` or `scope:global` is in tags; if `scope:repo`, `repo:<base>` is too. Apply the scope decision rule: if recall from a different repo should still find it, use `scope:global`.
+3. `source:`, `origin:`, and `kind:` (one of `semantic` / `episodic` / `procedural`) are in tags.
 4. At least one namespaced caller tag identifies the topic, ticket, or subsystem.
-5. `update_mode: "replace"` is set explicitly.
+5. `scope`, `source`, `kind`, `origin` live in the `tags` array — not as top-level retain fields. `update_mode` is only valid on `hindsight_retain` (the async tool); `sync_retain` rejects it.
 6. Content contains no secrets, tokens, credentials, or `.env`-style assignments.

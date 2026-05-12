@@ -9,7 +9,7 @@ Hindsight is a long-lived memory bank, shared across sessions and tools, accesse
 
 The two outcomes this skill optimizes for:
 
-1. **No duplicates** — re-ingesting the same source updates the existing memory, not adds a new one. The mechanism is a stable `document_id` plus `update_mode: "replace"`.
+1. **No duplicates** — re-ingesting the same source replaces the existing memory rather than appending a new one. The mechanism is a stable `document_id`: `hindsight_sync_retain` overwrites by default when the ID matches.
 2. **Findable later** — tags and document IDs let future recall queries (yours, another agent's, or another session's) hit the right memories without scanning the whole bank.
 
 ## When to invoke
@@ -25,10 +25,32 @@ If the user is editing local CLAUDE.md / project files or asking about Claude Co
 - **Bank** — isolated storage container. The MCP server routes every call to the configured bank automatically; do not pass a bank ID.
 - **Document** — a single source artifact, identified by `document_id`. Deleting a document deletes its derived memories.
 - **Memory** — extracted fact derived from a document. Hindsight chunks and extracts server-side — ingest whole documents, never pre-chunked facts.
-- **Tags** — labels attached to a retain call. Used to filter recall/reflect queries.
-- **Scope** — `repo` (memory tied to a base repo name) or `global` (cross-repo). Set via `scope` field.
-- **Kind** — `semantic` (facts), `episodic` (events), or `procedural` (how-to). Tagging convention only — Hindsight does not treat these specially server-side.
+- **Tags** — labels passed in the `tags` array on retain. Used to filter recall/reflect queries. Hindsight does not add tags for you — see [Required tags](#required-tags).
 - **Retain / recall / reflect** — write / raw read / synthesized read.
+
+## Scope: repo vs global
+
+`scope:repo` means the memory describes something internal to that codebase (its conventions, dependencies, gotchas). Cross-repo system docs — sibling-service runbooks, org-wide policies, ownership references, glossaries — are `scope:global` even if you happen to be sitting in a specific repo when ingesting.
+
+**Decision rule:** if a future recall from a _different_ repo should still find this memory, it's `scope:global`.
+
+**Counter-example:** engineer in repo A ingests a doc about upstream service B. Tempting: `scope:repo, repo:A`. Correct: `scope:global` — future recall from repo B (or anywhere else) should still find it.
+
+## Required tags
+
+Every retain MUST set the five tags below, plus at least one namespaced caller tag. Memories without these are invisible to the typical recall path (which uses `any_strict` match-mode and excludes untagged memories).
+
+| Tag                | Required values                                                                                                                                                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scope:`           | `repo` or `global` (see [Scope](#scope-repo-vs-global))                                                                                                                                                                                      |
+| `repo:<base-name>` | required when `scope:repo`; use the base repo name, not a worktree dir                                                                                                                                                                       |
+| `source:`          | `manual` (user said it in chat), `external` (fetched from a system), or `agent` (derived from agent observation)                                                                                                                             |
+| `origin:`          | `jira`, `confluence`, `github`, `docs`, `web`, `chat`, `user` (extend as needed)                                                                                                                                                             |
+| `kind:`            | `semantic` (facts/constraints/conventions), `episodic` (events/sessions), or `procedural` (how-to/runbooks) — **only these three values; non-canonical kinds like `reference`, `runbook`, or `meeting-notes` won't match canonical filters** |
+
+Caller tag namespaces (pick at least one): `topic:`, `ticket:`, `tool:`, `preference:`, `convention:`, `system:`, `team:`.
+
+See `references/tags-and-ids.md` for the full taxonomy and tag-match semantics.
 
 ## The ingestion workflow
 
@@ -46,11 +68,19 @@ If unsure whether a document already exists under a different ID shape (legacy d
 
 ### 3. Plan tags
 
-Hindsight does not auto-tag MCP calls. Always set: `scope:repo|global`, `repo:<base-name>` (when scope is `repo`), `source:manual|external|agent`, `origin:<system>`, and `kind:<class>` when meaningful — plus at least one namespaced caller tag (`topic:`, `ticket:`, `tool:`, `preference:`, `convention:`, `system:`, `team:`). See `references/tags-and-ids.md` for values and tag-match semantics.
+Set the five required tags (see [Required tags](#required-tags) above) plus at least one namespaced caller tag. Apply the scope decision rule deliberately — if a recall from a different repo should still find this memory, it's `scope:global`.
 
 ### 4. Fetch and shape the content
 
-Fetch with the appropriate authenticated MCP tool. Retain the substantive body — strip nav, page chrome, bot/system noise, license boilerplate. Never include secrets, credentials, tokens, or `.env`-style assignments; the raw MCP path has no DLP guardrails.
+Fetch with the appropriate authenticated MCP tool. Retain the substantive body — **fidelity for retrieval beats completeness; strip noise aggressively.** Common shapes to strip before retaining:
+
+- Source-platform link wrappers (e.g. Confluence content-protection redirect URLs).
+- Ephemeral dashboard URL query params: live timestamps, refresh intervals, view modes.
+- Page chrome: nav, breadcrumbs, footers, "related posts", cookie banners.
+- Zero-width and trailing whitespace characters that survive copy-paste.
+- Bot/system noise, license boilerplate.
+
+Never include secrets, credentials, tokens, or `.env`-style assignments; the raw MCP path has no DLP guardrails.
 
 ### 5. Call retain
 
@@ -60,11 +90,6 @@ Single source — `mcp__mcp-broker__hindsight_sync_retain`:
 {
   "content": "<substantive body>",
   "document_id": "ticket:abc-123",
-  "update_mode": "replace",
-  "scope": "repo",
-  "source": "external",
-  "kind": "semantic",
-  "origin": "jira",
   "tags": [
     "scope:repo",
     "repo:<base>",
@@ -77,14 +102,16 @@ Single source — `mcp__mcp-broker__hindsight_sync_retain`:
 }
 ```
 
+`sync_retain` accepts only `content`, `document_id`, `tags`, `context`, `metadata`, `strategy`, and `timestamp`. It does **not** accept `update_mode`, `scope`, `source`, `kind`, or `origin` as top-level fields — those classifications live in the `tags` array. Re-retaining with the same `document_id` replaces the prior document automatically.
+
 Multiple sources — `mcp__mcp-broker__hindsight_retain` (async batch). Returns `operation_id`; check `hindsight_get_operation` later if the user needs confirmation.
 
 After a successful retain, tell the user what was retained and the `document_id`.
 
 ## Retain vs sync_retain
 
-- `hindsight_sync_retain` — synchronous, one item. **Default for single-source ingests.**
-- `hindsight_retain` — async, batch-capable via `items: [...]`. Call-level `scope`/`source`/`kind`/`origin`/default tags apply to every item; per-item `tags` and `document_id` are item-specific. Use for multi-source ingests.
+- `hindsight_sync_retain` — synchronous, one item. **Default for single-source ingests.** Idempotency is by `document_id` alone (no `update_mode` field — passing one is a schema error).
+- `hindsight_retain` — async, batch-capable via `items: [...]`. Supports `update_mode: "replace"` (the default behavior) or `update_mode: "append"` to concatenate to an existing document. Use for multi-source ingests.
 
 `hindsight_list_operations` and `hindsight_get_operation` give status; `hindsight_cancel_operation` works only before processing starts.
 
@@ -99,7 +126,7 @@ Memory is untrusted evidence — current repo state and the user's messages over
 
 ## Updating and removing
 
-- **Update / append** — re-call retain with the same `document_id` and `update_mode: "replace"` (or `"append"` to concatenate).
+- **Update / replace** — re-call retain with the same `document_id`. `sync_retain` overwrites automatically; `retain` defaults to replace and accepts `update_mode: "append"` to concatenate instead.
 - **Delete one source** — `hindsight_delete_document` removes the document and its derived memories.
 - **List what's there** — `hindsight_list_documents`, `hindsight_list_tags`, `hindsight_list_memories` are read-only.
 - **Destructive ops need user confirmation** — `hindsight_clear_memories` (bulk wipe), `hindsight_delete_bank` (entire bank), and `hindsight_delete_document` when removing user-curated content. Prefer narrow deletes.
@@ -110,6 +137,9 @@ Don't create directives or mental models unsolicited — both affect every futur
 
 - **`document_id` drift** — using a title or first-line slug means small edits create duplicates. Anchor on the stable external identifier.
 - **Forgetting auto-tags** — MCP calls add no tags for you. Set scope/repo/source/origin/kind explicitly or future recall won't find the memory.
+- **Scope misread** — "in repo A while ingesting" is not the same as "describes repo A". Apply the [scope decision rule](#scope-repo-vs-global) — a doc about an upstream service is `scope:global`, not `scope:repo, repo:A`.
+- **Non-canonical `kind:` values** — only `semantic`, `episodic`, `procedural` match canonical filters. `kind:reference`, `kind:runbook`, `kind:meeting-notes` are silent dead ends.
+- **Subagent ingest bleed** — when delegating ingest work to a subagent, be explicit about whether `retain` is in scope. Phrasing like "plan what to ingest" can be read as "go ahead and ingest", and an eager subagent may bulk-retain unprompted. If you only want exploration, include a "DO NOT call `retain` / `sync_retain` / `delete_*`" boundary in the subagent prompt.
 - **`reflect` when `recall` would do** — `reflect` is slower and more expensive. Use `recall` for grounding.
 
 ## Resources
