@@ -259,5 +259,6 @@
       "launchctl:*",
       "playwright-cli:*"
     ]
-  }
+  },
+  "preferredNotifChannel": "iterm2"
 }
