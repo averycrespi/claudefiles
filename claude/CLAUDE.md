@@ -18,6 +18,15 @@ Title under 70 chars: `TICKET-123: description` or conventional commit format. B
 
 In a worktree, **all git operations target the worktree, never the main repo**. Use `git -C <worktree-path>` if needed — never point it at the main repo. Do not `cd` to the main repo to run git. Verify with `git rev-parse --show-toplevel`.
 
+## Git and GitHub Operations
+
+Prefer MCP broker tools over shell `git` remote subcommands and the `gh` CLI:
+
+- **Git remote ops** (fetch, pull, push, list remotes/refs): use `mcp__mcp-broker__git_*` tools instead of `git fetch/pull/push`.
+- **GitHub ops** (PRs, issues, reviews, runs, releases, search): use `mcp__mcp-broker__github_gh_*` tools instead of the `gh` CLI.
+
+Local-only git commands (`status`, `diff`, `log`, `add`, `commit`, `branch`, `rev-parse`, etc.) still go through the shell `git` command.
+
 ## Sorting
 
 When sorting items alphabetically or numerically, always use `sort` (or equivalent shell command) — never sort by hand or from memory.
