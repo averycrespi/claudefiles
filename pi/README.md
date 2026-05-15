@@ -59,5 +59,6 @@ Markdown skill packages that load on demand via progressive disclosure — only 
 | `reviewing-prs`           | Reviewing a pull request or branch holistically across correctness, security, and quality         |
 | `skill-creator`           | Creating a new skill or updating an existing one                                                  |
 | `test-driven-development` | Implementing a feature or bugfix that involves writing meaningful application logic               |
+| `using-hindsight`         | Retaining and querying Hindsight memories via the mcp-broker `hindsight` namespace                |
 
 Most skills are mirrored from `claude/skills/` with Pi-platform adjustments (tool name swaps, mcp-broker meta-tools for MCP calls, GPT-5.x-friendly prose). Collaborative planning now lives in the `dev-workflow` Plan-mode contract rather than a separate Pi brainstorming skill. Skills adapted from external sources should include bare `ATTRIBUTION` and `LICENSE` files in the skill directory. See the [skill-creator](../pi/agent/skills/skill-creator/SKILL.md) skill when adding new ones.
