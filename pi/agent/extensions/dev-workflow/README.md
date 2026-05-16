@@ -237,6 +237,12 @@ During compaction, the extension summarizes the active workflow shell state inst
 - tactical TODO state
 - next intended action
 
+### Prompt-prefix cache trade-off
+
+Changing the active tool set between modes can bust the provider's prompt-prefix cache. This is intentional. The extension also changes thinking levels between modes, and that is already expected to miss the cache; Plan and Verify need more reasoning for correctness, while Execute should avoid costly overthinking. Since the workflow is already paying the cache-miss cost to get the right thinking level, it also switches tools to get the additional safety and focus benefits of mode-scoped tool access instead of keeping every tool registered and merely telling the model which ones are disabled.
+
+Pre-switch compaction is the cost mitigation for those deliberate cache misses. By compacting before changing tools/thinking, the next uncached request starts from a smaller workflow-aware summary rather than the full raw session, so the mode switch preserves the important state without paying to resend as many tokens.
+
 ## Prior art
 
 - [Agents need control flow](https://bsuh.bearblog.dev/agents-need-control-flow/) — argues for deterministic state transitions and validation checkpoints around LLM work instead of relying only on prompt chains.
