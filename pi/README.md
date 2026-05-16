@@ -43,6 +43,15 @@ Underscore-prefixed directories are libraries imported by sibling extensions, no
 
 See [AGENTS.md](../AGENTS.md) for repo-specific authoring guidance.
 
+## Prompt Templates
+
+Markdown snippets invoked with `/name` in Pi, where `name` is the filename without `.md`.
+
+| Prompt template | Purpose                                                                    |
+| --------------- | -------------------------------------------------------------------------- |
+| `refresh`       | Reconstruct current branch context from git history and an open PR, if any |
+| `scan-secrets`  | Scan branch or unpushed commits for secrets and personal information       |
+
 ## Skills
 
 Markdown skill packages that load on demand via progressive disclosure — only the `name` and `description` are pre-registered; the body of `SKILL.md` and any bundled `references/` files load only when the skill activates.
