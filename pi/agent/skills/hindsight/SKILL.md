@@ -1,9 +1,9 @@
 ---
-name: using-hindsight
+name: hindsight
 description: Use when ingesting external content (Jira, Confluence, GitHub, docs, web pages) into Hindsight memory from Pi, retaining facts for long-term recall, or querying stored memories through Pi's mcp-broker Hindsight namespace. Covers stable document IDs, tagging conventions, retain/recall/reflect selection, and avoiding duplicate memories.
 ---
 
-# Using Hindsight
+# Hindsight
 
 Hindsight is a long-lived memory bank shared across sessions and tools. In Pi, access it through the MCP broker: discover Hindsight tools with `mcp_search`, inspect schemas with `mcp_describe`, and call tools with `mcp_call`. Hindsight tools are scoped under the `hindsight` namespace, for example `hindsight.retain`, `hindsight.recall`, and `hindsight.reflect` when those tools are available in the broker catalog.
 

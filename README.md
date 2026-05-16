@@ -44,7 +44,7 @@ This repo is opinionated. It provides a structured development workflow, securit
 git clone git@github.com:averycrespi/agent-config.git
 cd agent-config
 brew bundle             # install system dependencies on macOS
-make install-playwright # for /playwright-cli skill
+make install-playwright # for the playwright skill
 make stow-claude        # symlink claude/ into ~/.claude/
 make stow-pi            # symlink pi/agent/ into ~/.pi/agent/
 ```

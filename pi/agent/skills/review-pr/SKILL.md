@@ -1,13 +1,11 @@
 ---
-name: reviewing-prs
+name: review-pr
 description: Use when reviewing a pull request or branch holistically across correctness, security, codebase alignment, code quality, test quality, and performance. Accepts a GitHub PR URL or local branch name as argument.
 ---
 
-# Reviewing PRs
+# Review PR
 
 ## Overview
-
-Announce: "I'm using the reviewing-prs skill to perform a holistic review."
 
 Perform six parallel specialized reviews of a pull request or branch, then synthesize findings with confidence scoring and severity tiers. Each review dimension runs as an independent `review` subagent through `spawn_agents`; results are merged, deduplicated, and presented as one structured report.
 

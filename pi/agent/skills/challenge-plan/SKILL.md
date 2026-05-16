@@ -1,9 +1,9 @@
 ---
-name: challenging-plans
+name: challenge-plan
 description: Use when stress-testing, challenging, reviewing, repairing, or grilling a plan before execution.
 ---
 
-# Challenging Plans
+# Challenge Plan
 
 Stress-test a plan before execution. Optimize for finding material problems early, not for producing a long review.
 

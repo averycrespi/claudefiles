@@ -1,9 +1,9 @@
 ---
-name: diagnosing
+name: diagnose
 description: Use when debugging bugs, failures, exceptions, flaky behavior, regressions, or performance problems where the cause is not already proven.
 ---
 
-# Diagnosing
+# Diagnose
 
 Use a feedback-loop-first debugging discipline. Do not guess from code inspection alone when a reproducible signal can be built.
 

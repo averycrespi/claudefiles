@@ -3,7 +3,7 @@ name: test-driven-development
 description: Use when implementing a feature or bugfix that involves writing meaningful application logic
 ---
 
-# Following Test-Driven Development (TDD)
+# Test-Driven Development
 
 ## Overview
 

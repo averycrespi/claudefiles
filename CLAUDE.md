@@ -47,8 +47,8 @@ Test files import source with `.ts` extensions (e.g. `from "./state.ts"`). This 
 
 ## Skill Naming Convention
 
-- **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)
-- **Reference skills** (provide information/context): use nouns (e.g., `playwright-cli`, `tdd`)
+- **Workflow skills** (invoked to perform a task): use verb-object names (e.g., `challenge-plan`, `review-pr`)
+- **Reference skills** (provide information/context): use nouns (e.g., `playwright`, `tdd`)
 
 ## Notes Format
 

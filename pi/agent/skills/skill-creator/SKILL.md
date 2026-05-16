@@ -4,7 +4,7 @@ description: Use when creating a new skill or updating an existing skill
 license: Complete terms in LICENSE
 ---
 
-# Creating Skills
+# Skill Creator
 
 Skills are modular, self-contained packages that extend the agent's capabilities with specialized knowledge, workflows, and tools.
 
@@ -23,8 +23,8 @@ skill-name/
 
 ## Naming Convention
 
-- **Workflow skills** (invoked to perform a task): use gerund form (e.g., `brainstorming`, `reviewing-prs`)
-- **Reference skills** (provide information/context): use nouns (e.g., `playwright-cli`, `tdd`)
+- **Workflow skills** (invoked to perform a task): use verb-object names (e.g., `challenge-plan`, `review-pr`)
+- **Reference skills** (provide information/context): use nouns (e.g., `playwright`, `tdd`)
 
 ## SKILL.md Frontmatter
 

@@ -50,15 +50,20 @@ Markdown skill packages that load on demand via progressive disclosure — only 
 | Skill                     | Use when                                                                                          |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |
 | `agent-engineering`       | Designing, building, debugging, or reviewing AI coding agent harnesses and multi-phase workflows  |
-| `challenging-plans`       | Stress-testing, challenging, reviewing, repairing, or grilling a plan before execution            |
-| `creating-html-artifacts` | Creating standalone HTML reports, explainers, visual plans, dashboards, slide decks, or tools     |
-| `creating-jira-tickets`   | Drafting and creating a Jira ticket via the `mcp-broker` extension's Atlassian namespace          |
-| `diagnosing`              | Debugging bugs, failures, flaky behavior, regressions, or performance problems                    |
+| `challenge-plan`          | Stress-testing, challenging, reviewing, repairing, or grilling a plan before execution            |
+| `diagnose`                | Debugging bugs, failures, flaky behavior, regressions, or performance problems                    |
 | `frontend-design`         | Building web components, pages, or applications that need distinctive, production-grade frontends |
-| `playwright-cli`          | Driving a browser for testing, form filling, screenshots, or data extraction                      |
-| `reviewing-prs`           | Reviewing a pull request or branch holistically across correctness, security, and quality         |
+| `hindsight`               | Retaining and querying Hindsight memories via the mcp-broker `hindsight` namespace                |
+| `html-artifacts`          | Creating standalone HTML reports, explainers, visual plans, dashboards, slide decks, or tools     |
+| `jira-tickets`            | Drafting and creating a Jira ticket via the `mcp-broker` extension's Atlassian namespace          |
+| `playwright`              | Driving a browser for testing, form filling, screenshots, or data extraction                      |
+| `review-pr`               | Reviewing a pull request or branch holistically across correctness, security, and quality         |
 | `skill-creator`           | Creating a new skill or updating an existing one                                                  |
 | `test-driven-development` | Implementing a feature or bugfix that involves writing meaningful application logic               |
-| `using-hindsight`         | Retaining and querying Hindsight memories via the mcp-broker `hindsight` namespace                |
 
-Most skills are mirrored from `claude/skills/` with Pi-platform adjustments (tool name swaps, mcp-broker meta-tools for MCP calls, GPT-5.x-friendly prose). Collaborative planning now lives in the `dev-workflow` Plan-mode contract rather than a separate Pi brainstorming skill. Skills adapted from external sources should include bare `ATTRIBUTION` and `LICENSE` files in the skill directory. See the [skill-creator](../pi/agent/skills/skill-creator/SKILL.md) skill when adding new ones.
+Notes:
+
+- Most skills are mirrored from `claude/skills/` with Pi-platform adjustments (tool name swaps, mcp-broker meta-tools for MCP calls, GPT-5.x-friendly prose).
+- Collaborative planning now lives in the `dev-workflow` Plan-mode contract rather than a separate Pi brainstorming skill.
+- Skills adapted from external sources should include bare `ATTRIBUTION` and `LICENSE` files in the skill directory.
+- See the [skill-creator](../pi/agent/skills/skill-creator/SKILL.md) skill when adding new skills.

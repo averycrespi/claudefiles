@@ -1,9 +1,9 @@
 ---
-name: creating-html-artifacts
+name: html-artifacts
 description: Use when the user asks to create a standalone HTML artifact, HTML report, interactive explainer, visual plan, dashboard, slide deck, diagram, or throwaway HTML tool.
 ---
 
-# Creating HTML Artifacts
+# HTML Artifacts
 
 ## Purpose
 

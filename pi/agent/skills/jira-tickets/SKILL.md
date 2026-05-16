@@ -1,9 +1,9 @@
 ---
-name: creating-jira-tickets
+name: jira-tickets
 description: Use when creating a Jira ticket to plan upcoming work. Guides ticket drafting with clear structure, self-contained context, and testable acceptance criteria, then creates the ticket via the MCP broker's Atlassian namespace.
 ---
 
-# Creating Jira Tickets
+# Jira Tickets
 
 ## Overview
 
