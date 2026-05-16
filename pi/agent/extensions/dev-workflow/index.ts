@@ -966,6 +966,22 @@ export function createDevWorkflowExtension(
       });
     });
 
+    pi.on("tool_call", async (event, ctx) => {
+      if (state.mode === "normal") return undefined;
+      const config = await loadDevWorkflowConfig(ctx.cwd);
+      updateRuntimeConfig(config);
+      const allowed = new Set(
+        getManagedToolNamesForMode(state.mode, {
+          autoAdvanceEnabled: state.autoAdvanceEnabled,
+        }),
+      );
+      if (allowed.has(event.toolName)) return undefined;
+      return {
+        block: true,
+        reason: `dev-workflow: ${event.toolName} is not available in ${state.mode} mode`,
+      };
+    });
+
     pi.on("tool_result", async (event) => {
       if (event.toolName === "todo") {
         resetTodoReminder();

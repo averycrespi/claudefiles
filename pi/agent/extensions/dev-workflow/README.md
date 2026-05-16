@@ -6,6 +6,7 @@ Pi extension that adds lightweight workflow modes on top of the repo's existing 
 
 - registers `/normal`, `/plan`, `/execute`, and `/verify` commands
 - switches tool access only on explicit mode transitions
+- blocks stale or out-of-mode tool calls at execution time if a queued turn still sees an older tool snapshot
 - applies per-mode thinking defaults only on explicit mode transitions
 - publishes workflow-mode state over `pi.events` for other extensions
 - injects a stable mode-specific contract into `before_agent_start`
@@ -46,6 +47,7 @@ Restores the session's baseline tool set and baseline thinking level. No workflo
 
 - intended for deterministic checks, review, and findings capture
 - stays read-mostly
+- blocks stale `edit` and `write` calls even if Verify was entered from a queued Execute-mode turn
 - defaults thinking to `high` (`verifyThinkingLevel`)
 - reports a structured verification result: overall verdict (`pass`, `fail`, or `blocked`), deterministic checks and results, per-acceptance-criterion verdicts with evidence, findings / next actions, and any user-accepted known issues
 

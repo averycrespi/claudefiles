@@ -673,6 +673,52 @@ test("execute and verify include workflow_advance only when auto advance is enab
   await rm(cwd, { recursive: true, force: true });
 });
 
+test("verify mode blocks stale edit and write tool calls at execution time", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-verify-guard-"));
+  const pi = makePi(cwd);
+  createTestDevWorkflowExtension()(pi as any);
+  await startSession(pi);
+  await pi._commands.get("verify")!.handler("Check", pi._ctx());
+
+  const toolCall = pi._handlers.get("tool_call");
+  assert.ok(toolCall);
+
+  assert.deepEqual(
+    await toolCall(
+      { type: "tool_call", toolName: "edit", toolCallId: "call-1", input: {} },
+      pi._ctx(),
+    ),
+    {
+      block: true,
+      reason: "dev-workflow: edit is not available in verify mode",
+    },
+  );
+  assert.deepEqual(
+    await toolCall(
+      {
+        type: "tool_call",
+        toolName: "write",
+        toolCallId: "call-2",
+        input: {},
+      },
+      pi._ctx(),
+    ),
+    {
+      block: true,
+      reason: "dev-workflow: write is not available in verify mode",
+    },
+  );
+  assert.equal(
+    await toolCall(
+      { type: "tool_call", toolName: "read", toolCallId: "call-3", input: {} },
+      pi._ctx(),
+    ),
+    undefined,
+  );
+
+  await rm(cwd, { recursive: true, force: true });
+});
+
 test("mode switch skips pre-compaction below threshold or when not idle", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "dev-workflow-precompact-skip-"));
   const pi = makePi(cwd);
